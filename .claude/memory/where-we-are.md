@@ -8,7 +8,7 @@ metadata:
 
 # Where we are
 
-*Last updated: 2026-09-21, after the second expansion of the working branch (Bylaws, Council, Ecosystem, SPEC, ANCHORS, curate/annotate).*
+*Last updated: 2026-09-21, after the pipeline document landed (the arrow, written at three altitudes).*
 
 ## The state
 
@@ -32,6 +32,7 @@ The founding work continues on the working branch, one PR growing through six th
 - SPEC.md (what any Oath-shaped register must satisfy; enables forks).
 - ANCHORS.md (public build ledger, empty until first anchored build).
 - METHODOLOGY.md §10 (annotate, do not curate).
+- PIPELINE.md (the arrow: seven stages from raw source to reader-verified record, written at three altitudes for Reddit reader, PhD/researcher, engineer, subject).
 - Updated PR template with Council checkbox and COI disclosure.
 - Sharpened NEXT.md with six phases (added Phase 6: ecosystem and forks).
 - README and CLAUDE.md wired to the new documents.
