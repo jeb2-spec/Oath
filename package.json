@@ -1,0 +1,25 @@
+{
+  "name": "oath",
+  "version": "0.0.0",
+  "private": true,
+  "description": "A public register reconciling what U.S. elected officials swore to uphold with what the record shows. TypeScript adapters and Signals; the Python tooling lives in pyproject.toml.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jeb2-spec/Oath.git"
+  },
+  "scripts": {
+    "lint": "biome check .",
+    "format": "biome format --write .",
+    "test": "vitest run --passWithNoTests"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2",
+    "typescript": "^5",
+    "vitest": "^5"
+  }
+}
