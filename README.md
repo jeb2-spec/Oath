@@ -22,7 +22,7 @@ The project does not adjudicate. A signal names a condition, not a verdict; whet
 
 **Contents.** 1. The idea · 2. The problem · 3. Terms · 4. Standards · 5. Method · 6. Extensibility · 7. Limits · 8. Reproduction · 9. Sources · 10. What this claims for civic infrastructure · 11. Disclosures · 12. Colophon
 
-**Reference companions.** [CHARTER.md](CHARTER.md) (four vows) · [RUBRIC.md](RUBRIC.md) (five gates per Signal) · [INVARIANTS.md](INVARIANTS.md) (twelve mechanical rules) · [METHODOLOGY.md](METHODOLOGY.md) · [STANDARDS.md](STANDARDS.md) · [SOURCES.md](SOURCES.md) · [LIMITATIONS.md](LIMITATIONS.md) · [NEXT.md](NEXT.md).
+**Reference companions.** [CHARTER.md](CHARTER.md) (four vows) · [RUBRIC.md](RUBRIC.md) (five gates per Signal) · [INVARIANTS.md](INVARIANTS.md) (sixteen mechanical rules) · [BYLAWS.md](BYLAWS.md) (governance) · [COUNCIL.md](COUNCIL.md) (adversarial review) · [METHODOLOGY.md](METHODOLOGY.md) · [STANDARDS.md](STANDARDS.md) · [SOURCES.md](SOURCES.md) · [LIMITATIONS.md](LIMITATIONS.md) · [SPEC.md](SPEC.md) (what any Oath-shaped register must satisfy) · [ECOSYSTEM.md](ECOSYSTEM.md) (the website and the mark) · [ANCHORS.md](ANCHORS.md) (public build ledger) · [NEXT.md](NEXT.md).
 
 ---
 
