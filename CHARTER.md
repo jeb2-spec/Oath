@@ -1,6 +1,6 @@
 # Charter
 
-Four vows. When everything else is negotiable, these do not bend.
+Five vows. When everything else is negotiable, these do not bend.
 
 They are printed here in the order a future contributor, a future maintainer, or a future AI session must read them. They are short on purpose. Each is enforced by one or more mechanical gates listed in [INVARIANTS.md](INVARIANTS.md); when the gates enforce a vow, the vow cannot be silently walked past.
 
@@ -34,13 +34,19 @@ Aggregators are cited beside the primary they draw from. Never in place of it.
 
 A finding without a filing is not a finding. A filing without a source URL and a retrieval timestamp is not a filing. The distinction between what a project like OpenSecrets read and what the House Clerk actually published is the whole point of the register. When the two disagree, the primary source wins, and the disagreement is recorded on the row so the reader can see it.
 
+## V. Facts stay. Change is shown.
+
+What was disclosed is a fact and does not change. A Finding may be superseded by a later primary-source filing that demonstrates a change of conduct; the superseding row cites the evidence, both rows stay in the register, and nothing is quietly erased.
+
+Removal by request is not the register's mechanism. Change is. The reader who returns to a page sees both what the record was and what the record is now, with the primary-source filing that shows the difference. Leave simple things alone: what happened, happened. What has changed since is shown, not hidden. Full policy in [BYLAWS.md §6](BYLAWS.md).
+
 ---
 
 ## The vow behind the vows
 
-A record about a person is not the person. The gap between what the register can show and who somebody is is enormous. The register that forgets the gap becomes a weapon. The four vows above exist so the register never forgets.
+A record about a person is not the person. The gap between what the register can show and who somebody is is enormous. The register that forgets the gap becomes a weapon. The five vows above exist so the register never forgets.
 
-Any future contributor, maintainer, or AI session who proposes to soften any of the four vows will find that the answer is *no*. Not by policy. By design. The invariants in the next file are what makes the answer *no* when nobody is watching.
+Any future contributor, maintainer, or AI session who proposes to soften any of the five vows will find that the answer is *no*. Not by policy. By design. The invariants in the next file are what makes the answer *no* when nobody is watching.
 
 ## The coda
 
@@ -58,4 +64,4 @@ Then [COUNCIL.md](COUNCIL.md), the adversarial-review body that catches what one
 
 Then [METHODOLOGY.md](METHODOLOGY.md), [STANDARDS.md](STANDARDS.md), [LIMITATIONS.md](LIMITATIONS.md), [SOURCES.md](SOURCES.md), [SPEC.md](SPEC.md), [ECOSYSTEM.md](ECOSYSTEM.md), and [ANCHORS.md](ANCHORS.md).
 
-*The Charter is 350 words. It should be memorable. If a session ever finds itself unable to recall which four vows they were, the session has already drifted. Come back here.*
+*The Charter is short on purpose. It should be memorable. If a session ever finds itself unable to recall which five vows they were, the session has already drifted. Come back here.*

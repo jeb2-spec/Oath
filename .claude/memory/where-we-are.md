@@ -23,7 +23,7 @@ The founding work continues on the working branch, one PR growing through six th
 
 **On the working branch (`claude/us-officials-financial-oversight-hz36kr`), pending PR review:**
 - Em-dash strip (voice-print discipline).
-- CHARTER.md (four vows + annotate/curate coda).
+- CHARTER.md (five vows + annotate/curate coda; Vow V, *facts stay, change is shown*, added on Jared's call).
 - RUBRIC.md (five gates per Signal).
 - INVARIANTS.md (sixteen mechanical rules + meta-invariant).
 - BYLAWS.md (roles, decision authority, corrections, removal policy, contributor agreement).
@@ -91,4 +91,4 @@ Council seats (per COUNCIL.md §3) are: Seat A (the reader who wants to be fair)
 
 This is a young repository built on old discipline. The Vera and errata records are its family; when in doubt, read from them. When you finish a step, update this file in the same commit. Its freshness is more valuable than any polish elsewhere.
 
-Read the [Charter](../../CHARTER.md) before you start. If you cannot recall the four vows, come back.
+Read the [Charter](../../CHARTER.md) before you start. If you cannot recall the five vows, come back.

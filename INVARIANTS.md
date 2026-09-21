@@ -70,11 +70,11 @@ Not a "worst offenders" list. Not a signal-count leaderboard. Not a "top N by do
 
 The rationale is in METHODOLOGY.md §10: the register annotates, the signals curate, and the register does not curate persons.
 
-## §14. Public-record content is never removed at the subject's request.
+## §14. Facts stay. Change is shown by supersession, not by removal.
 
-The register aggregates filings the officeholder is required by law to make. The mechanism for removal is with the source that publishes them, not with this register. Full policy in BYLAWS.md §6.
+A row that enters the register can be superseded, not deleted. A supersession is a new row that cites a primary-source filing (either the correction of a fact or a demonstrated change of conduct); both the original row and the superseding row remain readable. Off-the-record requests are not honored. Full policy in BYLAWS.md §6. Codifies Charter Vow V.
 
-**Gate:** `tools/check-removals.py` *(planned)*. Any removal from the register (a row disappearing between builds without a supersession) is a build failure. A row may be superseded (per §12) but not deleted.
+**Gate:** `tools/check-removals.py` *(planned)*. Any row that disappears from the register between builds without an accompanying supersession row is a build failure. Editing a row in place (rather than superseding it) is a build failure. A supersession row without a primary-source citation is a build failure.
 
 ## §15. Contributors disclose conflicts of interest.
 
@@ -106,7 +106,7 @@ More rules will land as more failures land. They land here, with their gates. A 
 
 When two rules could conflict, the order is:
 
-1. The **Charter**'s four vows.
+1. The **Charter**'s five vows.
 2. The **sixteen invariants** above.
 3. The **rubric**'s five gates.
 4. The **bylaws**' governance rules.

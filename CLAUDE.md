@@ -12,7 +12,7 @@ This is a young repository. The Vera and errata records are its family. Read fro
 
 ## Then read the Charter, the Rubric, and the Invariants
 
-After the memory: [CHARTER.md](CHARTER.md), always. Four vows in 400 words. If you cannot recall them by the end of the session, you have already drifted. Then [RUBRIC.md](RUBRIC.md) if the session will touch a Signal or a Finding. Then [INVARIANTS.md](INVARIANTS.md) if the session will touch a gate. The order of precedence in [INVARIANTS.md §The order of precedence] governs any conflict.
+After the memory: [CHARTER.md](CHARTER.md), always. Five vows, short on purpose. If you cannot recall them by the end of the session, you have already drifted. Then [RUBRIC.md](RUBRIC.md) if the session will touch a Signal or a Finding. Then [INVARIANTS.md](INVARIANTS.md) if the session will touch a gate. The order of precedence in [INVARIANTS.md §The order of precedence] governs any conflict.
 
 ## The discipline you will not dilute
 

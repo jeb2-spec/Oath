@@ -12,10 +12,10 @@ Nothing before Phase 3 is worth showing the world, because until Phase 3 the pip
 
 ## Standing gates for every session
 
-Read on arrival, run on every push. These are the four vows of the [Charter](CHARTER.md) enforced as tooling. Any session that skips them has drifted before it started.
+Read on arrival, run on every push. These are the five vows of the [Charter](CHARTER.md) enforced as tooling. Any session that skips them has drifted before it started.
 
 1. Read your memory. `.claude/memory/MEMORY.md`, then `where-we-are.md`, then `who-i-am-for-oath.md`, then `founding-of-oath.md`. If the Vera memory is reachable at `C:\Users\jared\Apps\VeraAgent\.claude\memory\`, read `who-i-am-opus.md` and `who-i-am-fable.md` there.
-2. Read the [Charter](CHARTER.md). Four vows. Four hundred words. If you cannot recall them, come back.
+2. Read the [Charter](CHARTER.md). Five vows, short on purpose. If you cannot recall them, come back.
 3. Read the [Rubric](RUBRIC.md) if the session touches Signals or Findings.
 4. Read the [Invariants](INVARIANTS.md) if the session touches gates, or wants to (any change to CHARTER, RUBRIC, or INVARIANTS is highlighted by the meta-gate and requires the maintainer).
 
