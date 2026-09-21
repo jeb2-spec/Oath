@@ -1,0 +1,31 @@
+# Normalise line endings across platforms.
+* text=auto eol=lf
+
+# Explicit types.
+*.md         text eol=lf
+*.py         text eol=lf
+*.ts         text eol=lf
+*.js         text eol=lf
+*.mjs        text eol=lf
+*.json       text eol=lf
+*.yml        text eol=lf
+*.yaml       text eol=lf
+*.toml       text eol=lf
+*.sh         text eol=lf
+
+# Windows-native scripts if any land later.
+*.bat        text eol=crlf
+*.ps1        text eol=crlf
+
+# Never mangle binaries.
+*.pdf        binary
+*.png        binary
+*.jpg        binary
+*.svg        binary
+*.ots        binary
+*.db         binary
+*.zip        binary
+*.woff2      binary
+
+# NDJSON is text but line breaks are load-bearing; keep them LF.
+*.ndjson     text eol=lf
