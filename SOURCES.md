@@ -4,9 +4,9 @@ Every row of record in Oath enters through an adapter registered here. An adapte
 
 This file grows as coverage extends. At the founding, no adapter is implemented; every entry below is a planned source with the information a maintainer or contributor needs to build the adapter honestly.
 
-## Federal — primary
+## Federal. primary
 
-### F.1 — U.S. House Financial Disclosures
+### F.1. U.S. House Financial Disclosures
 - **URL.** <https://disclosures-clerk.house.gov/FinancialDisclosure>
 - **Publisher.** Office of the Clerk of the U.S. House of Representatives.
 - **Forms.** Financial Disclosure (annual), Periodic Transaction Report (PTR).
@@ -16,7 +16,7 @@ This file grows as coverage extends. At the founding, no adapter is implemented;
 - **Known gaps.** Older filings are scanned images; extraction is bounded by OCR quality. PTRs are often incomplete descriptions of underlying transactions.
 - **Adapter status.** Planned.
 
-### F.2 — U.S. Senate Financial Disclosures
+### F.2. U.S. Senate Financial Disclosures
 - **URL.** <https://efdsearch.senate.gov>
 - **Publisher.** Office of Public Records, Secretary of the Senate.
 - **Forms.** Financial Disclosure Report (annual), Periodic Transaction Report (PTR).
@@ -26,7 +26,7 @@ This file grows as coverage extends. At the founding, no adapter is implemented;
 - **Known gaps.** Absence of bulk download imposes a per-filing retrieval cost; adapter throttling must be conservative.
 - **Adapter status.** Planned.
 
-### F.3 — U.S. Office of Government Ethics — Executive Branch Form 278e
+### F.3. U.S. Office of Government Ethics. Executive Branch Form 278e
 - **URL.** <https://extapps2.oge.gov/Web/278eFiling.nsf>
 - **Publisher.** Office of Government Ethics (OGE).
 - **Forms.** OGE Form 278e (public financial disclosure for senior Executive Branch officials).
@@ -36,7 +36,7 @@ This file grows as coverage extends. At the founding, no adapter is implemented;
 - **Known gaps.** Coverage is limited to senior officials as defined by 5 U.S.C. app. 4 § 101; a large population of federal employees files the confidential OGE-450, which is not public.
 - **Adapter status.** Planned.
 
-### F.4 — Federal Election Commission (FEC)
+### F.4. Federal Election Commission (FEC)
 - **URL.** <https://www.fec.gov/data/>
 - **API.** <https://api.open.fec.gov/developer/>
 - **Publisher.** Federal Election Commission.
@@ -47,7 +47,7 @@ This file grows as coverage extends. At the founding, no adapter is implemented;
 - **Known gaps.** Committee-to-candidate linking is not always clean; small in-kind contributions may go unreported below thresholds.
 - **Adapter status.** Planned.
 
-### F.5 — U.S. Senate Lobbying Disclosure Act database
+### F.5. U.S. Senate Lobbying Disclosure Act database
 - **URL.** <https://lda.senate.gov/system/public/>
 - **Publisher.** Secretary of the Senate.
 - **Forms.** LD-1 (registration), LD-2 (quarterly activity), LD-203 (semiannual contribution report by registered lobbyists).
@@ -56,13 +56,13 @@ This file grows as coverage extends. At the founding, no adapter is implemented;
 - **Terms.** Public documents.
 - **Adapter status.** Planned.
 
-### F.6 — U.S. House Lobbying Disclosure
+### F.6. U.S. House Lobbying Disclosure
 - **URL.** <https://disclosurespreview.house.gov/>
 - **Publisher.** Clerk of the U.S. House.
 - **Formats.** XML.
 - **Adapter status.** Planned (mirror of F.5 for House-side filings).
 
-### F.7 — Congress.gov (legislative activity)
+### F.7. Congress.gov (legislative activity)
 - **URL.** <https://www.congress.gov>
 - **API.** <https://api.congress.gov>
 - **Publisher.** Library of Congress.
@@ -71,17 +71,17 @@ This file grows as coverage extends. At the founding, no adapter is implemented;
 - **Terms.** Public. Rate limits documented.
 - **Adapter status.** Planned. Needed to reconcile filings against legislative activity.
 
-## Federal — corroborating (aggregators, cited never sole)
+## Federal. corroborating (aggregators, cited never sole)
 
-- **OpenSecrets** — <https://www.opensecrets.org> — Center for Responsive Politics; comprehensive campaign finance and lobbying, with lobbying-issue coding and reconciliation not in the primaries.
-- **ProPublica Represent** — <https://projects.propublica.org/represent/> — congressional votes, statements, and financial disclosures with a well-designed API.
-- **Ballotpedia** — <https://ballotpedia.org> — encyclopedic coverage of federal, state, and local officeholders; useful for identity resolution.
-- **LegiStorm** — <https://www.legistorm.com> — congressional staff, salaries, foreign travel gifts.
-- **Follow the Money** — <https://www.followthemoney.org> — National Institute on Money in Politics; deep state-level campaign finance.
-- **MapLight** — <https://maplight.org> — money-and-influence analysis, with issue-level joins.
-- **GovTrack** — <https://www.govtrack.us> — legislative tracking; long-lived.
-- **Capitol Trades** — <https://www.capitoltrades.com> and **Unusual Whales congressional trading** — <https://unusualwhales.com/politics> — STOCK Act trade tracking with UX suited to lay readers.
-- **CREW** — <https://www.citizensforethics.org> — Citizens for Responsibility and Ethics in Washington; enforcement filings and investigative work.
+- **OpenSecrets**. <https://www.opensecrets.org>, Center for Responsive Politics; comprehensive campaign finance and lobbying, with lobbying-issue coding and reconciliation not in the primaries.
+- **ProPublica Represent**. <https://projects.propublica.org/represent/>, congressional votes, statements, and financial disclosures with a well-designed API.
+- **Ballotpedia**. <https://ballotpedia.org>, encyclopedic coverage of federal, state, and local officeholders; useful for identity resolution.
+- **LegiStorm**. <https://www.legistorm.com>, congressional staff, salaries, foreign travel gifts.
+- **Follow the Money**. <https://www.followthemoney.org>, National Institute on Money in Politics; deep state-level campaign finance.
+- **MapLight**. <https://maplight.org>, money-and-influence analysis, with issue-level joins.
+- **GovTrack**. <https://www.govtrack.us>, legislative tracking; long-lived.
+- **Capitol Trades**. <https://www.capitoltrades.com> and **Unusual Whales congressional trading**, <https://unusualwhales.com/politics>, STOCK Act trade tracking with UX suited to lay readers.
+- **CREW**. <https://www.citizensforethics.org>, Citizens for Responsibility and Ethics in Washington; enforcement filings and investigative work.
 
 **Rule.** An aggregator is cited alongside the primary source it drew from. Where the two disagree, the primary source is authoritative and the disagreement is recorded on the row.
 
@@ -89,7 +89,7 @@ This file grows as coverage extends. At the founding, no adapter is implemented;
 
 States are added per coverage. Each state entry follows the shape:
 
-### [STATE] — [Ethics Commission or equivalent]
+### [STATE]. [Ethics Commission or equivalent]
 - **URL.**
 - **Publisher.**
 - **Forms.**
@@ -99,7 +99,7 @@ States are added per coverage. Each state entry follows the shape:
 - **Known gaps.**
 - **Adapter status.**
 
-Priority states (populous, machine-readable, high officeholder density) will be documented first: California, New York, Texas, Florida, Illinois. The state coverage matrix — which states have adapters, which are pending, which are known infeasible without paper retrieval — will be maintained as a table in this file as adapters land.
+Priority states (populous, machine-readable, high officeholder density) will be documented first: California, New York, Texas, Florida, Illinois. The state coverage matrix, which states have adapters, which are pending, which are known infeasible without paper retrieval, will be maintained as a table in this file as adapters land.
 
 ## Local coverage
 

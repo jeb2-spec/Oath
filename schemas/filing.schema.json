@@ -65,6 +65,95 @@
       "type": ["string", "null"],
       "enum": ["structured", "ocr-high", "ocr-medium", "ocr-low", "manual", null],
       "description": "How the content was extracted from the source. Rows built from OCR-low sources are flagged in downstream Findings."
+    },
+    "evidence_bundle": {
+      "type": "object",
+      "required": ["bundle_path", "content_hash", "hash_algorithm", "witnesses"],
+      "additionalProperties": false,
+      "description": "The durable, multi-witness evidence bundle for this filing. Architecture in EVIDENCE.md. Enforced by INVARIANTS.md §16.",
+      "properties": {
+        "bundle_path": {
+          "type": "string",
+          "description": "Repository-relative path to the evidence bundle directory (e.g. 'data/captures/fl-house-PTR-12345/')."
+        },
+        "content_hash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$",
+          "description": "SHA-256 of the captured response bytes, lowercase hex."
+        },
+        "hash_algorithm": {
+          "type": "string",
+          "const": "sha256"
+        },
+        "response_headers_hash": {
+          "type": ["string", "null"],
+          "pattern": "^[a-f0-9]{64}$",
+          "description": "SHA-256 of the canonicalised response headers."
+        },
+        "adapter_identity": {
+          "type": "string",
+          "description": "Adapter name and version that captured this filing (e.g. 'house-fd@0.1.0')."
+        },
+        "opentimestamps_proof": {
+          "type": ["string", "null"],
+          "description": "Path to the .ots proof file within the bundle, once stamped."
+        },
+        "opentimestamps_state": {
+          "type": "string",
+          "enum": ["confirmed", "pending", "owed"],
+          "description": "Anchor state; matches ANCHORS.md conventions."
+        },
+        "witnesses": {
+          "type": "array",
+          "minItems": 1,
+          "description": "External witnesses. At least one confirmed witness is required by INVARIANTS.md §16. A row with only pending witnesses ships marked 'pending-external-witness'.",
+          "items": {
+            "type": "object",
+            "required": ["type", "state"],
+            "additionalProperties": false,
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": ["wayback", "archive_today", "ipfs", "arweave", "software_heritage", "perma_cc", "other"]
+              },
+              "url": {
+                "type": ["string", "null"],
+                "description": "The witness's URL (for wayback/archive_today/perma_cc/software_heritage)."
+              },
+              "cid": {
+                "type": ["string", "null"],
+                "description": "Content identifier (for ipfs/arweave)."
+              },
+              "pinned_by": {
+                "type": ["array", "null"],
+                "items": { "type": "string" },
+                "description": "For IPFS: which pinning services hold this CID."
+              },
+              "captured_at": {
+                "type": ["string", "null"],
+                "format": "date-time"
+              },
+              "confirmed_at": {
+                "type": ["string", "null"],
+                "format": "date-time"
+              },
+              "state": {
+                "type": "string",
+                "enum": ["confirmed", "pending", "failed"]
+              }
+            }
+          }
+        },
+        "redaction_manifest": {
+          "type": ["object", "null"],
+          "description": "Deterministic redactions applied to the response bytes before storage (personal identifiers). Empty when none applied.",
+          "additionalProperties": false,
+          "properties": {
+            "version": { "type": "string" },
+            "applied_rules": { "type": "array", "items": { "type": "string" } }
+          }
+        }
+      }
     }
   }
 }

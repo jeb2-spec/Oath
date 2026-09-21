@@ -27,7 +27,7 @@ observes, in terms a lay reader can follow.
 
 ## Standard
 
-[<STANDARDS.md row id>](../../STANDARDS.md#<anchor>) — full citation and
+[<STANDARDS.md row id>](../../STANDARDS.md#<anchor>), full citation and
 the specific sentence the Signal derives from.
 
 ## Inputs
@@ -57,7 +57,7 @@ Every new Signal, and every version bump that changes the Criteria, requires an 
 
 1. Sentences in the description or worked example that read as verdicts.
 2. The Standard cited but the sentence bearing on it not linked.
-3. Criteria that would fire against sympathetic figures — or, worse, that plausibly *should* fire but do not.
+3. Criteria that would fire against sympathetic figures, or, worse, that plausibly *should* fire but do not.
 4. Coverage gaps that shape which officeholders can be observed at all.
 5. Language a subject would read back to you uncomfortably in a room.
 

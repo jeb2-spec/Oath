@@ -22,7 +22,8 @@
 - [ ] Standard cited in the frontmatter.
 - [ ] Worked example against a fixture.
 - [ ] "What this Signal does not say" paragraph is filled in.
-- [ ] Adversarial second reading requested and recorded.
+- [ ] Adversarial second reading requested and recorded (Council session per [COUNCIL.md](../COUNCIL.md)); findings linked below.
+- [ ] All five gates in [RUBRIC.md](../RUBRIC.md) stated with pass/fail; any `advisory` weight named with reason.
 
 ## If this adds a Source or Adapter
 
@@ -35,6 +36,12 @@
 - [ ] Version bumped in `$id`.
 - [ ] Migration path documented, or a note that no rows exist yet.
 - [ ] `schemas/README.md` updated.
+
+## Conflict of interest disclosure
+
+<!-- Required by BYLAWS.md §7. Are you or do you represent: an officeholder in the current or planned scope of the register; an aggregator or source registered in SOURCES.md; a political party, campaign, PAC, or lobbying entity? "None" is a valid answer when true. -->
+
+None.
 
 ## Notes for the reviewer
 
