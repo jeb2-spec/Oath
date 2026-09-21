@@ -40,17 +40,17 @@ A primary source is identified and registered. A primary source is an official b
 
 **How it can fail.** A source's terms prohibit programmatic reading and the manual path is prohibitively expensive (documented as inaccessible in SOURCES.md with the reason). A source disappears (its row stays; the row is annotated with the outage date; the register's citations to it continue to display).
 
-### Stage 2. Retrieval
+### Stage 2. Retrieval and multi-witness capture
 
-An adapter fetches from one registered source on a cadence and produces schema-typed rows.
+An adapter fetches from one registered source on a cadence, produces schema-typed rows, and produces the durable evidence bundle that lets the citation survive the source itself.
 
-**What happens.** The adapter (in `src/adapters/<source>/`) reads the source on schedule, respects rate limits and any documented politeness rules, writes raw responses to a local cache (`data/cache/`, gitignored), and emits candidate rows for the next stage.
+**What happens.** The adapter (in `src/adapters/<source>/`) reads the source on schedule, respects rate limits and any documented politeness rules, writes the exact response bytes to `data/captures/<filing-id>/response.<ext>`, records the response headers, computes the SHA-256 hash, submits to the Wayback Machine and (where permitted) archive.today, pins the bytes to IPFS through at least two pinning services, and commits the hash to OpenTimestamps. Full architecture in [EVIDENCE.md](EVIDENCE.md).
 
-**What must be true.** Every candidate row carries a `source.url`, a `source.retrieved_at` timestamp in ISO-8601 UTC, and, where the source provides one, a source-side content hash or version identifier. Nothing enters without those three fields. This is Invariant §4.
+**What must be true.** Every candidate row carries a `source.url`, a `source.retrieved_at` timestamp in ISO-8601 UTC, the SHA-256 `content_hash` of the response, and the pointer to its evidence bundle at `data/captures/<filing-id>/`. Every filing has at least one external witness confirmed before it is considered complete (Invariant §16). Nothing enters without those fields. This is Invariants §4 and §16.
 
-**Where it lands.** The adapter's output is inputs to Stage 3.
+**Where it lands.** The adapter's output is inputs to Stage 3 (schema validation) *and* a self-contained evidence bundle a stranger can verify years later without contacting the register.
 
-**How it can fail.** Source down (adapter fails closed, logs to `data/adapter-runs/`, next scheduled retry). Source shape changed (schema mismatch caught at Stage 3; adapter version bump follows). Rate limit hit (adapter backs off; retries with the source's stated retry-after).
+**How it can fail.** Source down (adapter fails closed, logs to `data/adapter-runs/`, next scheduled retry). Source shape changed (schema mismatch caught at Stage 3; adapter version bump follows). Rate limit hit (adapter backs off; retries with the source's stated retry-after). External witness unavailable (row ships as *pending-external-witness*, a follower job retries; after seven days, escalation per Invariant §16).
 
 ### Stage 3. Typing at the boundary
 
@@ -237,7 +237,8 @@ Every gate lives at `tools/<name>.py` or `tools/<name>.mjs` and runs in CI. Ever
 | §13 no cross-officeholder ranking | `tools/lint-no-ranking.py` |
 | §14 facts stay | `tools/check-removals.py` |
 | §15 contributor COI | `tools/check-coi-disclosure.py` |
-| §16 meta-invariant highlight | `tools/highlight-charter-change.py` |
+| §16 evidence bundle per filing | `tools/check-evidence-bundle.py` |
+| §17 meta-invariant highlight | `tools/highlight-charter-change.py` |
 
 Every one is *(planned)* at the founding. They land in NEXT.md Phase 1.
 
