@@ -62,9 +62,10 @@ Ship this phase as: one live per-officeholder page a stranger can walk from Find
 - **I.1 House FD adapter.** `src/adapters/house-fd/`. Bulk XML/CSV. Rate-limited. Respects the source's terms. Writes rows to the canonical NDJSON; rejects rows to `data/rejected/`.
 - **I.2 One current Representative, one calendar year.** The choice of first Rep is a judgement call. Recommendation: the maintainer's own current Representative and both Senators, because it is honest ("here is the register applied to my own reps"), naturally scoped, and reads as neutral. Alternative: a small committee (e.g. House Financial Services), because coverage of a coherent set is more useful than coverage of one person. Not recommended: a marquee national figure, because the register is not ready to hold that much attention on its first live artifact.
 - **I.3 First Findings.** Run the S.1 Signal against the ingested data. Sealed build. Anchor stamped.
-- **I.4 The per-officeholder page template.** The frame in the header (Invariant §7). The Findings listed with their standards. The filings listed with their source URLs. The rubric visible in a sidebar. The verifier command visible at the foot.
+- **I.4 The per-officeholder page template.** The frame in the header (Invariant §7). The Findings listed with their standards, grouped by signal not by severity (Invariant §14 and METHODOLOGY §10). The filings listed with their source URLs. The rubric visible in a sidebar. The verifier command visible at the foot.
+- **I.5 The mark generator.** `tools/strike-mark.mjs`. Strikes a wax-seal-in-guilloche mark from the officeholder id and the build digest, per ECOSYSTEM.md §2. `tools/check-mark.mjs` verifies the geometry stays legible across a range of digests. Each per-officeholder page carries its own struck seal.
 
-Ship gate for the phase: an anchored sealed build; a live page that renders cleanly in both themes; the verifier passes; the reader can click from any claim to its primary source.
+Ship gate for the phase: an anchored sealed build; a live page that renders cleanly in both themes; the verifier passes; the reader can click from any claim to its primary source; the per-officeholder seal reproduces byte-identically from the same inputs.
 
 ## Phase 4. Coverage extend and second signal (goal: prove the extensibility is real)
 
@@ -76,27 +77,36 @@ Ship this phase as: the first cross-signal officeholder profile.
 
 Ship gate for the phase: at least one officeholder page renders two different Signals in the register, each cited to its distinct Standard.
 
-## Phase 5. Public flip (goal: the world can read it)
+## Phase 5. Public flip and the website (goal: the world can read it)
 
 - The maintainer flips the repository to public.
-- The `README.md` prospectus is the world's landing.
-- The Charter is one click away.
-- The Rubric is one click away.
-- The verifier is one command away.
-- Errata's corrections trail is linked (the family's canonical corrections record).
+- Static site scaffolded per ECOSYSTEM.md §1: Astro or 11ty, edge-cached, no client JS that changes what a page says.
+- URL structure per ECOSYSTEM.md §1.2. Landing, Charter, Rubric, Invariants, Bylaws, Council, Officeholders index, per-officeholder pages, Signals index, per-signal pages, Verify page, Anchors ledger, Corrections trail, About.
+- The build mark and per-officeholder seals rendered per ECOSYSTEM.md §2.
+- The download endpoint at `oath.<domain>/download/<build>.zip` ships the NDJSON, the seal, and the anchor proof.
+- The `ANCHORS.md` ledger publishes every build's state.
+- The consumer contract in ECOSYSTEM.md §3 published on the site.
 
-No ship gate; this is Jared's call. All Phase 4 gates must be green.
+No ship gate; this is Jared's call. All Phase 4 gates must be green, and the Council convenes before public flip to review the site's per-officeholder template shape (a new subject-naming surface, per COUNCIL.md §2).
 
-## Beyond Phase 5
+## Phase 6. Ecosystem and forks
+
+Once the register is public and stable, the goal is that other people can build on it and that the method itself is portable.
+
+- **SPEC.md finalisation.** The spec is committed at the founding; Phase 6 exercises it. Every check named in SPEC.md is a shipping test that runs in CI. A fork of Oath for another jurisdiction (a state Oath, a foreign-country Oath, a non-elective-officeholder Oath) that satisfies every SPEC.md check may call itself Oath-shaped.
+- **First cited-by.** The first external project (journalist, researcher, academic) that cites an Oath Finding by its build digest is recorded. The relationship is by link, not by build coupling.
+- **Consumer download.** The stable download endpoint per ECOSYSTEM.md §3.3.
+- **State coverage.** California, New York, Texas, Florida, Illinois in that priority order. Each adds a state row to STANDARDS.md, one or more adapters, and a jurisdictional coverage matrix entry to SOURCES.md.
+
+## Beyond Phase 6
 
 The register grows by adding sources, adding signals, adding jurisdictions. Each addition passes the same five gates in [RUBRIC.md](RUBRIC.md). No exceptions.
 
-Second-order goals, deferred until Phase 5 ships:
+Second-order goals:
 
-- **State coverage.** California, New York, Texas, Florida, Illinois in that priority order. Each adds a state row to STANDARDS.md, one or more adapters, and a jurisdictional coverage matrix entry to SOURCES.md.
 - **Signal library.** After the first two Signals, the library grows deliberately: signals whose definitions can be defended in a room, whose data cost is bounded, whose false positive rate is measurable.
-- **Public API.** A read-only endpoint over the register, cached at the edge. Never a write endpoint. Never authentication that changes what a reader sees.
 - **Corrections cadence.** Weekly rebuild against fresh source retrievals. Diffs surfaced in the build's release notes. Superseded Findings never removed.
+- **Multi-maintainer transition.** Per BYLAWS.md §1.4, succession planning documented in `docs/succession.md` when the first successor is designated.
 
 ## Standing rules for anyone adding work
 
