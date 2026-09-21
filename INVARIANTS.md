@@ -12,7 +12,7 @@ Where a gate is marked *(planned)*, the invariant is agreed at the founding and 
 
 **Gate:** `tools/lint-verdict-language.py` *(planned)*. Runs on every Signal definition, every rendered Finding, and every user-facing template (README examples included). CI fails on any hit. False positives are added to a `verdict-lint.allowlist` file with the surrounding context and a one-line reason.
 
-**Change process:** adding a word requires one approver on the pull request. Removing a word requires two approvers and a written justification, and the PR is highlighted by [§13](#13-the-meta-invariant) below.
+**Change process:** adding a word requires one approver on the pull request. Removing a word requires two approvers and a written justification, and the PR is highlighted by [§17](#17-the-meta-invariant) below.
 
 ## §2. Every Signal cites a Standard.
 
