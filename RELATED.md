@@ -137,7 +137,7 @@ The table covers the surfaces in §2 that present per-officeholder financial or 
 | Surface | Population set by a stated rule | Primary filing linked per row | Standard cited beside each flag | Per-person score or rank | Flag definitions versioned | Open data licence | Open code |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | OpenSecrets, personal finances | yes | partial | none | yes | none | CC BY-NC-SA 3.0 | n/v |
-| GovTrack report cards | yes | n/v | none | yes | none | reuse encouraged; software and cached datasets barred; misconduct dataset CC0 | partial |
+| GovTrack report cards | yes | n/v | none | yes | none | reuse encouraged; software and cached datasets barred; investigations dataset CC0 | partial |
 | LegiStorm disclosures | yes | n/v | none | no | none | proprietary | n/v |
 | Campaign Legal Center, By the Numbers | yes | no | yes | no | per Congress | none stated | n/v |
 | Sludge articles | editorial | partial | partial | no | no | copyright; none stated | n/v |
