@@ -30,7 +30,9 @@ import sys
 from pathlib import Path
 
 HEADING = re.compile(r"^#{1,6}\s+(.*?)\s*#*\s*$")
-BOLD_NUMBERED = re.compile(r"^\*\*(\d+(?:\.\d+)+)\*\*")
+BOLD_NUMBERED = re.compile(
+    r"^\*\*(\d+(?:\.\d+)+)\b"
+)  # **5.2** and **5.2 Title.** alike
 KEY = re.compile(
     r"^(?:§\s*)?(Stage\s+\d+|[A-Z]{1,2}\.?\d+(?:\.\d+)*|\d+(?:\.\d+)*|[IVX]+)\.?(?=\s|$)"
 )
