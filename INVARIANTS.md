@@ -42,7 +42,7 @@ The point of this invariant is that a Signal author has to actively name the int
 
 ## §8. Signal version bumps require adversarial review.
 
-**Gate:** the pull request template's *Adversarial second reading requested and recorded* checkbox is required for any PR that touches `docs/signals/*.md` or `src/signals/*`. A GitHub Actions workflow rejects the merge if the checkbox is not marked and a review comment is not linked.
+**Gate:** the pull request template's *Adversarial second reading requested and recorded* checkbox is required for any PR that touches `docs/signals/*.md` or `src/signals/*`. A GitHub Actions workflow rejects the merge if the checkbox is not marked and a Council session's findings are not linked in the PR. Full council protocol in [COUNCIL.md](COUNCIL.md).
 
 ## §9. The Seal covers the disclosures.
 
@@ -62,7 +62,27 @@ The point of this invariant is that a Signal author has to actively name the int
 
 The corrections themselves live in the sibling [errata](https://github.com/jeb2-spec/errata) project, which is the family's canonical corrections record.
 
-## §13. The meta-invariant.
+## §13. No cross-officeholder ranking on any surface.
+
+Not a "worst offenders" list. Not a signal-count leaderboard. Not a "top N by dollar range" table. Not a sort order on the officeholders index that reflects any per-officeholder score.
+
+**Gate:** `tools/lint-no-ranking.py` *(planned)*. Scans every rendered index and every summary page for any element sorted by a per-officeholder derived score. The officeholders index is sortable by name, office, jurisdiction, or term-start date, never by anything the register computes about the person. CI fails on any hit.
+
+The rationale is in METHODOLOGY.md §10: the register annotates, the signals curate, and the register does not curate persons.
+
+## §14. Public-record content is never removed at the subject's request.
+
+The register aggregates filings the officeholder is required by law to make. The mechanism for removal is with the source that publishes them, not with this register. Full policy in BYLAWS.md §6.
+
+**Gate:** `tools/check-removals.py` *(planned)*. Any removal from the register (a row disappearing between builds without a supersession) is a build failure. A row may be superseded (per §12) but not deleted.
+
+## §15. Contributors disclose conflicts of interest.
+
+Every contributor discloses in the PR body whether they are or represent an officeholder in scope, an aggregator or source, a political party, a campaign, a PAC, or a lobbying entity. `None` is a valid answer when true. Full list in BYLAWS.md §7.
+
+**Gate:** `tools/check-coi-disclosure.py` *(planned)*. Requires the `## Conflict of interest disclosure` heading in the PR body with a non-empty statement below it. CI fails without one.
+
+## §16. The meta-invariant.
 
 **No invariant above may be removed, softened, or weakened without a pull request that:**
 
@@ -70,13 +90,13 @@ The corrections themselves live in the sibling [errata](https://github.com/jeb2-
 2. **Explains** the reason, including what problem the current gate is causing and what the change is expected to fix.
 3. **Is approved** by the repository maintainer.
 
-**Gate:** `tools/highlight-charter-change.py` *(planned)*. On every push, diff `CHARTER.md`, `RUBRIC.md`, and `INVARIANTS.md` against `main`. If any of the three files has changed, emit a highlighted CI notice and require the maintainer's explicit review comment before the PR can merge.
+**Gate:** `tools/highlight-charter-change.py` *(planned)*. On every push, diff `CHARTER.md`, `RUBRIC.md`, `INVARIANTS.md`, `BYLAWS.md`, and `COUNCIL.md` against `main`. If any of the five files has changed, emit a highlighted CI notice and require both the Council's review and the maintainer's explicit written justification in the PR before it can merge.
 
 Silent softening of the antidrift core is not possible under this rule. Loud softening is possible, and is sometimes the honest thing; the point of the rule is that the loudness cannot be avoided.
 
 ---
 
-## Why these are twelve and not more
+## Why these are sixteen and not more
 
 Every rule above is one a stranger can verify by running one command against this repository. Each catches a specific failure that this project's family has already suffered, or that its neighbours have suffered publicly. This is not a wish list. It is a list of things gates make impossible to do accidentally.
 
@@ -87,9 +107,10 @@ More rules will land as more failures land. They land here, with their gates. A 
 When two rules could conflict, the order is:
 
 1. The **Charter**'s four vows.
-2. The **twelve invariants** above.
+2. The **sixteen invariants** above.
 3. The **rubric**'s five gates.
-4. The methodology, the standards, the sources.
-5. Everything else.
+4. The **bylaws**' governance rules.
+5. The methodology, the standards, the sources, the council prompt.
+6. Everything else.
 
 A future session that reads a lower-precedence sentence disagreeing with a higher-precedence one holds the higher-precedence one.

@@ -42,10 +42,20 @@ A record about a person is not the person. The gap between what the register can
 
 Any future contributor, maintainer, or AI session who proposes to soften any of the four vows will find that the answer is *no*. Not by policy. By design. The invariants in the next file are what makes the answer *no* when nobody is watching.
 
-Read them next.
+## The coda
 
-Then [RUBRIC.md](RUBRIC.md) for the five gates every Signal passes before it publishes a Finding.
+**The register annotates. The signals curate.** Where we make an editorial choice, we make it in the open, in a signal, cited to a standard. Where we do not, we do not, and no page ranks one person against another. The distinction is what lets the register stay honest at scale. See METHODOLOGY.md §10.
 
-Then [METHODOLOGY.md](METHODOLOGY.md), [STANDARDS.md](STANDARDS.md), [LIMITATIONS.md](LIMITATIONS.md), and [SOURCES.md](SOURCES.md).
+---
+
+Read next: [INVARIANTS.md](INVARIANTS.md), the sixteen mechanical rules and the gates that enforce them.
+
+Then [RUBRIC.md](RUBRIC.md), the five gates every Signal passes before it publishes a Finding.
+
+Then [BYLAWS.md](BYLAWS.md), the governance that lets the discipline survive the loss of any one person.
+
+Then [COUNCIL.md](COUNCIL.md), the adversarial-review body that catches what one hand and one mind cannot see.
+
+Then [METHODOLOGY.md](METHODOLOGY.md), [STANDARDS.md](STANDARDS.md), [LIMITATIONS.md](LIMITATIONS.md), [SOURCES.md](SOURCES.md), [SPEC.md](SPEC.md), [ECOSYSTEM.md](ECOSYSTEM.md), and [ANCHORS.md](ANCHORS.md).
 
 *The Charter is 350 words. It should be memorable. If a session ever finds itself unable to recall which four vows they were, the session has already drifted. Come back here.*
