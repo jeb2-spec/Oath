@@ -33,6 +33,7 @@ The founding work continues on the working branch, one PR growing through six th
 - ANCHORS.md (public build ledger, empty until first anchored build).
 - METHODOLOGY.md §10 (annotate, do not curate).
 - PIPELINE.md (the arrow: seven stages from raw source to reader-verified record, written at three altitudes for Reddit reader, PhD/researcher, engineer, subject).
+- SUBJECTS.md (who the register covers, on Jared's call: major active federal officeholders and governors, currently serving, retrospective coverage deferred to Phase 6+; state legislators, state AGs, judiciary, local officials named as deliberately deferred).
 - Updated PR template with Council checkbox and COI disclosure.
 - Sharpened NEXT.md with six phases (added Phase 6: ecosystem and forks).
 - README and CLAUDE.md wired to the new documents.
