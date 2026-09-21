@@ -95,7 +95,7 @@ Read one example in full:
   [ link to the first published worked example ]
 
 Understand the discipline:
-  [ Charter (four vows, 400 words) ]
+  [ Charter (five vows) ]
 ```
 
 The landing is the door. The Charter is one click behind it. The example is one click behind it. The index is one click behind it. Nothing else on the landing.

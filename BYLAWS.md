@@ -102,15 +102,21 @@ A correction pull request must:
 
 Corrections that would apply to a whole class of Findings (a Signal-level bug) require a Signal version bump per §3.
 
-## 6. Removal requests
+## 6. Corrections and supersessions (facts stay, change is shown)
 
-**Public-record content is never removed at the subject's request.** The register aggregates filings the officeholder is required by law to make. The mechanism for taking that content down is with the source that publishes it (the House Clerk, the Senate Public Records office, the state ethics commission), not with this register. When the source removes it, the register removes it in the next build, and the removal is noted in the build's release notes.
+Charter Vow V is the rule: what was disclosed is a fact and does not change; what has changed since can be shown, with primary-source evidence, in public. Removal by request is not the register's mechanism. Supersession is.
 
-**A subject may request a correction.** If a specific Finding cites a filing the subject can show is misidentified (wrong person, wrong filing, wrong asset), the correction path in §5 applies. The correction PR is opened by the subject or by any Contributor on their behalf; the primary-source citation requirement stands.
+**A subject may request a correction.** If a specific Finding cites a fact incorrectly (wrong person, wrong filing, wrong asset, wrong date, wrong amount), the correction path in §5 applies. The correction PR is opened by the subject or by any Contributor on their behalf; the primary-source citation requirement stands. The corrected row supersedes the original; both stay in the register.
 
-**Removal by judicial order.** A court of competent jurisdiction may compel removal. Compliance is documented in the build's release notes with the docket number and the order, redacted only to the extent the order itself requires.
+**A subject may request a supersession on demonstrated change.** If a subject can point to a later primary-source filing that demonstrates a change of conduct addressing the condition a Finding named, a supersession may be entered. The supersession row cites the primary source that demonstrates the change and states, in one sentence, what changed. The original Finding stays; the supersession stays; the reader sees both. The signal itself is not altered; the officeholder's status against the signal is what has changed, and the record shows it.
 
-**No shadow removal.** The Maintainer does not honor an off-the-record request from any party. Every removal is documented.
+**What supersession does not do.** It does not erase the original Finding. It does not remove the historical facts. It does not hide the condition that fired at the time it fired. Facts stay.
+
+**No shadow removal.** The Maintainer does not honor an off-the-record request from any party. Every change is a row in the register that a reader can see.
+
+**Public-record source removal.** If the primary source itself removes the underlying filing, the register annotates the row with the removal date and reason. The row is not deleted from the register (a stranger reading a citation to it should still find the citation). The row's source URL is marked *withdrawn from source on YYYY-MM-DD* and continues to display.
+
+**Removal by judicial order.** A court of competent jurisdiction may compel removal or redaction. Compliance is documented in the build's release notes with the docket number and the order, redacted only to the extent the order itself requires. The reader sees that the removal happened and why.
 
 ## 7. Contributor Agreement
 

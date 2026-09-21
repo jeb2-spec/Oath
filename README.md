@@ -4,7 +4,7 @@
 
 **This file is a prospectus, not yet a paper.** The repository is at day zero. It sets down what will be measured, against which standards, from which sources, and what will never be claimed. Later builds will carry findings; this one carries the method a stranger can hold them to.
 
-**Before this file, read the [Charter](CHARTER.md).** Four vows in 400 words. When everything else in this repository is negotiable, they are not. Then the [Rubric](RUBRIC.md) (the five gates every Signal passes before it publishes a Finding) and the [Invariants](INVARIANTS.md) (the twelve mechanical rules and the gates that enforce them).
+**Before this file, read the [Charter](CHARTER.md).** Five vows, short on purpose. When everything else in this repository is negotiable, they are not. Then the [Rubric](RUBRIC.md) (the five gates every Signal passes before it publishes a Finding) and the [Invariants](INVARIANTS.md) (the sixteen mechanical rules and the gates that enforce them).
 
 If you got here from a friend and none of this looks like your world: every elected officeholder in the United States, from the President to the newest school board trustee, takes an oath. Article VI, Clause 3 of the Constitution requires it. Federal law then requires many of them to file public financial disclosures every year, and to report certain transactions within a few weeks. Those documents are already public. They are not easy to read together, and they are not easy to check against what the same person voted on or decided in office. This repository is a project to make that reading and that checking possible, in a form a reader without a subscription and without a law degree can follow, and a form that never asks anyone to believe the project itself.
 
@@ -22,7 +22,7 @@ The project does not adjudicate. A signal names a condition, not a verdict; whet
 
 **Contents.** 1. The idea · 2. The problem · 3. Terms · 4. Standards · 5. Method · 6. Extensibility · 7. Limits · 8. Reproduction · 9. Sources · 10. What this claims for civic infrastructure · 11. Disclosures · 12. Colophon
 
-**Reference companions.** [CHARTER.md](CHARTER.md) (four vows) · [RUBRIC.md](RUBRIC.md) (five gates per Signal) · [INVARIANTS.md](INVARIANTS.md) (sixteen mechanical rules) · [BYLAWS.md](BYLAWS.md) (governance) · [COUNCIL.md](COUNCIL.md) (adversarial review) · [METHODOLOGY.md](METHODOLOGY.md) · [STANDARDS.md](STANDARDS.md) · [SOURCES.md](SOURCES.md) · [LIMITATIONS.md](LIMITATIONS.md) · [SPEC.md](SPEC.md) (what any Oath-shaped register must satisfy) · [ECOSYSTEM.md](ECOSYSTEM.md) (the website and the mark) · [ANCHORS.md](ANCHORS.md) (public build ledger) · [NEXT.md](NEXT.md).
+**Reference companions.** [CHARTER.md](CHARTER.md) (five vows) · [RUBRIC.md](RUBRIC.md) (five gates per Signal) · [INVARIANTS.md](INVARIANTS.md) (sixteen mechanical rules) · [BYLAWS.md](BYLAWS.md) (governance) · [COUNCIL.md](COUNCIL.md) (adversarial review) · [METHODOLOGY.md](METHODOLOGY.md) · [STANDARDS.md](STANDARDS.md) · [SOURCES.md](SOURCES.md) · [LIMITATIONS.md](LIMITATIONS.md) · [SPEC.md](SPEC.md) (what any Oath-shaped register must satisfy) · [ECOSYSTEM.md](ECOSYSTEM.md) (the website and the mark) · [ANCHORS.md](ANCHORS.md) (public build ledger) · [NEXT.md](NEXT.md).
 
 ---
 
