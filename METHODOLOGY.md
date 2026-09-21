@@ -119,7 +119,7 @@ For Oath:
 - **The register is annotative.** We do not choose which officeholders to cover; we cover the population within our defined scope from the sources we can reach. We do not choose which filings to include; we include everything the source publishes for a covered officeholder. We do not choose which conditions to surface once a signal is defined; we surface every firing.
 - **The signals are curative, and their curation is visible.** Choosing which signals to define is editorial work. Choosing which not to define is also editorial work. That editorial work is documented in every signal's `not_saying` field and in the signal's Council review.
 - **Officeholder pages annotate.** Filings appear in chronological order. Findings appear grouped by signal (name), never sorted by a "severity" the register does not have authority to assign. No "featured", "most concerning", "top", or "worst" list.
-- **The register does not rank officeholders against each other.** Not by signal count, not by dollar amounts, not by any derived score. Enforced by INVARIANTS.md §14. A cross-officeholder count is a curation of persons; the register does not do that.
+- **The register does not rank officeholders against each other.** Not by signal count, not by dollar amounts, not by any derived score. Enforced by INVARIANTS.md §13. A cross-officeholder count is a curation of persons; the register does not do that.
 
 The distinction is why the register can stay honest at scale. A page that says *"here is what the record shows, in a definition anyone can read"* is a page a subject can trust and a reader can check. A page that says *"here is why this officeholder is worse than that one"* is a page whose authority no register can carry.
 

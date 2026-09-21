@@ -35,7 +35,7 @@ Oath speaks in the register of a paper. Not because a paper is more truthful, bu
 
 Concretely:
 
-- **Structure and precision, not vocabulary.** No jargon for its own sake. Nine load-bearing terms, each defined once, used consistently. If a five-syllable Latin word is doing the same work as a one-syllable English one, pick the English.
+- **Structure and precision, not vocabulary.** No jargon for its own sake. The load-bearing terms are defined once, in [README.md §3](README.md), and used consistently. If a five-syllable Latin word is doing the same work as a one-syllable English one, pick the English.
 - **Limits stated as their own section, in the order a careful reader would raise them.** A page that hides its threats to validity is the same failure as a record that hides its corrections. Read the errata README on this if you have not.
 - **A figure caption instead of a paragraph under the chart.** Every visual carries its own caption; the caption states what the visual shows and what it does not.
 - **Sources with real citations.** Statute numbers, CFR sections, constitutional clauses. Real URLs. If it is not sourced, it is not said.

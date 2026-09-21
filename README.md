@@ -51,7 +51,7 @@ The last property is load-bearing. A record about a public person, held by stran
 
 ## 3. Terms
 
-Twelve terms carry the argument. Each is used in its ordinary sense, made exact.
+Fifteen terms carry the argument. Each is used in its ordinary sense, made exact.
 
 - **Oath.** The sworn statement, taken on assumption of an elective office in the United States, that binds the officeholder to defined duties. The federal officers' oath is codified at 5 U.S.C. § 3331; state oaths are codified in each state constitution.
 - **Office.** A specific elective position (e.g. *U.S. Senator, North Carolina*; *Mayor, City of Raleigh*), with a jurisdiction, a term, and a set of duties.
@@ -64,7 +64,10 @@ Twelve terms carry the argument. Each is used in its ordinary sense, made exact.
 - **Signal.** A named, defined condition observable in the record (for example: *reported holding in a company subject to legislation the officeholder voted on within thirty days of the report*). A Signal is a pure definition: inputs, criteria, and the Standard it corresponds to. Signals are versioned; a change to a definition produces a new version, not a silent revision of the old one.
 - **Finding.** A specific instance of a Signal firing against a specific Officeholder, at a specific date, with the rows of record that produced it. A Finding is a description of a condition, not a verdict.
 - **Source.** The primary document or database entry from which a row of record was retrieved, identified by URL, retrieval timestamp, and where available a content hash.
-- **Seal** and **Anchor.** *Seal*: a SHA-256 digest computed over a canonical serialisation of the register at a build. *Anchor*: an independent, third-party witness to that digest (OpenTimestamps against the Bitcoin blockchain), so that a later rewrite is detectable by a stranger.
+- **Seal.** A SHA-256 digest computed over a canonical serialisation of the register at a build.
+- **Anchor.** An independent, third-party witness to the Seal (OpenTimestamps against the Bitcoin blockchain), so that a later rewrite is detectable by a stranger.
+- **Correction.** A row that supersedes an earlier row on the ground that the earlier row named a fact incorrectly. Both rows stay readable.
+- **Supersession.** A row that supersedes an earlier row on the ground that a later primary-source filing demonstrates a change of conduct addressing the condition the earlier row named. Both rows stay readable.
 
 Two properties are named here and defended in §7. *Integrity* means the record is unchanged since the build. *Accuracy* means the record is true. The Seal and the Anchor give the first; only reading and cross-checking give the second.
 
