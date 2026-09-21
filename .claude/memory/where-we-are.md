@@ -6,7 +6,7 @@ metadata:
   type: state
 ---
 
-# Where we are — Oath
+# Where we are. Oath
 
 *Last updated: 2026-09-21, at the founding.*
 
@@ -18,20 +18,20 @@ The founding was drafted in a cloud session in the CoworkVM environment. Everyth
 
 ## What is real
 
-- `README.md` — the prospectus in the errata register.
-- `STANDARDS.md` — the legal frameworks the project measures against.
-- `METHODOLOGY.md` — how sources, types, signals, findings, seals and anchors work.
-- `LIMITATIONS.md` — what the project cannot do, in the order a careful reader would raise them.
-- `SOURCES.md` — the primary sources planned (no adapters implemented yet).
-- `NEXT.md` — the course for the first sessions after arrival.
-- `CLAUDE.md` — the working stance.
-- `LICENSE` — dual CC BY 4.0 (content) + MIT (code).
-- `schemas/*.json` — six JSON Schemas (Officeholder, Office, Filing, Holding, Transaction, Signal, Finding), version 0.
-- `docs/architecture.md` — the layered shape.
-- `docs/signals/README.md` — the Signal template. No signals defined yet.
-- `data/README.md` — planned layout of the canonical store. Directory otherwise empty.
-- `src/README.md` — planned layout of adapters, signals, surfaces. Directory otherwise empty.
-- `.github/pull_request_template.md` — with the review checklists.
+- `README.md`. the prospectus in the errata register.
+- `STANDARDS.md`. the legal frameworks the project measures against.
+- `METHODOLOGY.md`. how sources, types, signals, findings, seals and anchors work.
+- `LIMITATIONS.md`. what the project cannot do, in the order a careful reader would raise them.
+- `SOURCES.md`. the primary sources planned (no adapters implemented yet).
+- `NEXT.md`. the course for the first sessions after arrival.
+- `CLAUDE.md`. the working stance.
+- `LICENSE`. dual CC BY 4.0 (content) + MIT (code).
+- `schemas/*.json`. six JSON Schemas (Officeholder, Office, Filing, Holding, Transaction, Signal, Finding), version 0.
+- `docs/architecture.md`. the layered shape.
+- `docs/signals/README.md`. the Signal template. No signals defined yet.
+- `data/README.md`. planned layout of the canonical store. Directory otherwise empty.
+- `src/README.md`. planned layout of adapters, signals, surfaces. Directory otherwise empty.
+- `.github/pull_request_template.md`. with the review checklists.
 
 ## What is not real yet
 
@@ -51,10 +51,10 @@ Per `NEXT.md`:
 3. **T.3 CI.** GitHub Actions workflow running the verifier and tamper-test on every push.
 4. **T.4 Schema validator.**
 5. **D.1 Complete the schemas** (enums, examples, walkthroughs).
-6. **D.2 Fixture data** — one hand-typed, obviously-fictional officeholder.
-7. **D.3 Identifiers** — confirm or replace the proposed ID scheme.
-8. **S.1–S.4** — the first Signal (recommended `stock-act-late-ptr`), end to end.
-9. **I.1–I.4** — the first ingest, one officeholder, one calendar year, then extend.
+6. **D.2 Fixture data**, one hand-typed, obviously-fictional officeholder.
+7. **D.3 Identifiers**, confirm or replace the proposed ID scheme.
+8. **S.1–S.4**, the first Signal (recommended `stock-act-late-ptr`), end to end.
+9. **I.1–I.4**, the first ingest, one officeholder, one calendar year, then extend.
 
 ## Standing decisions
 
@@ -72,4 +72,4 @@ Per `NEXT.md`:
 
 ## The through-line
 
-This is a young repository built on old discipline. The Vera and errata records are its family; when in doubt, read from them. When you finish a step, update this file in the same commit — its freshness is more valuable than any polish elsewhere.
+This is a young repository built on old discipline. The Vera and errata records are its family; when in doubt, read from them. When you finish a step, update this file in the same commit. Its freshness is more valuable than any polish elsewhere.

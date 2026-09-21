@@ -34,7 +34,7 @@ How Oath sources, types, reconciles, and publishes. This document is the specifi
 - **What it does not say.** An explicit paragraph naming the interpretations the Signal does *not* support.
 - **Worked example.** At least one worked example against a fixture, showing the Signal firing and (where possible) not firing.
 
-**3.3** A Signal change of any kind — criteria, inputs, description — produces a new version. The old version and its findings remain readable. There is no in-place edit of a published Signal.
+**3.3** A Signal change of any kind (criteria, inputs, description) produces a new version. The old version and its findings remain readable. There is no in-place edit of a published Signal.
 
 **3.4** Adding or changing a Signal requires an adversarial second reading, per §5 below. Signals that name people are the surface where the project is most likely to do harm; the review discipline is proportionate.
 
@@ -51,7 +51,7 @@ How Oath sources, types, reconciles, and publishes. This document is the specifi
 
 **4.3** A Finding is regenerable. Given the Signal version and the Filing identifiers, any reader running the reference implementation must be able to produce the same Finding, byte-identical.
 
-**4.4** The Officeholder's frame stays on every Finding surface. The framing paragraph appears on the API response, the UI card, the exported CSV, the RSS entry — anywhere a Finding is rendered. If a surface strips the frame, that is a defect, and the fix ships in the same build that finds the strip.
+**4.4** The Officeholder's frame stays on every Finding surface. The framing paragraph appears on the API response, the UI card, the exported CSV, the RSS entry, anywhere a Finding is rendered. If a surface strips the frame, that is a defect, and the fix ships in the same build that finds the strip.
 
 ## 5. Adversarial review
 
@@ -94,7 +94,7 @@ How Oath sources, types, reconciles, and publishes. This document is the specifi
 
 ## 8. Corrections
 
-**8.1** Oath will make mistakes. The maintenance surface for the mistake is the corrections table in [errata](https://github.com/jeb2-spec/errata), the sibling project that keeps the corrections record for this project's family. Corrections that arise from a Finding — an incorrect officeholder identification, a misread transaction range, a Signal that fired on a false premise — land in that record.
+**8.1** Oath will make mistakes. The maintenance surface for the mistake is the corrections table in [errata](https://github.com/jeb2-spec/errata), the sibling project that keeps the corrections record for this project's family. Corrections that arise from a Finding, an incorrect officeholder identification, a misread transaction range, a Signal that fired on a false premise, land in that record.
 
 **8.2** A correction to a Signal produces a new Signal version. A correction to a Finding produces a superseded row that stays readable; the corrected row cites the superseded one.
 

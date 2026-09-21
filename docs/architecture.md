@@ -1,6 +1,6 @@
 # Architecture
 
-Oath is designed as three layers over one canonical store, so that four groups of contributors — data-source authors, signal authors, jurisdictional authors, tooling authors — can extend the project without stepping on each other. This file documents the shape at the founding. It will evolve as real data lands and constraints become concrete.
+Oath is designed as three layers over one canonical store, so that four groups of contributors (data-source authors, signal authors, jurisdictional authors, tooling authors) can extend the project without stepping on each other. This file documents the shape at the founding. It will evolve as real data lands and constraints become concrete.
 
 ## The layers
 
@@ -21,7 +21,7 @@ Oath is designed as three layers over one canonical store, so that four groups o
     ┌──────────────────┴───────────────────────────┐
     │  Canonical store                             │
     │  Officeholder / Office / Filing / Holding /  │
-    │  Transaction — schema-typed, sealed          │
+    │  Transaction, schema-typed, sealed          │
     └──────────────────────────────────────────────┘
                        ▲
     ┌──────────────────┴───────────────────────────┐
@@ -67,8 +67,8 @@ An adapter is registered in `SOURCES.md`. Its ingest cadence is documented; its 
 
 A Signal has two files:
 
-- **Definition** — `docs/signals/<slug>.md` in the template documented at `docs/signals/README.md`. Human-readable. The definition is the artefact a reader argues with.
-- **Reference implementation** — `src/signals/<slug>.ts` (or `.py`). A pure function that reads the schemas the definition names and returns Finding rows. Tests against fixtures under `fixtures/`.
+- **Definition**. `docs/signals/<slug>.md` in the template documented at `docs/signals/README.md`. Human-readable. The definition is the artefact a reader argues with.
+- **Reference implementation**. `src/signals/<slug>.ts` (or `.py`). A pure function that reads the schemas the definition names and returns Finding rows. Tests against fixtures under `fixtures/`.
 
 A Signal is *pure*: it does not fetch, it does not write side-effects, it does not touch the network. This is what makes findings regenerable.
 

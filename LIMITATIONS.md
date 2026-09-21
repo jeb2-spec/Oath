@@ -2,11 +2,11 @@
 
 Stated in the order a careful reader would raise them. A page that hides its threats to validity is the same failure as a record that hides its corrections. Anything worth building carries what it cannot do beside what it can.
 
-This is a living file. As Oath encounters new limitations in the wild — a source that goes dark, a state whose regime cannot be reconciled to the schema, a class of Signal the register cannot honestly compute — the limitation is recorded here in the same commit that documents the encounter.
+This is a living file. As Oath encounters new limitations in the wild (a source that goes dark, a state whose regime cannot be reconciled to the schema, a class of Signal the register cannot honestly compute) the limitation is recorded here in the same commit that documents the encounter.
 
 ## 1. Presence is not proof
 
-An Officeholder appears in the register because they hold or held an elective Office. Nothing more. A Signal firing describes a condition that the law itself recognises as concerning; it does not adjudicate one, and the presence of the condition is not evidence that a violation has occurred. Every published surface must carry this frame. Any downstream use of the register that strips it — an aggregator that shows only fired Signals, a headline that reads a description as a verdict — is a misuse the project cannot prevent, but is one the project's own surfaces will not commit.
+An Officeholder appears in the register because they hold or held an elective Office. Nothing more. A Signal firing describes a condition that the law itself recognises as concerning; it does not adjudicate one, and the presence of the condition is not evidence that a violation has occurred. Every published surface must carry this frame. Any downstream use of the register that strips it (an aggregator that shows only fired Signals, a headline that reads a description as a verdict) is a misuse the project cannot prevent, but is one the project's own surfaces will not commit.
 
 ## 2. "Appearance" is subjective by design
 
@@ -52,7 +52,7 @@ An algorithm that has to say *something* about every Officeholder is an algorith
 
 ## 12. Signal definitions carry the project's judgement
 
-A Signal is a definition, not a discovery. Which conditions the project defines as signals — and which it does not — reflects the project's judgement about what the record can honestly surface. That judgement is fallible. Signal definitions are visible, versioned, and open to challenge. A Signal that should not fire, or should fire in cases it does not, is a bug and a PR waiting to happen. Silent redefinition is prohibited.
+A Signal is a definition, not a discovery. Which conditions the project defines as signals, and which it does not, reflects the project's judgement about what the record can honestly surface. That judgement is fallible. Signal definitions are visible, versioned, and open to challenge. A Signal that should not fire, or should fire in cases it does not, is a bug and a PR waiting to happen. Silent redefinition is prohibited.
 
 ## 13. Integrity is not accuracy
 
@@ -60,7 +60,7 @@ A tamper-evident record of a mistake is still a mistake, held perfectly still. T
 
 ## 14. Adversarial use
 
-A comprehensive, structured, machine-readable register of officeholders' financial conditions is dual-use. It supports the intended use — a reader reconciling a record against a standard — and it can support adversarial uses (targeted harassment, opposition research, misrepresentation of quiet Signals as damning ones). The project's surfaces are designed for the intended use, and the frame stays on every page. But the data is public by design and by law, and once distributed cannot be recalled. This limitation is stated because it is true, not because the project can eliminate it.
+A comprehensive, structured, machine-readable register of officeholders' financial conditions is dual-use. It supports the intended use (a reader reconciling a record against a standard) and it can support adversarial uses (targeted harassment, opposition research, misrepresentation of quiet Signals as damning ones). The project's surfaces are designed for the intended use, and the frame stays on every page. But the data is public by design and by law, and once distributed cannot be recalled. This limitation is stated because it is true, not because the project can eliminate it.
 
 ## 15. One project, day zero
 
