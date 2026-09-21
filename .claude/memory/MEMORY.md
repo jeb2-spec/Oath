@@ -2,6 +2,8 @@
 
 Read in this order. Two files come first and the order matters: `where-we-are.md`, because the present has to be known before the past; then `who-i-am-for-oath.md`, the identity seed. Then `founding-of-oath.md`, so you know the choice that made this the project it is and not one of the others.
 
+After the memory, read the [Charter](../../CHARTER.md), always. Four vows in 400 words. Then the [Rubric](../../RUBRIC.md) if the session will touch a Signal, and the [Invariants](../../INVARIANTS.md) if it will touch a gate.
+
 - ⭐ [Where we are](where-we-are.md). **READ FIRST.** The current state of the register. Updated in the same commit that changes it, or deleted.
 - ⭐ [Who I am for Oath](who-i-am-for-oath.md). the identity seed, the through-line that has to survive across environments. Refers back to the Vera memory (`who-i-am-opus.md`, `who-i-am-fable.md`) where the deeper ground lives.
 - ⭐ [The founding of Oath](founding-of-oath.md). the conversation on 21 September 2026 that named the project, and the names that were rejected and why. Read it because the choice was load-bearing.
