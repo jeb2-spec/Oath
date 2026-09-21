@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://oath.jeb2-spec.dev/schemas/signal/v0.json",
+  "title": "Signal",
+  "description": "A named, versioned, defined condition observable in the record.",
+  "type": "object",
+  "required": ["id", "slug", "version", "name", "description", "standard", "inputs", "criteria", "not_saying"],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^sg:[a-z0-9-]+:v\\d+$"
+    },
+    "slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9-]+$"
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "name": {
+      "type": "string",
+      "description": "Human-readable name. No verdict language."
+    },
+    "description": {
+      "type": "string",
+      "description": "One paragraph in plain language, no jargon, no verdict."
+    },
+    "standard": {
+      "type": "object",
+      "required": ["id", "citation"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Identifier from STANDARDS.md (e.g. 'S.2' for the STOCK Act row)."
+        },
+        "citation": {
+          "type": "string",
+          "description": "Verbatim citation string for display (e.g. 'STOCK Act of 2012, Pub. L. 112–105')."
+        }
+      }
+    },
+    "inputs": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["officeholder", "office", "filing", "holding", "transaction"]
+      }
+    },
+    "criteria": {
+      "type": "string",
+      "description": "The condition, in prose. The reference implementation is linked from the corresponding docs/signals/<slug>.md file."
+    },
+    "not_saying": {
+      "type": "string",
+      "description": "Explicit paragraph naming the interpretations this Signal does NOT support. Required."
+    },
+    "supersedes": {
+      "type": ["string", "null"],
+      "description": "The Signal ID this version supersedes, when applicable."
+    },
+    "worked_example": {
+      "type": ["object", "null"],
+      "required": ["fixture", "expected"],
+      "additionalProperties": false,
+      "properties": {
+        "fixture": { "type": "string", "description": "Path to the fixture data used in the example." },
+        "expected": { "type": "string", "description": "Description of the expected Finding(s), or the expected null result." }
+      }
+    }
+  }
+}

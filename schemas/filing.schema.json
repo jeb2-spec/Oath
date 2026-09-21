@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://oath.jeb2-spec.dev/schemas/filing/v0.json",
+  "title": "Filing",
+  "description": "A single dated instance of a required Disclosure.",
+  "type": "object",
+  "required": ["id", "officeholder_id", "form_type", "filed_at", "source"],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^fl:[a-z0-9-]+:[A-Za-z0-9-]+:.+$",
+      "description": "Stable identifier: fl:<source>:<form>:<source-id>."
+    },
+    "officeholder_id": {
+      "type": "string",
+      "pattern": "^oh:[a-z]{2}:[a-z0-9-]+:[a-z0-9-]+$"
+    },
+    "office_id": {
+      "type": ["string", "null"],
+      "pattern": "^of:[a-z]{2}:[a-z0-9-]+:\\d{4}$",
+      "description": "The Office the Filing was made in respect of, when identifiable."
+    },
+    "form_type": {
+      "type": "string",
+      "enum": [
+        "OGE-278e",
+        "House-FD",
+        "Senate-FDR",
+        "House-PTR",
+        "Senate-PTR",
+        "FEC-3",
+        "FEC-3P",
+        "FEC-3X",
+        "FEC-5",
+        "FEC-24",
+        "LDA-LD-1",
+        "LDA-LD-2",
+        "LDA-LD-203",
+        "state-annual",
+        "state-transaction",
+        "other"
+      ],
+      "description": "The disclosed form type."
+    },
+    "filed_at": {
+      "type": "string",
+      "format": "date"
+    },
+    "covers_period_start": {
+      "type": ["string", "null"],
+      "format": "date"
+    },
+    "covers_period_end": {
+      "type": ["string", "null"],
+      "format": "date"
+    },
+    "amends": {
+      "type": ["string", "null"],
+      "description": "Filing ID this Filing amends, when applicable.",
+      "pattern": "^fl:[a-z0-9-]+:[A-Za-z0-9-]+:.+$"
+    },
+    "source": { "$ref": "officeholder.schema.json#/$defs/Source" },
+    "extraction_confidence": {
+      "type": ["string", "null"],
+      "enum": ["structured", "ocr-high", "ocr-medium", "ocr-low", "manual", null],
+      "description": "How the content was extracted from the source. Rows built from OCR-low sources are flagged in downstream Findings."
+    }
+  }
+}

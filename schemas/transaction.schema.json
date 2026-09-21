@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://oath.jeb2-spec.dev/schemas/transaction/v0.json",
+  "title": "Transaction",
+  "description": "A reported purchase, sale, or exchange affecting a Holding.",
+  "type": "object",
+  "required": ["id", "filing_id", "officeholder_id", "asset", "action", "transaction_date", "owner"],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "type": "string" },
+    "filing_id": { "type": "string" },
+    "officeholder_id": {
+      "type": "string",
+      "pattern": "^oh:[a-z]{2}:[a-z0-9-]+:[a-z0-9-]+$"
+    },
+    "owner": {
+      "type": "string",
+      "enum": ["self", "spouse", "dependent", "joint", "trust", "other"]
+    },
+    "asset": { "type": "string" },
+    "asset_normalized": { "type": ["string", "null"] },
+    "action": {
+      "type": "string",
+      "enum": ["purchase", "sale", "sale-partial", "exchange", "gift-received", "gift-given", "other"]
+    },
+    "transaction_date": { "type": "string", "format": "date" },
+    "notified_date": {
+      "type": ["string", "null"],
+      "format": "date",
+      "description": "Date the Officeholder was notified of the transaction, where different from transaction_date (per STOCK Act reporting)."
+    },
+    "amount_range": {
+      "type": ["object", "null"],
+      "required": ["min", "max"],
+      "additionalProperties": false,
+      "properties": {
+        "min": { "type": ["integer", "null"], "minimum": 0 },
+        "max": { "type": ["integer", "null"] },
+        "currency": { "type": "string", "default": "USD" }
+      }
+    },
+    "notes": { "type": ["string", "null"] }
+  }
+}
