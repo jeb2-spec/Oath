@@ -22,7 +22,7 @@ Two fields the readers produced are not in these records: the first reader's wor
 
 Presence in these records is not a claim about a project's quality, and absence is not either. A project is here because it works with the same public record Oath does.
 
-Presence in the register is not evidence of wrongdoing. Several neighbours publish complaints, rankings, and per-person figures about named officeholders. Where a record describes that, it describes the role (a House member, a senator, a White House official) and not the person, names no officeholder outside a citation URL, and reproduces no ranked list. These records are about the neighbours; nothing in them is a Finding. If a project's maintainers find their entry wrong, the correction path is a pull request against the JSON; the corrected entry supersedes the old one and both stay readable, as with any row in the register.
+Presence in the register is not evidence of wrongdoing. Several neighbours publish complaints, rankings, and per-person figures about named officeholders. Where a record describes that, it describes the role (a House member, a senator, a White House official) and not the person, names no officeholder outside a citation URL or a neighbour's own product name, and reproduces no ranked list. These records are about the neighbours; nothing in them is a Finding. If a project's maintainers find their entry wrong, the correction path is a pull request against the JSON; the corrected entry supersedes the old one and both stay readable, as with any row in the register.
 
 ## The schema of an entry
 
