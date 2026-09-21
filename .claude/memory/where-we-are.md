@@ -6,70 +6,88 @@ metadata:
   type: state
 ---
 
-# Where we are. Oath
+# Where we are
 
-*Last updated: 2026-09-21, at the founding.*
+*Last updated: 2026-09-21, after the antidrift foundation landed on the working branch.*
 
 ## The state
 
-**Day zero.** The repository exists. It has a prospectus, standards, methodology, limitations, sources, schemas, an architecture note, a memory seed, and a course. No data has been ingested. No signal has been defined. No finding has been published.
+**Day zero, plus the antidrift core.** The repository exists on `main` with the founding doctrine. A pull request on the working branch adds the Charter, the Rubric, the Invariants, and the sharpened critical path in NEXT.md. No data has been ingested. No signal has been defined. No finding has been published. The verifier does not exist yet. The gates named in INVARIANTS.md are agreed but not yet wired.
 
-The founding was drafted in a cloud session in the CoworkVM environment. Everything committed here should be reproducible from `NEXT.md` on a local machine.
+The founding and the antidrift additions were both drafted in a cloud session on Opus 4.7. Everything committed here should be reproducible from `NEXT.md` on a local machine.
 
 ## What is real
 
-- `README.md`. the prospectus in the errata register.
-- `STANDARDS.md`. the legal frameworks the project measures against.
-- `METHODOLOGY.md`. how sources, types, signals, findings, seals and anchors work.
-- `LIMITATIONS.md`. what the project cannot do, in the order a careful reader would raise them.
-- `SOURCES.md`. the primary sources planned (no adapters implemented yet).
-- `NEXT.md`. the course for the first sessions after arrival.
-- `CLAUDE.md`. the working stance.
-- `LICENSE`. dual CC BY 4.0 (content) + MIT (code).
-- `schemas/*.json`. six JSON Schemas (Officeholder, Office, Filing, Holding, Transaction, Signal, Finding), version 0.
-- `docs/architecture.md`. the layered shape.
-- `docs/signals/README.md`. the Signal template. No signals defined yet.
-- `data/README.md`. planned layout of the canonical store. Directory otherwise empty.
-- `src/README.md`. planned layout of adapters, signals, surfaces. Directory otherwise empty.
-- `.github/pull_request_template.md`. with the review checklists.
+**On `main`:**
+- `README.md`: the prospectus in the errata register.
+- `STANDARDS.md`: the legal frameworks the project measures against.
+- `METHODOLOGY.md`: how sources, types, signals, findings, seals and anchors work.
+- `LIMITATIONS.md`: what the project cannot do, in the order a careful reader would raise them.
+- `SOURCES.md`: the primary sources planned. No adapters implemented yet.
+- `NEXT.md`: the course for the first sessions after arrival.
+- `CLAUDE.md`: the working stance.
+- `LICENSE`: dual CC BY 4.0 (content) plus MIT (code).
+- `schemas/*.json`: six JSON Schemas (Officeholder, Office, Filing, Holding, Transaction, Signal, Finding), version 0.
+- `docs/architecture.md`: the layered shape.
+- `docs/signals/README.md`: the Signal template. No signals defined yet.
+- `data/README.md`: planned layout of the canonical store. Directory otherwise empty.
+- `src/README.md`: planned layout of adapters, signals, surfaces. Directory otherwise empty.
+- `.github/pull_request_template.md`: with the review checklists.
+- `.claude/memory/`: the bridge, four files.
+
+**On the working branch (`claude/us-officials-financial-oversight-hz36kr`), pending merge:**
+- Em-dash strip across every markdown file (voice-print discipline).
+- `CHARTER.md`: four vows. The antidrift core in 400 words.
+- `RUBRIC.md`: the five gates every Signal passes before it publishes a Finding.
+- `INVARIANTS.md`: twelve mechanical rules with their gates, plus the meta-invariant.
+- `NEXT.md`: rewritten with the sharpened five-phase critical path.
+- This file updated.
 
 ## What is not real yet
 
 - No adapter is implemented. No source has been read.
 - No signal is defined. `docs/signals/` contains only the template.
 - No verifier (`tools/verify.py`), no tamper-test, no schema validator, no CI workflow.
+- No verdict-language lint. No frame-presence lint. No aggregator-sole check. No supersession check. None of the twelve invariant gates in INVARIANTS.md exist yet as tools; they land in NEXT.md Phase 1.
 - No `package.json`, no `pyproject.toml`, no runtime dependency pinning.
 - No fixtures.
 - No `ANCHORS.md`. There is nothing to anchor.
 
 ## The immediate next moves
 
-Per `NEXT.md`:
+Per the sharpened `NEXT.md`:
 
-1. **T.1 Runtimes.** `package.json` + `pyproject.toml`.
-2. **T.2 The verifier, empty.** Standard-library Python, ships with a tamper-test companion.
-3. **T.3 CI.** GitHub Actions workflow running the verifier and tamper-test on every push.
-4. **T.4 Schema validator.**
-5. **D.1 Complete the schemas** (enums, examples, walkthroughs).
-6. **D.2 Fixture data**, one hand-typed, obviously-fictional officeholder.
-7. **D.3 Identifiers**, confirm or replace the proposed ID scheme.
-8. **S.1–S.4**, the first Signal (recommended `stock-act-late-ptr`), end to end.
-9. **I.1–I.4**, the first ingest, one officeholder, one calendar year, then extend.
+**Phase 1. Plumbing green.** Ship as: a green CI badge on the working branch and a sealed empty build.
+
+1. T.1 Runtimes. `package.json` (TypeScript 5, Node 20, Vitest, Biome) and `pyproject.toml` (Python 3.11, Ruff, Pytest).
+2. T.2 Verifier and tamper-test.
+3. T.3 Schema validator.
+4. T.4 Verdict-language lint (INVARIANTS §1).
+5. T.5 CI workflow running T.2 through T.4.
+6. T.6 Session-start doctor.
+
+Every step is small enough to finish in one session.
+
+Then Phase 2 (first Signal against fixture), Phase 3 (first real officeholder, live checkable page), Phase 4 (coverage extend and second Signal), Phase 5 (public flip).
 
 ## Standing decisions
 
-- **Repository visibility:** private at the founding. Jared flips public when he is ready.
-- **Branch:** work continues on `claude/us-officials-financial-oversight-hz36kr` outside main, per the standing per-repo branch convention. The founding commits landed on that branch (or on main via the founder, depending on the setup path taken).
-- **Reference runtimes:** Node 20 + TypeScript for adapters and signals; Python 3.11 for tooling and the verifier.
-- **Data format:** newline-delimited JSON as canonical; SQLite as convenience mirror.
-- **License:** CC BY 4.0 for content; MIT for code.
-- **Attribution convention:** `Co-Authored-By: Claude ...` per the Vera/errata convention.
+- **Repository visibility.** Private at the founding. Jared flips public when he is ready.
+- **Branch.** Work continues on `claude/us-officials-financial-oversight-hz36kr`, per the per-repo branch convention. The founding commits landed on `main` directly (no reviewers at that point); everything since is on the working branch and lands via pull request.
+- **Reference runtimes.** Node 20 with TypeScript 5 for adapters and Signals; Python 3.11 for tooling and the verifier.
+- **Data format.** Newline-delimited JSON as canonical; SQLite as convenience mirror.
+- **License.** CC BY 4.0 for content; MIT for code.
+- **Attribution convention.** `Co-Authored-By: Claude ...` per the Vera and errata convention.
+- **Voice-print.** No em dashes in any authored markdown. Stripped 2026-09-21 across all fourteen files. New writing follows the same rule.
 
 ## What I could not do from the cloud
 
 - **Create the GitHub repository.** The GitHub App this session runs under lacks `administration:write`; a 403 came back on `create_repository`. Jared created the empty shell manually at github.com/new (owner `jeb2-spec`, name `oath`, private, empty).
-- **Set up the local dev environment.** That happens on Jared's PC when he arrives. `NEXT.md` T.1 is the first step.
+- **Set up the local dev environment.** That happens on Jared's PC when he arrives. `NEXT.md` Phase 1 T.1 is the first step.
+- **Wire the twelve invariant gates.** They are agreed and named in INVARIANTS.md; the tools that enforce them are Phase 1 work.
 
 ## The through-line
 
 This is a young repository built on old discipline. The Vera and errata records are its family; when in doubt, read from them. When you finish a step, update this file in the same commit. Its freshness is more valuable than any polish elsewhere.
+
+Read the [Charter](../../CHARTER.md) before you start. If you cannot recall the four vows, come back.
