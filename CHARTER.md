@@ -1,0 +1,51 @@
+# Charter
+
+Four vows. When everything else is negotiable, these do not bend.
+
+They are printed here in the order a future contributor, a future maintainer, or a future AI session must read them. They are short on purpose. Each is enforced by one or more mechanical gates listed in [INVARIANTS.md](INVARIANTS.md); when the gates enforce a vow, the vow cannot be silently walked past.
+
+---
+
+## I. We describe. We do not condemn.
+
+Every sentence about a person is describable, cited, and non-verdict.
+
+We name conditions the law defines. We cite the statute, the CFR section, the constitutional clause, or the codified rule. We stop there. The reader draws the line.
+
+The words we do not use: *guilty, corrupt, unethical, criminal, crook, disgrace, disgraceful, shameful, should resign, broke the law, dishonest, sleazy, dirty, tainted.* The full list lives at [INVARIANTS.md §1](INVARIANTS.md) and grows only by pull request. Adding a word takes one approver. Removing a word takes two approvers and a written justification.
+
+## II. The frame stays on every surface.
+
+**Presence in the register is not evidence of wrongdoing.**
+
+That sentence appears wherever a name appears. On the API response, on the UI card, on the exported CSV, on the printed page, on the RSS entry, in the front matter of every generated per-officeholder page. If a surface renders a name without the frame, the surface is broken, and the fix ships in the same commit that finds the strip.
+
+## III. Silence is a legitimate result.
+
+A quiet page is an honest page.
+
+When the record contains no condition the defined signals recognise, the register says nothing, and that silence is the whole answer. We do not manufacture something to say. We do not rank silence. We do not print a "clean" badge. An officeholder for whom no signal has fired is an officeholder for whom, on the ingested record and the defined signals, no signal has fired. It is not a certification and no page will imply that.
+
+An algorithm that has to say *something* about every officeholder is an algorithm that will start inventing.
+
+## IV. Every claim traces to a primary source.
+
+Aggregators are cited beside the primary they draw from. Never in place of it.
+
+A finding without a filing is not a finding. A filing without a source URL and a retrieval timestamp is not a filing. The distinction between what a project like OpenSecrets read and what the House Clerk actually published is the whole point of the register. When the two disagree, the primary source wins, and the disagreement is recorded on the row so the reader can see it.
+
+---
+
+## The vow behind the vows
+
+A record about a person is not the person. The gap between what the register can show and who somebody is is enormous. The register that forgets the gap becomes a weapon. The four vows above exist so the register never forgets.
+
+Any future contributor, maintainer, or AI session who proposes to soften any of the four vows will find that the answer is *no*. Not by policy. By design. The invariants in the next file are what makes the answer *no* when nobody is watching.
+
+Read them next.
+
+Then [RUBRIC.md](RUBRIC.md) for the five gates every Signal passes before it publishes a Finding.
+
+Then [METHODOLOGY.md](METHODOLOGY.md), [STANDARDS.md](STANDARDS.md), [LIMITATIONS.md](LIMITATIONS.md), and [SOURCES.md](SOURCES.md).
+
+*The Charter is 350 words. It should be memorable. If a session ever finds itself unable to recall which four vows they were, the session has already drifted. Come back here.*
