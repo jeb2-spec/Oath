@@ -24,7 +24,7 @@ The project does not adjudicate. A signal names a condition, not a verdict; whet
 
 **Contents.** 1. The idea · 2. The problem · 3. Terms · 4. Standards · 5. Method · 6. Extensibility · 7. Limits · 8. Reproduction · 9. Sources · 10. What this claims for civic infrastructure · 11. Disclosures · 12. Colophon
 
-**Reference companions.** [CHARTER.md](CHARTER.md) (five vows) · [SUBJECTS.md](SUBJECTS.md) (who the register covers and why) · [PIPELINE.md](PIPELINE.md) (how a filing becomes a verified written record, seven stages, three altitudes) · [EVIDENCE.md](EVIDENCE.md) (how source captures survive link rot, silent edits, deplatforming, and AI slop) · [RUBRIC.md](RUBRIC.md) (five gates per Signal) · [INVARIANTS.md](INVARIANTS.md) (seventeen mechanical rules) · [BYLAWS.md](BYLAWS.md) (governance) · [COUNCIL.md](COUNCIL.md) (adversarial review) · [METHODOLOGY.md](METHODOLOGY.md) · [STANDARDS.md](STANDARDS.md) · [SOURCES.md](SOURCES.md) · [LIMITATIONS.md](LIMITATIONS.md) · [SPEC.md](SPEC.md) (what any Oath-shaped register must satisfy) · [ECOSYSTEM.md](ECOSYSTEM.md) (the website and the mark) · [ANCHORS.md](ANCHORS.md) (public build ledger) · [NEXT.md](NEXT.md).
+**Reference companions.** [CHARTER.md](CHARTER.md) (five vows) · [SUBJECTS.md](SUBJECTS.md) (who the register covers and why) · [PIPELINE.md](PIPELINE.md) (how a filing becomes a verified written record, seven stages, three altitudes) · [EVIDENCE.md](EVIDENCE.md) (how source captures survive link rot, silent edits, deplatforming, and AI slop) · [RUBRIC.md](RUBRIC.md) (five gates per Signal) · [INVARIANTS.md](INVARIANTS.md) (seventeen mechanical rules) · [BYLAWS.md](BYLAWS.md) (governance) · [COUNCIL.md](COUNCIL.md) (adversarial review) · [METHODOLOGY.md](METHODOLOGY.md) · [STANDARDS.md](STANDARDS.md) · [SOURCES.md](SOURCES.md) · [LIMITATIONS.md](LIMITATIONS.md) · [SPEC.md](SPEC.md) (what any Oath-shaped register must satisfy) · [ECOSYSTEM.md](ECOSYSTEM.md) (the website and the mark) · [RELATED.md](RELATED.md) (the neighbourhood, and what Oath is against it) · [ANCHORS.md](ANCHORS.md) (public build ledger) · [NEXT.md](NEXT.md).
 
 ---
 
@@ -40,7 +40,7 @@ The standard against which each entry is measured is the officeholder's own oath
 
 Financial disclosures are public. In practice, checking them against an officeholder's record is not tractable for a reader without training. The federal filings alone span Form 278e (Executive Branch), Form 278-T (transaction reports), the House LM-10 and equivalent Senate paper filings, the FEC Form 3 and 3X for campaign finance, and the LDA-mandated lobbying disclosures, each in a different schema, each on a different retention cycle, each behind a different search interface. State disclosures multiply the problem across fifty jurisdictions, each with its own definitions of *reportable interest*, *immediate family*, *de minimis threshold*, and *retention period*.
 
-Existing aggregators serve much of the field well: OpenSecrets, ProPublica's *Represent*, LegiStorm, MapLight, Follow the Money, Ballotpedia, Capitol Trades and *Unusual Whales*, GovTrack, and the National Institute on Money in Politics. Each is load-bearing in its own way, and Oath cites and links to their primary work throughout. What Oath adds is narrower and, if built honestly, useful:
+Existing projects serve much of the field well: OpenSecrets (which absorbed the National Institute on Money in Politics's Follow the Money in 2021), LegiStorm, Ballotpedia, GovTrack, Capitol Trades and *Unusual Whales*, the Campaign Legal Center, and Sludge, among others read on their own terms in [RELATED.md](RELATED.md). Each is load-bearing in its own way, and Oath cites and links to their primary work throughout. What Oath adds is narrower and, if built honestly, useful:
 
 - **Standard-visible.** The legal or regulatory standard against which every signal is measured is stated in the repository, in plain language, beside the definition of the signal itself.
 - **Machine-checkable.** Every finding derives from a schema-typed row, with the source URL and retrieval timestamp on the row, so a reader can regenerate the finding from the same public source.
@@ -177,10 +177,10 @@ Canonical primary sources, catalogued in [SOURCES.md](SOURCES.md) with retrieval
 Corroborating aggregators (cited, not treated as primary):
 
 - OpenSecrets (Center for Responsive Politics)
-- ProPublica *Represent*
+- ProPublica (FEC Itemizer; *Represent* closed in July 2024)
 - Ballotpedia
-- Follow the Money (National Institute on Money in Politics)
-- MapLight
+- Follow the Money (part of OpenSecrets since 2021)
+- MapLight (money-and-votes data through 2021)
 
 The distinction matters. Aggregators are cited alongside the primary source they draw from; they are never the sole basis for a Finding.
 
