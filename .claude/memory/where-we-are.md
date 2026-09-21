@@ -34,6 +34,7 @@ The founding work continues on the working branch, one PR growing through six th
 - METHODOLOGY.md §10 (annotate, do not curate).
 - PIPELINE.md (the arrow: seven stages from raw source to reader-verified record, written at three altitudes for Reddit reader, PhD/researcher, engineer, subject).
 - SUBJECTS.md (who the register covers, on Jared's call: major active federal officeholders and governors, currently serving, retrospective coverage deferred to Phase 6+; state legislators, state AGs, judiciary, local officials named as deliberately deferred).
+- EVIDENCE.md (the source-preservation architecture: four independent witnesses per filing — our capture, a public web archive, a content-addressable IPFS pin, and an OpenTimestamps anchor — designed to survive link rot, silent edits, deplatforming, CDN games, and the rising AI-slop fog; SPEC.md gains S13 for this; INVARIANTS.md gains §16; filing.schema.json gains an evidence_bundle object with a witnesses array; PIPELINE.md Stage 2 rewritten to name the multi-witness capture as part of retrieval).
 - Updated PR template with Council checkbox and COI disclosure.
 - Sharpened NEXT.md with six phases (added Phase 6: ecosystem and forks).
 - README and CLAUDE.md wired to the new documents.

@@ -82,7 +82,13 @@ Every contributor discloses in the PR body whether they are or represent an offi
 
 **Gate:** `tools/check-coi-disclosure.py` *(planned)*. Requires the `## Conflict of interest disclosure` heading in the PR body with a non-empty statement below it. CI fails without one.
 
-## §16. The meta-invariant.
+## §16. Every filing carries a durable evidence bundle.
+
+For each filing in the register, the adapter produces a bundle at `data/captures/<filing-id>/` containing the captured bytes, the response headers, an OpenTimestamps proof of the content hash, and at least one confirmed external witness (Wayback Machine, archive.today, or IPFS CID). Full architecture in [EVIDENCE.md](EVIDENCE.md).
+
+**Gate:** `tools/check-evidence-bundle.py` *(planned)*. Fails a build if any filing row's `filing_id` has no `data/captures/<filing-id>/` directory, if the bundle's `response.<ext>` has no matching hash, if the `hash.ots` proof does not commit to the recorded hash, or if no external witness URL/CID is present. A row whose external witness is still pending seven days after retrieval is escalated to the maintainer and, if still failing, moved to `data/rejected/`; the register never claims a witness it does not have.
+
+## §17. The meta-invariant.
 
 **No invariant above may be removed, softened, or weakened without a pull request that:**
 
@@ -96,7 +102,7 @@ Silent softening of the antidrift core is not possible under this rule. Loud sof
 
 ---
 
-## Why these are sixteen and not more
+## Why these are seventeen
 
 Every rule above is one a stranger can verify by running one command against this repository. Each catches a specific failure that this project's family has already suffered, or that its neighbours have suffered publicly. This is not a wish list. It is a list of things gates make impossible to do accidentally.
 
@@ -107,7 +113,7 @@ More rules will land as more failures land. They land here, with their gates. A 
 When two rules could conflict, the order is:
 
 1. The **Charter**'s five vows.
-2. The **sixteen invariants** above.
+2. The **seventeen invariants** above.
 3. The **rubric**'s five gates.
 4. The **bylaws**' governance rules.
 5. The methodology, the standards, the sources, the council prompt.

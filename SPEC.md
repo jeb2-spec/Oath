@@ -86,7 +86,13 @@ The register states what a contributor commits to when they open a pull request.
 
 **Check:** a `CONTRIBUTING.md` (or equivalent) is present and referenced from the pull request template.
 
-## S13. Removal policy is stated and universal
+## S13. Each row cited from a source carries a durable, multi-witness evidence bundle
+
+A citation to a source that only resolves through that source's current URL is a citation that dies with the source. Every row in an Oath-shaped register carries a captured copy of the source's response bytes at retrieval time, a cryptographic hash of those bytes, a third-party timestamp on the hash, and at least one independent external witness (a public web archive, a content-addressable storage pin, or both). The evidence bundle is durable enough that a reader in the far future can verify the row without contacting the register, the source, or any specific third party.
+
+**Check:** every filing row has a matching evidence bundle at `data/captures/<filing-id>/` (or the fork's equivalent path) containing at minimum the response bytes, the response headers, and an OpenTimestamps proof of the SHA-256; the bundle records at least one confirmed external witness URL or CID. The full architecture for Oath is in [EVIDENCE.md](EVIDENCE.md); a fork's equivalent document meets the clause.
+
+## S14. Removal policy is stated and universal
 
 The register states, publicly, what its policy on subject-side removal requests is. The policy applies uniformly; a request from one subject is treated identically to a request from another. No shadow removals.
 

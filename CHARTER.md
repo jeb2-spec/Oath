@@ -54,7 +54,7 @@ Any future contributor, maintainer, or AI session who proposes to soften any of 
 
 ---
 
-Read next: [INVARIANTS.md](INVARIANTS.md), the sixteen mechanical rules and the gates that enforce them.
+Read next: [INVARIANTS.md](INVARIANTS.md), the seventeen mechanical rules and the gates that enforce them.
 
 Then [RUBRIC.md](RUBRIC.md), the five gates every Signal passes before it publishes a Finding.
 
