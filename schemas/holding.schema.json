@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://oath.jeb2-spec.dev/schemas/holding/v0.json",
+  "title": "Holding",
+  "description": "A reported asset attributed to an Officeholder (or a covered relative disclosed on a Filing).",
+  "type": "object",
+  "required": ["id", "filing_id", "asset", "category", "owner"],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "type": "string" },
+    "filing_id": { "type": "string" },
+    "owner": {
+      "type": "string",
+      "enum": ["self", "spouse", "dependent", "joint", "trust", "other"],
+      "description": "The owner category disclosed on the Filing."
+    },
+    "asset": {
+      "type": "string",
+      "description": "The asset as named on the Filing. Verbatim; not interpreted."
+    },
+    "asset_normalized": {
+      "type": ["string", "null"],
+      "description": "Normalised asset identifier (e.g. ticker), when reliably derivable."
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "common-stock",
+        "mutual-fund",
+        "etf",
+        "bond",
+        "us-treasury",
+        "corporate-bond",
+        "options-derivatives",
+        "cryptocurrency",
+        "real-property",
+        "private-equity",
+        "partnership-interest",
+        "receivable",
+        "annuity",
+        "life-insurance",
+        "trust-holding",
+        "other"
+      ]
+    },
+    "value_range": {
+      "type": ["object", "null"],
+      "required": ["min", "max"],
+      "additionalProperties": false,
+      "properties": {
+        "min": { "type": ["integer", "null"], "minimum": 0 },
+        "max": { "type": ["integer", "null"], "description": "Null indicates an open-ended top range (e.g. 'over $50,000,000')." },
+        "currency": { "type": "string", "default": "USD" }
+      }
+    },
+    "income_range": {
+      "type": ["object", "null"],
+      "required": ["min", "max"],
+      "additionalProperties": false,
+      "properties": {
+        "min": { "type": ["integer", "null"], "minimum": 0 },
+        "max": { "type": ["integer", "null"] },
+        "currency": { "type": "string", "default": "USD" }
+      }
+    },
+    "notes": { "type": ["string", "null"] }
+  }
+}

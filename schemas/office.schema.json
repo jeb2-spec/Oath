@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://oath.jeb2-spec.dev/schemas/office/v0.json",
+  "title": "Office",
+  "description": "A specific elective position with a jurisdiction and a term.",
+  "type": "object",
+  "required": ["id", "jurisdiction", "term_start"],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^of:[a-z]{2}:[a-z0-9-]+:\\d{4}$",
+      "description": "Stable identifier: of:<country>:<office-slug>:<term-start-year>."
+    },
+    "jurisdiction": {
+      "type": "string",
+      "enum": ["us:federal", "us:state", "us:local"],
+      "description": "The jurisdictional level of the Office."
+    },
+    "branch": {
+      "type": ["string", "null"],
+      "enum": ["executive", "legislative", "judicial", null],
+      "description": "Branch of government. Judicial included for coverage of elective judgeships."
+    },
+    "chamber": {
+      "type": ["string", "null"],
+      "enum": ["house", "senate", "assembly", "unicameral", null]
+    },
+    "state": {
+      "type": ["string", "null"],
+      "pattern": "^[A-Z]{2}$",
+      "description": "USPS two-letter state code, when applicable."
+    },
+    "district": {
+      "type": ["string", "null"],
+      "description": "District identifier, when applicable (e.g. '01', 'at-large')."
+    },
+    "seat": {
+      "type": ["string", "null"],
+      "description": "Seat designation, when applicable (e.g. 'junior', 'senior', 'class-3')."
+    },
+    "title": {
+      "type": ["string", "null"],
+      "description": "The Office's official title (e.g. 'Governor', 'Mayor', 'Commissioner')."
+    },
+    "term_start": {
+      "type": "string",
+      "format": "date"
+    },
+    "term_end": {
+      "type": ["string", "null"],
+      "format": "date",
+      "description": "Null for a currently-held Office."
+    }
+  }
+}
