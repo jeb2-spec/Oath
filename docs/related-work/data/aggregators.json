@@ -1,0 +1,861 @@
+{
+ "key": "aggregators",
+ "title": "Money-in-politics aggregators",
+ "retrieved": "2026-09-21",
+ "method": "sweep by one reader from the project's own pages; skeptic re-fetched every citation and tried to refute each claim",
+ "sweep": {
+  "entries": [
+   {
+    "name": "OpenSecrets",
+    "organisation": "OpenSecrets, a 501(c)(3) formed in 2021 by the merger of the Center for Responsive Politics (CRP) and the National Institute on Money in Politics (NIMP)",
+    "url": "https://www.opensecrets.org/",
+    "kind": "Nonprofit money-in-politics data aggregator and newsroom (federal and, since the merger, state campaign finance; lobbying; 527s; personal financial disclosures)",
+    "self_description": "Describes itself as nonpartisan, independent and nonprofit, with a mission to serve as the trusted authority on money in American politics by providing data, analysis and tools for policymakers, storytellers and citizens. Names three goals: data (collect, clean and create access), insights (analysis, reports, tools) and engagement (a community of users). The June 2, 2021 press release says CRP and NIMP joined to form a combined organisation integrating federal, state and local data on campaign finance and lobbying, with opensecrets.org retained as the URL and followthemoney.org continuing to be updated until a new site launched later in 2021. The FAQ says nearly all its data originates with an official government source, to which it adds processing and research (industry coding of contributors, employer standardisation, household attribution).",
+    "subject_scope": "Federal candidates and officeholders (campaign committees, leadership PACs, PAC and individual contributions, industries, elections); lobbying (clients, registrants, lobbyists, bills lobbied); 527 committees; personal financial disclosures of members of Congress (annual reports 2008-2018 on the section landing page; Periodic Transaction Reports back to 2012), executive-branch and judicial filers; Revolving Door; state-level campaign finance (served through followthemoney.org for state data through 2024).",
+    "primary_sources_used": [
+     "Federal Election Commission (congressional and presidential campaign finance; profile pages state figures are based on FEC data with an as-of date)",
+     "Senate Office of Public Records (lobbying)",
+     "State agencies across the country (state-level campaign finance)",
+     "Internal Revenue Service (527 committees)",
+     "Senate Office of Public Records and Office of the Clerk of the House (personal financial disclosures of members of Congress, per the personal-finance methodology)",
+     "U.S. Office of Government Ethics (executive-branch disclosures) and the Judicial Conference of the U.S. (judicial filings)",
+     "Press reports and official announcements (Revolving Door database; not a government source)",
+     "Linking to the primary filing: the personal-finances Reports tab offers the original disclosure files by filing year; per-row links from campaign-finance profile pages to individual FEC filings were not observed on the pages read"
+    ],
+    "outputs": [
+     "Candidate and officeholder profiles: summary, PACs, individual donors and demographics, organizations, industries, elections, committee assignments",
+     "Personal-finances profiles: net worth, assets, liabilities, transactions (Periodic Transaction Reports and annual-report transactions, CSV download), reports (original disclosure files), other data",
+     "Bulk Data: compressed CSV tables with data dictionaries for campaign finance, lobbying, 527s, personal finance, and reference tables; account approval required",
+     "News and analysis articles (dated items in September 2026)",
+     "Custom research and commercial data licensing (commercial@opensecrets.org)",
+     "API: discontinued as of April 15, 2025"
+    ],
+    "derived_scoring_or_ranking": "Per-person estimated net worth with a rank against the chamber (one member's 2018 net-worth page shows 'Rank: 6th in the House'). Section-level tables: 'Richest Members of Congress, 2018', 'Poorest Members of Congress, 2018' and 'Biggest wealth increase in Congress, 2008-2018' (top ten each, exportable to CSV), plus a median estimated-net-worth-over-time chart. The methodology states net worth is computed as a minimum-maximum range from reported value ranges and that the midpoint (average) is used for ranking filers by wealth. Per-candidate Top Contributors and top industry lists; 'Top Assets' aggregates across filers.",
+    "identifiers_exposed": [
+     "OpenSecrets candidate ID (CID), format N followed by eight digits, e.g. cid=N00007360 in personal-finances and members-of-congress URLs",
+     "A numeric 'mpid' in current profile URLs, e.g. /profiles/jen-kiggans/us_congress/summary?mpid=1191305",
+     "Bulk reference files: CRP_IDs.xls (candidate IDs and other information), CRP_Categories.txt (industry codes), CRP_PFDRangeData.xls (range values for personal-finance calculations)",
+     "Bulk table named 'FEC Committees (PACs and Candidate and Party Committees)'; whether FEC committee IDs are carried in it was not verified (data dictionaries not opened)"
+    ],
+    "signal_precedents": [
+     "None computed on the pages read. The transactions page footnote states the reporting rule it displays against: under the Ethics in Government Act as amended by the STOCK Act, members must report each purchase, sale or exchange of securities over $1,000, with a PTR due within 30 days of receiving notice of the transaction and not more than 45 days after the transaction; the page lists transactions with date and value range but no late-filing or other per-filing flag was observed",
+     "Coding rules (not per-filing conditions): a contribution receives an ideological code instead of an industry code when the contributor gives to an ideological PAC and the candidate has also received money from PACs representing that same ideological interest; contributions from members of one household are attributed to the primary earner's employer"
+    ],
+    "openness_code": "No public code repository stated on the pages read.",
+    "openness_data_license": "Creative Commons Attribution-NonCommercial-ShareAlike 3.0 United States for site content and for Bulk Data; Bulk Data is for educational use after account registration, email confirmation, approval, and agreement to Terms of Service; attribution requested near the citation with a link; commercial republishing 'may involve a fee'; Revolving Door data is excluded from the Creative Commons download.",
+    "openness_api": "The API page states: \"As of April 15, 2025, our API offerings have been discontinued.\" (opensecrets.org/api). It directs data needs to commercial@opensecrets.org for a custom data solution. The still-posted API Terms of Service (last modified April 7, 2009) provided free educational, research and non-commercial use under CC BY-NC-SA, required citation, prohibited solicitation and commercial use without permission, prohibited scraping or storing a collection of the data, and disclaimed warranties.",
+    "funding_or_business_model": "501(c)(3) tax-exempt charity. About page: institutional grants, contributions from individuals, and income earned from custom research and licensing data for commercial use. FAQ: operated since 1983 on private-foundation grants and individual contributions, with some revenue from research fees and data contracts. The 2021 merger press release says the Hewlett Foundation provided critical support for the merger review and integration.",
+    "disclaimer_or_frame": "Profile pages (Notes and References): clusters of contributions from people tied to one employer can indicate organized bundling, but in other cases the reason may be unrelated to the organization; totals by industry and ideology are conservative estimates; itemized figures may not match summary figures; a lag exists between filing and publication. Personal-finance methodology includes a 'What is missing from these disclosures?' section (personal residences and personal property not reported unless held for investment; federal retirement accounts not reported; two value ranges have no upper limit; salary not included) and notes net worth is an estimate within a range. No general statement about what a person's presence in the database implies was observed on the pages read.",
+    "status_as_of_retrieval": "active (news articles dated September 9-16, 2026; profile pages state FEC summary data as of August 4, 2026 and transaction-level data as of July 17, 2026)",
+    "citations": [
+     {
+      "url": "https://www.opensecrets.org/about/",
+      "retrieved": "2026-09-21",
+      "supports": "Self-description (mission, three goals), 501(c)(3) status, funding sources (grants, individuals, custom research and commercial data licensing)"
+     },
+     {
+      "url": "https://www.opensecrets.org/news/2021/06/opensecrets-merger-press-release/",
+      "retrieved": "2026-09-21",
+      "supports": "June 2, 2021 merger of CRP and NIMP to form OpenSecrets; URLs retained; followthemoney.org to be updated until new site; Hewlett Foundation support; 'Created in 2021 by the merger'; related articles dated September 2026 (status)"
+     },
+     {
+      "url": "http://www.opensecrets.org/api",
+      "retrieved": "2026-09-21",
+      "supports": "API discontinued as of April 15, 2025 (quoted); custom data solution contact; CC BY-NC-SA 3.0 US statement"
+     },
+     {
+      "url": "https://www.opensecrets.org/open-data/api-terms-of-service",
+      "retrieved": "2026-09-21",
+      "supports": "Historical API terms (last modified April 7, 2009): educational/non-commercial use, CC BY-NC-SA, citation, no solicitation or commercial use, no scraping/storing, as-is disclaimer"
+     },
+     {
+      "url": "https://www.opensecrets.org/open-data/bulk-data",
+      "retrieved": "2026-09-21",
+      "supports": "Bulk Data scope (campaign finance, lobbying, 527s, personal finances, reference tables), CSV format with data dictionaries, educational use, attribution terms, commercial fee, Revolving Door excluded, CC license"
+     },
+     {
+      "url": "https://www.opensecrets.org/open-data",
+      "retrieved": "2026-09-21",
+      "supports": "Bulk Data sign-up steps (Terms of Service, registration, approval); commercial republishing generally involves a fee"
+     },
+     {
+      "url": "https://www.opensecrets.org/open-data/bulk-data-documentation",
+      "retrieved": "2026-09-21",
+      "supports": "Bulk table list including 'FEC Committees' and personal-finance Transactions; reference files CRP_IDs.xls, CRP_Categories.txt, CRP_PFDRangeData.xls"
+     },
+     {
+      "url": "https://www.opensecrets.org/resources/faq",
+      "retrieved": "2026-09-21",
+      "supports": "Government sources by dataset (FEC, Senate Office of Public Records, state agencies, IRS, congressional information-collectors, press reports for Revolving Door); funding since 1983; human coding of industries"
+     },
+     {
+      "url": "https://www.opensecrets.org/personal-finances/methodology",
+      "retrieved": "2026-09-21",
+      "supports": "Personal-finance sources (Senate Office of Public Records, House Clerk, OGE, Judicial Conference), years 2008-2018, net-worth range and midpoint ranking method, STOCK Act description, 'What is missing from these disclosures?' caveats"
+     },
+     {
+      "url": "https://www.opensecrets.org/personal-finances",
+      "retrieved": "2026-09-21",
+      "supports": "'Richest', 'Poorest' and 'Biggest wealth increase' tables for 2018, CSV export, median net worth chart, tables based on 2018 filings"
+     },
+     {
+      "url": "https://www.opensecrets.org/personal-finances/nancy-pelosi/net-worth?cid=N00007360&year=2018",
+      "retrieved": "2026-09-21",
+      "supports": "Per-person rank ('Rank: 6th in the House'), CID identifier in URL, top industries and top assets per filer"
+     },
+     {
+      "url": "https://www.opensecrets.org/personal-finances/nancy-pelosi/reports?cid=N00007360",
+      "retrieved": "2026-09-21",
+      "supports": "Reports tab: original disclosure files accessible by filing year (primary-filing linking for personal finances)"
+     },
+     {
+      "url": "https://www.opensecrets.org/personal-finances/nancy-pelosi/transactions?cid=N00007360&year=2018",
+      "retrieved": "2026-09-21",
+      "supports": "PTR and annual-report transaction listings with date and value ranges; footnote stating the STOCK Act 30-day/45-day reporting rule; CSV download; no per-filing flag observed"
+     },
+     {
+      "url": "https://www.opensecrets.org/members-of-congress/nancy-pelosi/summary?cid=N00007360",
+      "retrieved": "2026-09-21",
+      "supports": "Profile page methodology and FAQ: FEC as source, as-of dates (August 4 and July 17, 2026), industry and ideology coding rules, household attribution, bundling frame, conservative-estimate and lag caveats"
+     },
+     {
+      "url": "https://www.opensecrets.org/profiles/jen-kiggans/us_congress/summary?mpid=1191305",
+      "retrieved": "2026-09-21",
+      "supports": "Current profile URL scheme exposing a numeric mpid; committee assignments shown; same FEC as-of dates"
+     },
+     {
+      "url": "https://www.opensecrets.org/about/terms-and-conditions",
+      "retrieved": "2026-09-21",
+      "supports": "Existence of a site Terms and Conditions agreement governing use of the Services (only the opening of the page was captured)"
+     }
+    ],
+    "could_not_verify": [
+     "https://www.opensecrets.org/about/methodology and https://www.opensecrets.org/about/tos returned the site's generic error page; the methodology content used here comes from the profile-page Methodology section and the personal-finance methodology page instead",
+     "Whether campaign-finance rows on profile pages link to individual FEC filings (not observed on pages read)",
+     "Whether bulk tables carry FEC candidate/committee IDs (data dictionaries and the Open Data User's Guide were not opened)",
+     "Whether personal-finance annual-report data on the site has been extended beyond 2018 (section landing page says 2018 filings are the latest available)",
+     "Full text of the Terms and Conditions page (only the opening was captured)"
+    ]
+   },
+   {
+    "name": "FollowTheMoney (National Institute on Money in Politics)",
+    "organisation": "National Institute on Money in Politics (earlier the National Institute on Money in State Politics), which the site says joined with the Center for Responsive Politics to become OpenSecrets; the site's license names OpenSecrets as licensor",
+    "url": "https://www.followthemoney.org/",
+    "kind": "State campaign-finance and lobbying database, continued under OpenSecrets after the 2021 merger; federal data has moved to opensecrets.org",
+    "self_description": "The home page states that the National Institute on Money in Politics and the Center for Responsive Politics \"joined forces to become OpenSecrets\" (followthemoney.org), and that the site displays state campaign finance data through the 2024 election while federal data has moved to OpenSecrets.org. The About page describes the purpose as promoting an accountable democracy by compiling campaign-donor, lobbyist and other information from government disclosure agencies nationwide and making it freely available; founded 1999; recognised with a 2015 MacArthur Award; the Campaign Finance Institute merged with NIMP in 2018.",
+    "subject_scope": "State elections: contributions to statewide, legislative and court offices (2000 onward), ballot measures (2003 onward), independent spending in selected states (2006 onward); state lobbying registrations (2006 onward) and lobbying spending in selected states (2002 onward); selected local races (2006 onward). Federal: presidential, Senate and House contributions and independent spending 2010-2020 and party committee contributions 2009-2020 (now served by opensecrets.org).",
+    "primary_sources_used": [
+     "State disclosure agencies in all 50 states (per About page)",
+     "Federal Election Commission for federal campaigns since 2010 (per About page)",
+     "Linking each row to the primary filing: not verified; the entity-details page could not be loaded"
+    ],
+    "outputs": [
+     "Entity-details pages per candidate, committee, donor or lobbyist (eid-keyed URLs)",
+     "myFollowTheMoney free accounts with web access and downloads capped at 1,000 records per year for general users; expanded access on application for accredited academic institutions, journalism organisations, and registered 501(c)(3), (5) and (6) entities",
+     "APIs: an 'Ask Anything' API documented in a PDF and an Entity Details API mirroring the entity page (XML or JSON)"
+    ],
+    "derived_scoring_or_ranking": "None observed on the pages that loaded; the entity-details page, where per-person totals or rankings would appear, could not be loaded (see could_not_verify).",
+    "identifiers_exposed": [
+     "Entity ID ('eid', numeric), used in entity-details URLs (e.g. entity-details?eid=210204) and as the required parameter of the Entity Details API"
+    ],
+    "signal_precedents": [
+     "None observed on the pages read"
+    ],
+    "openness_code": "No public code repository stated on the pages read.",
+    "openness_data_license": "Creative Commons Attribution-NonCommercial-ShareAlike 3.0 United States; the Terms of Data Use name the National Institute on Money in State Politics (now operating as OpenSecrets) as licensor; attribution required in reports, articles, mashups or visual displays; data may not be used for political campaigns or contribution solicitation, or sold to third parties; commercial entities need a separate commercial license; expanded access is denied to electoral entities (527s, super PACs, party committees, 501(c)(4)s, candidate committees).",
+    "openness_api": "Available after creating a free myFollowTheMoney account; Entity Details API at http://api.followthemoney.org/entity.php?eid=...&APIKey=...&mode=xml|json; Ask Anything API documented in PDF; no rate limits stated on the pages read; the documentation page says detailed documentation for the Entity Details API is being developed.",
+    "funding_or_business_model": "About page describes a 501(c)(3) tax-exempt charitable organisation and references Form 990s and financial statements; now part of OpenSecrets (see the OpenSecrets entry for the merged organisation's stated funding).",
+    "disclaimer_or_frame": "No statement about what a listing means for a person was observed on the pages that loaded; the Terms of Data Use restrict uses (no campaign, solicitation or resale use) rather than framing the data's meaning.",
+    "status_as_of_retrieval": "merged (the home page states NIMP and CRP joined forces to become OpenSecrets; federal data moved to opensecrets.org; state data displayed through the 2024 election; copyright 2026)",
+    "citations": [
+     {
+      "url": "https://www.followthemoney.org/",
+      "retrieved": "2026-09-21",
+      "supports": "Merger notice (quoted), state data through 2024, federal data 2010-2020 moved to OpenSecrets, data coverage by category and year, CC BY-NC-SA 3.0 US license by OpenSecrets, copyright 2026"
+     },
+     {
+      "url": "https://www.followthemoney.org/about-us/",
+      "retrieved": "2026-09-21",
+      "supports": "Purpose statement, founded 1999, 2015 MacArthur Award, 2018 Campaign Finance Institute merger, sources (state agencies in all 50 states; FEC since 2010), 501(c)(3) status and 990s reference"
+     },
+     {
+      "url": "https://www.followthemoney.org/our-data/apis/",
+      "retrieved": "2026-09-21",
+      "supports": "APIs available after a free myFollowTheMoney account; CC BY-NC-SA license; documentation, support and examples sections"
+     },
+     {
+      "url": "https://www.followthemoney.org/our-data/apis/documentation",
+      "retrieved": "2026-09-21",
+      "supports": "Ask Anything API (PDF) and Entity Details API; base URL api.followthemoney.org/entity.php; eid and APIKey parameters; xml/json modes; no rate limits stated; documentation being developed"
+     },
+     {
+      "url": "https://www.followthemoney.org/our-data/terms-of-data-use/",
+      "retrieved": "2026-09-21",
+      "supports": "License and licensor, attribution, non-commercial and no-solicitation restrictions, 1,000-record annual cap, expanded-access categories and exclusions"
+     }
+    ],
+    "could_not_verify": [
+     "Entity-details page (HTTP 403 via fetch; bot-check page via browser): per-person totals or rankings, any disclaimer, and whether rows link to state or FEC filings",
+     "Whether the site continues to be updated after the 2024 election",
+     "Relationship between eid and other identifier schemes (OpenSecrets CID, FEC ID)"
+    ]
+   },
+   {
+    "name": "MapLight",
+    "organisation": "MapLight, a 501(c)(3) nonprofit founded in 2005",
+    "url": "https://maplight.org/",
+    "kind": "Nonprofit civic-technology organisation that builds campaign-finance, lobbying and ethics disclosure software for state and local governments; earlier money-and-votes research data now offered as an archived dataset",
+    "self_description": "The home page states \"MapLight creates technology to improve democracy\" (maplight.org) under the heading Technology for Democracy. The About page describes a nonpartisan 501(c)(3) founded in 2005 that provides campaign finance, lobbying and ethics disclosure solutions to state and local governments, naming the California Secretary of State, Minneapolis, Denver and Maine as clients, and that operated Voter's Edge, a nonpartisan voting guide for California voters; awards listed from 2007 to 2015.",
+    "subject_scope": "Software products: Campaign Finance (e-filing and disclosure), Lobbying Filings (registration and reporting), Ethics Filings (personal financial disclosures), E-Signatures (candidate and ballot-measure petitions); Data Series: Bill Positions, a dataset of organisational positions on congressional legislation covering 2007-2021 (more than 225,000 positions on more than 14,000 bills).",
+    "primary_sources_used": [
+     "Bill Positions dataset: companies' websites, press releases, government documents, congressional hearing testimony and other public-record sources (per the Data Series page)",
+     "Sources for the earlier money-and-votes database (classic.maplight.org) could not be loaded",
+     "Linking rows to primary filings: not stated on the pages read"
+    ],
+    "outputs": [
+     "Disclosure software operated for government clients (e-filing, lobbying, ethics, e-signatures)",
+     "Bill Positions dataset, available for academic and research use for a licensing fee; the page states the complete dataset is no longer being updated",
+     "Earlier public money-and-votes database at classic.maplight.org (unreachable at retrieval)"
+    ],
+    "derived_scoring_or_ranking": "None observed on the pages read.",
+    "identifiers_exposed": [
+     "Not stated on the pages read"
+    ],
+    "signal_precedents": [
+     "None observed on the pages read; the classic site's money-and-votes methodology (any contribution-to-vote timing window) could not be loaded"
+    ],
+    "openness_code": "No public code repository stated on the pages read.",
+    "openness_data_license": "Bill Positions: 'available for academic and research use for a modest licensing fee' (Data Series page); no open license stated for any dataset on the pages read.",
+    "openness_api": "None stated on the pages read.",
+    "funding_or_business_model": "501(c)(3) nonprofit (About page). The Solutions page lists software products and government customers (California Secretary of State, Maine Ethics Commission, City and County of Denver via testimonials); the Data Series page states a licensing fee for the Bill Positions data. The 'How we're funded' page could not be loaded, so foundation or donor funding is not verified.",
+    "disclaimer_or_frame": "None observed on the pages read.",
+    "status_as_of_retrieval": "unknown (pages show a 2025 copyright line but no content dated within the last twelve months and no explicit current notice; the Bill Positions dataset is stated to be no longer updated)",
+    "citations": [
+     {
+      "url": "https://maplight.org/",
+      "retrieved": "2026-09-21",
+      "supports": "Self-description (quoted), product list (Campaign Finance, Lobbying Filings, Ethics Filings, E-Signatures, Data Series), copyright 2025"
+     },
+     {
+      "url": "https://www.maplight.org/about-us",
+      "retrieved": "2026-09-21",
+      "supports": "501(c)(3), founded 2005, nonpartisan, government disclosure solutions, named clients, Voter's Edge, awards 2007-2015, no mention of the earlier research database"
+     },
+     {
+      "url": "https://www.maplight.org/data-series",
+      "retrieved": "2026-09-21",
+      "supports": "Bill Positions dataset 2007-2021, counts, sources, licensing fee for academic and research use, no longer being updated"
+     },
+     {
+      "url": "https://www.maplight.org/solutions",
+      "retrieved": "2026-09-21",
+      "supports": "Five product lines, customers named in testimonials, founded 2005, copyright 2025"
+     }
+    ],
+    "could_not_verify": [
+     "classic.maplight.org pages (TLS handshake failure via fetch; navigation denied in the browser): money-and-votes methodology, data sources (third-party search snippets mention CRP/OpenSecrets and GovTrack, not verified on MapLight's own page), timing windows, and the Federal Money and Politics Data Set terms",
+     "https://maplight.org/how-were-funded (HTTP 403 via fetch; a sign-up wall in the browser): funding sources",
+     "https://maplight.org/about/ returned 404 (the /about-us page was used instead)",
+     "Any content dated within the last twelve months"
+    ]
+   },
+   {
+    "name": "Sunlight Foundation",
+    "organisation": "Sunlight Foundation (nonprofit; ceased operations in 2020)",
+    "url": "https://sunlightfoundation.com/",
+    "kind": "Defunct open-government nonprofit; website maintained as a static archive; tools transferred to other organisations in 2016 and 2020",
+    "self_description": "The home page states that as of September 2020 the Sunlight Foundation is no longer active and that \"This site is maintained as a static archive only.\" (sunlightfoundation.com). The board chair's note of September 24, 2020 (Michael R. Klein) says the board determined the organisation's role was no longer essential to its original mission, that staff and activities were transferred to other institutions or discontinued, and that its intellectual property, name and records were transferred to the Internet Archive and the Berkman Klein Center at Harvard.",
+    "subject_scope": "Historically: open-government data tools and APIs for Congress and states (Congress API, Capitol Words, Open States, Influence Explorer and Real-Time Influence Explorer, Foreign Influence Explorer, Political Party Time, Politwoops, Political Ad Sleuth, Scout, Hall of Justice, House Staff Directory, House Expenditure Database).",
+    "primary_sources_used": [
+     "Not stated on the archive pages read; influenceexplorer.com (a Sunlight product page) references the OpenFEC API in an August 18, 2015 post",
+     "Linking rows to primary filings: not applicable to the archive; not verified for the retired tools"
+    ],
+    "outputs": [
+     "Static archive of the website",
+     "Disposition of tools per the November 1, 2016 Sunlight Labs update (see notes)",
+     "APIs page directing users to successors (Congress API operated by ProPublica; Open States run independently)"
+    ],
+    "derived_scoring_or_ranking": "None observed on the pages read.",
+    "identifiers_exposed": [
+     "None observed on the pages read"
+    ],
+    "signal_precedents": [
+     "None observed on the pages read"
+    ],
+    "openness_code": "A github.com/sunlightlabs organisation appeared in search results but was not fetched; not verified.",
+    "openness_data_license": "Not stated on the pages read.",
+    "openness_api": "The APIs page states Sunlight is no longer the provider of these services after the closure of Sunlight Labs (2016); the Congress API is operated by ProPublica; Open States is independently run by former Sunlight staff. influenceexplorer.com states the Influence Explorer and TransparencyData APIs were deprecated starting September 2015 and turned off beginning January 2016.",
+    "funding_or_business_model": "not verified (no funding statement on the archive pages read)",
+    "disclaimer_or_frame": "Static-archive notice on every page; no content framing observed.",
+    "status_as_of_retrieval": "defunct (home page: no longer active as of September 2020; board chair note dated September 24, 2020)",
+    "citations": [
+     {
+      "url": "https://sunlightfoundation.com/",
+      "retrieved": "2026-09-21",
+      "supports": "Closure notice as of September 2020 and static-archive statement (quoted)"
+     },
+     {
+      "url": "https://sunlightfoundation.com/2020/09/24/a-note-from-the-sunlight-foundations-board-chair/",
+      "retrieved": "2026-09-21",
+      "supports": "Closure reasoning, transfer of staff and activities, transfer of IP, name and records to the Internet Archive and Berkman Klein Center, author Michael R. Klein"
+     },
+     {
+      "url": "https://sunlightfoundation.com/2016/11/01/sunlight-labs-update-nonprofits-step-up-to-preserve-tools-for-transparency/",
+      "retrieved": "2026-09-21",
+      "supports": "November 1, 2016 disposition of Sunlight Labs tools: ProPublica (Congress API, Capitol Words, Politwoops, House Staff Directory, House Expenditure Database), CRP (Foreign Influence Explorer, Political Party Time), Marshall Project (Hall of Justice), Open States alumni group led by James Turk (Open States), Cornell LII (Docket Wrench successor), Commerce (Census API wrapper); retired Real-Time Influence Explorer, Political Ad Sleuth, Scout; Email Congress without a home; author Kat Duffy"
+     },
+     {
+      "url": "https://sunlightfoundation.com/api/",
+      "retrieved": "2026-09-21",
+      "supports": "Sunlight no longer provides the APIs; Congress API operated by ProPublica; Open States independently run by former Sunlight staff; Politwoops at ProPublica"
+     },
+     {
+      "url": "https://www.influenceexplorer.com/",
+      "retrieved": "2026-09-21",
+      "supports": "Influence Explorer and TransparencyData APIs deprecated from September 2015 and turned off from January 2016; described as a product of the Sunlight Foundation"
+     }
+    ],
+    "could_not_verify": [
+     "Disposition of the non-foreign Influence Explorer after 2016 (not named in the 2016 post)",
+     "Whether influenceexplorer.com still serves data (the page fetched is 2015-era content)",
+     "Funding history",
+     "Existence and content of the sunlightlabs GitHub organisation (search result only)"
+    ]
+   },
+   {
+    "name": "Open States / Plural",
+    "organisation": "Plural Policy, Inc., which adopted the Open States project in 2021; Plural was acquired by SAI360 (announced December 1, 2025)",
+    "url": "https://openstates.org/ (redirects to https://pluralpolicy.com/open); https://open.pluralpolicy.com/; https://docs.openstates.org/",
+    "kind": "Open state-legislative data project (scrapers, API, bulk downloads, curated people data) operated by a commercial legislative- and regulatory-tracking software company",
+    "self_description": "The GitHub organisation page describes Open States as striving to improve civic engagement at the state level by providing data and tools regarding state legislatures, aggregating legislative information from all 50 states, Washington D.C. and Puerto Rico, standardising it and publishing it via the website, an API and bulk downloads, and as a project of Plural since 2021. pluralpolicy.com/open says Plural is carrying the legacy forward from the Open States project it adopted in 2021 and makes the collection available for bulk download and via its API. Plural's home page describes AI-native legislative and regulatory tracking software for government affairs teams; the About page says Plural was acquired by SAI360, a governance, risk and compliance platform, and that the acquisition did not change what it builds.",
+    "subject_scope": "State legislatures in all 50 states, D.C. and Puerto Rico: jurisdictions, sessions, bills (with text), votes, people (state legislators, governors, some municipal leaders), organisations and committees, posts, memberships, events; legislative district geography. The Plural commercial product also covers Congress and 40+ countries.",
+    "primary_sources_used": [
+     "State legislature websites, read by the openstates-scrapers (GPL-3.0) repository; people data historically scraped and now manually curated in the people repository",
+     "Whether bill and vote records carry a link to the source page on the legislature site was not verified on the pages read"
+    ],
+    "outputs": [
+     "API v3 (REST) at https://v3.openstates.org/ with interactive docs at /docs and /redoc; GraphQL API marked deprecated",
+     "Bulk data: legislator YAML and CSV, per-session bill and vote CSV and JSON archives (including full bill text), legislative district polygons (November 2018), monthly PostgreSQL database dumps (September 2026 version referenced)",
+     "Free bill search and legislator finder at pluralpolicy.com/open; open.pluralpolicy.com serves API key registration and bulk downloads while most other tools were disabled after a June 7, 2023 transition notice",
+     "Plural commercial product: AI bill and regulation summaries, legislator and staff contact data, alerts, dashboards"
+    ],
+    "derived_scoring_or_ranking": "None observed on the pages read.",
+    "identifiers_exposed": [
+     "Person id: a UUID per person in the people schema (documentation refers to OCD-person IDs); jurisdictions use ocd-jurisdiction identifiers; bills addressable by ocd-bill UUID or by jurisdiction/session/identifier; committee and event ids in API paths",
+     "People schema 'ids' block: twitter, youtube, instagram, facebook",
+     "People schema 'other_identifiers': free-form entries of scheme (required), identifier (required), start_date and end_date (optional); no bioguide, FEC, OpenSecrets, Wikidata, VoteSmart or Ballotpedia schemes are enumerated on the schema page",
+     "pupa_id being replaced by dedupe_key (per an enhancement proposal referenced on the docs index)"
+    ],
+    "signal_precedents": [
+     "None observed on the pages read"
+    ],
+    "openness_code": "github.com/openstates (28 repositories): openstates-scrapers (Python, GPL-3.0, updated Sep 21, 2026), people (CC0-1.0, updated Sep 21, 2026), jurisdictions (AGPL-3.0), openstates-core (MIT), openstates.org (MIT), api-v3 (MIT), documentation (CC-BY-4.0), openstates-geo (MIT), scraper-audit (GPL-3.0).",
+    "openness_data_license": "People data: public domain in the United States with copyright waived via a CC0 dedication (people repository README and contributing docs). Bulk data page: \"data is provided under a public domain dedication\" with attribution described as appreciated (open.pluralpolicy.com/data). No separate terms of use for API data were found on the pages read.",
+    "openness_api": "API v3 at https://v3.openstates.org/; API key required, obtained from an account profile at open.pluralpolicy.com/accounts/profile/ and passed as an X-API-KEY header or apikey query parameter; endpoints for jurisdictions, people, people.geo, bills, committees, events; rate limits and tiers not stated on the pages read.",
+    "funding_or_business_model": "Plural sells subscriptions: Essential $59/month or $609/year, Professional $5,000/year, Enterprise custom pricing; states over 500 teams across advocacy, academia and government affairs; free tools alongside. SAI360 announced its acquisition of Plural Policy on December 1, 2025 with financial terms not disclosed; the announcement does not mention Open States.",
+    "disclaimer_or_frame": "None observed on the pages read.",
+    "status_as_of_retrieval": "active (GitHub repositories updated September 17-21, 2026; monthly database dump for September 2026 referenced; Plural pages published September 10, 2026)",
+    "citations": [
+     {
+      "url": "https://openstates.org/",
+      "retrieved": "2026-09-21",
+      "supports": "301 redirect to https://pluralpolicy.com/open"
+     },
+     {
+      "url": "https://pluralpolicy.com/open",
+      "retrieved": "2026-09-21",
+      "supports": "Plural adopted the Open States project in 2021; bulk download and API; API key managed at open.pluralpolicy.com; copyright 2026"
+     },
+     {
+      "url": "https://open.pluralpolicy.com/",
+      "retrieved": "2026-09-21",
+      "supports": "API key portal, bulk downloads, GitHub link, June 7, 2023 transition notice, most tools disabled, 'Plural / SAI360' branding"
+     },
+     {
+      "url": "https://open.pluralpolicy.com/data/",
+      "retrieved": "2026-09-21",
+      "supports": "Bulk data offerings (legislator YAML/CSV, per-session CSV/JSON, geo data Nov 2018, monthly PostgreSQL dumps with a September 2026 version), public domain dedication (quoted), update cadence"
+     },
+     {
+      "url": "https://docs.openstates.org/",
+      "retrieved": "2026-09-21",
+      "supports": "API v3, GraphQL deprecated, coverage of 50 states plus D.C. and Puerto Rico, OCD-person IDs, pupa_id to dedupe_key proposal, openstates/documentation repository"
+     },
+     {
+      "url": "https://docs.openstates.org/api-v3/",
+      "retrieved": "2026-09-21",
+      "supports": "Base URL, API key requirement and registration URL, header/query parameter, endpoint list, interactive docs; no rate limits or terms stated"
+     },
+     {
+      "url": "https://docs.openstates.org/data/",
+      "retrieved": "2026-09-21",
+      "supports": "Data model concepts (jurisdictions, sessions, bills, votes, persons, organizations, posts, memberships); no license stated on that page"
+     },
+     {
+      "url": "https://github.com/openstates",
+      "retrieved": "2026-09-21",
+      "supports": "Organisation description, repository list with licenses and update dates, project of Plural since 2021"
+     },
+     {
+      "url": "https://github.com/openstates/people",
+      "retrieved": "2026-09-21",
+      "supports": "Contents (YAML on legislators, governors, some municipal leaders), CC0 dedication, move from scraping to manual curation"
+     },
+     {
+      "url": "https://github.com/openstates/people/blob/main/schema.md",
+      "retrieved": "2026-09-21",
+      "supports": "Person id as UUID, ids block (twitter, youtube, instagram, facebook), other_identifiers as free-form scheme/identifier with optional dates, ocd-jurisdiction format"
+     },
+     {
+      "url": "https://docs.openstates.org/contributing/people/",
+      "retrieved": "2026-09-21",
+      "supports": "People data in the public domain via CC0; contributors waive copyright"
+     },
+     {
+      "url": "https://docs.openstates.org/contributing/openstates-org/",
+      "retrieved": "2026-09-21",
+      "supports": "open.pluralpolicy.com historically provided free tools, API key registration and bulk data; functionality migrating into the Plural application; Django"
+     },
+     {
+      "url": "https://pluralpolicy.com/",
+      "retrieved": "2026-09-21",
+      "supports": "Product description, pricing tiers, customer count, coverage (50 states, D.C., Puerto Rico, Congress, 40+ countries), page published September 10, 2026"
+     },
+     {
+      "url": "https://pluralpolicy.com/about",
+      "retrieved": "2026-09-21",
+      "supports": "Acquisition by SAI360 described as acquired not absorbed; customer types; remote-first; no Open States history on the page"
+     },
+     {
+      "url": "https://pluralpolicy.com/news/sai360-announces-acquisition-of-plural-policy-expanding-ai-regulatory-change-management/",
+      "retrieved": "2026-09-21",
+      "supports": "December 1, 2025 acquisition of Plural Policy by SAI360; terms not disclosed; no mention of Open States"
+     }
+    ],
+    "could_not_verify": [
+     "API rate limits, quotas or paid tiers (not stated on the API v3 docs or the portal page)",
+     "Whether other_identifiers entries in the published people data include bioguide, FEC, OpenSecrets or Wikidata identifiers",
+     "Whether bill and vote records carry source URLs to the legislature site",
+     "Open States history page contains no chronology; the 2016 alumni transfer is documented on Sunlight's site, the 2021 adoption on pluralpolicy.com/open"
+    ]
+   },
+   {
+    "name": "FEC open data (fec.gov/data and the OpenFEC API)",
+    "organisation": "Federal Election Commission (U.S. government agency)",
+    "url": "https://www.fec.gov/data/ ; https://api.open.fec.gov/developers/",
+    "kind": "Primary publisher of federal campaign-finance filings: browse site, RESTful API (OpenFEC 1.0) and bulk data files",
+    "self_description": "The developers page describes an API that allows users to explore the way candidates and committees fund their campaigns, a RESTful web service supporting full-text and field-specific searches on FEC data, with bulk downloads on the main site and data updated nightly. It states: \"Information is tied to the underlying forms by file ID and image ID.\" (api.open.fec.gov/developers). fec.gov/data presents candidate and committee financial profiles, receipts, disbursements, loans and debts, filings and reports, and notes the information is produced and disseminated at U.S. taxpayer expense.",
+    "subject_scope": "Federal candidates and committees (authorized campaign committees, PACs, party committees, independent-expenditure-only groups, corporations and unions filing communication costs); itemized receipts (Schedule A), disbursements (B), loans (C), debts (D), independent expenditures (E), party-coordinated expenditures (F), communication costs (Form 7), electioneering communications; summary and detailed financial reports (Forms 3, 3X, 3P, 13); bulk files by two-year cycle from 1979 through 2026; form images with availability back to 1972; PostgreSQL dumps from 1975 to present.",
+    "primary_sources_used": [
+     "Itself: reports and statements filed electronically, plus paper filings scanned into the database; summary data enters the databases and report images post to fec.gov within 48 hours of receipt",
+     "Rows are tied to the underlying form by file ID and image ID (developers page), i.e. each API record can be traced to the filing image"
+    ],
+    "outputs": [
+     "fec.gov/data browse interface for candidates, committees, receipts, disbursements, filings",
+     "OpenFEC API 1.0 (candidate, committee, dates, financial, filings, schedules A-F, communication cost, electioneering endpoints; /swagger schema)",
+     "Bulk data files: candidate master and summary, committee master and summary, candidate-committee linkages, PAC summary, leadership PACs, Forms 1 and 2, individual contributions, committee-to-candidate, operating expenditures, communication costs, electioneering, independent expenditures, inter-committee transactions, false and fictitious filings, daily .fec compilations, PostgreSQL database dumps; weekly Schedule A dumps",
+     "Source code on GitHub (fecgov/openFEC)"
+    ],
+    "derived_scoring_or_ranking": "None observed on the pages read (the API provides aggregates by candidate and committee; no per-person rank or leaderboard was observed on the pages read).",
+    "identifiers_exposed": [
+     "Candidate ID (e.g. P00003335), used as candidate_id in the API",
+     "Committee ID (e.g. C00431445), used as committee_id in the API",
+     "Filing image numbers; file ID and image ID tying records to the underlying forms",
+     "Form type codes (F1, F2, F3, F3X, F3P, F13, F7 and others)"
+    ],
+    "signal_precedents": [
+     "None; the FEC publishes filings and does not compute per-filing conditions on the pages read (the bulk list includes a 'False and Fictitious Filings' file, 2016-2026, which is an agency-designated category rather than a computed signal)"
+    ],
+    "openness_code": "https://github.com/fecgov/openFEC (develop branch, 8,950 commits, open issues and pull requests at retrieval). LICENSE.md refers to the FEC Default License; the FEC LICENSE.md states the project is a U.S. government work in the public domain within the United States, waives copyright worldwide via CC0 1.0 Universal, releases contributions under CC0, and notes FEC data may not be used for commercial solicitation or to sell contributor lists.",
+    "openness_data_license": "Public domain / CC0 for the code and government works. Data-use restriction under 52 U.S.C. 30111(a)(4) and 11 CFR 104.15: information about individual contributors (names, addresses) copied from reports may not be sold or used to solicit contributions or for commercial purposes; exceptions include committees' own contributor lists, names of political committees, use in newspapers, magazines and books whose principal purpose is not solicitation or commerce, and bona fide academic research (AO 1986-25). The bulk-data page repeats that individual contributors' names and addresses may not be sold or used for commercial purposes or to solicit contributions.",
+    "openness_api": "API key via api.data.gov signup form; DEMO_KEY for trial (api.data.gov: 30 requests per IP per hour, 50 per IP per day); a registered key allows up to 1,000 calls per hour (api.data.gov default across participating agencies); 100 results per page; a 7,200-calls-per-hour (120 per minute) key can be requested by email to APIinfo@fec.gov; key passed as X-Api-Key header, api_key parameter, or HTTP Basic username; use is stated to be subject to the Terms of Service and Acceptable Use policy (link target not verified); questions handled through a community-led group.",
+    "funding_or_business_model": "Federal agency; fec.gov/data states the information is produced and disseminated at U.S. taxpayer expense.",
+    "disclaimer_or_frame": "The about-campaign-finance-data page states the information is not intended to replace the law or change its meaning and creates no rights or obligations (paraphrased). The sale-or-use page and bulk-data page carry the contributor-information restriction. No statement about what a candidate's or committee's listing implies was observed.",
+    "status_as_of_retrieval": "active (2026 election-cycle data highlighted on fec.gov/data; bulk files through the 2026 cycle; API data updated nightly)",
+    "citations": [
+     {
+      "url": "https://www.fec.gov/data/",
+      "retrieved": "2026-09-21",
+      "supports": "Data published, identifier examples (P00003335, C00431445, image numbers), OpenFEC API and GitHub links, taxpayer-expense statement, 2026 cycle data"
+     },
+     {
+      "url": "https://api.open.fec.gov/developers/",
+      "retrieved": "2026-09-21",
+      "supports": "OpenFEC 1.0 description (quoted), nightly updates, file ID and image ID linkage, API key signup, DEMO_KEY, 1,000 calls per hour, 100 results per page, 7,200 per hour on request, Terms of Service and Acceptable Use reference, contributor-use restriction, source code, endpoint families and schedule definitions"
+     },
+     {
+      "url": "https://www.fec.gov/campaign-finance-data/about-campaign-finance-data/",
+      "retrieved": "2026-09-21",
+      "supports": "Electronic and scanned paper filings, 48-hour posting, form types with availability from 1972, disclaimer that the information does not replace the law, API and bulk links"
+     },
+     {
+      "url": "https://www.fec.gov/data/browse-data/?tab=bulk-data",
+      "retrieved": "2026-09-21",
+      "supports": "Bulk file inventory and year ranges (1979-2026), formats, PostgreSQL dumps 1975-present, contributor sale/use restriction, 48-hour lag note"
+     },
+     {
+      "url": "https://www.fec.gov/updates/sale-or-use-contributor-information/",
+      "retrieved": "2026-09-21",
+      "supports": "52 U.S.C. 30111(a)(4) and 11 CFR 104.15 restriction, what is protected, exceptions including AO 1986-25"
+     },
+     {
+      "url": "https://github.com/fecgov/openFEC",
+      "retrieved": "2026-09-21",
+      "supports": "Repository description, API Umbrella for rate limiting and authentication, commit count and activity, public developers URL"
+     },
+     {
+      "url": "https://github.com/fecgov/openFEC/blob/develop/LICENSE.md",
+      "retrieved": "2026-09-21",
+      "supports": "Mix of public-domain government work and other open-source works; reference to the FEC Default License"
+     },
+     {
+      "url": "https://github.com/fecgov/FEC/blob/master/LICENSE.md",
+      "retrieved": "2026-09-21",
+      "supports": "U.S. government work in the public domain, CC0 1.0 worldwide waiver, contributions under CC0, note on FEC data-use restriction"
+     },
+     {
+      "url": "https://api.data.gov/docs/developer-manual/",
+      "retrieved": "2026-09-21",
+      "supports": "40-character API key, 1,000 requests per hour default, DEMO_KEY 30 per hour and 50 per day per IP, key passing methods, rate-limit headers and HTTP 429"
+     }
+    ],
+    "could_not_verify": [
+     "The target of the 'Terms of Service and Acceptable Use policy' link on the developers page (the page's link hrefs could not be captured; https://api.data.gov/terms/ and https://api.data.gov/docs/ returned 404)",
+     "Whether the API exposes a sub_id or other transaction-level identifier (not on the page text captured)",
+     "The 'raising' and 'spending' summary tables on fec.gov/data (not captured; no ranking claim made)",
+     "Rate limiting specifics beyond those stated on the developers page and the api.data.gov developer manual"
+    ]
+   },
+   {
+    "name": "Transparency USA",
+    "organisation": "Transparency USA, a 501(c)(3) nonprofit based in Midland, Texas",
+    "url": "https://www.transparencyusa.org/",
+    "kind": "Nonprofit aggregator of state-level campaign-finance data (25 states) with lobbying data for Texas",
+    "self_description": "The About page states the mission is to provide \"clear, accurate, easy-to-understand information about the money in state politics\" (transparencyusa.org/about-us). It describes a database of campaign-finance data for 25 named states covering state-level candidates, PACs, donors and payees (with Texas lobbying), organised by two-year election cycles, with state profiles listing current politicians and the laws regulating campaign finance in each state; it says raw data from the state agency is posted immediately upon receipt and then de-duplicated and corrected. The home page shows counters of 130.87+ million transactions, 25 states, 298,463 candidates and committees, and $100.7 billion in tracked political spending, and says the database is constantly updated as new numbers are released.",
+    "subject_scope": "State-level candidates, officeholders (governor, attorney general, state legislators), PACs, donors and payees in Alabama, Arizona, California, Colorado, Florida, Georgia, Idaho, Illinois, Indiana, Iowa, Michigan, Minnesota, Nevada, New Hampshire, New Mexico, New York, North Carolina, Ohio, Pennsylvania, South Carolina, Texas, Virginia, Washington, Wisconsin and Wyoming; contributions and expenditures by two-year cycle; Texas lobbying.",
+    "primary_sources_used": [
+     "State agencies to which candidates and PACs file donation and expenditure reports (About page); the FAQ directs federal queries to fec.gov",
+     "Linking each row to the primary filing: not verified"
+    ],
+    "outputs": [
+     "State profiles, entity pages, transaction history and an Advanced Transaction Search by date range or amount",
+     "Big-picture lists: top 10 donors in a state per cycle; totals by party",
+     "Articles and an email subscription; 'Our Data on Your Site' and 'Data Sales' services; CSV delivery (FAQ); custom data ranges priced on request",
+     "'Claim Your Page' verification (free) and page customisation (bio, links)"
+    ],
+    "derived_scoring_or_ranking": "'Top 10 donors in your state this election cycle' and totals of contributions and expenditures by party (About page); a 'Top Viewed Entities' section appears in the site navigation. No per-person score or report card was observed.",
+    "identifiers_exposed": [
+     "Not stated on the pages read"
+    ],
+    "signal_precedents": [
+     "None observed on the pages read"
+    ],
+    "openness_code": "No public code repository stated on the pages read.",
+    "openness_data_license": "No license stated on the pages read. The FAQ says legal uses of the data vary by state and advises consulting an attorney licensed in the relevant state; data delivered via CSV.",
+    "openness_api": "Not verified (the Data Sales page could not be loaded; the FAQ mentions CSV delivery only).",
+    "funding_or_business_model": "Stated as a non-profit, non-partisan 501(c)(3) (About page); the site solicits donations ('Chip in $10'); custom data ranges are offered with pricing on request; page customisation is offered to verified entities.",
+    "disclaimer_or_frame": "The FAQ states the site displays campaign-finance information that candidates, officeholders and PACs have been required by law to submit to a state agency, and that it cannot change individual transactions unless they have first been changed in the official reports filed or amended with the state agency; it invites error reports and says errors are corrected as quickly as possible.",
+    "status_as_of_retrieval": "unknown (the home page asserts ongoing updates but no dated content was captured on the pages read)",
+    "citations": [
+     {
+      "url": "https://www.transparencyusa.org/",
+      "retrieved": "2026-09-21",
+      "supports": "Counters (transactions, states, candidates and committees, tracked spending), statement of constant updating, donation appeal, Midland, Texas address"
+     },
+     {
+      "url": "https://www.transparencyusa.org/about-us",
+      "retrieved": "2026-09-21",
+      "supports": "Mission (quoted), 25 states listed, scope (candidates, PACs, donors, payees, Texas lobbying), cycle organisation, top-10 donor and party totals, raw data from state agencies posted on receipt then cleaned, corrections invitation, 501(c)(3) statement"
+     },
+     {
+      "url": "https://www.transparencyusa.org/faq",
+      "retrieved": "2026-09-21",
+      "supports": "Data types, CSV delivery, legal uses vary by state, removal policy tied to amended official reports, verification and page customisation, federal queries directed to fec.gov"
+     }
+    ],
+    "could_not_verify": [
+     "Data Sales page (bot-check interstitial): whether JSON or API delivery and pricing are offered (a search snippet claimed CSV, JSON or API; not verified on the site)",
+     "Any identifier scheme on entity pages",
+     "Whether transaction rows link to the state filing",
+     "Any content dated within the last twelve months",
+     "Cost of page customisation (the FAQ text was cut before the answer)"
+    ],
+    "added_by_sweep": true
+   },
+   {
+    "name": "ProPublica FEC Itemizer and Campaign Finance API",
+    "organisation": "ProPublica",
+    "url": "https://projects.propublica.org/itemizer/",
+    "kind": "Newsroom tool for browsing FEC electronic filings, with an accompanying Campaign Finance API",
+    "self_description": "The Itemizer page describes itself as a way to browse electronic campaign-finance filings from the Federal Election Commission and see individual contributions and expenditures reported by committees raising money for federal elections; created by Derek Willis and Sisi Wei, with Aaron Bycoffe, and stated to be updated regularly. The API documentation describes an API that retrieves data from FEC filings and other sources, originally created by The New York Times in 2008, providing candidate and committee summaries and itemized data, updated daily with electronic filings ingested every 15 minutes.",
+    "subject_scope": "Federal electronic filings: candidates and committees from 1980 to present; electronic filings from 2001, paper filings from 1999; Senate candidate and party committee reports included as of October 2018; lobbyist bundler data 2012 to present.",
+    "primary_sources_used": [
+     "Federal Election Commission electronic filings (Itemizer page and API docs); 'other sources' mentioned in the API docs without naming them",
+     "Whether each row links to the FEC filing image: not stated on the pages read"
+    ],
+    "outputs": [
+     "FEC Itemizer web tool",
+     "ProPublica Campaign Finance API (key issued through the ProPublica Data Store)"
+    ],
+    "derived_scoring_or_ranking": "None observed on the pages read.",
+    "identifiers_exposed": [
+     "Not stated on the pages read (identifier formats are not documented in the API page text captured)"
+    ],
+    "signal_precedents": [
+     "None observed on the pages read"
+    ],
+    "openness_code": "No public code repository stated on the pages read.",
+    "openness_data_license": "API documentation states the data is provided under Creative Commons Attribution-NonCommercial-NoDerivs 3.0, with conditions: no republishing raw data as a standalone product, no charging for access without authorisation, citation of ProPublica required, accuracy not guaranteed, users indemnify ProPublica. The Data Store terms state: \"We do not guarantee the accuracy or completeness of the data.\" (projects.propublica.org/datastore/terms) and prohibit republishing raw data in its entirety, altering it except for corrections, charging for access or advertising against it, and sublicensing or reselling; the Itemizer page notes use is subject to ProPublica's Data Terms of Use and the FEC's sale-or-use restrictions.",
+    "openness_api": "API key required, requested through the Data Store; usage limited to 5,000 requests per day, with rate limits stated to be subject to change; no deprecation notice observed.",
+    "funding_or_business_model": "not verified (no funding statement on the pages read)",
+    "disclaimer_or_frame": "Accuracy and completeness are not guaranteed (Data Store terms, quoted above); no statement about what a listing implies for a filer was observed.",
+    "status_as_of_retrieval": "active (Itemizer page states it is updated regularly and references 2026 filings; API docs state daily updates with no shutdown notice)",
+    "citations": [
+     {
+      "url": "https://projects.propublica.org/itemizer/",
+      "retrieved": "2026-09-21",
+      "supports": "Self-description, creators, FEC electronic filings as source, Senate reports as of October 2018, updated regularly, references to 2026 filings, link to the Campaign Finance API, subject to Data Terms of Use and FEC restrictions"
+     },
+     {
+      "url": "https://projects.propublica.org/api-docs/campaign-finance/",
+      "retrieved": "2026-09-21",
+      "supports": "API origin (NYT, 2008), FEC filings and other sources, daily updates and 15-minute electronic filing ingest, API key via Data Store, 5,000 requests per day, CC BY-NC-ND 3.0 terms and conditions, coverage date ranges"
+     },
+     {
+      "url": "https://projects.propublica.org/datastore/terms/",
+      "retrieved": "2026-09-21",
+      "supports": "Data Store terms: no republishing raw data in entirety, no alteration except corrections, no charging or advertising against it, no sublicensing, citation required, accuracy disclaimer (quoted)"
+     }
+    ],
+    "could_not_verify": [
+     "Identifier formats used by the API (candidate_id, committee_id, filing ids)",
+     "Whether Itemizer rows link to the FEC filing image",
+     "Funding for the tool",
+     "The exact 2026 references on the Itemizer page (reported by the page fetch summary)"
+    ],
+    "added_by_sweep": true
+   }
+  ],
+  "could_not_reach": [
+   "https://www.opensecrets.org/about/methodology (site error page in the browser; HTTP 403 via fetch)",
+   "https://www.opensecrets.org/about/tos (site error page in the browser)",
+   "https://www.opensecrets.org/about/ via fetch (HTTP 403; read through the browser instead)",
+   "https://www.followthemoney.org/entity-details?eid=210204 (HTTP 403 via fetch; bot-check interstitial in the browser)",
+   "http://classic.maplight.org/us-congress/guide/data, http://classic.maplight.org/data/get/federal-money-and-politics-dataset, http://classic.maplight.org/content/media-fact-sheet (TLS handshake failure via fetch; navigation denied in the browser)",
+   "https://maplight.org/about/ (HTTP 404; /about-us used instead)",
+   "https://maplight.org/how-were-funded (HTTP 403 via fetch; sign-up wall in the browser)",
+   "https://www.transparencyusa.org/ and /about-us and /faq via fetch (HTTP 403; read through the browser instead)",
+   "https://www.transparencyusa.org/about (HTTP 404; /about-us used instead)",
+   "https://www.transparencyusa.org/data-sales (bot-check interstitial in the browser)",
+   "https://api.data.gov/terms/ and https://api.data.gov/docs/ (HTTP 404; the developer manual at /docs/developer-manual/ was used)",
+   "https://api.data.gov/docs/rate-limits/ (fetch returned no page content)"
+  ]
+ },
+ "skeptic": {
+  "verdicts": [
+   {
+    "name": "OpenSecrets",
+    "confirmed": [
+     "organisation: 501(c)(3); 'Created in 2021 by the merger of the Center for Responsive Politics and the National Institute on Money in Politics' (merger press release, June 2, 2021)",
+     "self_description: mission sentence, vision, and the three goals (Data, Insights, Engagement) verbatim on /about/; merger press release statements (combined organisation, OpenSecrets.org retained, followthemoney.org updated until new site later in 2021, Hewlett Foundation support); FAQ 'Nearly all our data originates with an official government source'",
+     "primary_sources_used: FAQ names FEC (congressional and presidential), Senate Office of Public Records (lobbying), state agencies (state-level), IRS (527s), 'various information-collectors in Congress' (travel and PFDs), press reports and official announcements (Revolving Door); personal-finance methodology names Senate Office of Public Records, Office of the Clerk of the House, OGE, Judicial Conference; profile pages state 'Figures on this page are based on Federal Election Commission data' with as-of dates August 4, 2026 (summary) and July 17, 2026 (transaction-level); Reports tab: 'The original disclosure files can be accessed below by filing year' (one member's rows 1987-2018)",
+     "outputs: profile sections (Summary, PACs, Individual Donors & Demographics, Organizations, Industries, Elections) and committee assignments (one member: two committees listed); personal-finance tabs (Summary, Assets, Liabilities, Transactions, Reports, Other Data) with CSV download on transactions; Bulk Data as compressed CSV with a data dictionary per file; API page: 'As of April 15, 2025, our API offerings have been discontinued.' and commercial@opensecrets.org for custom data",
+     "derived_scoring_or_ranking: 'Rank: 6th in the House' on one member's 2018 net-worth page; 'Richest Members of Congress, 2018', 'Poorest Members of Congress, 2018', 'Biggest wealth increase in Congress, 2008-2018' tables with Export to CSV and a median 'Estimated Wealth Over Time' chart on /personal-finances; methodology: net worth as min-max range with 'The midpoint or average of the two limits ... used for purposes of ranking the filers by wealth'; Top Industries and Top Assets per filer",
+     "identifiers_exposed: cid=N00007360 URLs load; mpid=1191305 profile URL loads; bulk-data-documentation lists CRP_IDs.xls ('candidate ids and other information'), CRP_Categories.txt, CRP_PFDRangeData.xls and a table named 'FEC Committees (PACs and Candidate and Party Committees)'",
+     "signal_precedents: transactions footnote states the Ethics in Government Act as amended by the STOCK Act, the $1,000 threshold, and 'A PTR is due to the ethics committee within 30 days of receiving notice of the transaction, but not more than 45 days after the transaction'; rows show date and min/max value with no per-filing flag; profile Methodology states the ideological-code rule (both conditions) and household attribution to the primary income-earner's employer",
+     "openness_data_license: API page: 'Except for the Revolving Door section, content on this site is licensed under a Creative Commons Attribution-Noncommercial-Share Alike 3.0 United States License'; bulk-data page: educational use, attribution requests, 'Commercial republishing of OpenSecrets' data may involve a fee', Revolving Door 'not available for download or use through our Creative Commons license'; open-data page: agree to Terms of Service, register, confirm email, wait for approval; 'generally involves a fee'",
+     "openness_api: discontinuation sentence quoted exactly; API Terms of Service page last modified April 7, 2009 with educational/non-commercial use, CC BY-NC-SA, citation, no solicitation, no scraping/storing, as-is disclaimer",
+     "funding_or_business_model: /about/ names institutional grants, individual contributions, and income from custom research and commercial data licensing; FAQ: operated since 1983 on foundation grants and individual contributions with some revenue from research fees and data contracts; Hewlett support in the press release",
+     "disclaimer_or_frame (partial): profile Methodology bundling sentence ('Clusters of contributions ... can indicate organized bundling. In other cases, the reason ... may be completely unrelated'), conservative-estimate note, itemized-vs-summary mismatch, filing-to-publication lag; methodology 'What is missing from these disclosures?' items (personal residences, federal retirement accounts, two ranges with no upper limit, $174,000 salary not included)",
+     "status_as_of_retrieval: active; opensecrets.org/news lists articles dated September 16, 14, 9, 2, 1, 2026 (checked via browser); profile as-of dates August 4 and July 17, 2026 confirmed",
+     "could_not_verify items stand: about/methodology and about/tos were not re-tested; per-row FEC filing links not observable from page text; bulk data dictionaries not opened; Terms and Conditions page exists and opens as described"
+    ],
+    "refuted": [
+     {
+      "field": "disclaimer_or_frame",
+      "claim": "No general statement about what a person's presence in the database implies was observed on the pages read.",
+      "correction": "The cited FAQ page does state the presence criterion: 'Once a candidate files with the Federal Election Commission or a state agency, they're eligible to appear on OpenSecrets.org' and 'Once a candidate files with the FEC or a state agency, we list that candidate on our site' (with the $5,000 registration threshold explained under 'Why don't you list third-party candidates?'). That is a statement that presence means a filing exists, not a judgement about the person; the entry should record it rather than say none was observed. The FAQ also carries an accuracy caveat ('inaccuracies may result').",
+      "citation_url": "https://www.opensecrets.org/resources/faq"
+     },
+     {
+      "field": "subject_scope",
+      "claim": "personal financial disclosures of members of Congress (... Periodic Transaction Reports back to 2012)",
+      "correction": "The cited transactions page states the PTR database is House-only: 'This database only displays reports for Members of the House of Representatives. We hope to have data on Senators included soon.' and 'This page displays the 50 most recent transactions reported by Members of the House of Representative.' Scope should read House PTRs back to 2012, not members of Congress generally.",
+      "citation_url": "https://www.opensecrets.org/personal-finances/nancy-pelosi/transactions?cid=N00007360&year=2018"
+     }
+    ],
+    "unverifiable": [
+     "merger press release citation 'related articles dated September 2026 (status)': the captured page text was truncated before any related-articles list; status was instead confirmed from opensecrets.org/news",
+     "Whether campaign-finance rows on profile pages link to individual FEC filings (page text does not expose link targets)",
+     "Whether CRP_IDs.xls or the 'FEC Committees' table carries FEC candidate/committee IDs (dictionaries behind the bulk-data login were not opened)",
+     "The PTR listing on one member's transactions page for year=2018 shows 2014-dated PTR rows; whether the 'Recent PTR' block is filtered by year at all is unclear from the page",
+     "Full text of Terms and Conditions (only the opening was captured, as the entry says)"
+    ]
+   },
+   {
+    "name": "FollowTheMoney (National Institute on Money in Politics)",
+    "confirmed": [
+     "self_description: home page 'The National Institute on Money in Politics and the Center for Responsive Politics joined forces to become OpenSecrets'; state data through the 2024 election; federal data moved to OpenSecrets.org; About page purpose statement, founded 1999, 2015 MacArthur Award, 2018 Campaign Finance Institute merger",
+     "subject_scope: home-page coverage table: statewide, legislative and high court contributions 2000-, appellate court 2007-, political parties 2000-, ballot measure committees 2003-, independent spending 2006-, registered lobbyists/clients 2006-, lobbying spending 2002-, local races 2006-, federal President/Senate/House contributions 2010-2020, party committees 2009-2020, federal independent spending 2010-2020",
+     "primary_sources_used: About page names government disclosure agencies in all 50 states and FEC data since 2010",
+     "outputs and openness_api: APIs 'immediately available for use after you create a free myFollowTheMoney account'; Ask Anything API documented in a PDF (/assets/FollowTheMoney-API.pdf); Entity Details API at api.followthemoney.org/entity.php?eid=...&APIKey=...&mode=xml|json; 'Detailed documentation is being developed'; no rate limits stated",
+     "identifiers_exposed: eid parameter confirmed on the documentation page",
+     "openness_data_license: Terms of Data Use carry both 'licensed under a Creative Commons Attribution-Noncommercial-Share Alike 3.0 United States License by the National Institute on Money in State Politics' and the same sentence 'by OpenSecrets'; research/educational purposes only; 'shall not be used for political campaigns, solicitation of contributions, or sold to third parties'; 1,000 records per year; expanded access for accredited academic institutions, journalism organisations, 501(c)(3), (5), (6); electoral entities excluded (527s, SuperPACs, party committees, 501(c)(4)s, candidate committees); commercial license separate",
+     "funding_or_business_model: About page states 501(c)(3) and references Form 990s and financial statements",
+     "status_as_of_retrieval: merger notice, state data through 2024, copyright 2026 all present on the home page"
+    ],
+    "refuted": [],
+    "unverifiable": [
+     "Entity-details page (eid=210204): returns a bot-verification interstitial in the browser and 403 via fetch, so per-person totals, rankings, disclaimers and links to state or FEC filings remain unchecked, as the entry says",
+     "Whether the site continues to be updated after the 2024 election",
+     "Relationship between eid and OpenSecrets CID or FEC IDs"
+    ]
+   },
+   {
+    "name": "MapLight",
+    "confirmed": [
+     "self_description: home page 'MapLight creates technology to improve democracy.'; About page: 501(c)(3), founded 2005, nonprofit and nonpartisan, campaign finance, lobbying and ethics disclosure solutions to state and local governments; clients California Secretary of State, City of Minneapolis, City and County of Denver, State of Maine; Voter's Edge; awards 2007-2015",
+     "subject_scope and outputs: product list (Campaign Finance, Lobbying Filings, Ethics Filings, E-Signatures, Data Series); Bill Positions dataset 2007-2021, 'more than 225,000 positions taken on more than 14,000 bills', sources (companies' websites, press releases, government documents, congressional hearings testimony, other public-record sources), 'available for academic and research use for a modest licensing fee', 'no longer being updated'",
+     "funding_or_business_model: Solutions page testimonials name California Secretary of State, State of Maine Ethics Commission, City and County of Denver; copyright 2025; how-were-funded returns 403 via fetch and an empty body in the browser, so foundation/donor funding is indeed unverified",
+     "status_as_of_retrieval 'unknown' is consistent: maplight.org/news (browser) shows the latest item dated Dec 1, 2024 ('MapLight launches Digital Ad Archive transparency software'), which is more than twelve months before retrieval; no 2025 or 2026 items appear",
+     "could_not_verify: classic.maplight.org still fails the TLS handshake via fetch"
+    ],
+    "refuted": [],
+    "unverifiable": [
+     "Whether any page on maplight.org carries content dated within the last twelve months (the News page's newest item is Dec 1, 2024; a blog or other section could exist but was not found)",
+     "Money-and-votes methodology and sources on classic.maplight.org (unreachable)"
+    ]
+   },
+   {
+    "name": "Sunlight Foundation",
+    "confirmed": [
+     "self_description and status: home page 'As of September 2020 the Sunlight Foundation is no longer active. This site is maintained as a static archive only.'; board chair note by Michael R. Klein dated September 24, 2020 states 'Sunlight's board has determined that its role is no longer essential to its original central mission', that virtually all activities and staff were transferred or closed, and that the name, intellectual property and records went to the Internet Archive and the Berkman Klein Center at Harvard",
+     "outputs: November 1, 2016 post by Kat Duffy lists ProPublica (Congress API, Capitol Words, Politwoops, House Staff Directory, House Expenditure Database), CRP (Foreign Influence Explorer, Political Party Time), Marshall Project (Hall of Justice), Open States alumni group led by James Turk, Cornell LII (Docket Wrench successor), Commerce (Census API wrapper); retired Real-Time Influence Explorer, Political Ad Sleuth, Scout; Email Congress without a home",
+     "openness_api: /api/ page states Sunlight no longer provides the APIs, Congress API operated by ProPublica, Open States independently run by former Sunlight staff, Politwoops at ProPublica; influenceexplorer.com: 'Starting in September 2015, we are deprecating the Influence Explorer and TransparencyData APIs. They will be turned off beginning January 2016.' and 'A Product of the Sunlight Foundation'",
+     "openness_code (resolves a could_not_verify): github.com/sunlightlabs exists, description 'build tools that make government more transparent & accountable, then give them away to you', 248 repositories, most recent visible activity 2024 and earlier"
+    ],
+    "refuted": [],
+    "unverifiable": [
+     "Disposition of the non-foreign Influence Explorer after 2016",
+     "Whether influenceexplorer.com still serves data (the fetched content is 2015-era)",
+     "Funding history (no funding statement on the archive pages read)"
+    ]
+   },
+   {
+    "name": "Open States / Plural",
+    "confirmed": [
+     "organisation and self_description: pluralpolicy.com/open 'Plural is carrying that legacy forward from the Open States project, which we adopted in 2021'; GitHub org description 'Open States strives to improve civic engagement at the state level by providing data and tools regarding state legislatures'; docs index: all 50 states, D.C. and Puerto Rico; About page: acquisition 'did not change what we build or who we build it for'; acquisition post dated December 1, 2025, 'Financial terms of the transaction were not disclosed'",
+     "outputs: API v3 at https://v3.openstates.org/ with /docs and /redoc; GraphQL marked DEPRECATED on the docs index; bulk data page lists legislator YAML/CSV, per-session CSV and JSON (with full bill text), district polygons last updated November 2018, PostgreSQL dumps with September 2026 as the most recent version; open.pluralpolicy.com carries the June 7, 2023 notice 'Open States is now Plural / SAI360!', most tools disabled except Bill Search and Find Your Legislator via Plural Open, API key and bulk download still offered, GitHub link",
+     "identifiers_exposed: schema.md: id is 'UUID representing this person for this data set'; ids block twitter, youtube, instagram, facebook; other_identifiers has scheme (required), identifier (required), start_date, end_date; ocd-jurisdiction identifiers; pupa_id to dedupe_key proposal referenced on the docs index",
+     "openness_code: 28 repositories; openstates-scrapers GPL-3.0 (Sep 21, 2026), people CC0-1.0 (Sep 21, 2026), jurisdictions AGPL-3.0 (Sep 20, 2026), openstates-core MIT (Sep 17, 2026), openstates.org MIT, api-v3 MIT, documentation CC-BY-4.0, openstates-geo MIT, scraper-audit GPL-3.0",
+     "openness_data_license: people README: copyright waived via CC0; bulk page: 'Unless otherwise noted data is provided under a public domain dedication but attribution is greatly appreciated and very helpful.'; people repo states the move from scraping to manual curation",
+     "openness_api: API key required, registered at open.pluralpolicy.com/accounts/profile/, passed as X-API-KEY header or apikey query parameter; endpoints jurisdictions, people, people.geo, bills, committees, events; the cited docs page states no rate limits, quotas, tiers or terms",
+     "funding_or_business_model: Essential $59/month or $609/year, Professional $5,000/year, Enterprise custom; 'over 500 teams across advocacy, academia, and government affairs'; coverage 50 states, D.C., Puerto Rico, Congress, 40+ countries; page published September 10, 2026",
+     "status_as_of_retrieval: active (repository dates and September 2026 dump confirmed)",
+     "'the announcement does not mention Open States': the announcement body does not; Open States appears only in the site's shared navigation/footer as 'Find Your Legislators' linking to pluralpolicy.com/open",
+     "could_not_verify item resolved: published people data does carry richer schemes. data/us/retired/JD-Vance-5a8792bc-....yml lists other_identifiers schemes bioguide, lis, fec, govtrack, opensecrets, wikidata, wikipedia, google_entity_id, ballotpedia, pictorial, votesmart; a Florida state file (data/fl/retired/Lee-599a92bf-....yml) lists only legacy_openstates. GitHub code search returns roughly 670-750 files for each of 'scheme: bioguide', 'scheme: fec', 'scheme: wikidata', 'scheme: opensecrets' (sample hits all under data/us/), versus 15,616 for 'scheme: legacy_openstates', so the crosswalk schemes appear to be concentrated in the federal (data/us) files rather than state legislators; inspect per jurisdiction before relying on it."
+    ],
+    "refuted": [
+     {
+      "field": "identifiers_exposed",
+      "claim": "no bioguide, FEC, OpenSecrets, Wikidata, VoteSmart or Ballotpedia schemes are enumerated on the schema page",
+      "correction": "The schema page uses 'votesmart' as its worked example for other_identifiers: 'scheme: origin of this identifier (e.g. \"votesmart\")' with 'identifier ... (e.g. 13823)'. It enumerates no list, but VoteSmart is named on the page; the entry should say the page gives votesmart as an example and enumerates no closed list.",
+      "citation_url": "https://github.com/openstates/people/blob/main/schema.md"
+     }
+    ],
+    "unverifiable": [
+     "Whether 'OCD-person IDs' is the wording used on the docs index (the fetch summary did not surface that phrase)",
+     "API rate limits or tiers: not on the cited pages; a web-search snippet attributes tiers (default 500/day, legacy and bronze 5,000/day, silver 50,000/day) to github.com/openstates/issues/discussions/205, but that discussion returned 404 via fetch and NOT_FOUND via the GitHub GraphQL API, so it cannot be confirmed; the entry's 'no rate limit documented' should not be read as 'no rate limit exists'",
+     "Whether bill and vote records carry source URLs to the legislature site"
+    ]
+   },
+   {
+    "name": "FEC open data (fec.gov/data and the OpenFEC API)",
+    "confirmed": [
+     "self_description: developers page text verbatim: 'This application programming interface (API) allows you to explore the way candidates and committees fund their campaigns.', 'RESTful web service supporting full-text and field-specific searches on FEC data. Bulk downloads are available on the current site. Information is tied to the underlying forms by file ID and image ID. Data are updated nightly.'; fec.gov/data: 'This information is produced and disseminated at U.S. taxpayer expense.' and search examples 'C00431445', 'P00003335', 'enter an image number for a filing'",
+     "subject_scope and outputs: bulk file inventory with ranges 1979-2026 (candidate, committee, individual contributions, transactions), 2009-2026 (communication costs, independent expenditures, electioneering, leadership PACs, lobbyist bundled), 2003-2026 (operating expenditures), False and Fictitious Filings 2016-2026, PostgreSQL dumps 1975-present, formats .zip/.csv/.fec; about-campaign-finance-data: electronic and scanned paper filings, 'within 48 hours of receipt', images from 1972 (microfilm) by filer type; weekly Schedule A dump on Sunday (developers page)",
+     "openness_api: 'up to 1,000 calls an hour', '100 results per page', 'a request to get a key for 7,200 calls an hour (120 calls per minute) to APIinfo@fec.gov', 'a community led group', DEMO_KEY, 'subject to the Terms of Service and Acceptable Use policy'; api.data.gov manual: 40-character key, 1,000 requests per hour default, DEMO_KEY 30 per IP per hour and 50 per IP per day, X-Api-Key header / api_key parameter / HTTP Basic username, X-RateLimit headers, HTTP 429",
+     "openness_code and license: fecgov/openFEC, develop branch, 8,950 commits, API Umbrella for rate limiting and authentication; openFEC LICENSE.md: mix of public-domain government work and other open-source works, 'covered by the FEC's Default License'; fecgov/FEC LICENSE.md: public domain within the United States, CC0 1.0 worldwide, contributions under CC0, contributor-list restriction",
+     "openness_data_license: sale-or-use page cites 52 U.S.C. 30111(a)(4) and 11 CFR 104.15, protects names/addresses of contributors over $200, exceptions for newspapers/magazines/books not principally for solicitation, bona fide academic research (AO 1986-25), committees' own lists, political committee information; bulk page: 'The names and addresses of individual contributors may not be sold or used for commercial purposes or to solicit contributions or donations.'",
+     "disclaimer_or_frame: 'This information is not intended to replace the law or to change its meaning, nor does this information create or confer any rights for or on any person.'",
+     "status_as_of_retrieval: 2026 cycle highlighted on fec.gov/data; bulk files through 2026",
+     "signal_precedents and derived_scoring: consistent with the pages (no per-person rank on pages read; 'False and Fictitious Filings' is an agency file, not a computed flag)"
+    ],
+    "refuted": [],
+    "unverifiable": [
+     "Target URL of the 'Terms of Service and Acceptable Use policy' link on the developers page (link hrefs not exposed in page text)",
+     "Whether the API exposes sub_id or another transaction-level identifier",
+     "The 'raising' and 'spending' summary tables on fec.gov/data (a 'top fundraisers and spenders' comparison is present but was not examined for ranking semantics)"
+    ]
+   },
+   {
+    "name": "Transparency USA",
+    "confirmed": [
+     "self_description and subject_scope: About page mission sentence verbatim; the 25 states listed exactly as in the entry; state-level candidates, PACs, donors and payees; 'Texas is our first state to also include lobbying data'; two-year cycles (Virginia exception); state profiles list current politicians and campaign-finance laws; raw data 'available immediately upon receipt' then de-duplicated and corrected; corrections invited; 'Transparency USA is a non-profit, non-partisan 501(c)(3) organization.'; home page counters 130.87+ Million transactions, 25 states, 298,463 candidates and committees, $100,719,265,451.80 tracked spending, 'We're constantly updating our database as new numbers are released.', 'Chip in $10', Midland, Texas 79707 address",
+     "outputs and derived_scoring: 'top 10 donors in your state this election cycle or total contributions and expenditures by party'; Advanced Transaction Search by date range or dollar amount; articles and email subscription; custom data ranges with pricing on request; Claim Your Page verification is free",
+     "disclaimer_or_frame: FAQ 'We cannot change individual transactions unless they have been first changed in the official reports filed or amended with the state agency'; error reports invited",
+     "primary_sources_used: state agencies; FAQ directs federal queries to www.fec.gov",
+     "openness_data_license: no license stated on the pages read; FAQ 'Legal uses of our data vary by state. Always consult an attorney licensed in your state'; 'We can deliver data via CSV files.'",
+     "could_not_verify item resolved: page customisation costs '$75 per calendar year' (FAQ)"
+    ],
+    "refuted": [
+     {
+      "field": "openness_api",
+      "claim": "Not verified (the Data Sales page could not be loaded; the FAQ mentions CSV delivery only).",
+      "correction": "The Data Sales page loads in a browser and states: 'Data can be delivered via CSV file, JSON file, or API access.' with a quote available from editors@transparencyusa.org. So JSON and API delivery are offered (on request, priced), not CSV only.",
+      "citation_url": "https://www.transparencyusa.org/data-sales"
+     }
+    ],
+    "unverifiable": [
+     "'Top Viewed Entities' in the site navigation (not present in the captured page text of the three cited pages)",
+     "Identifier scheme on entity pages and whether transaction rows link to the state filing (entity pages not opened)",
+     "Status: the Articles page (browser) shows items dated 02/28/2023 and 02/27/2023 at the top; whether the list is sorted newest-first, and therefore whether any article is newer than February 2023, is not determinable from the page text. The FAQ also says '24 states' and lists 24 (omitting Idaho) while the About page and home page say 25; the entry's 25 follows the About page"
+    ]
+   },
+   {
+    "name": "ProPublica FEC Itemizer and Campaign Finance API",
+    "confirmed": [
+     "self_description: Itemizer sentence verbatim ('Itemizer allows you to browse electronic campaign finance filings from the Federal Election Commission and to see individual contributions and expenditures reported by committees raising money for federal elections'); Derek Willis and Sisi Wei with Aaron Bycoffe; Senate candidate and party committee reports included as of October 2018; updated regularly; API docs: 'originated at The New York Times in 2008', 'Federal Election Commission filings and other sources', 'FEC electronic filing data is updated every 15 minutes. Summary FEC data is updated daily.'",
+     "subject_scope: 1980 to present; electronic filings from 2001; paper filings from 1999; lobbyist bundler data 2012 to present",
+     "openness_api: key via ProPublica's Data Store; '5000 requests per day'; no deprecation notice on the docs page",
+     "openness_data_license: CC BY-NC-ND 3.0 United States; no standalone republication of raw data; no charging for access; citation required; term 8 'You will indemnify, hold harmless, and defend ProPublica from and against any claims arising out of your use of the data.'; Data Store terms: 'We do not guarantee the accuracy or completeness of the data. You acknowledge that the data may contain errors and omissions.', no republishing raw data in entirety, no changes except updates or corrections, no charging or advertising against it, no sub-licensing or resale, citation required; Itemizer requires agreeing to the Data Terms of Use and acknowledges 'the official sale and use restrictions set by the Federal Election Commission'",
+     "status_as_of_retrieval: Itemizer page carries a 'Previous day' link to /itemizer/filings/date/2026/9/20, i.e. filings dated in September 2026"
+    ],
+    "refuted": [],
+    "unverifiable": [
+     "Identifier formats used by the API (not documented on the page text)",
+     "Whether Itemizer rows link to the FEC filing image",
+     "Funding for the tool",
+     "Whether 'rate limits are subject to change' is stated verbatim (the 5,000/day cap is confirmed; the change clause was not surfaced)"
+    ]
+   }
+  ],
+  "missing_in_cluster": [
+   {
+    "name": "Capitol Trades",
+    "url": "https://www.capitoltrades.com/",
+    "why": "Live aggregator of congressional Periodic Transaction Reports (STOCK Act filings) with per-politician trade counts, filings, issuers and volume; home page shows trades dated the day of retrieval and insight posts dated August-September 2026. Named in Oath's own CLAUDE.md as a shoulder the project stands on, yet absent from the cluster. Its 'Why Capitol Trades?' framing (investment research) is a contrast worth recording."
+   },
+   {
+    "name": "Quiver Quantitative",
+    "url": "https://www.quiverquant.com/",
+    "why": "Commercial aggregator whose flagship dataset is 'Congress Trading' built from PTR filings, with a 'Congress Backtester'; belongs beside Capitol Trades as a money-in-politics/PTR aggregator with an investment-product frame."
+   },
+   {
+    "name": "Unusual Whales (Politics)",
+    "url": "https://unusualwhales.com/politics",
+    "why": "Page titled 'Track Congressional & Senate Stock Trades'; a third PTR aggregator in the same family; existence confirmed by fetch, content not examined further."
+   },
+   {
+    "name": "LegiStorm",
+    "url": "https://www.legistorm.com/",
+    "why": "Subscription database ('Congress Revealed') offering Financial Disclosures, Privately Funded Travel and staff Salaries products; named in Oath's CLAUDE.md as a comparator; paywalled 'Pro' tiers with free registration. Covers personal financial disclosures, which the cluster otherwise reaches only through OpenSecrets' 2018-capped section."
+   },
+   {
+    "name": "LittleSis (Public Accountability Initiative)",
+    "url": "https://littlesis.org/",
+    "why": "Self-described 'free, open-source research platform ... a database of who-knows-who at the heights of business and government'; power-mapping aggregator that links officeholders, donors and organisations, with posts dated September 2026. Whether it ingests campaign-contribution data was not verified from the home page (fetch was blocked by an Anubis bot check; the browser loaded it)."
+   }
+  ]
+ }
+}

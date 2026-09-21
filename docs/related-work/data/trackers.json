@@ -1,0 +1,1078 @@
+{
+ "key": "trackers",
+ "title": "Legislative trackers and identity resolution",
+ "retrieved": "2026-09-21",
+ "method": "sweep by one reader from the project's own pages; skeptic re-fetched every citation and tried to refute each claim",
+ "sweep": {
+  "entries": [
+   {
+    "name": "GovTrack.us",
+    "organisation": "Civic Impulse, LLC (registered in the District of Columbia)",
+    "url": "https://www.govtrack.us",
+    "kind": "Independent legislative tracker and analysis site (LLC, not a nonprofit, not a government site)",
+    "self_description": "GovTrack says it tracks the activities of the United States Congress and, since 2025, the White House, publishing the status of federal legislation, voting records, information and statistics about representatives and senators, and news and commentary; it describes itself as one of the oldest open-government websites, launched in 2004, and states plainly that it is not a government website. Its posted charter gives its mission as helping Americans participate in their government, commits to reporting fairly and not taking sides on policies or politicians, and says it accepts no grants from partisan organisations.",
+    "subject_scope": "U.S. Congress: bills and resolutions (bill status back to 1799 in varying completeness), roll-call votes (1789 to present, historical votes from Rosenthal and Poole), current and former members with committee assignments, committees, caucuses, congressional district maps, a legislator misconduct database 1789 to present (514 entries at retrieval), and a White House tracker newsletter for presidential actions.",
+    "primary_sources_used": [
+     "Members: the congress-legislators community repository (which GovTrack originally developed and helps maintain); raw member XML from the House and Senate; photos from the GPO Guide to House and Senate Members",
+     "Bill status: GPO GovInfo.gov Bill Status XML bulk data, retrieved daily via the unitedstates/congress scrapers; historical (1989 to 2014) bill status from the former THOMAS.gov",
+     "Bill text: GPO GovInfo.gov (PDF, XML, plain text); Statutes at Large for older enacted bills; Library of Congress American Memory Century of Lawmaking for 1799 to 1873",
+     "Votes: Senate and House websites in XML, refreshed roughly hourly; Rosenthal and Poole roll-call records (Carnegie Mellon) for 1789 to 1990",
+     "Bill summaries: Congressional Research Service summaries obtained by the same channel as bill status, plus summaries GovTrack writes itself",
+     "Upcoming business and committee meetings: Senate website and Docs.House.Gov",
+     "Misconduct database: Senate Historical Office expulsion and censure cases, the House Committee on Standards historical summary of conduct cases 1798 to 2004, a Washington Post indictment list, a Wikipedia list of convictions as of Jan 23, 2018, and contemporary news reports",
+     "Row-level linking: the member page observed links out to the member's official website, OpenSecrets, Bioguide and C-SPAN; per-bill links to GovInfo text were not checked in this survey"
+    ],
+    "outputs": [
+     "Bill pages with status, text, summaries, cosponsor tables and email alerts",
+     "Roll-call vote pages",
+     "Member pages with statistics, an ideology-leadership chart, and links to external profiles",
+     "Annual legislator report cards (per Congress)",
+     "Ideology and leadership scores (CSV downloads for House and Senate)",
+     "Bill prognosis (probability of enactment)",
+     "Text incorporation analysis (which bills were folded into enacted bills)",
+     "Legislator misconduct database (web page plus YAML/CSV on GitHub)",
+     "Pronunciation guide for member names",
+     "Congressional district maps",
+     "Twice-weekly newsletters on upcoming and completed legislative activity; White House tracker newsletter",
+     "Advocacy organisation ratings gathered onto member pages (since 2017) and FY24 earmark requests from Demand Progress Education Fund (since 2023)"
+    ],
+    "derived_scoring_or_ranking": "Report cards rank every member within cohorts (all representatives, all senators, party, freshmen, sophomores, ten-plus years) from #1 downward on: bills cosponsored; bills introduced; bills out of committee; committee positions (a score of five points per full-committee leadership post and one per subcommittee post); cosponsors gathered; ideology score on a 0.00 to 1.00 scale from most politically left to most politically right; joining bipartisan bills (percent of cosponsored bills from the other party); laws enacted (primary sponsor of an enacted bill, or at least about one third of a bill's text incorporated into an enacted bill, by automated analysis); leadership score on a 0.00 to 1.00 scale from top leader to bottom/follower; missed votes (percent); powerful cosponsors; working with the other chamber (companion bills as identified by CRS); writing bipartisan bills. The 2024 report cards cover the 118th Congress as of Feb 13, 2025. Ideology score: principal components analysis (singular value decomposition) of a member-by-member cosponsorship matrix over the current and previous two Congresses, using the second dimension; not computed for members who introduced fewer than ten bills or who have a low leadership score. Leadership score: PageRank run on the same cosponsorship matrix. Bill prognosis: logistic regression per measure type, trained on the 117th Congress. Member pages also present third-party advocacy organisation ratings.",
+    "identifiers_exposed": [
+     "GovTrack numeric person ID (in member page URLs, e.g. /congress/members/nancy_pelosi/400314; the govtrack key in congress-legislators; Wikidata property P12644)",
+     "Bioguide, OpenSecrets and C-SPAN profile links on member pages (the underlying IDs are held; the about-our-data page directs reusers to congress-legislators for the identifier crosswalk)",
+     "The unitedstates/congress scrapers emit GovTrack IDs for legislators when run with the --govtrack flag"
+    ],
+    "signal_precedents": [
+     "No per-filing financial condition (STOCK Act timing, trade-vote proximity, committee-industry overlap, transaction-versus-annual asset checks) is computed on the pages read.",
+     "Misconduct database inclusion criteria, stated on the page: all letters of reproval, censures and expulsions since 1789; all investigations by the House Office of Congressional Ethics (2008 onward), the House Committee on Ethics (1975 onward) and the Senate Select Committee on Ethics (1962 onward), plus Senate exclusion votes tied to personal misconduct; some other congressional investigations and monetary settlements involving alleged personal misconduct that GovTrack is aware of; resignations GovTrack believes likely relevant to an allegation; felony convictions and other nationally significant misconduct before or after service. Each entry carries category tags (bribery and corruption, other crimes, ethics violation, sexual harassment and abuse, campaign and elections), consequence tags (expulsion, censure, reprimand, fined, resignation, exclusion, settlement, conviction, plea) and a resolved/unresolved flag.",
+     "Missed votes: the percentage of roll-call votes a member missed in the Congress, with stated exclusions for the Speaker and non-voting delegates.",
+     "Laws enacted: counted only where the member is primary sponsor of the enacted measure or of a bill at least about one third of whose text was incorporated, excluding bills whose text was wholly replaced."
+    ],
+    "openness_code": "Website front end is public at github.com/govtrack/govtrack.us-web (Django; GitHub's license API reports no license file; last push 2026-07-24). The misconduct database is at github.com/govtrack/misconduct under CC0-1.0 (LICENSE.md; last push 2026-08-21). The analysis methodology page says the ideology and leadership source code is on GitHub and gives the core numpy steps inline. Data collection uses the CC0 unitedstates/congress and congress-legislators repositories, which GovTrack co-maintains.",
+    "openness_data_license": "Terms of Service (last updated August 2023): readers are welcome and encouraged to copy and reuse site information, except that site text, images, data and metadata may not be used for developing any software program, including training a machine learning or AI system, nor for providing archived or cached datasets to another person or entity except for personal, non-commercial use. Ideology and leadership scores are offered as CSV downloads. The misconduct dataset is CC0. GovTrack's own bulk open data and API were retired in 2017 (site timeline).",
+    "openness_api": "None. The site timeline records that its open data and API ended in 2017 because Congress began publishing structured data itself; the about-our-data page points reusers to congress-legislators, GovInfo bulk data, and House and Senate XML instead. Non-browser clients received HTTP 403 during this survey; pages loaded only with a browser user agent.",
+    "funding_or_business_model": "The About page states GovTrack is a project of Civic Impulse, LLC, wholly owned by its operator, with no outside funding, financers, sponsors, investors or partners, and no affiliation with any party, agency or outside group other than subscribers and advertisers. Operating costs are paid by advertising revenue, Substack subscribers, and crowdfunding (Patreon, Kickstarters in 2015 and 2025). It describes a few part-time staff.",
+    "disclaimer_or_frame": "The report cards page states that a higher or lower number does not necessarily make a legislator better or worse or more or less effective, that the statistics are presented so readers can \"make your own judgements\" (GovTrack 2024 Report Cards page), and that much of legislating (constituent service, oversight) is not measured. The ideology methodology page says no margin of error is reported, scores fluctuate with limited data, the axis may measure partisan-ness rather than ideology, cosponsorship is a low-risk act, and scores can be gamed. The misconduct page says many entries are politically motivated, some allegations are never proven, and readers must judge for themselves whether the conduct is misconduct. Every page footer states the site is not a government website, and the contact widget states GovTrack has no affiliation with the member.",
+    "status_as_of_retrieval": "active: the About Our Data page carries an analysis item dated Sept 21, 2026, the About page a recap dated Sept 18, 2026, and misconduct entries dated August 2026.",
+    "citations": [
+     {
+      "url": "https://www.govtrack.us/about",
+      "retrieved": "2026-09-21",
+      "supports": "self-description, charter, organisation (Civic Impulse LLC), funding statement, timeline including 2017 end of open data and API, 2013 report cards, 2017 misconduct database, dated recap item"
+     },
+     {
+      "url": "https://www.govtrack.us/about-our-data",
+      "retrieved": "2026-09-21",
+      "supports": "data sources per collection and era, pointer to congress-legislators, GovInfo, House and Senate XML, misconduct data on GitHub, dated Sept 21, 2026 item"
+     },
+     {
+      "url": "https://www.govtrack.us/about/analysis",
+      "retrieved": "2026-09-21",
+      "supports": "ideology (PCA/SVD, second dimension), leadership (PageRank), prognosis (logistic regression trained on 117th), text incorporation; caveats; CSV downloads; source code on GitHub"
+     },
+     {
+      "url": "https://www.govtrack.us/congress/members/report-cards/2024",
+      "retrieved": "2026-09-21",
+      "supports": "report-card statistics, ranks, cohorts, committee-position scoring, ideology and leadership display scales, exclusions, framing language and quote, as-of date Feb 13, 2025"
+     },
+     {
+      "url": "https://www.govtrack.us/misconduct",
+      "retrieved": "2026-09-21",
+      "supports": "misconduct database count (514), inclusion criteria, category and consequence tags, sources, political-motivation caveat, dated 2026 entries"
+     },
+     {
+      "url": "https://www.govtrack.us/legal",
+      "retrieved": "2026-09-21",
+      "supports": "terms of service reuse permission and the AI-training and cached-dataset exclusions; last updated August 2023; Civic Impulse LLC"
+     },
+     {
+      "url": "https://www.govtrack.us/congress/members/nancy_pelosi/400314",
+      "retrieved": "2026-09-21",
+      "supports": "numeric GovTrack person ID in URL; outbound links to OpenSecrets, Bioguide, C-SPAN; ideology-leadership chart on member page; no-affiliation statement"
+     },
+     {
+      "url": "https://github.com/govtrack/govtrack.us-web",
+      "retrieved": "2026-09-21",
+      "supports": "public source repository; GitHub license API reports no license; last push 2026-07-24"
+     },
+     {
+      "url": "https://github.com/govtrack/misconduct",
+      "retrieved": "2026-09-21",
+      "supports": "misconduct dataset repository; CC0-1.0 LICENSE.md; last push 2026-08-21"
+     }
+    ],
+    "could_not_verify": [
+     "License of the govtrack.us-web repository (no license file detected by GitHub)",
+     "Whether each bill page links to the GovInfo primary text (not fetched)",
+     "Location of the ideology/leadership CSV files (the linked download page was not fetched)",
+     "Pages returned HTTP 403 to WebFetch and to the browser pane; content was retrieved with a browser user agent"
+    ]
+   },
+   {
+    "name": "Congress.gov API",
+    "organisation": "Library of Congress (Congress.gov)",
+    "url": "https://api.congress.gov",
+    "kind": "Official government API for legislative data",
+    "self_description": "The API root says Congress.gov shares its application programming interface with the public to ingest congressional data, with keys issued through api.data.gov and documentation in a GitHub repository. The repository README describes the API as a method for Congress and the public to \"view, retrieve, and re-use machine-readable data\" (LibraryOfCongress/api.congress.gov README) from collections on Congress.gov. The Congress.gov developer guidance page calls the API the preferred route for developers and describes bill status bulk data as a joint effort of GPO, the Library of Congress, the House Clerk and the Secretary of the Senate.",
+    "subject_scope": "Per the Congress.gov coverage-dates table: member profiles from 1971 (92nd Congress to present, including members from 1923 to 1970 still serving in 1971); bill actions and cosponsors from 1973 (93rd); amendment actions from 1981; bill and resolution text in XML from 2007 (older text in PDF/TXT back to 1799 with gaps); committee reports and hearing transcripts from 1995; committee prints from 1993; nominations from 1981; treaty status from 1975; daily Congressional Record from 1995 and bound edition 1873 to 1994; CRS products from 1997; House roll-call votes from 2017 (115th) with the ChangeLog noting 117th-Congress House votes being added in April 2026. Senate committee membership: current only. Votes section lists House roll-call votes only.",
+    "primary_sources_used": [
+     "This is itself the Library of Congress's publication; the developer-guidance page states bill status data is produced jointly by GPO, the Library of Congress, the Office of the Clerk of the House and the Office of the Secretary of the Senate, and is also available as GPO bulk data and via the govinfo API",
+     "Member endpoint documentation says the bioguideId originates in the Biographical Directory of the United States Congress, 1774 to present, and that member vacancy data is maintained separately on the House Clerk website",
+     "Bill text is made available by GPO (coverage-dates footnote)"
+    ],
+    "outputs": [
+     "JSON or XML endpoints under /v3: bill (with actions, amendments, committees, cosponsors, related bills, subjects, summaries, text, titles), law, amendment, summaries, congress, member (list; by bioguideId; sponsored and cosponsored legislation; by congress, state and district), house-vote (list, by congress and session, vote detail and per-member positions, marked beta), committee (with bills, reports, nominations, communications), committee-report, committee-print, committee-meeting, hearing, congressional-record, daily-congressional-record, bound-congressional-record, house-communication, house-requirement, senate-communication, nomination, and (per the documentation folder) crsreport and treaty",
+     "OpenAPI specification (openapi.json and openapi.yaml)",
+     "Python and Java sample clients, a ChangeLog and an issue tracker on GitHub",
+     "Member records return name variants, party, state, district, terms with chamber and years, depiction with attribution, office contact, leadership positions, sponsored and cosponsored legislation counts, birth and death years, currentMember flag and updateDate"
+    ],
+    "derived_scoring_or_ranking": "None observed. Member records carry counts of sponsored and cosponsored legislation but no score or rank.",
+    "identifiers_exposed": [
+     "bioguideId as the member key (originates in the Biographical Directory of the United States Congress)",
+     "Committee system codes (committeeCode) and chamber",
+     "Bill identifiers as congress, billType, billNumber; law identifiers as congress, lawType, lawNumber",
+     "House roll-call vote identifiers as congress, session, voteNumber"
+    ],
+    "signal_precedents": [
+     "None. The API publishes records and counts; no per-filing conditions are computed."
+    ],
+    "openness_code": "Documentation, sample clients, changelog and issue tracker at github.com/LibraryOfCongress/api.congress.gov (last push 2026-09-21). GitHub's license API reports no license file for the repository.",
+    "openness_data_license": "No license statement was found on the API root, the README, the developer-guidance page or the Library's legal page. The Library's legal page says users should determine for themselves whether an item is protected by copyright or in the public domain, and that the Library generally does not own rights to materials in its collections. The README says API keys and registration fall under data.gov's privacy policy and API content under the Library's.",
+    "openness_api": "Public API; key required, obtained through api.data.gov; rate limit 5,000 requests per hour; default page size 20, adjustable up to 250; XML or JSON. The developer-guidance page warns that disregarding the disallow rules in Congress.gov's robots.txt leads to blocking. During this survey, congress.gov help pages returned HTTP 403 to non-browser clients.",
+    "funding_or_business_model": "Government service operated by the Library of Congress; no separate funding statement on the pages read.",
+    "disclaimer_or_frame": "House vote detail and per-member vote endpoints are labelled beta. Coverage-dates footnotes state that historical action data before 1973 is less complete, that committee actions for 1973 to 1980 are limited to referral, reporting and discharge, that pre-1981 cosponsorship dates are unavailable, and that historical bill text may be missing, incomplete or inaccurate.",
+    "status_as_of_retrieval": "active: ChangeLog entries dated May through August 2026; repository last pushed 2026-09-21; coverage-dates page describes next-morning updates.",
+    "citations": [
+     {
+      "url": "https://api.congress.gov/",
+      "retrieved": "2026-09-21",
+      "supports": "self-description at the API root; key via api.data.gov; endpoint list including member/{bioguideId} and house-vote beta endpoints (page text truncated after nomination)"
+     },
+     {
+      "url": "https://raw.githubusercontent.com/LibraryOfCongress/api.congress.gov/main/README.md",
+      "retrieved": "2026-09-21",
+      "supports": "README description and quote; rate limit 5,000 per hour; default and maximum page sizes; privacy-policy split; XML/JSON"
+     },
+     {
+      "url": "https://github.com/LibraryOfCongress/api.congress.gov/blob/main/Documentation/MemberEndpoint.md",
+      "retrieved": "2026-09-21",
+      "supports": "member endpoint forms; bioguideId originates in the Biographical Directory 1774 to present; member fields; vacancy data on House Clerk site"
+     },
+     {
+      "url": "https://raw.githubusercontent.com/LibraryOfCongress/api.congress.gov/main/ChangeLog.md",
+      "retrieved": "2026-09-21",
+      "supports": "dated 2026 changelog entries; 117th-Congress House roll-call votes added April 2026; member legislation sorting May 2026"
+     },
+     {
+      "url": "https://www.congress.gov/help/coverage-dates",
+      "retrieved": "2026-09-21",
+      "supports": "coverage table by collection: member profiles 1971 (92nd), House roll-call votes 2017 (115th), bill text 2007 XML, and footnotes on completeness"
+     },
+     {
+      "url": "https://www.congress.gov/help/using-data-offsite",
+      "retrieved": "2026-09-21",
+      "supports": "API as preferred developer route; GitHub resources; robots.txt blocking warning; bill status bulk data as joint GPO, LOC, House Clerk, Senate Secretary effort"
+     },
+     {
+      "url": "https://www.loc.gov/legal/",
+      "retrieved": "2026-09-21",
+      "supports": "Library's copyright statement placing determination on the user; no API-specific terms"
+     },
+     {
+      "url": "https://github.com/LibraryOfCongress/api.congress.gov",
+      "retrieved": "2026-09-21",
+      "supports": "repository exists; documentation folder lists endpoint docs including CRSReport and Treaty; GitHub license API reports none; last push 2026-09-21"
+     }
+    ],
+    "could_not_verify": [
+     "An explicit license or terms-of-use statement for API data",
+     "The full endpoint list beyond nomination (page text was truncated); crsreport and treaty endpoints inferred from documentation file names",
+     "api.data.gov terms page (HTTP 404 at /terms/)"
+    ]
+   },
+   {
+    "name": "ProPublica Represent and the ProPublica Congress API",
+    "organisation": "ProPublica (Pro Publica Inc.)",
+    "url": "https://projects.propublica.org/represent/",
+    "kind": "Newsroom database and API for Congress (discontinued)",
+    "self_description": "The Represent page describes the tool with the line \"See what your representatives in Congress say and do\" (ProPublica Represent page) and, in a notice updated July 10, 2024, states that Represent and the Congress API are no longer available, thanks users since the 2016 launch, and says the page is a partial archival snapshot from July 2024. The API documentation states the Congress API is no longer available and should be used only as historical reference, and recounts that the API began at The New York Times in 2009, moved to ProPublica in November 2016, and replaced the Sunlight Congress API that was sunset on Oct 1, 2017.",
+    "subject_scope": "Historical: members of Congress (all members, more detail for those serving since 1995), roll-call votes (House from 1991, Senate from 1989), bills from 1995, nominations from 2001, committees, statements and lobbying filings.",
+    "primary_sources_used": [
+     "API documentation describes legislative data from the House, Senate and Library of Congress",
+     "ProPublica volunteers contributed manual edits to the congress-legislators repository (per that project's README)",
+     "Whether each row linked to a primary filing: not verified"
+    ],
+    "outputs": [
+     "Represent web application with member, bill and vote pages (archival snapshot only)",
+     "Congress API endpoints for members, votes, bills, nominations, committees, statements and lobbying (no longer served; no new keys)"
+    ],
+    "derived_scoring_or_ranking": "Not verified; the pages read did not show per-member scores.",
+    "identifiers_exposed": [
+     "Historical member response fields per the members documentation: id (bioguide-format, e.g. A000360), api_uri, govtrack_id, cspan_id, votesmart_id, icpsr_id, crp_id (OpenSecrets), google_entity_id, fec_candidate_id, ocd_id, lis_id"
+    ],
+    "signal_precedents": [
+     "None observed on the pages read."
+    ],
+    "openness_code": "Not verified; no source repository was cited on the pages read.",
+    "openness_data_license": "API documentation states data was released under Creative Commons Attribution-NonCommercial-NoDerivs 3.0 United States, with commercial use available for a fee on request; terms barred wholesale republishing of raw data, altering data, charging for access or reselling, and required citing ProPublica.",
+    "openness_api": "Discontinued; documentation kept as historical reference; no new API keys issued.",
+    "funding_or_business_model": "Not stated on the pages read; the site carries a donate link and describes its work as investigative journalism in the public interest.",
+    "disclaimer_or_frame": "The Represent page frames itself as an archival snapshot and directs readers to ProPublica's ongoing politics coverage and other databases.",
+    "status_as_of_retrieval": "defunct: the site states Represent and the Congress API are no longer available (notice updated July 10, 2024).",
+    "citations": [
+     {
+      "url": "https://projects.propublica.org/represent/",
+      "retrieved": "2026-09-21",
+      "supports": "tagline quote; discontinuation notice; July 10, 2024 update date; archival snapshot framing; 2016 launch"
+     },
+     {
+      "url": "https://projects.propublica.org/api-docs/congress-api/",
+      "retrieved": "2026-09-21",
+      "supports": "API no longer available; history (NYT 2009, ProPublica Nov 2016, Sunlight sunset Oct 1, 2017); coverage dates; CC BY-NC-ND 3.0 US license; terms of use"
+     },
+     {
+      "url": "https://projects.propublica.org/api-docs/congress-api/members/",
+      "retrieved": "2026-09-21",
+      "supports": "identifier fields in the member response; status notice"
+     }
+    ],
+    "could_not_verify": [
+     "Whether any API data remains downloadable",
+     "Per-member derived statistics the API may have carried",
+     "Source code repository"
+    ]
+   },
+   {
+    "name": "The unitedstates project (congress-legislators and congress)",
+    "organisation": "The unitedstates GitHub organisation; volunteer maintained with contributors from GovTrack, ProPublica, MapLight, FiveThirtyEight and others (congress-legislators README); the congress scrapers were built by GovTrack.us and the Sunlight Foundation in 2013 and are maintained by GovTrack.us and other contributors",
+    "url": "https://github.com/unitedstates",
+    "kind": "Public-domain (CC0) data repositories and scrapers for Congress",
+    "self_description": "congress-legislators describes itself as members of the United States Congress from 1789 to the present in YAML, JSON and CSV, together with committees, committee membership, presidents and vice presidents, maintained by volunteer edits and automated imports; it says of the bioguide field, \"This is the best field to use as a primary key.\" (congress-legislators README). The congress repository describes itself as public-domain data collectors for the work of Congress, converting official bulk bill status data, scraping House and Senate roll-call votes, and fetching documents from GovInfo.gov.",
+    "subject_scope": "Members of Congress 1789 to present (current and historical files), committees (current and historical), committee membership, district offices, social media accounts, presidents and vice presidents (executive.yaml); bills, amendments, resolutions and roll-call votes for the congress scrapers.",
+    "primary_sources_used": [
+     "congress-legislators automated imports: GovTrack.us, the Congressional Biographical Directory, Nelson and Stewart historical committee data, Martis's Historical Atlas of Political Parties, the Sunlight Labs Congress API, the Library of Congress THOMAS site, and C-SPAN's Congressional Chronicle; committee data scraped from House and Senate websites",
+     "congress scrapers: official GPO bulk bill status data (github.com/usgpo/bill-status), GovInfo.gov for bill text and status documents, House and Senate roll-call vote pages; a defunct THOMAS nominations scraper",
+     "Row-level linking to primary filings: not applicable (the repositories are identifier and status data, not filings); each id key is documented with the source site it points to"
+    ],
+    "outputs": [
+     "legislators-current and legislators-historical in YAML, JSON and CSV (CSV and JSON on the gh-pages branch)",
+     "committees-current, committees-historical, committee-membership-current",
+     "legislators-social-media, legislators-district-offices, executive.yaml",
+     "congress scrapers emitting data.json and data.xml per bill and per vote, with a --govtrack flag for GovTrack-compatible IDs"
+    ],
+    "derived_scoring_or_ranking": "None.",
+    "identifiers_exposed": [
+     "Documented id keys in the README: bioguide (primary key), thomas, lis (Senate roll-call ID), fec (a list of FEC IDs per person), govtrack, opensecrets, votesmart, icpsr (Voteview), cspan, wikipedia (page name), ballotpedia (page name), maplight, house_history, bioguide_previous (list of alternative bioguide IDs), pictorial",
+     "Present in legislators-current.yaml but not documented in the README id list at retrieval: wikidata (538 of 539 current legislators) and google_entity_id (469)",
+     "Key counts in legislators-current.yaml at retrieval: govtrack 539, bioguide 539, wikipedia 538, wikidata 538, ballotpedia 525, opensecrets 523, votesmart 519, google_entity_id 469, pictorial 444, icpsr 319, cspan 265, maplight 262, thomas 224, house_history 163, lis 100"
+    ],
+    "signal_precedents": [
+     "None."
+    ],
+    "openness_code": "github.com/unitedstates/congress-legislators (CC0-1.0; last push 2026-09-03; scripts tested on Python 3.6) and github.com/unitedstates/congress (CC0-1.0; last push 2025-10-05).",
+    "openness_data_license": "Both READMEs state the project is in the public domain within the United States and that copyright and related rights worldwide are waived through the CC0 1.0 Universal public domain dedication; all contributions are released under CC0.",
+    "openness_api": "None; static files in the repositories (YAML on main, CSV and JSON on gh-pages) and locally run scrapers.",
+    "funding_or_business_model": "Not stated; the README describes volunteer maintenance and automated imports.",
+    "disclaimer_or_frame": "No frame about persons; data-quality notes only, such as the bioguide_previous list for legislators once listed under multiple Bioguide IDs and the note that fec is a list.",
+    "status_as_of_retrieval": "active: congress-legislators latest commit 2026-09-03 (a swearing-in and party fix); congress latest commit 2025-10-05.",
+    "citations": [
+     {
+      "url": "https://raw.githubusercontent.com/unitedstates/congress-legislators/main/README.md",
+      "retrieved": "2026-09-21",
+      "supports": "self-description, documented id keys with descriptions and the primary-key quote, data sources, maintainer statement, CC0 public-domain paragraph, gh-pages CSV/JSON note, users list including ProPublica"
+     },
+     {
+      "url": "https://raw.githubusercontent.com/unitedstates/congress/main/README.md",
+      "retrieved": "2026-09-21",
+      "supports": "scraper scope (GPO bulk bill status, GovInfo, House and Senate votes, defunct THOMAS nominations), origin 2013 GovTrack and Sunlight, maintainers, CC0 paragraph, --govtrack flag"
+     },
+     {
+      "url": "https://raw.githubusercontent.com/unitedstates/congress-legislators/main/legislators-current.yaml",
+      "retrieved": "2026-09-21",
+      "supports": "presence and counts of id keys including wikidata and google_entity_id"
+     },
+     {
+      "url": "https://github.com/unitedstates/congress-legislators",
+      "retrieved": "2026-09-21",
+      "supports": "repository description, CC0-1.0 license, last push 2026-09-03 (GitHub API)"
+     },
+     {
+      "url": "https://github.com/unitedstates/congress",
+      "retrieved": "2026-09-21",
+      "supports": "repository description, CC0-1.0 license, last push 2025-10-05 (GitHub API)"
+     }
+    ],
+    "could_not_verify": [
+     "README documentation of the wikidata and google_entity_id keys (absent from the id list at retrieval)",
+     "Contents of the gh-pages CSV/JSON branch"
+    ]
+   },
+   {
+    "name": "Ballotpedia",
+    "organisation": "Ballotpedia, sponsored by the Wisconsin-based Lucy Burns Institute; the About page states the Lucy Burns Institute/Ballotpedia is a 501(c)(3) organisation",
+    "url": "https://ballotpedia.org",
+    "kind": "Nonprofit online encyclopedia of American politics with paid data services",
+    "self_description": "Ballotpedia calls itself \"the digital encyclopedia of American politics\" (Ballotpedia:About) and says it provides curated, neutral, accurate and verifiable content on government officials and their offices, issues and policy, elections and candidates, produced by professional staff rather than open contributors; it reports 731,312 encyclopedic articles, a nonprofit mission to educate, no affiliation with campaigns or candidates, and a commitment to neutrality in all content.",
+    "subject_scope": "Federal, state, local and territorial candidates, incumbents and appointed figures (executives, legislators, judges); U.S. Congress; state executives, legislatures and courts; all state and territorial ballot measures and some local ones; school boards; the 100 largest cities plus state capitals; local election expansion in 32 states (37,036 elections in 2024, 35,050 in 2025, an estimated 40,000 in 2026); recall elections; redistricting; public policy topics. Stated aim: cover every election in the United States.",
+    "primary_sources_used": [
+     "The data-sales FAQ says staff research and compile data from Secretary of State offices, county election offices, news outlets, and the candidates or officeholders themselves, using official sources wherever possible",
+     "Whether each article statement links to a primary filing: not verified"
+    ],
+    "outputs": [
+     "Encyclopedia articles on officials, offices, candidates, elections, measures and policy",
+     "Sample Ballot Lookup tool; newsletters; annual reports (2019 to 2025)",
+     "Paid datasets: candidate lists and results, officeholder lists (over 600 federal and statewide offices; roughly 15,000 state legislative and top-100-city offices), school board members (about 82,000 across 13,000 boards), ballot measures with arguments, endorsements and campaign finance, topical legislation trackers, policy analysis, static historical files back to 2018",
+     "Geographic APIs with lat/long lookups and bulk CSV/JSON delivery via a client portal and developer documentation"
+    ],
+    "derived_scoring_or_ranking": "No per-officeholder score observed on the pages read. The site lists analytical products such as pivot counties, state supreme court partisanship, polling indexes, competitiveness reports and trifecta analyses.",
+    "identifiers_exposed": [
+     "Article title (page name) functions as the public identifier and is what congress-legislators and Wikidata property P2390 store",
+     "The data-sales page notes that for its ultralocal offices it does not provide persistent person IDs across years, which indicates persistent person IDs exist in the paid datasets for other levels; the identifier scheme itself was not described on the developer pages read"
+    ],
+    "signal_precedents": [
+     "None."
+    ],
+    "openness_code": "None found on the pages read.",
+    "openness_data_license": "Text on the encyclopedia is licensed under the GNU Free Documentation License: it may be copied, modified and redistributed only if made available on the same terms and with attribution (a live link back satisfies attribution). Paid datasets are governed by data terms of use under which the licensee must preserve confidentiality and receives no right to share the full datasets with others; use is permitted inside internal or external products with safeguards against bulk download.",
+    "openness_api": "Paid. Geographic and bulk APIs documented at developer.ballotpedia.org; API keys are obtained through data sales; annual subscriptions; pricing varies by package starting at $500; single-state subscriptions on request.",
+    "funding_or_business_model": "The About page states it is a 501(c)(3) accepting donations from individuals and foundations, with other revenue from Premium Research Services, custom election data and political intelligence via its API, and digital ad sales.",
+    "disclaimer_or_frame": "States that all content must be neutral, accurate and verifiable, that it is nonpartisan and not affiliated with campaigns or advocacy groups, and invites error reports; a separate Disclaimers page is linked in the footer (not fetched).",
+    "status_as_of_retrieval": "active: the About page links a 2025 annual report; navigation carries 2026 and 2027 election pages; the data-sales page lists 2026 state coverage; the scope page shows an update date of May 16, 2024.",
+    "citations": [
+     {
+      "url": "https://ballotpedia.org/Ballotpedia:About",
+      "retrieved": "2026-09-21",
+      "supports": "self-description and quote; article count; 501(c)(3); Lucy Burns Institute sponsorship; revenue sources; neutrality statements; coverage areas; 2025 annual report link; 2026 and 2027 navigation"
+     },
+     {
+      "url": "https://ballotpedia.org/Ballotpedia:Scope",
+      "retrieved": "2026-09-21",
+      "supports": "scope of offices and levels; local expansion figures and 32 states; May 16, 2024 update date; aim to cover every election"
+     },
+     {
+      "url": "https://ballotpedia.org/Ballotpedia:Buy_Political_Data",
+      "retrieved": "2026-09-21",
+      "supports": "paid datasets, delivery formats, officeholder list sizes, pricing from $500, sources statement, terms summary, persistent person ID note for ultralocal offices"
+     },
+     {
+      "url": "https://ballotpedia.org/Ballotpedia:Copyrights",
+      "retrieved": "2026-09-21",
+      "supports": "GFDL licensing of text and its conditions"
+     },
+     {
+      "url": "https://developer.ballotpedia.org/dictionaries-and-terms/terms-of-use",
+      "retrieved": "2026-09-21",
+      "supports": "data client terms: confidentiality, no right to share full datasets, purchase constitutes acceptance"
+     },
+     {
+      "url": "https://developer.ballotpedia.org/",
+      "retrieved": "2026-09-21",
+      "supports": "existence of geographic and bulk data API documentation; access via sales contact"
+     }
+    ],
+    "could_not_verify": [
+     "Person identifier scheme in the developer documentation",
+     "The Disclaimers page",
+     "Whether article statements link to primary filings row by row",
+     "API pricing beyond the stated starting point"
+    ]
+   },
+   {
+    "name": "Vote Smart",
+    "organisation": "Vote Smart (formerly Project Vote Smart), nonprofit, Des Moines, Iowa (office at Drake University)",
+    "url": "https://votesmart.org",
+    "kind": "Nonprofit voter-information database with a fee-based API",
+    "self_description": "Vote Smart says its sole mission is to provide \"free, factual, unbiased information on candidates and elected officials\" (votesmart.org About page) to all Americans, every day of the year; it recounts a founding more than thirty years ago by Presidents Ford and Carter and other leaders from both parties, describes itself as nonpartisan with no endorsements, advocacy or lobbying, and says its board seats were filled only in politically opposite pairs.",
+    "subject_scope": "Candidates and elected officials at federal and state levels (more than 220,000 candidates since 1992): biographies, voting records (key votes), issue positions (Political Courage Test), interest-group ratings (over 1,500 groups), endorsements, public statements, committees, vetoes, ballot measures, election summaries, and voter registration and polling-place information for all 50 states.",
+    "primary_sources_used": [
+     "Not stated on the pages read beyond a footer credit that legislative demographic data is provided by Aristotle International, Inc.; a page on the selection and description of key votes is linked but was not fetched",
+     "Whether each key vote links to the House Clerk or Senate roll-call record: not verified"
+    ],
+    "outputs": [
+     "Candidate and official profiles at justfacts.votesmart.org (bio, votes, positions, ratings)",
+     "Key votes database with issue, state, year and chamber filters (a House vote dated 09/15/2026 was observed on a member page)",
+     "Interest-group ratings and endorsements; Political Courage Test; public statements",
+     "API (api.votesmart.org) returning XML or JSON for classes Address, Ballot Measure, CandidateBio, Candidates, Committee, District, Election, Leadership, Local, Npat, Office, Officials, Rating, State and Votes",
+     "A chat feature (Civic Sage) drawing on Vote Smart research; printed voter guides; a data subscription program"
+    ],
+    "derived_scoring_or_ranking": "No Vote Smart-computed score observed. Member pages republish third-party interest-group ratings and offer a comparison of a member's votes against their stated positions.",
+    "identifiers_exposed": [
+     "Vote Smart candidate ID (numeric, in profile URLs such as /candidate/key-votes/26732/nancy-pelosi and as candidateId in the API; carried as the votesmart key in congress-legislators and as Wikidata property P3344)"
+    ],
+    "signal_precedents": [
+     "None."
+    ],
+    "openness_code": "None found on the pages read.",
+    "openness_data_license": "Site footer: all content copyright 1992 to 2021 Vote Smart unless otherwise attributed. API terms of use: individual use restricted to Vote Smart members; business or organisational use subject to fees; no use of the name, programs or data in any campaign activity; attribution not required but appreciated, and attribution to another party not permitted; keys are personal and non-transferable; service provided as-is with warranties disclaimed.",
+    "openness_api": "api.votesmart.org with documentation last updated September 23, 2014; registration and API key required; fees for organisational use; the API page invites booking a demo. The public site meters free page views and prompts for login after a few (observed), and justfacts.votesmart.org returned HTTP 403 to non-browser clients.",
+    "funding_or_business_model": "The About page states 97 percent of support comes from Americans mailing checks of $250 or less, that it refuses financial assistance from organisations and special-interest groups that lobby or support or oppose candidates or issues, and links Form 990s for 2020 to 2024; the home page adds nonpartisan foundation funding and revenue from its data subscription program and other programs.",
+    "disclaimer_or_frame": "Frames itself as nonpartisan and factual, with staff who check their politics at the door; the API terms disclaim warranties and forbid campaign use of the data.",
+    "status_as_of_retrieval": "active: a key vote dated 09/15/2026 appears on a member's voting-record page; the site footer copyright still reads 1992 to 2021 and the API documentation is dated 2014.",
+    "citations": [
+     {
+      "url": "https://www.votesmart.org/about",
+      "retrieved": "2026-09-21",
+      "supports": "mission quote; founding story; nonpartisan rules; funding statement (97 percent small checks, refusal of lobbying-group money); 990 links; Aristotle footer credit"
+     },
+     {
+      "url": "https://www.votesmart.org/",
+      "retrieved": "2026-09-21",
+      "supports": "voter tools list; interest-group count; candidate count since 1992; funding sources including data subscription program"
+     },
+     {
+      "url": "https://api.votesmart.org/docs/terms.html",
+      "retrieved": "2026-09-21",
+      "supports": "API terms of use: membership, fees, campaign-use ban, attribution, keys, disclaimer"
+     },
+     {
+      "url": "https://api.votesmart.org/docs/",
+      "retrieved": "2026-09-21",
+      "supports": "API classes; XML or JSON; documentation last updated September 23, 2014"
+     },
+     {
+      "url": "https://votesmart.org/share/api/register",
+      "retrieved": "2026-09-21",
+      "supports": "API feature list and demo booking; add-on datasets"
+     },
+     {
+      "url": "https://justfacts.votesmart.org/candidate/key-votes/26732/nancy-pelosi",
+      "retrieved": "2026-09-21",
+      "supports": "Vote Smart candidate ID in URL; key vote dated 09/15/2026; votes-versus-positions comparison; metered free views"
+     },
+     {
+      "url": "https://justfacts.votesmart.org/",
+      "retrieved": "2026-09-21",
+      "supports": "site sections (bio, votes, positions, ratings); Civic Sage feature; footer copyright range"
+     }
+    ],
+    "could_not_verify": [
+     "Key-vote selection methodology page",
+     "API fee schedule",
+     "Whether votes link to Congress.gov, House Clerk or Senate roll-call pages",
+     "Pages on justfacts.votesmart.org returned HTTP 403 to non-browser clients; read through the browser pane"
+    ]
+   },
+   {
+    "name": "LegiStorm",
+    "organisation": "LegiStorm LLC, Washington, DC (founded 2006; Jock Friedly, Chief Executive Officer and Founder)",
+    "url": "https://www.legistorm.com",
+    "kind": "Commercial public-affairs data platform (subscription) with some free public databases",
+    "self_description": "LegiStorm's home page carries the tagline \"Congress Revealed\" (legistorm.com home page); its company site says it is a comprehensive public affairs platform offering intelligence and tools for Congress and state legislatures, with a mission to give clients easy access to the information they need to achieve their objectives on Capitol Hill, and traces its start to making congressional salary information public in 2006, expanding by 2013 into staff directories, town halls, press releases and financial disclosures, then state coverage (2016) and lobbying analytics (2022).",
+    "subject_scope": "Congress: staff and member salaries, staff directories and contact lists, official expenses, staff turnover, town halls, hearing schedules, press releases and tweets, the revolving door; disclosures: personal financial disclosures of members and certain staff, privately funded travel from January 1, 2000 to present, foreign gifts, earmarks 2008 to 2010; lobbying filings; state legislators and staff; CRS, OMB, CBO and White House reports.",
+    "primary_sources_used": [
+     "Personal financial disclosures: public documents filed with Congress by all members and by staff earning at least 120 percent of the GS-15 base salary (about $111,000 in 2007), at least one staffer per member office, and Senate staff designated to accept campaign funds; LegiStorm posts images of the original disclosures with home addresses, phone numbers, Social Security numbers and minor children's names redacted",
+     "Privately funded travel: the financial disclosures required for privately sponsored official travel, with access to the original documentation",
+     "Foreign gifts: Federal Register publications supplemented by raw House Ethics Committee documents; the page states the Senate has no comparable public disclosure except through State Department reports",
+     "The about-our-data page does not name the House Clerk or Senate Office of Public Records; LegiStorm Pro lists original PDFs of congressional and lobbying disclosures"
+    ],
+    "outputs": [
+     "Free public site: find a member, salaries, official expenses, turnover, Congress by the Numbers, personal financial disclosure browsing and search (with staffer disclosures marked Pro)",
+     "Pro or Premium: privately funded travel, foreign gifts, town halls, Congressional Record search, lobbying filing searches, revolving door, top lobbying firms, state legislature and staff data, press-release feed",
+     "Staff contact lists, staffer dossiers (PowerBriefs), custom email notifications, mobile app, weekly newsletters, policy reports",
+     "Data licensing and an API listed under custom solutions on the company site"
+    ],
+    "derived_scoring_or_ranking": "Top Lobbying Firms (Premium) and a Members of Congress by Age report are the rankings named; no per-officeholder score observed on the pages read.",
+    "identifiers_exposed": [
+     "Its own person pages; no external identifier scheme (bioguide, FEC, OpenSecrets, Wikidata) observed on the pages read"
+    ],
+    "signal_precedents": [
+     "No computed per-filing condition observed on the pages read (no late-filing flag, trade-vote proximity, committee-industry overlap or transaction-versus-annual asset check). The PFD FAQ contains no information on filing deadlines, amendments or periodic transaction reports."
+    ],
+    "openness_code": "None found.",
+    "openness_data_license": "Proprietary; footer states copyright 2026 LegiStorm LLC, all rights reserved; a Terms of Use page is linked (not fetched).",
+    "openness_api": "An API is listed under custom solutions on the company site; no public terms or documentation were found on the pages read.",
+    "funding_or_business_model": "Subscription platform (LegiStorm Pro, with free demos and a Start Free plan), purchases of staff contact lists and policy reports, data licensing, and an API; the company site cites 7,000-plus customers served and 350,000-plus hours of research.",
+    "disclaimer_or_frame": "The PFD FAQ states that financial disclosure statements are not intended as net-worth statements and are not well suited to that purpose; the foreign-gifts page notes that diplomatic protocol often requires giving and accepting gifts; the travel FAQ notes that congressional rules allow private sponsorship only for official business and distinguishes such trips from taxpayer, campaign and foreign-government funded travel that is not disclosed the same way.",
+    "status_as_of_retrieval": "active: home page blog posts dated September 2026 (latest September 17, 2026); footer copyright 2026; the financial-disclosure page reports 28 disclosures added in the past week.",
+    "citations": [
+     {
+      "url": "https://www.legistorm.com/",
+      "retrieved": "2026-09-21",
+      "supports": "tagline quote; list of databases and Pro or Premium markers; free and paid tiers; blog posts dated September 2026"
+     },
+     {
+      "url": "https://info.legistorm.com/about",
+      "retrieved": "2026-09-21",
+      "supports": "mission, milestones 2006 to 2022, founder and CEO, customer counts, data licensing and API under custom solutions, 2026 copyright"
+     },
+     {
+      "url": "https://www.legistorm.com/pro.html",
+      "retrieved": "2026-09-21",
+      "supports": "LegiStorm Pro contents, audiences, subscription and demo model, original PDFs of disclosures"
+     },
+     {
+      "url": "https://www.legistorm.com/financial_disclosure.html",
+      "retrieved": "2026-09-21",
+      "supports": "images of original disclosures; who files; staffer disclosures marked Pro; disclosures added in past week"
+     },
+     {
+      "url": "https://www.legistorm.com/pfd/faq.html",
+      "retrieved": "2026-09-21",
+      "supports": "filer thresholds; redactions; not-a-net-worth-statement caveat; absence of deadline, amendment and PTR discussion"
+     },
+     {
+      "url": "https://www.legistorm.com/trip.html",
+      "retrieved": "2026-09-21",
+      "supports": "privately funded travel tracked for members and staff with original documentation, behind a subscription; LegiStorm LLC address"
+     },
+     {
+      "url": "https://www.legistorm.com/trip/faq.html",
+      "retrieved": "2026-09-21",
+      "supports": "travel database composed of privately funded travel disclosures from January 1, 2000; official-business rule; distinction from undisclosed travel types"
+     },
+     {
+      "url": "https://www.legistorm.com/foreign_gifts/about.html",
+      "retrieved": "2026-09-21",
+      "supports": "Foreign Gifts and Decorations Act basis; $335 minimal-value threshold as of 2008; Federal Register and House Ethics sources; Senate gap; Pro access; protocol caveat"
+     },
+     {
+      "url": "https://www.legistorm.com/index/about_our_data.html",
+      "retrieved": "2026-09-21",
+      "supports": "dataset list; Premium markers; no named government agencies"
+     }
+    ],
+    "could_not_verify": [
+     "Whether disclosure rows link to the House Clerk or Senate eFD record rather than LegiStorm-hosted images",
+     "API terms and documentation",
+     "The Terms of Use page",
+     "Government sources for staff salary and expense data (the about-our-data page did not name them)"
+    ]
+   },
+   {
+    "name": "Wikidata (as identity infrastructure for U.S. politicians)",
+    "organisation": "Wikimedia project; the operating organisation was not stated on the pages read",
+    "url": "https://www.wikidata.org",
+    "kind": "Collaboratively edited open knowledge base with CC0 structured data",
+    "self_description": "The Main Page describes Wikidata as a free and open knowledge base that can be \"read and edited by both humans and machines\" (Wikidata Main Page), reporting 123,437,129 data entities at retrieval. The Data Access page describes four access routes (linked data interface, SPARQL query service, MediaWiki Action API, dumps) and asks clients to follow the User-Agent policy and honour rate-limit responses.",
+    "subject_scope": "General-purpose; for this cluster, the external-identifier properties that link items for U.S. politicians to other databases: P1157 US Congress Bio ID, P1839 US Federal Election Commission ID, P2686 OpenSecrets people ID, P12644 GovTrack person ID, P3344 Vote Smart candidate ID, P2390 Ballotpedia ID.",
+    "primary_sources_used": [
+     "Not applicable as a publisher of filings; each identifier property carries a formatter URL to the external database: bioguide.congress.gov/search/bio/$1 (P1157), fec.gov/data/candidate/$1 (P1839), opensecrets.org/personal-finances/net-worth?cid=$1 (P2686), govtrack.us/congress/person.xpd?id=$1 (P12644), justfacts.votesmart.org/candidate/$1 (P3344), ballotpedia.org/$1 (P2390)"
+    ],
+    "outputs": [
+     "Items (QIDs) with statements and qualifiers",
+     "Linked data interface with content negotiation (.json, .rdf, .ttl) for known entities",
+     "SPARQL endpoint at query.wikidata.org/sparql",
+     "MediaWiki Action API (up to 50 entities per request)",
+     "Full database dumps"
+    ],
+    "derived_scoring_or_ranking": "None.",
+    "identifiers_exposed": [
+     "QID per item",
+     "P1157 US Congress Bio ID: format [A-Z]00[01]\\d{3}; single-value and distinct-values constraints; subject must be human with politician occupation and U.S. citizenship; 12,708 records in the linked Mix'n'match catalog",
+     "P1839 US Federal Election Commission ID: format covering candidate IDs ([HS][A-Z0-9][A-Z]{2}[A-Z0-9]{5}) and committee IDs ([PC][0-9]{8}); distinct values; applies to humans and organisations; requires a party statement",
+     "P2686 OpenSecrets people ID: format [Nn]00\\d{6}; single and distinct values; subject must be human",
+     "P12644 GovTrack person ID: numeric; single and distinct values; subject human with politician occupation",
+     "P3344 Vote Smart candidate ID: digits; single and distinct values",
+     "P2390 Ballotpedia ID: article title; distinct values; single value except lower state houses; MediaWiki page ID as required qualifier"
+    ],
+    "signal_precedents": [
+     "None."
+    ],
+    "openness_code": "Not verified on the pages read (the platform software was not examined).",
+    "openness_data_license": "All structured data in the main, property and lexeme namespaces is made available under Creative Commons CC0; text in other namespaces is under Creative Commons Attribution-ShareAlike 4.0; every contributor applies CC0 to their contribution as a term of use.",
+    "openness_api": "Linked data interface, SPARQL query service, MediaWiki Action API and dumps, all public; clients must follow the User-Agent policy and robot policies and respect 429 responses with Retry-After; the Data Access page advises the API is not for large result sets and dumps are not for current data.",
+    "funding_or_business_model": "Not stated on the pages read (a donate link is present).",
+    "disclaimer_or_frame": "Not applicable to listings; the identifier properties carry editorial constraints (format, single value, distinct values, subject type) that flag but do not prevent inconsistent data.",
+    "status_as_of_retrieval": "active: Main Page news items dated June 19 to 21, 2026 and November 12, 2025.",
+    "citations": [
+     {
+      "url": "https://www.wikidata.org/wiki/Wikidata:Main_Page",
+      "retrieved": "2026-09-21",
+      "supports": "self-description quote; entity count; dated 2025 and 2026 news items"
+     },
+     {
+      "url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+      "retrieved": "2026-09-21",
+      "supports": "CC0 for structured data; CC BY-SA 4.0 for other text; contributor CC0 term of use"
+     },
+     {
+      "url": "https://www.wikidata.org/wiki/Wikidata:Data_access",
+      "retrieved": "2026-09-21",
+      "supports": "access routes, SPARQL endpoint, API batch limit, dumps, User-Agent and rate-limit guidance"
+     },
+     {
+      "url": "https://www.wikidata.org/wiki/Property:P1157",
+      "retrieved": "2026-09-21",
+      "supports": "US Congress Bio ID label, formatter URL, format and subject constraints, Mix'n'match count"
+     },
+     {
+      "url": "https://www.wikidata.org/wiki/Property:P1839",
+      "retrieved": "2026-09-21",
+      "supports": "US FEC ID label, formatter URL, format regex covering candidate and committee IDs, constraints"
+     },
+     {
+      "url": "https://www.wikidata.org/wiki/Property:P2686",
+      "retrieved": "2026-09-21",
+      "supports": "OpenSecrets people ID label, formatter URL, format and constraints, examples"
+     },
+     {
+      "url": "https://www.wikidata.org/wiki/Property:P12644",
+      "retrieved": "2026-09-21",
+      "supports": "GovTrack person ID label, formatter URL, constraints"
+     },
+     {
+      "url": "https://www.wikidata.org/wiki/Property:P3344",
+      "retrieved": "2026-09-21",
+      "supports": "Vote Smart candidate ID label, formatter URL, constraints"
+     },
+     {
+      "url": "https://www.wikidata.org/wiki/Property:P2390",
+      "retrieved": "2026-09-21",
+      "supports": "Ballotpedia ID label, formatter URL, constraints and qualifiers"
+     }
+    ],
+    "could_not_verify": [
+     "Operating organisation and funding statements",
+     "Usage counts for P1839, P2686 and P12644",
+     "Platform software and its license"
+    ]
+   },
+   {
+    "name": "Open States (Plural Open)",
+    "organisation": "Plural (adopted the project in 2021); a Sunlight Foundation project 2009 to 2016; independently run 2016 to 2021",
+    "url": "https://open.pluralpolicy.com",
+    "kind": "State legislative data aggregator with open-source scrapers, API, bulk data and a curated people dataset",
+    "self_description": "Open States says it strives to improve civic engagement by providing data and tools for understanding the legislative process, aggregating legislative information from all 50 states, Washington, D.C., Puerto Rico and the U.S. Congress, standardising and cleaning it, and publishing it through its website, an API and bulk downloads; it states that legislative data is \"collected from official sources, linked at the bottom of relevant pages\" (Open States About page), with bill and vote data scraped several times a day and legislator data curated by its team and volunteers.",
+    "subject_scope": "Bills, votes, legislators, governors and some municipal leaders, committees and events for the 50 states, D.C. and Puerto Rico (the documentation site names states, D.C. and Puerto Rico; the About page also names the U.S. Congress, and the people repository ports the congress-legislators data into its schema).",
+    "primary_sources_used": [
+     "Official state legislature websites, read by scrapers, with the source linked at the bottom of relevant pages",
+     "People data curated manually in YAML; the us directory is ported from the CC0 congress-legislators repository"
+    ],
+    "outputs": [
+     "Website for finding legislators and tracking state bills",
+     "API v3 (JSON) at v3.openstates.org with endpoints for jurisdictions, people, people.geo, bills, committees and events; a deprecated GraphQL v2 API",
+     "Bulk downloads",
+     "openstates/people YAML repository (legislature, executive, municipalities, retired, committees per state)"
+    ],
+    "derived_scoring_or_ranking": "None observed.",
+    "identifiers_exposed": [
+     "ocd-person IDs, ocd-jurisdiction IDs and ocd-bill UUIDs (Open Civic Data identifiers) per the people schema and API",
+     "An other_identifiers list per person with scheme, identifier and optional start and end dates (example scheme: votesmart), plus an ids block for accounts such as Twitter",
+     "An enhancement proposal (OSEP 5) on replacing pupa_id with a dedupe_key"
+    ],
+    "signal_precedents": [
+     "None."
+    ],
+    "openness_code": "github.com/openstates: openstates-scrapers (GPL-3.0; last push 2026-09-21), openstates-core (MIT; last push 2026-09-17), people (CC0-1.0; last push 2026-09-21), documentation.",
+    "openness_data_license": "Terms of Service (effective September 15, 2021): no attribution required, no copyright claim over any data collected and published, no implied affiliation or endorsement; services provided as-is. The people repository is dedicated to the public domain under CC0.",
+    "openness_api": "API keys required (register, then pass X-API-KEY header or apikey parameter); interactive documentation at v3.openstates.org/docs; the terms reserve a right to limit or block use that exceeds stated limits.",
+    "funding_or_business_model": "The About page lists funding prior to 2022: the Sunlight Foundation (2009 to 2016), Rita Allen Foundation, Minnesota Historical Society, Robert R. McCormick Foundation, Google.org, the Donald W. Reynolds Journalism Institute, and corporate contributions from Google Summer of Code, WeWork, Amazon Web Services and free plans from NewRelic and GitHub; since 2021 it is run by Plural, described as a company creating software for public policy data. Current funding is not stated.",
+    "disclaimer_or_frame": "Terms summary: the project aims to be accurate and reliable but cannot provide guarantees, and use is contingent on accepting that.",
+    "status_as_of_retrieval": "active: openstates/people and openstates-scrapers last pushed 2026-09-21; openstates-core 2026-09-17.",
+    "citations": [
+     {
+      "url": "https://open.pluralpolicy.com/about/",
+      "retrieved": "2026-09-21",
+      "supports": "self-description and quote; scope; scrapers and curated people data; Plural adoption 2021; history; funding history"
+     },
+     {
+      "url": "https://docs.openstates.org/",
+      "retrieved": "2026-09-21",
+      "supports": "Plural Open description; states, D.C. and Puerto Rico scope; move under Plural Open in 2023; volunteer-powered note"
+     },
+     {
+      "url": "https://docs.openstates.org/api-v3/",
+      "retrieved": "2026-09-21",
+      "supports": "API v3 root, key mechanism, endpoints, concepts (jurisdiction, person, bill)"
+     },
+     {
+      "url": "https://docs.openstates.org/data/",
+      "retrieved": "2026-09-21",
+      "supports": "data model concepts: jurisdiction, session, bill, vote, person, organization, post, membership"
+     },
+     {
+      "url": "https://open.pluralpolicy.com/tos/",
+      "retrieved": "2026-09-21",
+      "supports": "terms effective September 15, 2021; no attribution; no copyright claim over data; right to limit; as-is"
+     },
+     {
+      "url": "https://raw.githubusercontent.com/openstates/people/main/README.md",
+      "retrieved": "2026-09-21",
+      "supports": "people data layout; inspiration from and port of congress-legislators; CC0 dedication"
+     },
+     {
+      "url": "https://raw.githubusercontent.com/openstates/people/main/schema.md",
+      "retrieved": "2026-09-21",
+      "supports": "ocd-person and ocd-jurisdiction identifiers; other_identifiers with scheme, identifier, start_date, end_date; ids block"
+     },
+     {
+      "url": "https://github.com/openstates",
+      "retrieved": "2026-09-21",
+      "supports": "repository licenses and last push dates (GitHub API): scrapers GPL-3.0, core MIT, people CC0-1.0"
+     }
+    ],
+    "could_not_verify": [
+     "Whether the live site currently serves U.S. Congress data (About says yes; documentation names only states, D.C. and Puerto Rico)",
+     "API rate limits and any paid tiers",
+     "A separate bulk-data license page"
+    ],
+    "added_by_sweep": true
+   },
+   {
+    "name": "Voteview",
+    "organisation": "UCLA Department of Political Science and Social Science Computing; project lead Jeffrey B. Lewis; directors emeritus Keith T. Poole and the late Howard Rosenthal",
+    "url": "https://voteview.com",
+    "kind": "Academic roll-call vote database with ideal-point estimation (DW-NOMINATE)",
+    "self_description": "Voteview says it lets users \"view every congressional roll call vote in American history\" (Voteview About page) on a map of the United States and on a liberal-conservative ideological map, using DW-NOMINATE, the scaling procedure developed by Poole and Rosenthal in the 1980s that places legislators so that closeness reflects similarity of voting records; the site is presented as a beta 3 rewrite of an older codebase, with data updated live as new votes are taken.",
+    "subject_scope": "Every Congress from the 1st (1789) through the 119th (2025 to 2027): members, roll-call votes, members' votes and party data for House and Senate.",
+    "primary_sources_used": [
+     "Not stated on the pages read; the data page says data is updated live as new votes are taken but does not name the House or Senate source feeds",
+     "Row-level linking to House Clerk or Senate roll-call records: not verified"
+    ],
+    "outputs": [
+     "Downloads of Member Ideology, Congressional Votes, Members' Votes and Congressional Parties in CSV, JSON, DAT or ORD",
+     "A complete weekly MongoDB database dump (about 500 MB zipped) and archived prior releases",
+     "Party unity scores, presidential support scores, polarization plots, and analysis articles",
+     "Rvoteview R package; site source, district boundary JSON and member photos through a GitHub organisation"
+    ],
+    "derived_scoring_or_ranking": "Per-member DW-NOMINATE scores (nominate_dim1 and nominate_dim2) for every member in every Congress; party unity scores; presidential support scores; an article tracking roll-call attendance rates of members running for president in 2020; an article explaining why NOMINATE estimated Alexandria Ocasio-Cortez as moderate as of June 2019.",
+    "identifiers_exposed": [
+     "icpsr: integer 1 to 99999 identifying the member; a member who changed parties or later became president may carry separate codes so NOMINATE can be computed for each role",
+     "bioguide_id: the member's identifier in the Biographical Directory of Congress",
+     "state_icpsr: integer 0 to 99 for the state"
+    ],
+    "signal_precedents": [
+     "None per filing. Attendance rate in roll-call votes was computed for presidential candidates as a per-person participation statistic."
+    ],
+    "openness_code": "The data page says most of the code for the website is available through the project's GitHub organisation (site source, district boundaries, photos, Rvoteview); the repository path was not confirmed (a lookup of voteview/voteview.com returned 404).",
+    "openness_data_license": "Not stated. The data page asks that the dataset be cited as Lewis, Poole, Rosenthal, Boche, Rudkin and Sonnet (2026), Voteview: Congressional Roll-Call Votes Database, and says the database dump is provided without warranty.",
+    "openness_api": "None stated; downloads and database dumps.",
+    "funding_or_business_model": "The About page acknowledges support from the William and Flora Hewlett Foundation (grant 2016-3870), the National Science Foundation (NSF-SBS-0611974), UCLA Social Science Computing, and the University of Georgia.",
+    "disclaimer_or_frame": "Database dump provided without warranty; archived releases may be missing new data or corrections and users are advised to use the current release; a methodology article addresses a counter-intuitive estimate.",
+    "status_as_of_retrieval": "active: the data page's requested citation is dated 2026 and lists the 119th Congress; data described as updated live.",
+    "citations": [
+     {
+      "url": "https://voteview.com/about",
+      "retrieved": "2026-09-21",
+      "supports": "self-description quote; UCLA hosting; project lead and directors emeritus; DW-NOMINATE description; funders; history"
+     },
+     {
+      "url": "https://voteview.com/data",
+      "retrieved": "2026-09-21",
+      "supports": "downloads and formats; 2026 citation request; live updates; MongoDB dump without warranty; archival note; ancillary analyses; GitHub organisation"
+     },
+     {
+      "url": "https://voteview.com/articles/data_help_members",
+      "retrieved": "2026-09-21",
+      "supports": "icpsr, bioguide_id and state_icpsr field definitions; multiple ICPSR codes after party switches; NOMINATE dimensions"
+     }
+    ],
+    "could_not_verify": [
+     "Primary sources for the roll-call feeds",
+     "Data license",
+     "GitHub repository path for the site source"
+    ],
+    "added_by_sweep": true
+   },
+   {
+    "name": "Biographical Directory of the United States Congress (Bioguide)",
+    "organisation": "Not stated on the pages read; hosted at bioguide.congress.gov, with the home page image credited to the Library of Congress",
+    "url": "https://bioguide.congress.gov",
+    "kind": "Official biographical directory and the registry of the bioguide identifier",
+    "self_description": "The home page states that since 1859 the Biographical Directory has been \"the primary source for biographical information on Members\" (bioguide.congress.gov home page) of the United States Congress and the Continental Congresses, and offers a browse-biographies entry point and a link to a retro version of the site.",
+    "subject_scope": "Members of the Continental Congresses and the U.S. Congress, 1774 to present (per the Congress.gov member endpoint documentation, which says the bioguideId originates in this directory).",
+    "primary_sources_used": [
+     "It is itself the reference record: each entry carries a profileText biography, dates, job positions and related members; image assets carry credit lines (for example, the Collection of the U.S. House of Representatives) and a usageRight field"
+    ],
+    "outputs": [
+     "Per-member pages at /search/bio/{ID}",
+     "A JSON record at /search/bio/{ID}.json (observed for P000197) with fields including usCongressBioId, familyName, givenName, birthDate, profileText, relationship (with the related member's own ID), image and asset metadata, and jobPositions",
+     "A retro version of the directory website"
+    ],
+    "derived_scoring_or_ranking": "None.",
+    "identifiers_exposed": [
+     "usCongressBioId (the bioguide ID: one letter plus six digits, e.g. P000197)",
+     "Related members referenced by their own bioguide IDs in the relationship field"
+    ],
+    "signal_precedents": [
+     "None."
+    ],
+    "openness_code": "Not verified.",
+    "openness_data_license": "Not stated on the pages read; asset records carry a usageRight value (for example, Import to Congress.gov).",
+    "openness_api": "An undocumented JSON endpoint per member was observed; no API documentation or terms were found. The site returned HTTP 403 to non-browser clients during this survey.",
+    "funding_or_business_model": "Not stated (government website).",
+    "disclaimer_or_frame": "None observed.",
+    "status_as_of_retrieval": "unknown: no explicitly dated content within the last twelve months was observed; the record fetched carried an asset upload date of 2024-06-21 and biography text referencing a 2024 event.",
+    "citations": [
+     {
+      "url": "https://bioguide.congress.gov/",
+      "retrieved": "2026-09-21",
+      "supports": "home page statement and quote; browse entry point; retro site link"
+     },
+     {
+      "url": "https://bioguide.congress.gov/search/bio/P000197.json",
+      "retrieved": "2026-09-21",
+      "supports": "JSON record structure: usCongressBioId, names, dates, profileText, relationship IDs, asset usageRight and upload date, jobPositions"
+     },
+     {
+      "url": "https://github.com/LibraryOfCongress/api.congress.gov/blob/main/Documentation/MemberEndpoint.md",
+      "retrieved": "2026-09-21",
+      "supports": "bioguideId originates in the Biographical Directory of the United States Congress, 1774 to present"
+     },
+     {
+      "url": "https://www.wikidata.org/wiki/Property:P1157",
+      "retrieved": "2026-09-21",
+      "supports": "formatter URL to bioguide.congress.gov/search/bio/$1 and ID format"
+     }
+    ],
+    "could_not_verify": [
+     "The office that maintains the directory",
+     "License or terms for the data",
+     "Documentation for the JSON endpoint",
+     "Recent update dates"
+    ],
+    "added_by_sweep": true
+   }
+  ],
+  "could_not_reach": [
+   "https://www.govtrack.us/developers (HTTP 404)",
+   "https://www.govtrack.us/congress/members/report-cards/2025 (HTTP 404; the 2024 report cards were used instead)",
+   "https://www.govtrack.us/about/licensing (HTTP 404)",
+   "https://ballotpedia.org/Ballotpedia:API (HTTP 404; developer.ballotpedia.org used instead)",
+   "https://ballotpedia.org/Ballotpedia:Support_Ballotpedia (HTTP 404)",
+   "https://ballotpedia.org/Ballotpedia:Neutrality_policy (HTTP 404)",
+   "https://www.legistorm.com/about.html (HTTP 404; info.legistorm.com/about used instead)",
+   "https://api.data.gov/terms/ (HTTP 404)",
+   "https://openstates.org/about/ (301 redirect; followed to open.pluralpolicy.com/about/)"
+  ]
+ },
+ "skeptic": {
+  "verdicts": [
+   {
+    "name": "GovTrack.us",
+    "confirmed": [
+     "organisation: About page and /legal both name Civic Impulse, LLC, registered in the District of Columbia; About says wholly owned by its operator, no outside funding, financers, sponsors, investors or partners, no affiliation other than subscribers and advertisers",
+     "self_description: tracks Congress and the White House; 'In 2025 we began tracking the White House'; began 2004; 'one of the oldest open government / government transparency websites'; 'This is not a government website'; charter mission 'to help Americans participate in their government', 'won't take sides on policies or politicians', 'do not accept grants from or have any relationship with partisan organizations'",
+     "funding_or_business_model: advertising revenue, Substack subscribers, Patreon, Kickstarters in 2015 and 2025; 'a few part-time staff members'",
+     "status_as_of_retrieval: About page carries 'Legislative Recap Sept. 18, 2026'; About Our Data carries 'Analysis and Commentary Sept. 21, 2026'; misconduct entries dated Aug. 17, Aug. 4 and Aug. 3, 2026",
+     "timeline: 'End of our open data' sits under the 2017 heading; 2013 report cards; 2017 misconduct database, advocacy organization rankings and bill text incorporation; 2018 pronunciation guide; 2023 FY24 earmark requests from Demand Progress Education Fund",
+     "primary_sources_used: congress-legislators described as 'a community repository we originally developed and help maintain'; 'raw Member data in XML from the House and Senate'; photos from the GPO Guide to House and Senate Members; bill status daily from GPO GovInfo.gov Bill Status XML Bulk Data via the congress project; votes from Senate and House websites in XML 'roughly hourly'; THOMAS.gov for 1989-2014 status and 1989-2012 text; Statutes at Large for older enacted bills; American Memory Century of Lawmaking for 1799-1873; Rosenthal & Poole (Carnegie Mellon) 1789-1990 votes; CRS summaries plus GovTrack's own; Senate website and Docs.House.Gov for upcoming business and committee meetings",
+     "misconduct: page states '514 instances of alleged and actual misconduct'; inclusion criteria as listed in the entry (reproval/censure/expulsion since 1789; OCE 2008-, HCE 1975-, SSCE 1962-; Senate exclusion votes; some other investigations and settlements; likely-relevant resignations; felony convictions and nationally significant misconduct); sources list: 'contemporary news reports', Senate Historical Office cases, House Committee on Standards summary 1798-2004, Washington Post indictment list, Wikipedia convictions list 'as of Jan 23, 2018'; category tags (bribery & corruption, sexual harassment & abuse, campaign & elections ...), consequence tags (resignation, exclusion, settlement ...), resolved/unresolved; caveat 'Many entries on this page are politically motivated', 'In some cases allegations are never proven', 'You must judge for yourself'; raw data on GitHub",
+     "derived_scoring_or_ranking: report cards cover 118th Congress 'as of Feb. 13, 2025'; cohorts All Representatives (435), House Republicans, House Democrats, All Senators, Senate Republicans, Senate Democrats, Freshmen, Sophomores, Serving 10+ Years; ranks from #1; committee positions 'five points for each full committee leadership position and one point for each subcommittee leadership position'; ideology axis labelled 0.00 'most politically left' to 1.00 'most politically right'; leadership axis labelled 'top leader' to 'bottom/follower'; 'An ideology score is not computed for Members of Congress who introduced fewer than 10 bills or who have a low leadership score'; laws enacted counted for primary sponsor of enacted bill or bill 'at least about one third of its text was incorporated'; bills whose text 'was replaced in whole' excluded; Speaker and territorial delegates exclusion for missed votes; companion bills 'identified as identical by ... Congressional Research Service'",
+     "analysis methodology: PCA via singular value decomposition on a member-by-member cosponsorship matrix over 'the current and previous two Congresses', second dimension used; leadership via PageRank on the same matrix; prognosis by logistic regression, models 'train' on the 117th Congress; caveats verbatim (no margin of error, scores fluctuate, may measure partisan-ness, cosponsorship low-risk, scores may be gamed); CSV files sponsorshipanalysis_h.txt and sponsorshipanalysis_s.txt linked; 'full source code for this analysis can be found on github'; page cites voteview.com as the vote-based analogue",
+     "disclaimer_or_frame: report cards page: 'A higher or lower number below doesn't necessarily make a legislator any better or worse, or more or less effective' and 'make your own judgements'; constituent services and oversight 'aren't reflected here'; member page states 'GovTrack.us, which has no affiliation with [the member] and is not a government website'; footer 'GovTrack.us is not a government website'",
+     "identifiers_exposed: member page URL /congress/members/nancy_pelosi/400314; outbound links to the member's official website, OpenSecrets, Bioguide, C-SPAN; ideology-leadership chart on member page",
+     "openness_code: GitHub API for govtrack/govtrack.us-web reports license null, pushed_at 2026-07-24T18:42:12Z, description 'The Django source code for the GovTrack.us website'; govtrack/misconduct reports CC0-1.0, pushed_at 2026-08-21T17:41:47Z",
+     "openness_data_license: /legal: 'You are welcome — and encouraged — to copy and reuse any information you see here, except as noted below' followed by the software-development/AI-training and archived-or-cached-dataset exclusions ('except for personal, non-commercial use'); 'last updated in August 2023'",
+     "openness_api: WebFetch of /legal returned HTTP 403; every page loaded with a browser User-Agent (HTTP 200); About page timeline says the open data and API were retired because 'Congress created their own and other organizations created similar APIs'"
+    ],
+    "refuted": [],
+    "unverifiable": [
+     "Whether each bill page links to GovInfo primary text (not fetched)",
+     "Location and contents of the ideology/leadership CSV download page (linked as 'over here' from the analysis page; not fetched)",
+     "'Photos ... credited on individual legislator pages' beyond the data page's statement",
+     "Whether the 2013 charter wording or the 2017 advocacy-ratings item has changed since the survey (the timeline as read matches)"
+    ]
+   },
+   {
+    "name": "Congress.gov API",
+    "confirmed": [
+     "self_description: API root text 'shares its application programming interface (API) with the public to ingest the Congressional data'; api.data.gov named; README: 'provides a method for Congress and the public to view, retrieve, and re-use machine-readable data from collections available on Congress.gov'; using-data-offsite page: API 'is the preferred source for use by developers'; Bill Status data 'is a joint effort by the Government Publishing Office (GPO), the Library of Congress (LOC), the Office of the Clerk of the U.S. House of Representatives, and the Office of the Secretary of the Senate'",
+     "subject_scope (coverage-dates table, read with a browser UA): Member profiles 1971, 92nd-present, footnote 11 'Includes Members from 1923 (68th Congress) to 1970 (91st Congress) who were serving still in 1971'; Actions Overview / All Actions Except Amendments / Cosponsors 1973 (93rd); Amendment Actions 1981 (97th); Bill and Resolution Text XML/PDF/TXT 2007-present (110th), PDF/TXT 1993-2006, TXT 1989-1992, historical PDF 1810-1873, TXT 1799-1809, none 1874-1988; Committee Reports and Hearing Transcripts 1995 (104th); Committee Prints 1993 (103rd); Nominations 1981 (97th); Treaty Document Status 1975 (94th); Daily Edition 1995-2026; Bound Edition 1873-1994; CRS Products 1997; Senate committee membership 'current'; Votes section contains only 'House Roll Call Votes' 2017, 115th-present",
+     "coverage footnotes: pre-1973 Actions Overview 'less complete'; 1973-1980 committee actions limited to referral, reporting and discharge; cosponsorship dates unavailable before 1981; historical text 'may be missing, incomplete or inaccurate'; GPO makes bill text available",
+     "primary_sources_used: MemberEndpoint.md says bioguideId 'originates in the Biographical Directory of the United States Congress, 1774-Present' and points to the House Clerk vacancies page",
+     "outputs: README rate limit 5,000 requests per hour, default 20 results, maximum 250; XML or JSON; Documentation folder lists Amendment, Bill, BoundCongressionalRecord, CRSReport, Committee, CommitteeMeeting, CommitteePrint, CommitteeReport, Congress, DailyCongressionalRecord, Hearing, HouseCommunication, HouseRequirement, HouseRollCallVote, Member, Nomination, SenateCommunication, Summaries, Treaty endpoint docs plus openapi.json and openapi.yaml; member fields include depiction with attribution, addressInformation, leadership positions, currentMember, birth and death years; the API root HTML itself contains the strings 'crsreport' and 'treaty' and 'house-vote' and 'beta', so crsreport and treaty need not be inferred from file names",
+     "openness_code: GitHub API reports license null and pushed_at 2026-09-21T14:41:40Z; raw LICENSE file returns 404",
+     "openness_data_license: README has no license statement, only the data.gov / Library privacy-policy split; loc.gov/legal: 'You should determine for yourself whether or not an item is protected by copyright or in the public domain' and 'we generally do not own the rights to materials in our collections'",
+     "openness_api: using-data-offsite: 'disregarding the disallow rules in https://www.congress.gov/robots.txt will cause you to be blocked'; WebFetch of congress.gov/help/coverage-dates returned HTTP 403 while a browser-UA request returned 200",
+     "status_as_of_retrieval: ChangeLog entries for March through August 2026 (two parts each for April and August); April 2026 Part 1 item 5: '117th Congress House roll call votes will be added to the API'; May 2026: optional sorting of sponsored/cosponsored legislation by introduced or sponsored date; coverage table lists 8 a.m. update times"
+    ],
+    "refuted": [],
+    "unverifiable": [
+     "An explicit license or terms-of-use statement for API data (none found on the pages read; same as the entry)",
+     "api.data.gov /terms/ HTTP 404 (not re-fetched)",
+     "The full endpoint list as rendered on the API root page (the root is JavaScript-rendered; only raw HTML strings were checked)"
+    ]
+   },
+   {
+    "name": "ProPublica Represent and the ProPublica Congress API",
+    "confirmed": [
+     "self_description: tagline 'See what your representatives in Congress say and do'; notice 'Represent and the Congress API are no longer available. Thank you to everybody who has used these resources since their launch in 2016'; 'this page provides a partial snapshot of Represent from July 2024'; updated July 10, 2024; API docs: 'ProPublica's Congress API is no longer available. This documentation should only be used as a historical reference'; history: originated at The New York Times in 2009, adopted by ProPublica in November 2016, replaced the Sunlight Congress API sunset Oct 1, 2017",
+     "subject_scope: members with more detail since 1995; House votes from 1991, Senate from 1989; bills from 1995; nominations from 2001",
+     "identifiers_exposed: members documentation shows id 'A000360', api_uri, govtrack_id, cspan_id, votesmart_id, icpsr_id, crp_id, google_entity_id, fec_candidate_id, ocd_id, lis_id; status notice repeated on the members page",
+     "status_as_of_retrieval: defunct per the notices above",
+     "terms of use: no wholesale republishing of raw data, no altering except updates/corrections, no charging for access or reselling, cite ProPublica; 'Commercial users may be subject to additional use fees. To request permission for any commercial use, please fill out the API key request form'",
+     "primary_sources_used: congress-legislators README 'Who's Using This Data' lists ProPublica Congress API and Represent, and names ProPublica among volunteer editors"
+    ],
+    "refuted": [
+     {
+      "field": "openness_data_license",
+      "claim": "API documentation states data was released under Creative Commons Attribution-NonCommercial-NoDerivs 3.0 United States",
+      "correction": "The documentation attaches the CC BY-NC-ND 3.0 US license to use of the API ('Use of this API is available under a Creative Commons Attribution-NonCommercial-NoDerivs 3.0 United States License') and separately states 'The data returned by the Congress API is in the public domain.' The entry omits the public-domain statement and so describes ProPublica's data as more restricted than the page says.",
+      "citation_url": "https://projects.propublica.org/api-docs/congress-api/"
+     }
+    ],
+    "unverifiable": [
+     "Whether any API data remains downloadable",
+     "Per-member derived statistics the API carried",
+     "Source code repository (none cited on the pages read; propublica.github.io/congress-api-docs is linked from the congress-legislators README but was not fetched)",
+     "funding_or_business_model beyond the donate link"
+    ]
+   },
+   {
+    "name": "The unitedstates project (congress-legislators and congress)",
+    "confirmed": [
+     "self_description: README describes members 1789-present in YAML/JSON/CSV plus committees, presidents and vice presidents; 'This is the best field to use as a primary key' under bioguide; congress README: 'Python tools to collect data about the bills, amendments, roll call votes, and other core data about the U.S. Congress'",
+     "organisation: 'manual edits by volunteers (from GovTrack, ProPublica, MapLight, FiveThirtyEight, and others)'; congress repo 'originally developed by GovTrack.us and the Sunlight Foundation in 2013', maintained by GovTrack.us and other contributors",
+     "primary_sources_used: automated imports list matches (GovTrack.us, Congressional Biographical Directory, Nelson and Stewart committee data, Martis's Historical Atlas, Sunlight Labs Congress API, THOMAS, C-SPAN Congressional Chronicle); congress scrapers read GPO bulk bill status, GovInfo.gov, House and Senate votes, defunct THOMAS nominations scraper",
+     "identifiers_exposed: README documents bioguide, thomas, lis, fec, govtrack, opensecrets, votesmart, icpsr, cspan, wikipedia, ballotpedia, maplight, house_history, bioguide_previous, pictorial and does not document wikidata or google_entity_id; key counts in legislators-current.yaml reproduced exactly: 539 legislators; govtrack 539, bioguide 539, wikipedia 538, wikidata 538, ballotpedia 525, opensecrets 523, votesmart 519, google_entity_id 469, pictorial 444, icpsr 319, cspan 265, maplight 262, thomas 224, house_history 163, lis 100 (fec 537, not claimed)",
+     "openness_code / openness_data_license: GitHub API: congress-legislators CC0-1.0, pushed_at 2026-09-03T10:34:29Z; congress CC0-1.0, pushed_at 2025-10-05T11:46:32Z; README CC0 paragraph verbatim; 'scripts ... Python 3.6'; 'CSV and JSON formatted files are also provided in the gh-pages branch'; --govtrack flag documented",
+     "status_as_of_retrieval: latest congress-legislators commit 2026-09-03 'Rep. Wahab sworn in, and fix party on Rep. Blair' (a swearing-in and party fix, as stated); latest congress commit 2025-10-05"
+    ],
+    "refuted": [],
+    "unverifiable": [
+     "Contents of the gh-pages branch (not fetched)"
+    ]
+   },
+   {
+    "name": "Ballotpedia",
+    "confirmed": [
+     "self_description: 'Ballotpedia is the digital encyclopedia of American politics'; 'neutral, accurate, and verifiable information on government officials and the offices they hold'; '731,312 encyclopedic articles'; 'Our professional staff of researchers and writers produce all of our content'; 'not affiliated with any campaigns or candidates'; 'firmly committed to neutrality in all our content'",
+     "organisation: 'Wisconsin-based Lucy Burns Institute sponsors Ballotpedia'; 'The Lucy Burns Institute/Ballotpedia is a 501(c)(3) organization'; revenue: donations, Premium Research Services, 'Custom election data and political intelligence via our API', Digital ad sales",
+     "subject_scope (Scope page, 'Updated: May 16, 2024'): federal, state, territorial officials; 100 largest cities; state capitals; school boards in the 200 largest districts; local expansion '37,036 elections in 2024, 35,050 in 2025, and an estimated 40,000 in 2026 across the following 32 states'; 'Our ultimate goal is to cover every election in the United States'",
+     "outputs and openness_api (Buy Political Data page): bulk CSV/JSON files, Developer Portal, single-state subscriptions on request, 'Annual subscriptions'; officeholder lists 'over 600 political offices' and 'approximately 15,000 political offices'; school board 'approximately 82,000 members across 13,000 school boards'; static files back to 2018; 'Pricing varies by package, starting at $500'; States (2026) list of 32; 'for these local offices, we do not provide election results, vote totals, or persistent person IDs across years'",
+     "primary_sources_used: 'Secretary of State's offices, county election offices, news outlets, and the candidates or officeholders themselves. We collect from official sources wherever possible'",
+     "openness_data_license: Copyrights page: text 'licensed under the GNU Free Documentation License'; copied version made available on the same terms; 'a live link from your website back to the article ... satisfies the GFDL attribution requirement'; developer terms: data sets 'proprietary and confidential', 'No right or license is being conveyed to Licensee to use or share the full data sets', use in internal or external products with precautions against bulk downloads, purchase constitutes acceptance",
+     "developer.ballotpedia.org: geographic APIs (/districts, /officeholders, /elections_by_point, /elections_by_state), bulk data via client portal and API, 'reach out to your Ballotpedia sales contact'",
+     "status_as_of_retrieval: About page links 2019-2025 annual reports; navigation carries 2026 and 2027 election pages; WebFetch returned empty content for Ballotpedia pages, consistent with the entry's note"
+    ],
+    "refuted": [],
+    "unverifiable": [
+     "identifiers_exposed inference that persistent person IDs exist in paid datasets for other levels (the page only states they are absent for the local offices; the inference is the entry's own)",
+     "The Disclaimers page (not fetched)",
+     "Whether article statements link to primary filings row by row",
+     "API pricing beyond the $500 starting point"
+    ]
+   },
+   {
+    "name": "Vote Smart",
+    "confirmed": [
+     "self_description: About page: 'Vote Smart provides free, factual, unbiased information on candidates and elected officials to all Americans'; founding 'over 30 years ago' by Presidents Ford and Carter and leaders from both parties; board pairs of political opposites (Ford/Carter, McGovern/Goldwater, McCain/Ferraro); 'No endorsements. No political advocacy or lobbying for a cause'; 'we check our politics at the door'; API terms use the name Project Vote Smart",
+     "organisation: address 1153 24th Street, Des Moines, IA 50311; home page: 'Volunteer with us at our Drake University office'",
+     "funding_or_business_model: '97%' of support from donations of $250 or less; 'refuses financial assistance from all organizations and special interest groups that lobby or support or oppose any candidate or issue'; Form 990s for 2020-2024 linked; home page: nonpartisan foundations and 'Our data subscription program and other programs'",
+     "subject_scope: home page 'More than 220,000 candidates ... since 1992'; 'over 1,500 special interest groups'; voter tools list matches",
+     "outputs: API docs list Address, Ballot Measure, CandidateBio, Candidates, Committee, District, Election, Leadership, Local, Npat, Office, Officials, Rating, State, Votes; 'XML or JSON'; documentation last updated September 23, 2014; register page offers 'BOOK DEMO', interest group endorsement data and public statements as add-ons; justfacts.votesmart.org root promotes 'Meet Civic Sage ... pulls directly from Vote Smart's verified, nonpartisan research'",
+     "openness_data_license: footer 'All content © 1992 - 2021 Vote Smart unless otherwise attributed'; 'Legislative demographic data provided by Aristotle International, Inc.'; API terms: individual use restricted to members, organisational use subject to fees, no campaign use, attribution to another party not permitted, key not transferable, as-is disclaimer",
+     "identifiers_exposed and status: browser pane loaded /candidate/key-votes/26732/nancy-pelosi showing a member's voting-records page, a key vote on H Res 1486 dated 09/15/2026, 'HOW DO PELOSI'S VOTES MATCH HER POSITIONS?', and the metering notice 'You have used all your free accesses. Please log in or sign up'; curl and WebFetch to justfacts.votesmart.org returned HTTP 403 (Cloudflare 'Just a moment')"
+    ],
+    "refuted": [],
+    "unverifiable": [
+     "Key-vote selection methodology page (linked as 'About the Selection and Descriptions of Key Votes'; not fetched)",
+     "API fee schedule (the register page shows no prices)",
+     "Whether key votes link to Congress.gov, House Clerk or Senate roll-call pages"
+    ]
+   },
+   {
+    "name": "LegiStorm",
+    "confirmed": [
+     "self_description: home page title 'LegiStorm: Congress Revealed'; company site mission 'Empower our clients with easy access to the information they need to achieve their objectives on Capitol Hill and in state legislatures'; milestones 2006 (salaries public), 2013 (Hill intelligence platform with staff directories and disclosures), 2016 (StateStorm), 2022 (LobbyStorm); Jock Friedly, Chief Executive Officer and founder; '7,000' customers and '350,000+' hours; data licensing and API under custom solutions; '©2026 LegiStorm LLC'",
+     "organisation: LegiStorm LLC, Washington, DC 20007 (trip FAQ footer)",
+     "outputs: home and about-our-data pages mark Townhalls, Congressional Record Search, New Filings, Client Search, Lobbyist Search, Revolving Door, Top Lobbying Firms, State Legislators/Staff as Premium and Foreign Gifts, Privately Funded Travel, Press Releases as Pro; Earmarks (2008-2010); 'Request Demo' and 'Start Free'; Pro page 'Original PDFs of congressional and lobbying disclosures' and PowerBriefs",
+     "primary_sources_used: PFD FAQ: filers earning 'at least 120 percent of the federal GS-15 base level salary, or a little more than $111,000 in 2007'; 'principal assistants on members' personal staffs, as designated by the members'; 'any staffer designated to accept political campaign funds must also file' (Senate); redactions of home address, home phone, signature, Social Security numbers, financial account numbers, names of minor children; financial disclosure page 'images of the original disclosures'; trip page 'access the original documentation'; foreign gifts page: Foreign Gifts and Decorations Act, '$335' in 2008, Federal Register plus House Ethics Committee raw documents, Senate 'does not have a similar policy of disclosing the raw filings, except through the reports to the State Department'; about-our-data page names no government office",
+     "signal_precedents: PFD FAQ contains no discussion of filing deadlines, amendments or periodic transaction reports",
+     "disclaimer_or_frame: 'Financial Disclosure Statements are not intended as net worth statements, nor are they well suited to that purpose'; 'Diplomatic protocol often requires the giving and acceptance of gifts'; travel FAQ: private sponsorship 'only when the travel is for official business purposes' and distinctions for taxpayer, campaign and foreign-government funded travel; travel database 'Jan. 1, 2000 – present'",
+     "status_as_of_retrieval: blog posts dated September 17, 14, 10, 8 and 3, 2026; financial-disclosure page: '28 new personal financial disclosures' in the past week"
+    ],
+    "refuted": [],
+    "unverifiable": [
+     "derived_scoring_or_ranking: a 'Members of Congress by Age' report was not found on any of the nine cited pages (no page is cited for it)",
+     "'at least one staffer per member office' is the entry's paraphrase; the FAQ says 'principal assistants on members' personal staffs, as designated by the members'",
+     "The 2013 milestone's mention of town halls and press releases (the company page summary read only names staff directories and disclosures)",
+     "Whether disclosure rows link to the House Clerk or Senate eFD record",
+     "API terms and documentation; the Terms of Use page"
+    ]
+   },
+   {
+    "name": "Wikidata (as identity infrastructure for U.S. politicians)",
+    "confirmed": [
+     "self_description: Main Page 'Wikidata is a free and open knowledge base that can be read and edited by both humans and machines'; '123,437,129 data entities'; news items 'WikiProject Days 2026 took place from June 19 to 21' and '2025-11-12: Temporary accounts were deployed'",
+     "openness_data_license: Licensing page: 'All structured data in the main, property and lexeme namespaces is made available under the Creative Commons CC0 License'; other text CC BY-SA 4.0; contributors apply CC0 as a term of use",
+     "openness_api: Data access page: Linked Data Interface, SPARQL at query.wikidata.org/sparql, MediaWiki Action API 'up to 50 entities per request', dumps; 'Follow the User-Agent policy'; '429 Too Many Requests ... see the Retry-After response header'; 'Don't use the API when your result set is likely to be large'; 'Don't use a dump if you need current data'",
+     "identifiers_exposed (property JSON): P1157 formatter https://bioguide.congress.gov/search/bio/$1 (plus .json/.xml and congress.gov variants), format '[A-Z]00[01]\\d{3}|', single-value and distinct-values constraints, subject human (Q5) with occupation politician (Q82955) and citizenship U.S. (Q30), Mix'n'match catalog 1779 with 12,708 records; P1839 formatter https://www.fec.gov/data/candidate/$1, format covering [HS]... candidate and [PC][0-9]{8} committee IDs, distinct values, humans and organisations, item-requires 'member of political party'; P2686 formatter opensecrets.org/personal-finances/net-worth?cid=$1, format [Nn]00\\d{6}, single and distinct, subject human; P12644 formatter govtrack.us/congress/person.xpd?id=$1, format [1-9]\\d*, single and distinct, type human, occupation politician; P3344 formatter justfacts.votesmart.org/candidate/$1, format \\d+, single and distinct; P2390 formatter ballotpedia.org/$1, distinct values, single-value constraint with exception Q18608569 'lower house of U.S. state legislature', required qualifier P9675 'MediaWiki page ID'"
+    ],
+    "refuted": [],
+    "unverifiable": [
+     "Operating organisation and funding statements (Main Page navigation lists the Wikimedia Foundation among sister sites but the pages read carry no operating statement)",
+     "Usage counts for P1839, P2686 and P12644",
+     "Platform software and its license"
+    ]
+   },
+   {
+    "name": "Open States (Plural Open)",
+    "confirmed": [
+     "self_description: About page: 'Legislative data is collected from official sources, linked at the bottom of relevant pages'; aggregates 50 states, D.C., Puerto Rico and the U.S. Congress; bill and vote data scraped several times a day; legislator data curated by team and volunteers",
+     "organisation: 'In 2021 Open States was adopted by Plural'; 'Plural creates cutting-edge software to make it easy for public policy data to be discoverable, interpretable, and collaborative'; 'As of 2023, the core team is led by Plural staff'; Sunlight Foundation project 2009-2016; docs site: 'Plural Open Data project (formerly Open States)', states, D.C. and Puerto Rico, 'under Plural Open in 2023', 'volunteer-powered project'",
+     "funding_or_business_model: pre-2022 funders list on About page matches (Sunlight Foundation, Rita Allen Foundation, Minnesota Historical Society, Robert R. McCormick Foundation, Google.org, Reynolds Journalism Institute, Google Summer of Code, WeWork, AWS, NewRelic and GitHub free plans)",
+     "openness_data_license: Terms 'effective September 15, 2021'; 'No attribution is required'; 'We make no copyright claim over any of the data we collect & publish'; blocking for exceeding limits; 'as-is' and 'as-available'; people README: 'in the public domain in the United States with all copyright waived via a CC0 dedication', data/us 'directly ported from the congress-legislators repo'",
+     "openness_code: GitHub API: openstates-scrapers GPL-3.0 pushed 2026-09-21T13:30:16Z; openstates-core MIT pushed 2026-09-17T13:21:42Z; people CC0-1.0 pushed 2026-09-21T06:31:29Z",
+     "identifiers_exposed: schema.md: ocd-person and ocd-jurisdiction identifiers; other_identifiers with scheme (e.g. 'votesmart'), identifier, start_date, end_date; ids block with twitter; OSEP 5 describes replacing pupa_id with a 'dedupe_key'",
+     "openness_api: API v3 key via 'X-API-KEY header or ?apikey query'; endpoints /jurisdictions, /people, /people.geo, /committees, /events; GraphQL API marked DEPRECATED"
+    ],
+    "refuted": [],
+    "unverifiable": [
+     "Whether the live site currently serves U.S. Congress data",
+     "API rate limits and paid tiers",
+     "A separate bulk-data license page",
+     "Presence of /bills in the v3 endpoint list (not captured in the text extraction; other endpoints were)"
+    ]
+   },
+   {
+    "name": "Voteview",
+    "confirmed": [
+     "self_description: 'View every congressional roll call vote in American history on a map of the United States and on a liberal-conservative ideological map'; DW-NOMINATE developed by Poole and Rosenthal in the 1980s; 'We have just updated Voteview's aging codebase'; site header 'beta 3'; data page: 'Data is updated live, as new votes are taken'",
+     "organisation: UCLA Department of Political Science and Social Science Computing; project lead Jeffrey B. Lewis; directors emeritus Keith T. Poole and Howard Rosenthal (deceased)",
+     "subject_scope: data page Congress selector includes '119th (2025 - 2027)'",
+     "outputs: Member Ideology, Congressional Votes, Members' Votes, Congressional Parties in CSV, JSON, DAT, ORD; 'complete database (approx. 500MB zipped)' weekly, without warranty; archival copies retained with advice to use the current release; Party Unity Scores and Presidential Support Scores articles; GitHub organisation with site source, district boundaries, member photos, R package",
+     "identifiers_exposed: data_help_members: icpsr 'Integer 1-99999', separate codes after party switch or becoming president, state_icpsr 'Integer 0-99', bioguide_id, nominate_dim1 and nominate_dim2",
+     "funding_or_business_model: Hewlett Foundation Grant #2016-3870, NSF-SBS-0611974, UCLA Social Science Computing, University of Georgia",
+     "openness_data_license: no license statement; citation 'Lewis, Jeffrey B., Keith Poole, Howard Rosenthal, Adam Boche, Aaron Rudkin, and Luke Sonnet (2026). Voteview: Congressional Roll-Call Votes Database'",
+     "openness_code (resolves a could_not_verify item): GitHub API for the voteview organisation lists WebVoteView (MIT), Rvoteview, pynominate, articles (MIT), member_photos, slide_carousel, voteview-dev, tag_twitter; the site source repository is github.com/voteview/WebVoteView, not voteview/voteview.com"
+    ],
+    "refuted": [],
+    "unverifiable": [
+     "Primary sources for the roll-call feeds (not named on the pages read)",
+     "The 2020 presidential-candidate attendance article and the Ocasio-Cortez methodology article (not seen in the data page text extraction)",
+     "Data license"
+    ]
+   },
+   {
+    "name": "Biographical Directory of the United States Congress (Bioguide)",
+    "confirmed": [
+     "self_description (browser pane, page is JavaScript-rendered): 'Since 1859, the Biographical Directory of the United States Congress has been the primary source for biographical information on Members of the United States Congress and Continental Congresses'; 'Browse Biographies'; 'Image courtesy of the Library of Congress'; 'Visit the Retro Biographical Directory Website'",
+     "outputs: /search/bio/P000197.json returns usCongressBioId P000197, familyName, givenName and birthDate fields, profileText (containing a 2024 reference), relationship [daughter, D000007], image and asset records with creditLine 'Collection of the U.S. House of Representatives', usageRight ['Import to Congress.gov'], uploadDate 2024-06-21T14:44:19.465, 31 jobPositions",
+     "openness_api: WebFetch of the home page returned HTTP 403; curl with a browser User-Agent returned only a 'Your browser is not supported' shell; the JSON endpoint returned 200 with a browser User-Agent; no API documentation or terms found",
+     "subject_scope: MemberEndpoint.md 'Biographical Directory of the United States Congress, 1774-Present'; Wikidata P1157 formatter URLs point to bioguide.congress.gov/search/bio/$1 (and $1.json, $1.xml)"
+    ],
+    "refuted": [],
+    "unverifiable": [
+     "The office that maintains the directory (no page read names it)",
+     "License or terms for the data",
+     "Documentation for the JSON endpoint",
+     "Recent update dates (status 'unknown' stands)"
+    ]
+   }
+  ],
+  "missing_in_cluster": [
+   {
+    "name": "Google Civic Information API (Divisions API / OCD-ID lookup; Representatives endpoints turned down)",
+    "url": "https://developers.google.com/civic-information",
+    "why": "Identity-resolution infrastructure the cluster's OCD-ID references (ProPublica ocd_id, Open States ocd-person/ocd-jurisdiction) depend on. Per the Google group notice 'Notice of Turndown of the Representatives API' (https://groups.google.com/g/google-civicinfo-api/c/9fwFn-dhktA), representativeInfoByAddress and representativeInfoByDivision were turned down on April 30, 2025 and a Divisions API method for looking up OCD-IDs by address remains. Worth an entry because it is the one address-to-officeholder route in this cluster that recently went defunct."
+   },
+   {
+    "name": "LegiScan",
+    "url": "https://legiscan.com/",
+    "why": "National legislative tracker covering all 50 states and Congress with a JSON API (free public tier and paid tiers per search results and third-party profiles). Sits squarely between GovTrack and Open States in this cluster and has an identifier scheme (people_id, bill_id) of its own. legiscan.com returned HTTP 403 to both WebFetch and curl in this survey, so its self-description could not be read; the entry should be written from a browser session."
+   },
+   {
+    "name": "Cicero (Azavea) address-to-official API",
+    "url": "https://www.cicerodata.com/",
+    "why": "Paid address-to-district and elected-official lookup with identifiers and verified social accounts across federal, state and local levels; one of the providers the Google Civic turndown notice points users toward. Belongs under identity resolution alongside Open States people.geo."
+   },
+   {
+    "name": "GPO GovInfo Bill Status bulk data and govinfo API",
+    "url": "https://www.govinfo.gov/",
+    "why": "Named as the upstream by GovTrack, the unitedstates/congress scrapers and the Congress.gov developer page (joint GPO/LOC/House Clerk/Senate Secretary effort), yet has no entry of its own even though the Congress.gov API does. If the cluster's purpose includes identifying which source is primary, the GPO bulk repository and its user guide deserve a row with their own license and coverage statements."
+   }
+  ]
+ }
+}
