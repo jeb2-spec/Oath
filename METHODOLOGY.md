@@ -34,7 +34,7 @@ How Oath sources, types, reconciles, and publishes. This document is the specifi
 - **What it does not say.** An explicit paragraph naming the interpretations the Signal does *not* support.
 - **Worked example.** At least one worked example against a fixture, showing the Signal firing and (where possible) not firing.
 
-**3.3** A Signal change of any kind — criteria, inputs, description — produces a new version. The old version and its findings remain readable. There is no in-place edit of a published Signal.
+**3.3** A Signal change of any kind (criteria, inputs, description) produces a new version. The old version and its findings remain readable. There is no in-place edit of a published Signal.
 
 **3.4** Adding or changing a Signal requires an adversarial second reading, per §5 below. Signals that name people are the surface where the project is most likely to do harm; the review discipline is proportionate.
 
@@ -51,7 +51,7 @@ How Oath sources, types, reconciles, and publishes. This document is the specifi
 
 **4.3** A Finding is regenerable. Given the Signal version and the Filing identifiers, any reader running the reference implementation must be able to produce the same Finding, byte-identical.
 
-**4.4** The Officeholder's frame stays on every Finding surface. The framing paragraph appears on the API response, the UI card, the exported CSV, the RSS entry — anywhere a Finding is rendered. If a surface strips the frame, that is a defect, and the fix ships in the same build that finds the strip.
+**4.4** The Officeholder's frame stays on every Finding surface. The framing paragraph appears on the API response, the UI card, the exported CSV, the RSS entry, anywhere a Finding is rendered. If a surface strips the frame, that is a defect, and the fix ships in the same build that finds the strip.
 
 ## 5. Adversarial review
 
@@ -94,7 +94,7 @@ How Oath sources, types, reconciles, and publishes. This document is the specifi
 
 ## 8. Corrections
 
-**8.1** Oath will make mistakes. The maintenance surface for the mistake is the corrections table in [errata](https://github.com/jeb2-spec/errata), the sibling project that keeps the corrections record for this project's family. Corrections that arise from a Finding — an incorrect officeholder identification, a misread transaction range, a Signal that fired on a false premise — land in that record.
+**8.1** Oath will make mistakes. The maintenance surface for the mistake is the corrections table in [errata](https://github.com/jeb2-spec/errata), the sibling project that keeps the corrections record for this project's family. Corrections that arise from a Finding, an incorrect officeholder identification, a misread transaction range, a Signal that fired on a false premise, land in that record.
 
 **8.2** A correction to a Signal produces a new Signal version. A correction to a Finding produces a superseded row that stays readable; the corrected row cites the superseded one.
 
@@ -106,7 +106,24 @@ How Oath sources, types, reconciles, and publishes. This document is the specifi
 
 **9.2** Where a decision fails the solo-operator test, the failure is documented in the decision, and the mitigation is either a documented workflow or a change to the decision.
 
-## 10. What this methodology does not do
+## 10. Annotate, do not curate
+
+The register annotates. The signals curate.
+
+**Annotate.** Adding structured metadata to items that are already in the record: labels, standard citations, computed conditions, cross-references. Annotation does not change what is there; it labels it. Every annotation is testable, because the criterion for the label is written down and mechanical.
+
+**Curate.** Selecting what enters the record, arranging what is there in some order that reflects a judgement, prioritising, framing. Curation is opinion work. Curation of a person's record is opinion work that can help them or hurt them.
+
+For Oath:
+
+- **The register is annotative.** We do not choose which officeholders to cover; we cover the population within our defined scope from the sources we can reach. We do not choose which filings to include; we include everything the source publishes for a covered officeholder. We do not choose which conditions to surface once a signal is defined; we surface every firing.
+- **The signals are curative, and their curation is visible.** Choosing which signals to define is editorial work. Choosing which not to define is also editorial work. That editorial work is documented in every signal's `not_saying` field and in the signal's Council review.
+- **Officeholder pages annotate.** Filings appear in chronological order. Findings appear grouped by signal (name), never sorted by a "severity" the register does not have authority to assign. No "featured", "most concerning", "top", or "worst" list.
+- **The register does not rank officeholders against each other.** Not by signal count, not by dollar amounts, not by any derived score. Enforced by INVARIANTS.md §14. A cross-officeholder count is a curation of persons; the register does not do that.
+
+The distinction is why the register can stay honest at scale. A page that says *"here is what the record shows, in a definition anyone can read"* is a page a subject can trust and a reader can check. A page that says *"here is why this officeholder is worse than that one"* is a page whose authority no register can carry.
+
+## 11. What this methodology does not do
 
 - It does not adjudicate. Whether a Signal that fired constitutes a violation is a determination reserved to House and Senate ethics committees, the Office of Government Ethics, state ethics commissions, inspectors general, prosecutors, and courts.
 - It does not editorialise. A Signal names a condition and cites a Standard; a Finding names an instance and cites the Signal and the Filing. Neither speaks for or against the Officeholder.

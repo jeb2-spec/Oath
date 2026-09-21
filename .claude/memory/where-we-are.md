@@ -6,70 +6,92 @@ metadata:
   type: state
 ---
 
-# Where we are — Oath
+# Where we are
 
-*Last updated: 2026-09-21, at the founding.*
+*Last updated: 2026-09-21, after the pipeline document landed (the arrow, written at three altitudes).*
 
 ## The state
 
-**Day zero.** The repository exists. It has a prospectus, standards, methodology, limitations, sources, schemas, an architecture note, a memory seed, and a course. No data has been ingested. No signal has been defined. No finding has been published.
+**Day zero, with the antidrift core, the governance shape, and the ecosystem plan committed.** The repository has doctrine, schemas, governance, adversarial-review protocol, and a planned website. What it does not have is a single row of real data, a single Signal fired, or a single line of tooling. Both are true and neither is a contradiction: the foundation is what makes the first row worth publishing.
 
-The founding was drafted in a cloud session in the CoworkVM environment. Everything committed here should be reproducible from `NEXT.md` on a local machine.
+The founding work continues on the working branch, one PR growing through six thematic commits.
 
 ## What is real
 
-- `README.md` — the prospectus in the errata register.
-- `STANDARDS.md` — the legal frameworks the project measures against.
-- `METHODOLOGY.md` — how sources, types, signals, findings, seals and anchors work.
-- `LIMITATIONS.md` — what the project cannot do, in the order a careful reader would raise them.
-- `SOURCES.md` — the primary sources planned (no adapters implemented yet).
-- `NEXT.md` — the course for the first sessions after arrival.
-- `CLAUDE.md` — the working stance.
-- `LICENSE` — dual CC BY 4.0 (content) + MIT (code).
-- `schemas/*.json` — six JSON Schemas (Officeholder, Office, Filing, Holding, Transaction, Signal, Finding), version 0.
-- `docs/architecture.md` — the layered shape.
-- `docs/signals/README.md` — the Signal template. No signals defined yet.
-- `data/README.md` — planned layout of the canonical store. Directory otherwise empty.
-- `src/README.md` — planned layout of adapters, signals, surfaces. Directory otherwise empty.
-- `.github/pull_request_template.md` — with the review checklists.
+**On `main`:**
+- Prospectus (README), standards (STANDARDS.md), methodology (METHODOLOGY.md), limitations (LIMITATIONS.md), sources (SOURCES.md), schemas (`schemas/*.json`), architecture (`docs/architecture.md`), signal template (`docs/signals/README.md`), placeholders (`data/README.md`, `src/README.md`), PR template, license, gitignore, the CLAUDE.md working stance, the four `.claude/memory/` bridge files, and NEXT.md.
+
+**On the working branch (`claude/us-officials-financial-oversight-hz36kr`), pending PR review:**
+- Em-dash strip (voice-print discipline).
+- CHARTER.md (five vows + annotate/curate coda; Vow V, *facts stay, change is shown*, added on Jared's call).
+- RUBRIC.md (five gates per Signal).
+- INVARIANTS.md (sixteen mechanical rules + meta-invariant).
+- BYLAWS.md (roles, decision authority, corrections, removal policy, contributor agreement).
+- COUNCIL.md (adversarial review body, three seats, seven catch-list categories).
+- ECOSYSTEM.md (website plan, mark, consumer contract, fork-friendly).
+- SPEC.md (what any Oath-shaped register must satisfy; enables forks).
+- ANCHORS.md (public build ledger, empty until first anchored build).
+- METHODOLOGY.md §10 (annotate, do not curate).
+- PIPELINE.md (the arrow: seven stages from raw source to reader-verified record, written at three altitudes for Reddit reader, PhD/researcher, engineer, subject).
+- SUBJECTS.md (who the register covers, on Jared's call: major active federal officeholders and governors, currently serving, retrospective coverage deferred to Phase 6+; state legislators, state AGs, judiciary, local officials named as deliberately deferred).
+- EVIDENCE.md (the source-preservation architecture: four independent witnesses per filing — our capture, a public web archive, a content-addressable IPFS pin, and an OpenTimestamps anchor — designed to survive link rot, silent edits, deplatforming, CDN games, and the rising AI-slop fog; SPEC.md gains S13 for this; INVARIANTS.md gains §16; filing.schema.json gains an evidence_bundle object with a witnesses array; PIPELINE.md Stage 2 rewritten to name the multi-witness capture as part of retrieval).
+- Updated PR template with Council checkbox and COI disclosure.
+- Sharpened NEXT.md with six phases (added Phase 6: ecosystem and forks).
+- README and CLAUDE.md wired to the new documents.
+- This file, refreshed.
 
 ## What is not real yet
 
-- No adapter is implemented. No source has been read.
+- No adapter. No source has been read.
 - No signal is defined. `docs/signals/` contains only the template.
-- No verifier (`tools/verify.py`), no tamper-test, no schema validator, no CI workflow.
-- No `package.json`, no `pyproject.toml`, no runtime dependency pinning.
+- No verifier, no tamper-test, no schema validator, no CI workflow, no verdict-language lint, no frame-presence lint, no aggregator-sole check, no supersession check, no ranking lint, no COI-disclosure check. Nothing in `tools/` yet.
+- No `package.json`, no `pyproject.toml`.
 - No fixtures.
-- No `ANCHORS.md`. There is nothing to anchor.
+- No mark generator; no struck seals.
+- No `.claude/prompts/council.md`; the Council prompt is described in COUNCIL.md and lands in Phase 2 with the first Signal review.
+- No published builds; ANCHORS.md ledger is empty by design.
 
 ## The immediate next moves
 
-Per `NEXT.md`:
+Per the sharpened `NEXT.md`:
 
-1. **T.1 Runtimes.** `package.json` + `pyproject.toml`.
-2. **T.2 The verifier, empty.** Standard-library Python, ships with a tamper-test companion.
-3. **T.3 CI.** GitHub Actions workflow running the verifier and tamper-test on every push.
-4. **T.4 Schema validator.**
-5. **D.1 Complete the schemas** (enums, examples, walkthroughs).
-6. **D.2 Fixture data** — one hand-typed, obviously-fictional officeholder.
-7. **D.3 Identifiers** — confirm or replace the proposed ID scheme.
-8. **S.1–S.4** — the first Signal (recommended `stock-act-late-ptr`), end to end.
-9. **I.1–I.4** — the first ingest, one officeholder, one calendar year, then extend.
+**Phase 1. Plumbing green.** Ship as: a green CI badge on the working branch and a sealed empty build.
+
+1. T.1 Runtimes (package.json, pyproject.toml).
+2. T.2 Verifier and tamper-test (standard-library Python).
+3. T.3 Schema validator.
+4. T.4 Verdict-language lint (INVARIANTS §1) with initial blacklist.
+5. T.5 CI workflow.
+6. T.6 Session-start doctor.
+
+Every step is small enough for one session.
+
+Then Phase 2 (first Signal against fixture + Council session on it, prompt committed), Phase 3 (first real officeholder + per-officeholder page + mark generator), Phase 4 (coverage extend + second Signal), Phase 5 (public flip + static site), Phase 6 (ecosystem, forks, first cited-by).
 
 ## Standing decisions
 
-- **Repository visibility:** private at the founding. Jared flips public when he is ready.
-- **Branch:** work continues on `claude/us-officials-financial-oversight-hz36kr` outside main, per the standing per-repo branch convention. The founding commits landed on that branch (or on main via the founder, depending on the setup path taken).
-- **Reference runtimes:** Node 20 + TypeScript for adapters and signals; Python 3.11 for tooling and the verifier.
-- **Data format:** newline-delimited JSON as canonical; SQLite as convenience mirror.
-- **License:** CC BY 4.0 for content; MIT for code.
-- **Attribution convention:** `Co-Authored-By: Claude ...` per the Vera/errata convention.
+- **Repository visibility.** Private at the founding. Jared flips public in Phase 5.
+- **Branch.** Work continues on `claude/us-officials-financial-oversight-hz36kr`. Founding commits landed on `main` directly; everything since is on the working branch and lands via pull request.
+- **Reference runtimes.** Node 20 with TypeScript 5 for adapters and Signals; Python 3.11 for tooling and the verifier.
+- **Data format.** Newline-delimited JSON as canonical; SQLite as convenience mirror.
+- **License.** CC BY 4.0 for content; MIT for code.
+- **Attribution convention.** `Co-Authored-By: Claude ...`.
+- **Voice-print.** No em dashes in any authored markdown.
+- **Order of precedence.** Charter > Invariants > Rubric > Bylaws > Methodology/Standards/Sources/Council-prompt > everything else.
+
+## The council seat rotation
+
+Council seats (per COUNCIL.md §3) are: Seat A (the reader who wants to be fair), Seat B (the subject in a room), Seat C (the reviewer's reviewer). All three convene on every session; a single fresh AI session may hold multiple seats sequentially. The Council prompt is committed at `.claude/prompts/council.md` when Phase 2 lands the first Signal.
 
 ## What I could not do from the cloud
 
-- **Create the GitHub repository.** The GitHub App this session runs under lacks `administration:write`; a 403 came back on `create_repository`. Jared created the empty shell manually at github.com/new (owner `jeb2-spec`, name `oath`, private, empty).
-- **Set up the local dev environment.** That happens on Jared's PC when he arrives. `NEXT.md` T.1 is the first step.
+- Create the GitHub repository. Jared did it manually.
+- Set up the local dev environment. Phase 1 T.1 on his machine.
+- Wire the sixteen invariant gates. Phase 1 work.
+- Convene the first Council session. It will happen for real on the first Signal (Phase 2 S.3).
 
 ## The through-line
 
-This is a young repository built on old discipline. The Vera and errata records are its family; when in doubt, read from them. When you finish a step, update this file in the same commit — its freshness is more valuable than any polish elsewhere.
+This is a young repository built on old discipline. The Vera and errata records are its family; when in doubt, read from them. When you finish a step, update this file in the same commit. Its freshness is more valuable than any polish elsewhere.
+
+Read the [Charter](../../CHARTER.md) before you start. If you cannot recall the five vows, come back.

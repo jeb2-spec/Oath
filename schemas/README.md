@@ -4,13 +4,13 @@ The data model of Oath. Every row that enters the register is validated against 
 
 ## Files
 
-- `officeholder.schema.json` — a natural person occupying an elective Office.
-- `office.schema.json` — a specific elective position with a jurisdiction and a term.
-- `filing.schema.json` — a single dated instance of a required Disclosure.
-- `holding.schema.json` — a reported asset attributed to an Officeholder or a covered relative.
-- `transaction.schema.json` — a reported purchase, sale, or exchange affecting a Holding.
-- `signal.schema.json` — a versioned, defined condition observable in the record.
-- `finding.schema.json` — a specific instance of a Signal firing against a specific Officeholder.
+- `officeholder.schema.json`. a natural person occupying an elective Office.
+- `office.schema.json`. a specific elective position with a jurisdiction and a term.
+- `filing.schema.json`. a single dated instance of a required Disclosure.
+- `holding.schema.json`. a reported asset attributed to an Officeholder or a covered relative.
+- `transaction.schema.json`. a reported purchase, sale, or exchange affecting a Holding.
+- `signal.schema.json`. a versioned, defined condition observable in the record.
+- `finding.schema.json`. a specific instance of a Signal firing against a specific Officeholder.
 
 ## Conventions
 
@@ -22,11 +22,11 @@ The data model of Oath. Every row that enters the register is validated against 
 
 ## Identifier scheme (proposed, v0)
 
-- **Officeholder.** `oh:<country>:<office-slug>:<person-slug>` — e.g. `oh:us:senate-nc-jr:tillis-thom`.
-- **Office.** `of:<country>:<office-slug>:<term-year>` — e.g. `of:us:house-nc-01:2025`.
-- **Filing.** `fl:<source>:<form>:<source-id>` — e.g. `fl:house:PTR:12345`.
-- **Signal.** `sg:<slug>:v<n>` — e.g. `sg:stock-act-late-ptr:v1`.
-- **Finding.** `fn:<signal-id>:<officeholder-id>:<yyyy-mm-dd>` — e.g. `fn:sg:stock-act-late-ptr:v1:oh:us:senate-nc-jr:tillis-thom:2026-09-21`.
+- **Officeholder.** `oh:<country>:<office-slug>:<person-slug>`. e.g. `oh:us:senate-nc-jr:tillis-thom`.
+- **Office.** `of:<country>:<office-slug>:<term-year>`. e.g. `of:us:house-nc-01:2025`.
+- **Filing.** `fl:<source>:<form>:<source-id>`. e.g. `fl:house:PTR:12345`.
+- **Signal.** `sg:<slug>:v<n>`. e.g. `sg:stock-act-late-ptr:v1`.
+- **Finding.** `fn:<signal-id>:<officeholder-id>:<yyyy-mm-dd>`. e.g. `fn:sg:stock-act-late-ptr:v1:oh:us:senate-nc-jr:tillis-thom:2026-09-21`.
 
 These are proposed at the founding. They will change once real data lands and the trade-offs become concrete. Change is recorded in `docs/architecture.md`.
 
