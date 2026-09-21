@@ -14,7 +14,7 @@ The clauses below are the ones a stranger with a terminal and a browser can veri
 
 A register names its subjects. A subject is either in scope or out of scope. The rule that decides membership is stated in prose and testable in code.
 
-**Check:** the register publishes a `subjects.ndjson` with one row per subject in scope, and a `subject-scope.md` document with the membership rule. A tool `check-subject-scope` reads a candidate subject and returns `in`, `out`, or `undetermined`; `undetermined` is not more than a documented fraction of applied cases.
+**Check:** the register publishes a `subjects.ndjson` with one row per subject in scope, and a `SUBJECTS.md` document with the membership rule (for Oath, [SUBJECTS.md](SUBJECTS.md); for a fork, the equivalent). A tool `check-subject-scope` reads a candidate subject and returns `in`, `out`, or `undetermined`; `undetermined` is not more than a documented fraction of applied cases.
 
 ## S2. Every claim traces to a primary source
 
