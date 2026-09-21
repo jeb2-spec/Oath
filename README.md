@@ -10,7 +10,7 @@ If you got here from a friend and none of this looks like your world: every elec
 
 ## Abstract
 
-*Oath* takes its name from the single act that turns a citizen into an officeholder: the sworn promise, common to every level of U.S. elective government, to act for the public and against private benefit at public expense. Federal and state law then make parts of that promise measurable. The Ethics in Government Act of 1978 requires senior federal officeholders to publish annual financial disclosures. The STOCK Act of 2012 requires many of them to report securities transactions within thirty to forty-five days. 5 CFR § 2635 sets Executive Branch standards of ethical conduct and, in § 2635.101(b)(14), requires that officials *avoid the appearance* of violating them. The Foreign and Domestic Emoluments Clauses (U.S. Const. Art. I § 9 cl. 8; Art. II § 1 cl. 7) forbid particular categories of benefit from particular sources. State legislatures and executives operate under state analogues that vary widely. The record every officeholder generates against these frameworks — filings, transactions, holdings, votes, committee memberships, meetings, contracts awarded — is largely public and largely fragmented.
+*Oath* takes its name from the single act that turns a citizen into an officeholder: the sworn promise, common to every level of U.S. elective government, to act for the public and against private benefit at public expense. Federal and state law then make parts of that promise measurable. The Ethics in Government Act of 1978 requires senior federal officeholders to publish annual financial disclosures. The STOCK Act of 2012 requires many of them to report securities transactions within thirty to forty-five days. 5 CFR § 2635 sets Executive Branch standards of ethical conduct and, in § 2635.101(b)(14), requires that officials *avoid the appearance* of violating them. The Foreign and Domestic Emoluments Clauses (U.S. Const. Art. I § 9 cl. 8; Art. II § 1 cl. 7) forbid particular categories of benefit from particular sources. State legislatures and executives operate under state analogues that vary widely. The record every officeholder generates against these frameworks (filings, transactions, holdings, votes, committee memberships, meetings, contracts awarded) is largely public and largely fragmented.
 
 Oath is a project to aggregate that record into a structured, sourced, machine-readable register; to define, in the open, a set of *signals* corresponding to conditions the law itself recognises (a conflict of interest, an undisclosed holding, a transaction within a prohibited window, an emolument accepted without consent); to publish, per officeholder, which signals the record raises; and to seal each build so a reader can prove the record they hold is byte-identical to the one the project published.
 
@@ -26,15 +26,15 @@ The project does not adjudicate. A signal names a condition, not a verdict; whet
 
 Every U.S. elected officeholder swears an oath. The presidential oath, set down in Article II § 1 cl. 8, includes the words *faithfully execute* and *preserve, protect and defend*. The federal oath for other officers (5 U.S.C. § 3331) commits the officer to support and defend the Constitution and to *well and faithfully discharge the duties of the office*. Every state constitution requires oaths of its own officers. The words vary; the shape is constant. A person raises a hand, and in that moment the standard by which their conduct will be measured is their own sworn commitment.
 
-Oath is a project to reconcile that commitment with the record. Not the record as reputation, and not the record as inference from party or district. The record as it exists: filings on paper and in databases, votes cast, committees sat, contracts awarded, transactions reported. When the record shows a condition United States law recognises as a conflict of interest or the appearance of one, the register says so — in terms the law itself uses, cited to the source, with the reader able to reproduce the reading.
+Oath is a project to reconcile that commitment with the record. Not the record as reputation, and not the record as inference from party or district. The record as it exists: filings on paper and in databases, votes cast, committees sat, contracts awarded, transactions reported. When the record shows a condition United States law recognises as a conflict of interest or the appearance of one, the register says so, in terms the law itself uses, cited to the source, with the reader able to reproduce the reading.
 
 The standard against which each entry is measured is the officeholder's own oath and the statute or regulation implementing it. The project does not import outside standards. It does not editorialise. It describes.
 
 ## 2. The problem
 
-Financial disclosures are public. In practice, checking them against an officeholder's record is not tractable for a reader without training. The federal filings alone span Form 278e (Executive Branch), Form 278-T (transaction reports), the House LM-10 and equivalent Senate paper filings, the FEC Form 3 and 3X for campaign finance, and the LDA-mandated lobbying disclosures — each in a different schema, each on a different retention cycle, each behind a different search interface. State disclosures multiply the problem across fifty jurisdictions, each with its own definitions of *reportable interest*, *immediate family*, *de minimis threshold*, and *retention period*.
+Financial disclosures are public. In practice, checking them against an officeholder's record is not tractable for a reader without training. The federal filings alone span Form 278e (Executive Branch), Form 278-T (transaction reports), the House LM-10 and equivalent Senate paper filings, the FEC Form 3 and 3X for campaign finance, and the LDA-mandated lobbying disclosures, each in a different schema, each on a different retention cycle, each behind a different search interface. State disclosures multiply the problem across fifty jurisdictions, each with its own definitions of *reportable interest*, *immediate family*, *de minimis threshold*, and *retention period*.
 
-Existing aggregators serve much of the field well — OpenSecrets, ProPublica's *Represent*, LegiStorm, MapLight, Follow the Money, Ballotpedia, Capitol Trades and *Unusual Whales*, GovTrack, the National Institute on Money in Politics. Each is load-bearing in its own way, and Oath cites and links to their primary work throughout. What Oath adds is narrower and, if built honestly, useful:
+Existing aggregators serve much of the field well: OpenSecrets, ProPublica's *Represent*, LegiStorm, MapLight, Follow the Money, Ballotpedia, Capitol Trades and *Unusual Whales*, GovTrack, and the National Institute on Money in Politics. Each is load-bearing in its own way, and Oath cites and links to their primary work throughout. What Oath adds is narrower and, if built honestly, useful:
 
 - **Standard-visible.** The legal or regulatory standard against which every signal is measured is stated in the repository, in plain language, beside the definition of the signal itself.
 - **Machine-checkable.** Every finding derives from a schema-typed row, with the source URL and retrieval timestamp on the row, so a reader can regenerate the finding from the same public source.
@@ -159,14 +159,14 @@ Builds will be sealed with a SHA-256 digest and anchored to OpenTimestamps once 
 
 Canonical primary sources, catalogued in [SOURCES.md](SOURCES.md) with retrieval cadence, throttling, terms-of-service notes, and known gaps.
 
-- **U.S. House Financial Disclosures** — Office of the Clerk (<https://disclosures-clerk.house.gov/FinancialDisclosure>)
-- **U.S. Senate Financial Disclosures** — Office of Public Records (<https://efdsearch.senate.gov>)
-- **U.S. Office of Government Ethics** — Executive Branch Form 278e (<https://extapps2.oge.gov/Web/278eFiling.nsf>)
-- **Federal Election Commission** — campaign finance filings (<https://www.fec.gov/data/>)
+- **U.S. House Financial Disclosures**. Office of the Clerk (<https://disclosures-clerk.house.gov/FinancialDisclosure>)
+- **U.S. Senate Financial Disclosures**. Office of Public Records (<https://efdsearch.senate.gov>)
+- **U.S. Office of Government Ethics**. Executive Branch Form 278e (<https://extapps2.oge.gov/Web/278eFiling.nsf>)
+- **Federal Election Commission**. campaign finance filings (<https://www.fec.gov/data/>)
 - **U.S. Senate Lobbying Disclosure Act database** (<https://lda.senate.gov/system/public/>)
 - **U.S. House Clerk Lobbying Disclosure** (<https://disclosurespreview.house.gov/>)
-- **Congress.gov** — legislative activity, committee memberships, votes
-- **State ethics commissions** — per-state list, in [SOURCES.md](SOURCES.md) as coverage extends
+- **Congress.gov**. legislative activity, committee memberships, votes
+- **State ethics commissions**. per-state list, in [SOURCES.md](SOURCES.md) as coverage extends
 
 Corroborating aggregators (cited, not treated as primary):
 

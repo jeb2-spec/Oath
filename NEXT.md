@@ -11,29 +11,29 @@ Every step is small enough to complete in one focused session. Each carries the 
 3. **Set up the local environment.** Node 20+ and Python 3.11+ are the reference runtimes. `npm install` and `python3 -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt` (both files land in step T.1 below).
 4. **Confirm you are on the working branch** `claude/us-officials-financial-oversight-hz36kr` (the branch the founding commits land on outside main), and that `git status` is clean.
 
-## T — Tooling foundation (2–3 sessions)
+## T. Tooling foundation (2–3 sessions)
 
 - **T.1 Runtimes.** Add `package.json` (TypeScript, Node 20, biome or eslint, vitest) and `pyproject.toml` (Python 3.11, ruff, pytest). Pin nothing that does not need pinning. Verify `npm test` and `pytest` both pass on an empty test.
 - **T.2 The verifier, empty.** Implement `tools/verify.py` against an empty register: it computes the digest over an empty canonical serialisation, prints *OK* and *Integrity is not accuracy*, and returns zero. Ship the `tamper-test` companion in the same commit. Standard-library only.
 - **T.3 CI.** `.github/workflows/verify.yml` runs the verifier and the tamper-test on every push. This gate exists before any data ingest.
 - **T.4 Schema validator.** A `tools/validate-schemas.py` (or `.mjs`) that walks `schemas/` and confirms each is valid JSON Schema draft-2020-12. Runs in CI.
 
-## D — Data model (2 sessions)
+## D. Data model (2 sessions)
 
 - **D.1 Complete the schemas.** The starter set in `schemas/` covers Officeholder, Filing, Holding, Transaction, Signal, Finding. Fill in the enums (form types, jurisdictions), add examples for each schema, and write a `schemas/README.md` walkthrough for a contributor.
 - **D.2 Fixture data.** A `fixtures/` directory with one hand-typed, obviously-fictional Officeholder, one Filing, one Holding, one Transaction. Used by tests and by the worked example in the first Signal.
 - **D.3 Identifiers.** Decide the Officeholder ID scheme (proposed: `us-house-nc-01-2025`, `us-senate-nc-jr-2025`, `us-state-nc-hd-005-2025`). Document in `schemas/README.md` with reasoning. Reversible; don't over-invest.
 
-## S — First Signal end-to-end (2 sessions)
+## S. First Signal end-to-end (2 sessions)
 
-The founding Signal is chosen to be small, sourceable, and clearly a description. Recommended: **S.stock-act-late-ptr** — a Periodic Transaction Report filed more than forty-five days after the transaction date, per the STOCK Act (2 U.S.C. § 30104, and the 45-day deadline in the STOCK Act). The Signal fires on public filing metadata; no interpretation.
+The founding Signal is chosen to be small, sourceable, and clearly a description. Recommended: **S.stock-act-late-ptr**, a Periodic Transaction Report filed more than forty-five days after the transaction date, per the STOCK Act (2 U.S.C. § 30104, and the 45-day deadline in the STOCK Act). The Signal fires on public filing metadata; no interpretation.
 
 - **S.1 Definition file.** `docs/signals/stock-act-late-ptr.md` in the template documented in `docs/signals/README.md`. Cite `STANDARDS.md` S.2. Include the worked example against a fixture.
 - **S.2 Reference implementation.** A pure function that reads Filings + Transactions and produces Finding rows. In TypeScript, under `src/signals/stock-act-late-ptr.ts`, with tests against `fixtures/`.
 - **S.3 Adversarial review.** A second reading (a fresh AI session with the adversarial-review prompt in the sibling *errata* project, or a human), against the four failure modes in `METHODOLOGY.md` §5.2. Findings recorded in the PR.
 - **S.4 Merge.** After review, into main. This closes the loop: primary source → schema → Signal → Finding → verified build. Everything after this is repeat and extend.
 
-## I — First ingest (3–4 sessions)
+## I. First ingest (3–4 sessions)
 
 - **I.1 Adapter for U.S. House Financial Disclosures (F.1).** Bulk XML/CSV first, since PDFs cost more. Rate-limited, backoff on failure.
 - **I.2 A single officeholder.** Ingest one filing set, at first: one U.S. Representative, one calendar year. This is the smallest end-to-end demonstration. Publish the sealed build. Confirm the verifier passes.
@@ -52,4 +52,4 @@ The founding Signal is chosen to be small, sourceable, and clearly a description
 
 ## When you finish a step
 
-Update `.claude/memory/where-we-are.md` in the same commit. That file is the arrival file for the next session — its freshness is more valuable than any polish elsewhere.
+Update `.claude/memory/where-we-are.md` in the same commit. That file is the arrival file for the next session, its freshness is more valuable than any polish elsewhere.
