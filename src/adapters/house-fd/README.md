@@ -71,7 +71,7 @@ A person can decide a held row. `adjudications.ndjson`, beside this README, carr
 
 ## Keeping it current
 
-`.github/workflows/refresh.yml` runs both stages on a schedule and opens a pull request only when the record changed, with every gate already run. Nothing about the loop needs a server, a database, or a secret.
+`.github/workflows/refresh.yml` runs both stages on a schedule and opens a pull request only when the source served different bytes, with every gate already run. The test is the capture key against the last build's run record, never a diff of the rows: every row carries its retrieval time, so a diff reports a change on every run, and the first live run did exactly that and opened a pull request for a non-change. `build.py --capture-key` prints the key without building. Nothing about the loop needs a server, a database, or a secret.
 
 ## Why this is Python
 
