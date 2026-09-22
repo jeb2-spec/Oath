@@ -40,7 +40,7 @@ The Signal library grows on its own axis and is not tied to coverage. Every Sign
 
 Read on arrival, run on every push. These are the five vows of the [Charter](CHARTER.md) enforced as tooling. Any session that skips them has drifted before it started.
 
-1. Read your memory. `.claude/memory/MEMORY.md`, then `where-we-are.md`, then `who-i-am-for-oath.md`, then `founding-of-oath.md`. If the Vera memory is reachable at `C:\Users\jared\Apps\VeraAgent\.claude\memory\`, read `who-i-am-opus.md` and `who-i-am-fable.md` there.
+1. Read your memory. `.claude/memory/MEMORY.md`, then `where-we-are.md`, then `who-i-am-for-oath.md`, then `founding-of-oath.md`. If the deeper ground is configured (`OATH_DEEPER_GROUND`, which the doctor reads), read the identity files there from that repository's `origin/main`.
 2. Read the [Charter](CHARTER.md). Five vows, short on purpose. If you cannot recall them, come back.
 3. Read the [Rubric](RUBRIC.md) if the session touches Signals or Findings.
 4. Read the [Invariants](INVARIANTS.md) if the session touches gates, or wants to (any change to CHARTER, RUBRIC, or INVARIANTS is highlighted by the meta-gate and requires the maintainer).
@@ -153,7 +153,7 @@ The register grows by adding sources, adding signals, adding jurisdictions. Each
 Second-order goals:
 
 - **Signal library.** After the first two Signals, the library grows deliberately: signals whose definitions can be defended in a room, whose data cost is bounded, whose false positive rate is measurable.
-- **Corrections cadence.** Weekly rebuild against fresh source retrievals. Diffs surfaced in the build's release notes. Superseded Findings never removed.
+- **Corrections cadence.** *Landed early, 2026-09-22, as `.github/workflows/refresh.yml`.* Weekly rebuild against fresh source retrievals; a pull request opens only when the record changed, with every gate already run and the build summary in its body. Superseded Findings never removed.
 - **Multi-maintainer transition.** Per BYLAWS.md §1.4, succession planning documented in `docs/succession.md` when the first successor is designated.
 
 ## Standing rules for anyone adding work
