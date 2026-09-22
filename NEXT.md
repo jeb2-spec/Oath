@@ -67,43 +67,53 @@ Ship this phase as: a green CI badge on the working branch, and a sealed empty b
 
 Ship gate for the phase: `oath-doctor` prints all-green on a clean clone, and CI is green on the branch.
 
-## Phase 2. The Signal, proven before it touches anyone (goal: arithmetic checked at its boundaries, register still empty)
+## Phase 2. The decisions the adapter needs (goal: schema settled, identifier settled, empty register anchored)
 
-Ship this phase as: a Signal definition, a reference implementation that is correct on both sides of the exact day the rule turns, and a register that still holds nothing. Set by the maintainer on 2026-09-22: no invented officeholder, and nothing fictional is ever written to `data/` or sealed.
+Ship this phase as: schemas a stranger can read, an identifier convention that will survive contact with real data, and an anchored seal over a register that still holds nothing.
 
-The earlier plan put a hand-typed fictional officeholder and a fictional Finding into the register and sealed them. That is cut. It could not satisfy [INVARIANTS.md §4](INVARIANTS.md) (a Filing carries a source URL and a retrieval timestamp) or [§16](INVARIANTS.md) (a Filing carries a durable evidence bundle) without either inventing a URL or carving an exemption that weakens both gates, and it asked the Seal, which is this project's whole proof mechanism, to vouch for something made up.
-
-What fixtures are still for is narrow and has nothing to do with people: a test needs an input whose correct answer is known in advance. Real filings do not come with an answer key, which is the reason the tool is being built. The cases below are dates and amounts. No name appears in them, invented or real.
+This phase used to hold the whole first Signal, because the Signal was going to be proven end to end against a hand-typed fictional officeholder before any real data arrived. The fiction is cut, set by the maintainer on 2026-09-22, and the reasoning sits in [fixtures/README.md](fixtures/README.md). Cutting it removed the reason for the Signal to come first: with no fictional rows flowing through anything, the Signal work proves one pure function correct, which is a unit test rather than a proof of the pipeline. What stays here is only what the adapter cannot start without.
 
 - **D.1 Schema examples and walkthrough.** Enumerate the enums, add a worked example to each schema, expand `schemas/README.md` for a contributor arriving cold. Examples use reserved placeholders (`EXAMPLE`, `example.com`, per RFC 2606), which are visibly not a person. Replace the identifier examples in `schemas/README.md`, which currently name a sitting Senator and a real district.
-- **D.2 Known-answer cases.** `fixtures/stock-act-late-ptr/`. Dates and amounts with the correct answer written beside each, and no person in them: a transaction reported on day forty-five and one on day forty-six; the rule's two prongs (thirty days from notification, forty-five from the transaction, whichever falls earlier) crossing each other; a missing notification date; a date that does not parse. These are test inputs. They never enter `data/`.
 - **D.3 Identifier scheme confirmed.** Either adopt the proposed scheme in `schemas/README.md` or replace it. Reversibility is cheap now, expensive later.
-- **S.1 First Signal definition.** `docs/signals/stock-act-late-ptr.md`. Standard: STANDARDS.md §S.2 (STOCK Act). Criterion: a Periodic Transaction Report filed later than the rule allows, stated as both prongs rather than the forty-five-day prong alone. Worked example against the D.2 cases. `not_saying` filled in.
-- **S.2 Reference implementation.** `src/signals/stock-act-late-ptr.ts`. A pure function over dates. Tests assert each boundary case, including the day the answer changes and the prong that binds first.
-- **S.3 Adversarial review.** A fresh AI session with the council prompt, or a human, takes a hostile pass at the Signal against the five failure modes. Findings recorded in the PR. Merge only after.
 - **S.4 Seal and anchor the empty register.** Into main. The build seals and anchors `data/` as it stands, which is empty. *On this date this register held nothing* is a true and checkable claim, and stamping it proves the anchoring chain works before one real row depends on it.
 
-Ship gate for the phase: the Signal is correct on both sides of the boundary and on both prongs; the pipeline runs end to end from the D.2 cases into a throwaway directory and writes nothing to `data/`; `data/` is still empty, still verifies, and the empty build carries an OpenTimestamps proof.
+Ship gate for the phase: every schema carries a worked example that validates against it; the identifier convention is decided and written down; `data/` is still empty, still verifies, and the empty build carries an OpenTimestamps proof.
 
-## Phase 3. The chamber, quiet (goal: the first publicly checkable claims, about everyone in one chamber)
+## Phase 3. The chamber, quiet, then the first Signal (goal: something a reader can use, then the first checkable claim)
 
-Ship this phase as: every voting member of the House in the register, each with a page a stranger can walk from any claim to its primary source in three clicks. Most of those pages have no Finding on them, because no Signal has fired there. That is the phase working, not the phase unfinished.
+Ship this phase as: every voting member of the House in the register, each filing they have made linked to the original document, and then the first Signal run against those real filings.
+
+The phase has two movements and **the first one ships on its own**. A register that lists an entire chamber and links every disclosure to its primary document is useful to a reader before any Signal exists, because that record is already public without being reachable: it lives behind a search form that returns documents by an eight-digit identifier. Making it navigable, with a source URL and a retrieval timestamp on every row, is the first thing here that a citizen can use. The second movement adds the first checkable claim on top of it.
+
+Most pages carry no Finding even after movement two. That is the phase working, not the phase unfinished.
+
+### Movement one. The quiet chamber.
 
 - **I.1a House FD adapter, index only.** `src/adapters/house-fd/`. The annual bulk ZIP: offices, officeholders, and the filings index. One fetch, one format, no document parsing. Rate-limited. Respects the source's terms. Writes rows to the canonical NDJSON; rejects rows to `data/rejected/`. This lands a register with every voting member in it and no Findings at all, because the index carries no transaction dates. Ship it in that state; the silent register is the cheapest honest proof the Charter's third vow is real.
-- **I.1b House FD adapter, filing extraction.** Transaction rows from the Periodic Transaction Report documents, which is where the transaction date required by `transaction.schema.json` actually lives. Per [SOURCES.md](SOURCES.md) F.1, older filings are scanned images and extraction is bounded by their quality; a filing the adapter cannot read with confidence is rejected, never guessed. This is the hard half of the adapter and it is deliberately behind a shipped I.1a.
 - **I.2 The whole chamber, one calendar year.** Every voting member of the current House, from the pool defined in [SUBJECTS.md](SUBJECTS.md). No person is chosen to go first and no person is the focus. Set by the maintainer on 2026-09-22: everyone in scope is treated equally, and the weighting that decides who is in the register at all is the weighting already in SUBJECTS.md §7, which is the office's impact, its responsibilities, and the public sworn commitment that comes with it. The scope is weighted by office. The people inside it are not weighted against each other, ever; that is [INVARIANTS.md §13](INVARIANTS.md).
 
   Ingesting everyone is also the cheaper path and the more defensible one. One source, one file, no selection to justify. The earlier recommendation here was the maintainer's own Representative and both Senators; it is withdrawn, because two thirds of that cohort sit behind the Senate's agreement gate and captcha (SOURCES.md F.2) and because any three-person cohort invites the question of why those three.
 
   **The pressure this creates, named in advance.** With a whole chamber ingested, the first question anyone asks is who has the most of something. The register does not answer that. No index sorted by a per-person count, no league table, no "top" anything. Findings are grouped by Signal, never ranked by person, per INVARIANTS.md §13 and METHODOLOGY.md §10.
-- **I.3 First Findings.** Run the S.1 Signal against the ingested data. Sealed build. Anchor stamped.
 - **I.3b The two rendering gates.** `tools/lint-frame-presence.py` (§7) and `tools/lint-no-ranking.py` (§13). Both are rendering-time invariants, and both are unbuilt, so nothing currently stops a page without the frame or an index sorted by a per-person count from shipping. They land with the first template rather than after it, so that by the time a Finding exists every surface that could mishandle it is already gated.
 - **I.4 The per-officeholder page template.** The frame in the header (Invariant §7). The Findings listed with their standards, grouped by signal not by severity (Invariant §13 and METHODOLOGY §10). The filings listed with their source URLs. The rubric visible in a sidebar. The verifier command visible at the foot.
 - **I.5 The mark generator.** `tools/strike-mark.mjs`. Strikes a wax-seal-in-guilloche mark from the officeholder id and the build digest, per ECOSYSTEM.md §2. `tools/check-mark.mjs` verifies the geometry stays legible across a range of digests. Each per-officeholder page carries its own struck seal.
 - **I.5b The index of everyone, quiet.** A page listing every officeholder the register holds, in a fixed order that is not a ranking (INVARIANTS §13), most of them with nothing to show. Built privately; the repository stays private until Phase 5. This is the earliest point the project becomes a thing the maintainer can look at, and it exercises both rendering gates against real names before any Finding exists.
+
+### Movement two. The first Signal, against real filings.
+
+- **D.2 Known-answer cases.** `fixtures/stock-act-late-ptr/`. Dates and amounts with the correct answer written beside each, and no person in them: a transaction reported on day forty-five and one on day forty-six; the rule's two prongs (thirty days from notification, forty-five from the transaction, whichever falls earlier) crossing each other; a missing notification date; a date that does not parse. These are test inputs. They never enter `data/`.
+- **S.1 First Signal definition.** `docs/signals/stock-act-late-ptr.md`. Standard: STANDARDS.md §S.2 (STOCK Act). Criterion: a Periodic Transaction Report filed later than the rule allows, stated as both prongs rather than the forty-five-day prong alone. Worked example against the D.2 cases. `not_saying` filled in.
+- **S.2 Reference implementation.** `src/signals/stock-act-late-ptr.ts`. A pure function over dates. Tests assert each boundary case, including the day the answer changes and the prong that binds first.
+- **S.3 Adversarial review.** A fresh AI session with the council prompt, or a human, takes a hostile pass at the Signal against the five failure modes. Findings recorded in the PR. Merge only after.
+- **I.1b House FD adapter, filing extraction.** Transaction rows from the Periodic Transaction Report documents, which is where the transaction date required by `transaction.schema.json` actually lives. Per [SOURCES.md](SOURCES.md) F.1, older filings are scanned images and extraction is bounded by their quality; a filing the adapter cannot read with confidence is rejected, never guessed. This is the hard half of the adapter and it is deliberately behind a shipped I.1a.
+- **I.3 First Findings.** Run the S.1 Signal against the ingested data. Sealed build. Anchor stamped.
+
 - **I.6 The colophon.** Every build emits a sealed record of how it was made: the gates that ran and their results, the adapter and Signal versions, the Council sessions linked, the corrections and supersessions counted, the contributor roles (human, co-authored, assistant), the digest, and the anchor state. One line of it prints on every page beside the verifier command, and the build mark's ring counts it. It states what was done and never claims quality; a struck count is record, a badge is reputation. Set on the course by the maintainer on 2026-09-21 as the exhaust of the pipeline made into record. A design pass precedes the build.
 
-Ship gate for the phase: an anchored sealed build; a live page that renders cleanly in both themes; the verifier passes; the reader can click from any claim to its primary source; the per-officeholder seal reproduces byte-identically from the same inputs.
+Ship gate for movement one: every voting member in the register; the index page and one per-officeholder page render in both themes; both rendering gates pass; every filing row carries a source URL and a retrieval timestamp; the verifier passes on the sealed build.
+
+Ship gate for the phase: an anchored sealed build carrying at least one Finding; the reader can click from any claim to its primary source; the per-officeholder seal reproduces byte-identically from the same inputs.
 
 ## Phase 4. Coverage extend and second signal (goal: prove the extensibility is real)
 
