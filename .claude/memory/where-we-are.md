@@ -8,7 +8,7 @@ metadata:
 
 # Where we are
 
-*Last updated: 2026-09-22, second local session (Fable 5.1), after the merges. Phase 1 is on `main`; no pull request is open.*
+*Last updated: 2026-09-22, second local session (Opus 5, continuing from Fable 5.1), after the merges and the scope decision. Phase 1 is on `main`; no pull request is open.*
 
 ## The state
 
@@ -28,6 +28,8 @@ What `main` holds, by the pull request that brought it:
 
 **Held.** RELATED.md §2.7 (journalism) has one reading; its six entries are named and held per §6. The first reading, three carried corrections (the Washington Sun launched as NOTUS in 2024; ProPublica's May 2025 piece names executive-branch officials and congressional aides, not members; Trump Town was last updated 2019-10-15), and the record-building scripts are in `C:/Users/jared/.claude/projects/C--Users-jared-Apps-Oath/carry-2026-09-21/`. Finishing is three browser reads (Insider's *Conflicted Congress* methodology page, the Pulitzer listing for *Capital Assets*, the Times article), the splice, the gates, a push; no agent. Lauren's pointer (the §2.8 draft) stays out by decision; the draft is in the same carry folder.
 
+**The scope decision, set by Jared on 2026-09-22.** No person is the focus and no person goes first. Phase 3 ingests every voting member of the House, because everyone in scope is treated equally and the weighting that decides who is in scope at all is the one already in SUBJECTS.md §7: the office's impact, its responsibilities, and the public sworn commitment. His words: "Everyone in a sense should be treated equally. Weighted on their impact and responsibilities and commitments to the quality of life of the American people." The scope is weighted by office; the people inside it are never weighted against each other (INVARIANTS §13). The earlier recommendation of his own Representative and both Senators is withdrawn in NEXT.md I.2. I.1 is split: I.1a is the index (no document parsing, no Findings possible, ship it silent), I.1b is the extraction that produces transaction dates.
+
 **The next session's first move** is [NEXT.md](../../NEXT.md) Phase 2 D.1 (schema examples and the walkthrough for a contributor arriving cold), then D.2 and D.3, on the way to the first Signal. Branch from `main`; every gate is there.
 
 ## What this session decided or learned
@@ -39,6 +41,7 @@ What `main` holds, by the pull request that brought it:
 - **The first Signal's rule text.** The House PTR form and the Committee's January 2023 memorandum, and the Senate's Financial Disclosure page, state the rule: due the earlier of 30 days from notification or 45 from the transaction; more than 30 days late without the fee is "not properly filed." The notification date is a field on the form. Cite the chambers, not any summary.
 - **Identifiers.** The field's convention is bioguide as primary key with a crosswalk of (scheme, id, from, to); `unitedstates/congress-legislators` is CC0 and vendorable; the Clerk's index has no person key, which is a Limit to state. Details in RELATED.md §5.1 for the D.3 decision.
 - **What the verdict lint will hit.** RELATED.md carries four neighbours' own names and self-descriptions that contain blacklisted words (GovTrack's database, POGO's database, the site's own words for its investigations, OCCRP's name). When T.4 lands, those four contexts go in the allowlist with the reason.
+- **Two gaps found reading the course on 2026-09-22, both open.** `schemas/README.md` gives its proposed identifier scheme with a real sitting Senator's name and a real district as the worked examples; the register is empty and silent and its own documentation should not be the one surface carrying a real name. Fix it in D.1 using the D.2 fixture person. Second: SUBJECTS.md §4 calls `tools/check-subject-scope.py` a Phase 1 tool, but it was never on the course (T.1 to T.6 do not include it), Phase 1 shipped without it, and `scripts/oath-doctor.py` does not list it, so the doctor cannot warn that it is missing. It is really a Phase 3 gate, because it validates rows and there are none. Correct the reference and add it to the doctor's inventory as planned.
 - **Re-seal convention, chosen for #4.** When sealed doctrine changes and the register does not, the build id stays and `built_at` is a time taken from the record (the tip of `main` the branch sits on), never the clock. The digest carries the change.
 - **A §17 approval is the maintainer's words in the PR thread.** Jared gave the approval in session; it was posted in his words with a line saying who typed it and at whose instruction. It is not written for him.
 - **An old branch gets the full gate set before it is pushed.** #5 predated the Ruff configuration from #3 and failed lint after its rebase; two housekeeping commits. Run everything CI runs, not only the branch's own tests.
