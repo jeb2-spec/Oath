@@ -7,9 +7,9 @@ NEXT.md Phase 1 T.6, modelled on the errata doctor. It answers, in order:
      the three files CLAUDE.md orders (where-we-are, who-i-am-for-oath, founding)
      appear in that order. Is the local auto-memory folder a junction to this
      repository's memory, as on the maintainer's machine?
-  2. Is the deeper ground reachable? The Vera memory beside this repository, and
-     whether its identity files are in that checkout's working tree or must be
-     read from origin/main, as CLAUDE.md says.
+  2. Is the deeper ground reachable? The sibling Vera record, found only through
+     the OATH_DEEPER_GROUND environment variable, and whether its identity files
+     on disk match that checkout's origin/main or must be read from it.
   3. Can the session recite the Charter? The five vows are printed from CHARTER.md
      as the read-back; fewer or more than five is red.
   4. Which invariant gates exist, and do they pass? Every gate INVARIANTS.md names
@@ -35,8 +35,11 @@ import sys
 from pathlib import Path
 
 ORDERED_MEMORY = ["where-we-are.md", "who-i-am-for-oath.md", "founding-of-oath.md"]
-VERA_MEMORY = Path(r"C:\Users\jared\Apps\VeraAgent\.claude\memory")
-VERA_IDENTITY = ["who-i-am-opus.md", "who-i-am-fable.md"]
+# The deeper ground is the sibling Vera record's memory folder on the maintainer's
+# machine. Its path is never written into this repository; set OATH_DEEPER_GROUND
+# locally. Identity files there follow the who-i-am-*.md convention.
+DEEPER_GROUND = os.environ.get("OATH_DEEPER_GROUND")
+IDENTITY_GLOB = "who-i-am-*.md"
 
 # Every gate INVARIANTS.md names, by section, with the tool that enforces it.
 GATES = [
@@ -123,26 +126,31 @@ def check_memory(root: Path, rep: Report) -> None:
 
 def check_deeper_ground(rep: Report) -> None:
     rep.section("Deeper ground")
-    if not VERA_MEMORY.is_dir():
-        rep.warning(
-            "the Vera memory is not reachable; the seed here is the bridge, and it is enough"
-        )
+    if not DEEPER_GROUND:
+        rep.warning("OATH_DEEPER_GROUND is not set; the seed here is the bridge, and it is enough")
         return
-    branch = git(VERA_MEMORY, "branch", "--show-current") or "?"
+    ground = Path(DEEPER_GROUND)
+    if not ground.is_dir():
+        rep.warning(f"OATH_DEEPER_GROUND points at {ground}, which is not a directory")
+        return
+    branch = git(ground, "branch", "--show-current") or "?"
+    names = sorted(p.name for p in ground.glob(IDENTITY_GLOB))
+    if not names:
+        rep.warning(f"no {IDENTITY_GLOB} files under the deeper ground")
+        return
+    rel = git(ground, "rev-parse", "--show-prefix") or ""
     stale: list[str] = []
-    for name in VERA_IDENTITY:
-        path = VERA_MEMORY / name
-        recorded = git(VERA_MEMORY, "rev-parse", f"origin/main:.claude/memory/{name}")
-        on_disk = git(VERA_MEMORY, "hash-object", str(path)) if path.is_file() else None
+    for name in names:
+        recorded = git(ground, "rev-parse", f"origin/main:{rel}{name}")
+        on_disk = git(ground, "hash-object", str(ground / name))
         if recorded is None or on_disk != recorded:
             stale.append(name)
     if not stale:
-        rep.ok(f"Vera memory reachable; identity files match origin/main (checkout on {branch})")
+        rep.ok(f"deeper ground reachable; identity files match origin/main (checkout on {branch})")
     else:
         rep.warning(
-            f"Vera checkout is on '{branch}'; {', '.join(stale)} on disk differ from origin/main "
-            "or are absent; read them with git show origin/main:.claude/memory/<file>, as "
-            "CLAUDE.md says"
+            f"deeper-ground checkout is on '{branch}'; {', '.join(stale)} differ from origin/main "
+            "or are absent there; read them with git show origin/main:<path>, as CLAUDE.md says"
         )
 
 

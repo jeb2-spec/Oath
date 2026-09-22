@@ -1,0 +1,44 @@
+name: Correct a row
+description: A row in the register is wrong (wrong person, wrong filing, wrong date). Corrections are supersessions; nothing is deleted.
+title: "Correction: <row id>"
+labels: ["correction"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Facts stay. A correction adds a row that supersedes the wrong one, citing the primary source that shows the error, and both rows remain visible (BYLAWS.md §6). Off-the-record requests are not honoured; every change is a row a reader can see.
+
+        Presence in the register is not evidence of wrongdoing.
+  - type: input
+    id: row
+    attributes:
+      label: The row
+      description: Its identifier, e.g. `fl:house-clerk:P:20032062` or `oh:us:house:a000055`.
+    validations:
+      required: true
+  - type: textarea
+    id: wrong
+    attributes:
+      label: What is wrong with it
+    validations:
+      required: true
+  - type: input
+    id: source
+    attributes:
+      label: The primary source that shows the correction
+      description: A URL at the publisher. A claim without a primary source cannot enter the register.
+    validations:
+      required: true
+  - type: dropdown
+    id: coi
+    attributes:
+      label: Conflict of interest
+      options:
+        - "None."
+        - "I have one, described below."
+    validations:
+      required: true
+  - type: textarea
+    id: coi_detail
+    attributes:
+      label: Conflict of interest, if any

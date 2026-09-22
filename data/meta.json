@@ -4,8 +4,8 @@
     "state": "none"
   },
   "build": "0001-house-2025",
-  "built_at": "2026-09-22T21:55:50Z",
-  "digest": "b9705444ee944b6643b3418360f8ae197477a600f35be894ea083c8de01b5ce8",
+  "built_at": "2026-09-22T21:40:20Z",
+  "digest": "9ec08278b08f59a831b037546b5b1cbeaadd0eb46e2ea9a4c01a0d45c56fe68b",
   "disclosures": {
     "affiliations": "The maintainer is not an employee, contractor, or paid contributor of any political party, campaign, or advocacy organisation.",
     "assistant": "An AI collaborator drafted the founding documents and this build's tooling, disclosed in commit trailers and in README.md section 11.",
@@ -15,10 +15,11 @@
   },
   "register": "Oath",
   "rows": {
+    "data/adapter-runs/house-fd-2025-82bf87098f8d.ndjson": 1,
     "data/filings.ndjson": 1097,
     "data/officeholders.ndjson": 439,
     "data/offices.ndjson": 441,
-    "data/rejected/house-fd/2025-2026-09-22.ndjson": 1842
+    "data/rejected/house-fd/2025-82bf87098f8d.ndjson": 1842
   },
   "sealed": {
     "data": "every file under data/ whose name ends in .ndjson",
