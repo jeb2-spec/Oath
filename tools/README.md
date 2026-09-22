@@ -36,6 +36,10 @@ At the founding, this directory was empty except for this README. Each planned t
 
 Both land in Phase 3 with the first per-officeholder page.
 
+## Session start
+
+`scripts/oath-doctor.py` is not a gate; it is the read-back a session runs before it starts. It checks that the memory chain is whole and in order, that the deeper ground beside this repository matches `origin/main`, prints the five vows from CHARTER.md, lists every gate INVARIANTS.md names as present or planned and runs the present ones, compares the branch to `origin/main`, and checks the toolchain floor. Any red exits non-zero; a warning never does.
+
 ## Continuous integration
 
 `.github/workflows/verify.yml` runs on every push and every pull request, on Python 3.11 and Node 20, the reference runtimes: Ruff (check and format), Pytest, `verify.py`, `tamper-test.py`, `validate-schemas.py`, `lint-verdict-language.py`, `check-crossrefs.py` once its pull request has merged, a parse of every generated JSON file, Biome, and Vitest. A gate that fails fails the build. A gate whose tool is not on the branch warns loudly rather than passing quietly. The seal was first computed on Windows; the Linux job recomputing the same digest is the cross-platform check that `.gitattributes` and LF-only writes are working.
