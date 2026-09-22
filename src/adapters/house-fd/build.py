@@ -432,9 +432,17 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--year", type=int, required=True, help="filing year, e.g. 2025")
     parser.add_argument("--dry-run", action="store_true", help="report and write nothing")
+    parser.add_argument(
+        "--capture-key",
+        action="store_true",
+        help="print the key of the recorded captures and exit; same bytes, same key",
+    )
     args = parser.parse_args(argv)
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
+    if args.capture_key:
+        print(capture_key(read_capture(f"{args.year}FD.zip"), read_capture("MemberData.xml")))
+        return 0
     return build(args.year, args.dry_run)
 
 

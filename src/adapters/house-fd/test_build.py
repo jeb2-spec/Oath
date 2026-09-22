@@ -118,3 +118,14 @@ def test_the_document_url_follows_the_clerks_own_split():
 def test_canonical_lines_are_stable():
     line = build.canonical({"b": 2, "a": 1})
     assert line == '{"a":1,"b":2}\n'
+
+
+def test_the_capture_key_names_the_bytes_and_nothing_else():
+    """Same source bytes, same key, whenever they were fetched. The refresh loop rests on this."""
+    a = {"sha256": "aa" * 32, "retrieved_at": "2026-09-22T21:40:20Z"}
+    b = {"sha256": "bb" * 32, "retrieved_at": "2026-09-22T21:40:17Z"}
+    later_a = {"sha256": "aa" * 32, "retrieved_at": "2026-09-29T09:17:00Z"}
+    key = build.capture_key(a, b)
+    assert len(key) == 12 and all(c in "0123456789abcdef" for c in key)
+    assert build.capture_key(later_a, b) == key
+    assert build.capture_key(b, a) != key
