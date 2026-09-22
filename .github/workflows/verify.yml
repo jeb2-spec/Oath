@@ -57,6 +57,9 @@ jobs:
       - name: lint-no-ranking, no ranking on any surface (Invariant 13)
         run: python tools/lint-no-ranking.py
 
+      - name: check-mark, the seal is struck and legible (ECOSYSTEM section 2.4)
+        run: python tools/check-mark.py
+
       - name: lint-verdict-language (Invariant 1)
         run: python tools/lint-verdict-language.py
 
