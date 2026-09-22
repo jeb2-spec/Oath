@@ -144,22 +144,25 @@ Stated in the order a careful reader would raise them.
 
 Do not take the project's word for the contents. That would be the exact mistake the discipline argues against.
 
-Once builds carry data, every claim will be reproducible from the primary source:
+Every build is sealed, the empty founding build included. Once builds carry data, every claim will be reproducible from the primary source:
 
 ```bash
 git clone https://github.com/jeb2-spec/oath.git
 cd oath
 
-# check the file is what it claims to be, before reading a word of it
-./tools/verify           # (planned; verifier lands with the first data build)
+# check the record is what it claims to be, before reading a word of it
+python3 tools/verify.py
+
+# prove the check is not decorative
+python3 tools/tamper-test.py
 
 # regenerate any Finding from its Sources
-./tools/rebuild <finding-id>
+./tools/rebuild <finding-id>     # (planned; lands with the first Signal)
 ```
 
 Every Finding will name the Filing IDs and the Source URLs it derives from. Every Filing will name the retrieval timestamp and the source-side identifier. A reader with a browser can walk from Finding → Filing → primary source, in three clicks and no dependence on this project.
 
-Builds will be sealed with a SHA-256 digest and anchored to OpenTimestamps once the first data build ships. Anchor records will live in `ANCHORS.md` (planned) with per-build confirmation status, in the manner of the errata project.
+Every build is sealed with a SHA-256 digest over its rows, its doctrine, and its own disclosures; the rule is written at the top of `tools/verify.py` so a stranger can rebuild the digest with `sha256sum` and `sort`. Anchoring to OpenTimestamps begins with the first data build, and anchor records will live in `ANCHORS.md` with per-build confirmation status, in the manner of the errata project.
 
 ## 9. Sources
 
