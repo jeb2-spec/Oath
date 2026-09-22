@@ -41,19 +41,23 @@ Ship this phase as: a green CI badge on the working branch, and a sealed empty b
 
 Ship gate for the phase: `oath-doctor` prints all-green on a clean clone, and CI is green on the branch.
 
-## Phase 2. First signal against fixture (goal: prove the pipeline end to end with fictional data)
+## Phase 2. The Signal, proven before it touches anyone (goal: arithmetic checked at its boundaries, register still empty)
 
-Ship this phase as: the first Finding in the register, against a hand-typed fictional officeholder, byte-identically reproducible.
+Ship this phase as: a Signal definition, a reference implementation that is correct on both sides of the exact day the rule turns, and a register that still holds nothing. Set by the maintainer on 2026-09-22: no invented officeholder, and nothing fictional is ever written to `data/` or sealed.
 
-- **D.1 Schema examples and walkthrough.** Enumerate the enums, add worked examples for each schema, expand `schemas/README.md` for a contributor arriving cold.
-- **D.2 Fixture data.** `fixtures/example-person.json` (one obviously-fictional officeholder), `fixtures/example-filings.json`, `fixtures/example-ptrs.json`. Every fixture explicitly marked *fixture only, not a real person* in a top-level field.
+The earlier plan put a hand-typed fictional officeholder and a fictional Finding into the register and sealed them. That is cut. It could not satisfy [INVARIANTS.md §4](INVARIANTS.md) (a Filing carries a source URL and a retrieval timestamp) or [§16](INVARIANTS.md) (a Filing carries a durable evidence bundle) without either inventing a URL or carving an exemption that weakens both gates, and it asked the Seal, which is this project's whole proof mechanism, to vouch for something made up.
+
+What fixtures are still for is narrow and has nothing to do with people: a test needs an input whose correct answer is known in advance. Real filings do not come with an answer key, which is the reason the tool is being built. The cases below are dates and amounts. No name appears in them, invented or real.
+
+- **D.1 Schema examples and walkthrough.** Enumerate the enums, add a worked example to each schema, expand `schemas/README.md` for a contributor arriving cold. Examples use reserved placeholders (`EXAMPLE`, `example.com`, per RFC 2606), which are visibly not a person. Replace the identifier examples in `schemas/README.md`, which currently name a sitting Senator and a real district.
+- **D.2 Known-answer cases.** `fixtures/stock-act-late-ptr/`. Dates and amounts with the correct answer written beside each, and no person in them: a transaction reported on day forty-five and one on day forty-six; the rule's two prongs (thirty days from notification, forty-five from the transaction, whichever falls earlier) crossing each other; a missing notification date; a date that does not parse. These are test inputs. They never enter `data/`.
 - **D.3 Identifier scheme confirmed.** Either adopt the proposed scheme in `schemas/README.md` or replace it. Reversibility is cheap now, expensive later.
-- **S.1 First Signal definition.** `docs/signals/stock-act-late-ptr.md`. Standard: STANDARDS.md §S.2 (STOCK Act). Criterion: a PTR filed more than forty-five days after the transaction date. Worked example against `fixtures/`. `not_saying` filled in.
-- **S.2 Reference implementation.** `src/signals/stock-act-late-ptr.ts`. Pure function. Tests against the fixtures.
+- **S.1 First Signal definition.** `docs/signals/stock-act-late-ptr.md`. Standard: STANDARDS.md §S.2 (STOCK Act). Criterion: a Periodic Transaction Report filed later than the rule allows, stated as both prongs rather than the forty-five-day prong alone. Worked example against the D.2 cases. `not_saying` filled in.
+- **S.2 Reference implementation.** `src/signals/stock-act-late-ptr.ts`. A pure function over dates. Tests assert each boundary case, including the day the answer changes and the prong that binds first.
 - **S.3 Adversarial review.** A fresh AI session with the council prompt, or a human, takes a hostile pass at the Signal against the five failure modes. Findings recorded in the PR. Merge only after.
-- **S.4 Merge and seal.** After review, into main. The build seals and anchors. The verifier proves the record includes the new Finding.
+- **S.4 Seal and anchor the empty register.** Into main. The build seals and anchors `data/` as it stands, which is empty. *On this date this register held nothing* is a true and checkable claim, and stamping it proves the anchoring chain works before one real row depends on it.
 
-Ship gate for the phase: run `tools/verify.py` on a fresh clone and see the fixture Finding in the output, with a non-empty digest that OpenTimestamps has stamped.
+Ship gate for the phase: the Signal is correct on both sides of the boundary and on both prongs; the pipeline runs end to end from the D.2 cases into a throwaway directory and writes nothing to `data/`; `data/` is still empty, still verifies, and the empty build carries an OpenTimestamps proof.
 
 ## Phase 3. The chamber, quiet (goal: the first publicly checkable claims, about everyone in one chamber)
 

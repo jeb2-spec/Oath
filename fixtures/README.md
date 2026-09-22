@@ -1,41 +1,35 @@
 # fixtures/
 
-Fictional data used to test the pipeline without touching real filings, real officeholders, or real sources.
+Test inputs whose correct answer is known in advance. Nothing here is a person, and nothing here ever enters the register.
 
-At the founding, this directory contains only this README. Fixtures land in [NEXT.md](../NEXT.md) Phase 2 D.2, alongside the first Signal.
+At the founding, this directory contained only this README. Since Phase 1 it also holds the cross-reference gate's cases. The Signal's cases land in [NEXT.md](../NEXT.md) Phase 2 D.2.
 
 ## Rules
 
-- **Every fixture is obviously fictional.** Names are placeholder patterns (`Example Person`, `Test Officeholder A`), never a real person's name or a name that could plausibly be one.
-- **Every fixture is marked.** Top-level `fixture_only: true` on every row. Any downstream tool that produces user-facing output from a fixture is required to display the fictional marker.
+- **No invented person, and no real one.** Earlier drafts of the course planned a hand-typed fictional officeholder. That is cut, set by the maintainer on 2026-09-22. Where a schema requires an identifier, use a reserved placeholder (`oh:us:example:example`, `example.com`, per RFC 2606), which is visibly not a person and makes no claim about one.
 - **Fixtures never enter the canonical NDJSON.** They live only under `fixtures/` and are read only by tests. A test that leaks a fixture into `data/` is a test that fails.
+- **Every fixture carries its expected answer.** A case without a written expectation is not a fixture; it is a sample.
 - **Fixtures are versioned.** A schema change that would invalidate a fixture requires an updated fixture in the same commit.
 
 ## Planned layout
 
 ```
 fixtures/
-├── officeholders/
-│   └── example-person.json
-├── filings/
-│   └── example-ptr-late.json
-├── holdings/
-│   └── example-holding.json
-├── transactions/
-│   └── example-transaction.json
-├── signals/
-│   └── stock-act-late-ptr/
-│       ├── input.json          the fixture rows the Signal reads
-│       └── expected.json       the Finding(s) the Signal must produce
-└── tools/
-    └── verify/
-        ├── clean-db.sql        a known-good tiny record
-        ├── clean-db.digest     the expected digest
-        └── tampered-db.sql     a record with one row altered
+├── stock-act-late-ptr/
+│   ├── input.ndjson            transaction and filing rows, placeholder ids, no names
+│   └── expected.json           for each case: fires or does not, and why
+├── tools/
+│   ├── check-crossrefs/        landed in Phase 1: good/ and bad/ trees
+│   └── verify/
+│       ├── clean-db.sql        a known-good tiny record
+│       ├── clean-db.digest     the expected digest
+│       └── tampered-db.sql     a record with one row altered
 ```
 
-## Why fictional
+## Why not test against real filings
 
-Signals should be tested against inputs that isolate the criterion the Signal exists to detect. Real filings carry adjacent conditions and confounders that are useful to encounter in ingest but not in a unit test. Fictional fixtures let the test suite say *this Signal fires on exactly this pattern* without accidentally also saying *this Signal fires on this officeholder*.
+A test needs an input whose correct answer is known before the tool runs. Real filings do not come with an answer key; producing one is the reason the tool is being built. Run a Signal against real data and it returns something plausible whether the logic is right or wrong, and there is nothing to compare it to.
 
-Every fixture pair is a small commitment to a specific interpretation of the criterion. When the interpretation changes, the fixture changes and the Signal version bumps.
+The cases that matter are the ones at the edges of the rule, and the record almost never hands you a clean one. The STOCK Act sets two prongs, thirty days from notification and forty-five days from the transaction, whichever falls earlier. The day the answer changes, the prong that binds first, a notification date that is absent, a date that does not parse: those are arithmetic, and arithmetic can be stated exactly. Getting the boundary wrong against a real filing means publishing a false claim about a real person, and no amount of care at ingest catches a logic error that ingest cannot see.
+
+So the fixtures here are dates and amounts, and the register holds only what a primary source published.
