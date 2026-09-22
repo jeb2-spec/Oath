@@ -2,7 +2,7 @@
 
 The canonical store of the register, and the caches around it.
 
-At the founding, this directory is empty except for this README.
+At the founding, this directory was empty except for this README. Since Phase 1 T.2 it holds `meta.json`, the sealed record of the build: the digest `tools/verify.py` recomputes, the row counts, the disclosures the seal covers, and the anchor state. The register itself is still empty; the empty build is sealed so the first row, when it comes, is a visible change.
 
 ## Layout (planned)
 
