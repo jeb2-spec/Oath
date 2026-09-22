@@ -11,12 +11,12 @@ At the founding, this directory was empty except for this README. Each planned t
 | `verify.py` | §9; RUBRIC gate 4 | Recompute the register's seal and compare it to `data/meta.json`. The seal is one SHA-256 over a sorted manifest of every `data/**/*.ndjson`, the eleven doctrine documents, and `data/meta.json` without its digest as canonical JSON; the rule is written at the top of the file so a stranger can rebuild it with `sha256sum` and `sort`. Prints OK or FAIL and *Integrity is not accuracy* on every run; `--manifest` prints the manifest. 151 lines. |
 | `seal.py` | §9 | The build's last step: writes the build id, the build time it is given (never the clock), the row counts, and the digest into `data/meta.json`. Two runs from the same inputs produce the same bytes. Any change to a sealed file, doctrine included, needs a re-seal in the same commit; the digest change is the loudness the meta-invariant wants. |
 | `tamper-test.py` | §9; RUBRIC gate 4 | Proves the verifier is not decorative: alters one character of a disclosure in a throwaway copy and requires FAIL; runs on the real tree and requires OK; recomputes the digest with code that imports nothing from the verifier and requires equality. |
+| `validate-schemas.py` | §2 §3 §4 §6 | Meta-checks every schema in `schemas/` against the subset of JSON Schema draft 2020-12 this register uses (any other keyword fails loudly), validates each schema's own examples, and validates every row of every canonical NDJSON file under `data/` against its schema, naming the file, line, field path, and rule. Formats are assertions: a `date-time` must be UTC. Standard library. |
 
 ## Planned tools
 
 | Tool | Invariant | Job |
 | --- | --- | --- |
-| `validate-schemas.py` | §2 §3 §4 §6 | Walk `schemas/` and validate every row of the canonical NDJSON against its schema. Fail on any invalid row. |
 | `lint-verdict-language.py` | §1 | Scan Signal definitions, rendered Findings, templates, and every user-facing Markdown file for the blacklist. Ships with an `.allowlist` for cases the blacklist matches but the context clears. |
 | `lint-frame-presence.py` | §7 | Read every rendered officeholder-facing page and require the presence-is-not-proof frame verbatim in the header region. |
 | `lint-no-ranking.py` | §13 | Scan every rendered index and summary page for elements sorted by a per-officeholder derived score. |
