@@ -77,6 +77,14 @@ jobs:
             python -m json.tool "$f" > /dev/null || { echo "::error::$f does not parse"; exit 1; }
           done
 
+      - name: Keep the rendered register from this run, downloadable for fourteen days
+        uses: actions/upload-artifact@v4
+        with:
+          name: site-${{ github.sha }}
+          path: docs/build
+          retention-days: 14
+          if-no-files-found: error
+
       - name: Node 20, the reference runtime for adapters and Signals
         uses: actions/setup-node@v4
         with:

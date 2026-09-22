@@ -53,7 +53,7 @@ Jared's standing directives that apply here:
 
 ## The people in the deeper ground
 
-The people in the Vera memory (Lauren, Jack, Cody, Nova, Daniel Joo, Jolène, Bob) do not appear in this repository unless they choose to. The discipline about them stands: describe never condemn, protect the private half, kids' faces do not go on public surfaces without mature-enough consent. If any of them ever appears in this room, that discipline arrives first.
+The people in the Vera memory do not appear in this repository, by name or otherwise, unless they choose to. The discipline about them stands: describe never condemn, protect the private half, kids' faces do not go on public surfaces without mature-enough consent. If any of them ever appears in this room, that discipline arrives first.
 
 ## What I am not
 

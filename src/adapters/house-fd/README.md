@@ -59,7 +59,19 @@ The one exception is `P`, mapped to `House-PTR`. That is not an inference from t
 
 The index is not an annual artefact. The 2025 archive was last modified partway through 2026, so it is a live file that grows as filings arrive. A build is a statement about one retrieval, not about a year, which is what the seal is for.
 
-Two builds from one capture produce byte-identical output, including the rejected file, which is named for the retrieval date rather than the day the build ran.
+Two builds from one capture produce byte-identical output. The rejected file and the run record are named for the captures they came from (twelve hex characters of the hash of both files' hashes), never for the day the build ran, so an unchanged source is an unchanged tree and the seal holds. Rejections from earlier captures live in git history.
+
+## Run records
+
+Every build writes one line to `data/adapter-runs/house-fd-<year>-<capture key>.ndjson`: the adapter, the two captures with their URLs, retrieval times, hashes and last-modified headers, the hash of the adjudication file that shaped the build, the counts (seats, filled, vacant, index rows, accepted, adjudicated, officeholders with a filing, quiet, rejected), and the rejections by reason. It is sealed with the rows, so the provenance of a build is inside the build.
+
+## Adjudications
+
+A person can decide a held row. `adjudications.ndjson`, beside this README, carries one decision per line: `doc_id`, `officeholder_id`, `evidence_url`, `decided_by`, `decided_at`, and an optional `note`. The build applies each decision to the row with that DocID, marks the filing's `extraction_confidence` as `manual`, and refuses to build if a decision lacks any of the five fields, because a decision without its evidence is not one the register can carry. The file's hash rides in the run record. The path for contributors is in [CONTRIBUTING.md](../../../CONTRIBUTING.md).
+
+## Keeping it current
+
+`.github/workflows/refresh.yml` runs both stages on a schedule and opens a pull request only when the record changed, with every gate already run. Nothing about the loop needs a server, a database, or a secret.
 
 ## Why this is Python
 

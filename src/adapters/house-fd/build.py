@@ -40,6 +40,7 @@ from __future__ import annotations
 
 import argparse
 import collections
+import hashlib
 import json
 import sys
 import unicodedata
@@ -49,6 +50,11 @@ from pathlib import Path
 
 CACHE = Path("data/cache/house-fd")
 CLERK = "https://disclosures-clerk.house.gov/public_disc"
+
+# Human decisions about which held row belongs to which officeholder, one per line,
+# each citing its evidence. Lives beside the adapter, not under data/, because it is
+# an input a person writes; its hash is carried into every run record it shaped.
+ADJUDICATIONS = Path("src/adapters/house-fd/adjudications.ndjson")
 
 # The 119th Congress convened on this date under the Twentieth Amendment. It is the
 # term start of the seat, which is not the same as the day a given member was sworn.
@@ -195,11 +201,41 @@ def canonical(obj: dict) -> str:
     return json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=False) + "\n"
 
 
+def capture_key(index_capture: dict, roster_capture: dict) -> str:
+    """Twelve hex characters naming this pair of captures. Same bytes in, same key out."""
+    joined = f"{index_capture['sha256']}\n{roster_capture['sha256']}".encode()
+    return hashlib.sha256(joined).hexdigest()[:12]
+
+
+def load_adjudications(path: Path) -> tuple[dict[str, dict], str | None]:
+    """Human decisions keyed by DocID, and the file's hash for the run record.
+
+    Each line carries doc_id, officeholder_id, evidence_url, decided_by and decided_at,
+    and may carry a note. A line missing any of the five stops the build: a decision
+    without its evidence is not a decision the register can carry.
+    """
+    if not path.is_file() or path.stat().st_size == 0:
+        return {}, None
+    required = ("doc_id", "officeholder_id", "evidence_url", "decided_by", "decided_at")
+    raw = path.read_bytes()
+    decisions: dict[str, dict] = {}
+    for number, line in enumerate(raw.decode("utf-8").splitlines(), 1):
+        if not line.strip():
+            continue
+        row = json.loads(line)
+        missing = [key for key in required if not row.get(key)]
+        if missing:
+            raise SystemExit(f"{path}:{number}: adjudication lacks {', '.join(missing)}")
+        decisions[str(row["doc_id"])] = row
+    return decisions, hashlib.sha256(raw).hexdigest()
+
+
 def build(year: int, dry_run: bool = False) -> int:
     roster_capture = read_capture("MemberData.xml")
     index_capture = read_capture(f"{year}FD.zip")
     seats, people = load_roster(CACHE / "MemberData.xml")
     rows = load_index(CACHE / f"{year}FD.xml")
+    adjudications, adjudications_hash = load_adjudications(ADJUDICATIONS)
 
     for person in people:
         person["_tokens"] = tokens(person["last"], person["first"])
@@ -233,7 +269,7 @@ def build(year: int, dry_run: bool = False) -> int:
         offices.append(office)
         office_of_seat[seat["seat"]] = office
 
-    officeholders, holder_of_bioguide = [], {}
+    officeholders, holder_of_bioguide, person_of_id = [], {}, {}
     for person in people:
         office = office_of_seat[person["seat"]]
         sworn = person["sworn"]
@@ -259,10 +295,21 @@ def build(year: int, dry_run: bool = False) -> int:
         }
         officeholders.append(holder)
         holder_of_bioguide[person["bioguide"]] = holder
+        person_of_id[holder["id"]] = person
 
-    filings, rejected = [], []
+    filings, rejected, adjudicated = [], [], 0
     for row in rows:
         person, reason = match(row, people, by_surname)
+        confidence = "structured"
+        decided = adjudications.get(row["doc_id"]) if person is None else None
+        if decided is not None:
+            person = person_of_id.get(decided["officeholder_id"])
+            if person is None:
+                raise SystemExit(
+                    f"adjudication for DocID {row['doc_id']} names "
+                    f"{decided['officeholder_id']}, which is not in the roster"
+                )
+            confidence, adjudicated = "manual", adjudicated + 1
         filed_at = iso(row["filing_date"])
         if person is None or filed_at is None:
             rejected.append(
@@ -295,7 +342,7 @@ def build(year: int, dry_run: bool = False) -> int:
                     "retrieved_at": index_capture["retrieved_at"],
                     "content_hash": None,
                 },
-                "extraction_confidence": "structured",
+                "extraction_confidence": confidence,
             }
         )
 
@@ -303,18 +350,19 @@ def build(year: int, dry_run: bool = False) -> int:
     officeholders.sort(key=lambda h: h["id"])
     offices.sort(key=lambda o: o["id"])
 
+    attributed = len({f["officeholder_id"] for f in filings})
+    quiet = len(people) - attributed
+    reasons = dict(collections.Counter(r["reason"].split(" (")[0] for r in rejected))
     print(
         f"roster        {len(seats)} seats, {len(people)} filled, {len(seats) - len(people)} vacant"
     )
     print(f"index         {len(rows)} rows for {year}")
-    attributed = len({f["officeholder_id"] for f in filings})
     print(f"accepted      {len(filings)} filings against {attributed} officeholders")
+    if adjudicated:
+        print(f"              {adjudicated} of them by a person's adjudication, citing evidence")
     print(f"rejected      {len(rejected)} rows")
-    for reason, count in collections.Counter(
-        r["reason"].split(" (")[0] for r in rejected
-    ).most_common():
+    for reason, count in sorted(reasons.items(), key=lambda item: -item[1]):
         print(f"              {count:5d}  {reason}")
-    quiet = len(people) - len({f["officeholder_id"] for f in filings})
     print(f"quiet         {quiet} sitting members have no filing in this index")
 
     if dry_run:
@@ -324,12 +372,51 @@ def build(year: int, dry_run: bool = False) -> int:
     write(Path("data/offices.ndjson"), offices)
     write(Path("data/officeholders.ndjson"), officeholders)
     write(Path("data/filings.ndjson"), filings)
-    # Named for the retrieval the rows came from, never for the day the build ran, so
-    # that rebuilding the same capture rewrites the same file and the seal holds.
-    stamp = index_capture["retrieved_at"][:10]
-    write(Path(f"data/rejected/house-fd/{year}-{stamp}.ndjson"), rejected)
+    # Named for the captures the rows came from, never for the day the build ran: the
+    # same bytes rebuild the same file, so an unchanged source is an unchanged tree and
+    # the seal holds. Rejections from earlier captures live in git history.
+    key = capture_key(index_capture, roster_capture)
+    rejected_dir = Path("data/rejected/house-fd")
+    rejected_dir.mkdir(parents=True, exist_ok=True)
+    for old in rejected_dir.glob(f"{year}-*.ndjson"):
+        if old.name != f"{year}-{key}.ndjson":
+            old.unlink()
+    write(rejected_dir / f"{year}-{key}.ndjson", rejected)
+    run = {
+        "adapter": "house-fd",
+        "year": year,
+        "capture_key": key,
+        "sources": [
+            {
+                "name": name,
+                "url": capture["url"],
+                "retrieved_at": capture["retrieved_at"],
+                "sha256": capture["sha256"],
+                "last_modified": capture.get("last_modified"),
+            }
+            for name, capture in (
+                ("MemberData.xml", roster_capture),
+                (f"{year}FD.zip", index_capture),
+            )
+        ],
+        "adjudications_sha256": adjudications_hash,
+        "counts": {
+            "seats": len(seats),
+            "filled": len(people),
+            "vacant": len(seats) - len(people),
+            "index_rows": len(rows),
+            "accepted": len(filings),
+            "adjudicated": adjudicated,
+            "officeholders_with_a_filing": attributed,
+            "quiet": quiet,
+            "rejected": len(rejected),
+        },
+        "rejected_by_reason": reasons,
+    }
+    write(Path(f"data/adapter-runs/house-fd-{year}-{key}.ndjson"), [run])
     print("\nwrote data/offices.ndjson, data/officeholders.ndjson, data/filings.ndjson")
-    print(f"wrote data/rejected/house-fd/{year}-{stamp}.ndjson")
+    print(f"wrote data/rejected/house-fd/{year}-{key}.ndjson")
+    print(f"wrote data/adapter-runs/house-fd-{year}-{key}.ndjson")
     print("Re-seal in this commit: python tools/seal.py --build <id> --built-at <time>")
     return 0
 
