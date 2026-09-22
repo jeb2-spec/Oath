@@ -11,20 +11,57 @@ Before you open a pull request, read three files, in this order, and know that o
 Beyond that, the shape of a good contribution:
 
 - **Small, named commits.** One purpose per commit. A PR with three orthogonal purposes should be three PRs.
-- **Cheap evidence first.** Run whatever gates exist locally before you push (`tools/validate-schemas.py`, `tools/verify.py`, `npm test`, `pytest`) once they land. If a gate does not exist yet, run the closest thing that does and note what you could not run.
+- **Gates last.** Run `python scripts/oath-doctor.py` after your final edit, not before it; it runs every gate that exists and says which are still planned. CI runs the same set on every push. A gate that fails locally will fail there.
 - **No verdict language.** Every user-facing sentence passes the "would the subject read this back to you comfortably in a room?" test. See [INVARIANTS.md §1](INVARIANTS.md).
 - **Corrections and supersessions preserve the past.** Nothing is deleted; everything is superseded. See Charter Vow V and [BYLAWS.md §6](BYLAWS.md).
 - **Conflict of interest disclosure is required.** Every PR body carries a `## Conflict of interest disclosure` heading. `None.` is a valid answer when true. See [BYLAWS.md §7](BYLAWS.md).
-- **Council review before publishing anything that names an officeholder in a new way.** New Signal, Signal version bump, new naming template. See [COUNCIL.md](COUNCIL.md).
+- **Council review before publishing anything that names an officeholder in a new way.** New Signal, Signal version bump, new naming template, the first batch of adjudications. See [COUNCIL.md](COUNCIL.md).
 - **Attribution follows the `Co-Authored-By` convention.** If an AI collaborator helped, disclose it in the trailer.
 
-## What kind of contribution the project needs most
+## How the record is obtained and kept current
 
-At the founding, work concentrates in the phases of [NEXT.md](NEXT.md). Priority order:
+The register reads primary sources and nothing else. Each source has an adapter under `src/adapters/`, in two stages that anyone can run:
 
-- **Phase 1 tooling.** The verifier, the tamper-test, the schema validator, the verdict-language lint, the CI workflow, and the session-start doctor. Standard-library Python where possible; TypeScript for adapters and Signals.
-- **Phase 2 first Signal.** `stock-act-late-ptr`, end-to-end, against fixtures.
-- **Adapter for the U.S. House Financial Disclosure Portal.** The reference primary source.
+```bash
+python src/adapters/house-fd/fetch.py --year 2025
+python src/adapters/house-fd/build.py --year 2025
+python tools/seal.py --build <sequence>-house-2025 --built-at <the retrieval time fetch.py recorded>
+```
+
+`fetch.py` retrieves and records: the URL, the retrieval time, the SHA-256 of the bytes, and the server's last-modified. `build.py` touches no network; it writes rows from the recorded capture, so anyone holding the same bytes gets the same rows. What the adapter cannot attribute beyond doubt goes to `data/rejected/` with the reason, and every run writes a one-line record to `data/adapter-runs/` naming the captures it read. Both are sealed with the rows.
+
+On a schedule, [`refresh.yml`](.github/workflows/refresh.yml) does the same in GitHub Actions: fetch, build, and if the record changed, re-seal, run every gate, and open a pull request for the maintainer. If nothing changed it says so and stops. A pull request opened by the workflow does not trigger CI on itself, so the workflow runs the full gate set before pushing and its log is the evidence; the merge runs CI on `main`.
+
+Adapters are Python, standard library, for the reason in [`src/README.md`](src/README.md): the sealed rows and the tool that seals them share one language. Signals are TypeScript.
+
+## Adjudicating a held row
+
+The adapter refuses a filing whose name matches a sitting member's surname but not their given names, because that is usually the same person and also the exact shape of a relative running for the seat. Those rows are held in `data/rejected/` for a person to decide, and there are a few hundred of them.
+
+To decide one: open an issue with the *Adjudicate a held row* template, or go straight to a PR that adds one line to [`src/adapters/house-fd/adjudications.ndjson`](src/adapters/house-fd/adjudications.ndjson):
+
+```json
+{"doc_id":"20032062","officeholder_id":"oh:us:house:a000055","evidence_url":"https://disclosures-clerk.house.gov/...","decided_by":"your name or handle","decided_at":"2026-09-22","note":"the index writes the legal name; the roster the common one"}
+```
+
+The evidence is the primary source that ties the document to the person, usually the document itself, which names its filer. The next build applies the decision, marks the filing's `extraction_confidence` as `manual`, and carries the hash of the adjudication file in the run record, so anyone can see which decisions shaped which build. A decision without its evidence is refused at build time.
+
+The first batch of adjudications goes to the [Council](COUNCIL.md) before it merges, because attributing a document to a person by human judgement is a new way of naming an officeholder.
+
+## What the project needs most
+
+In order:
+
+- **Adjudications.** The held rows, above. Each one closes a gap the build publishes as a number.
+- **The first Signal against real filings.** `stock-act-late-ptr`, per [NEXT.md](NEXT.md) Phase 3 movement two. It needs the document extraction (I.1b) first, which is the hardest open piece of engineering here.
+- **The Senate adapter.** SOURCES.md F.2. No bulk download, an agreement gate, and a report-identifier scheme nobody has recorded yet; the first session past the gate records the scheme before anything else.
+- **Watching the sources.** When a source moves or changes shape, the *A primary source changed* issue template is the way to say so.
+
+## When the repository is public
+
+Everything lives on GitHub on purpose. The rendered register publishes with GitHub Pages ([`pages.yml`](.github/workflows/pages.yml)), which is inert while the repository is private and publishes on the first push after the flip, once Pages is enabled with its source set to GitHub Actions. Until then every CI run keeps the rendered site as a downloadable artifact for fourteen days.
+
+Branch protection is also free only for public repositories on a personal account. On the day of the flip, require the `verify` workflow to pass before merge and require review from the code owners in [`.github/CODEOWNERS`](.github/CODEOWNERS), which makes the maintainer's approval of doctrine changes ([INVARIANTS.md §17](INVARIANTS.md)) mechanical rather than remembered.
 
 ## What to do if you find a problem in a published Finding
 
@@ -33,7 +70,7 @@ Two paths, both documented in [BYLAWS.md §6](BYLAWS.md):
 - **Fact correction** (wrong person, wrong filing, wrong amount): open a PR that adds a supersession row citing the primary source that reveals the correction. Both rows stay in the register.
 - **Demonstrated change** (a later primary-source filing shows the subject's conduct has changed such that the Finding's condition no longer applies): open a PR that adds a supersession row citing the primary source that shows the change. Both rows stay.
 
-Off-the-record requests are not honored. Every change is a row in the register a reader can see.
+Off-the-record requests are not honored. Every change is a row in the register a reader can see. The *Correct a row* issue template is the front door.
 
 ## Reporting a security or trust issue
 

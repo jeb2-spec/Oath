@@ -1,0 +1,40 @@
+name: A primary source changed
+description: A source in SOURCES.md moved, changed shape, or published something new that the adapter should know about.
+title: "Source changed: <which>"
+labels: ["source"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Adapters read primary sources as they are on a given day, and sources move. Tell the project what changed and where you saw it; the fix lands as a change to the adapter and a row in SOURCES.md, both citing what you report here.
+  - type: dropdown
+    id: source
+    attributes:
+      label: Which source
+      options:
+        - "F.1 House Clerk, financial disclosures"
+        - "F.2 Senate, financial disclosures"
+        - "F.3 Office of Government Ethics"
+        - "The House Clerk roster (MemberData.xml)"
+        - "Another source in SOURCES.md"
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What changed
+      description: A new URL, a new field, a code whose meaning the publisher now defines, a file that stopped updating.
+    validations:
+      required: true
+  - type: input
+    id: url
+    attributes:
+      label: Where you saw it
+      description: The publisher's own page, not a summary of it.
+    validations:
+      required: true
+  - type: input
+    id: when
+    attributes:
+      label: Date you saw it
+      placeholder: "2026-09-22"

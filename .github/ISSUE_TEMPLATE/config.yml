@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: A security or trust problem
+    url: https://github.com/jeb2-spec/Oath/blob/main/SECURITY.md
+    about: How to report one privately, per SECURITY.md.
+  - name: Read the Charter first
+    url: https://github.com/jeb2-spec/Oath/blob/main/CHARTER.md
+    about: Five vows, short on purpose. Every contribution is a commitment to them.
