@@ -1,0 +1,18 @@
+# Who is asked to review what. GitHub requests these reviews automatically; once
+# the repository is public and branch protection is available, they can be made
+# required. INVARIANTS.md §17 already requires the maintainer's written approval
+# for the five doctrine files below; this is the mechanical half of that rule.
+
+/CHARTER.md     @jeb2-spec
+/RUBRIC.md      @jeb2-spec
+/INVARIANTS.md  @jeb2-spec
+/BYLAWS.md      @jeb2-spec
+/COUNCIL.md     @jeb2-spec
+/SUBJECTS.md    @jeb2-spec
+
+# The sealed store and the schemas that shape it.
+/data/          @jeb2-spec
+/schemas/       @jeb2-spec
+
+# Human decisions about which document belongs to which person.
+/src/adapters/house-fd/adjudications.ndjson  @jeb2-spec

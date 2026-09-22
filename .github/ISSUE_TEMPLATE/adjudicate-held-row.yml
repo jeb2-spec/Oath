@@ -1,0 +1,54 @@
+name: Adjudicate a held row
+description: The adapter held a filing because the name did not match the roster beyond doubt. Help a person decide it, with a primary source.
+title: "Adjudicate held row: <DocID>"
+labels: ["adjudication"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The register never guesses which officeholder a filing belongs to. Rows the adapter could not attribute beyond doubt sit in `data/rejected/`, each with the reason. A person can decide one, and the decision is recorded with its evidence in `src/adapters/house-fd/adjudications.ndjson` so the next build applies it and anyone can check it.
+
+        Presence in the register is not evidence of wrongdoing. An adjudication says only that a document belongs to a person's record; it says nothing about the person.
+  - type: input
+    id: doc_id
+    attributes:
+      label: DocID of the held row
+      description: The Clerk's document identifier, from the rejected row's `source_row.doc_id`.
+      placeholder: "20032062"
+    validations:
+      required: true
+  - type: input
+    id: officeholder_id
+    attributes:
+      label: Officeholder the filing belongs to
+      description: The register's identifier, from `data/officeholders.ndjson`, e.g. `oh:us:house:a000055`.
+    validations:
+      required: true
+  - type: input
+    id: evidence
+    attributes:
+      label: Primary source that shows it
+      description: A URL at the Clerk or another primary source that ties this document to this person. The document itself usually names the filer.
+    validations:
+      required: true
+  - type: textarea
+    id: reasoning
+    attributes:
+      label: Why the names differ
+      description: One or two sentences. A common name against a legal name, a hyphen the index dropped, a district change.
+    validations:
+      required: true
+  - type: dropdown
+    id: coi
+    attributes:
+      label: Conflict of interest
+      description: BYLAWS.md §7 asks every contributor to disclose one.
+      options:
+        - "None."
+        - "I have one, described below."
+    validations:
+      required: true
+  - type: textarea
+    id: coi_detail
+    attributes:
+      label: Conflict of interest, if any
