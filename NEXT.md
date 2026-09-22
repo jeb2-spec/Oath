@@ -34,6 +34,33 @@ The second axis is depth, and it has a cliff in it:
 
 Ship the index layer for a group before the document layer for that group. A register that lists every member of a chamber and fires nothing is complete, honest, and cheap, and it is the state the project should be comfortable sitting in.
 
+## Obtaining the record
+
+Coverage is a ladder of doors, and each door has a shape. The shape sets the order, because the cost of a source is the cost of its door, not the number of people behind it. Verified reachable on 2026-09-22 unless marked.
+
+| Source | People | The door | Index layer | Document layer |
+| --- | --- | --- | --- | --- |
+| House Clerk, filing index (F.1) | 441 | bulk ZIP, no key | landed | PDF text; e-filed reports are text, older ones scanned |
+| House Clerk, roster | 441 | XML, no key | landed | none needed |
+| Senate roster (F.2) | 100 | XML, no key | one session | none needed |
+| Senate eFD, filings (F.2) | 100 | search behind a use agreement and a captcha; no bulk | a human step, then two or three sessions | e-filed reports are HTML tables |
+| FEC (F.4) | 541 | JSON API with a free key; bulk CSV | two or three sessions | structured; no extraction |
+| OGE 278e (F.3) | 37 | search interface, PDF | two to four sessions, plus requests that take weeks | PDF |
+| Governors and Lieutenant Governors | about 68 | fifty regimes | one to three sessions each; the best five first | varies by state |
+
+Three rules for walking the ladder:
+
+- **A door software cannot pass lawfully and mechanically is a human step, recorded.** The Senate's agreement gate and captcha are the first. A person accepts the agreement and exports the search; the adapter takes it from there, and the run record names the person and the session. Nothing here passes a captcha by machine, ever.
+- **The document layer takes one dependency, deliberately.** The standard library reads no PDF. The document adapter declares one pure-Python reader (the candidate is `pypdf`, BSD licence, no compiled parts); the verifier stays standard library, because the reader touches the cache and never the sealed rows. It is the first dependency the project takes on and it is recorded as such.
+- **Capture before extraction.** Every document the adapter reads is captured first, bytes and hash and headers, into an evidence bundle per [INVARIANTS.md §16](INVARIANTS.md) and [EVIDENCE.md](EVIDENCE.md), before anything is read out of it. Extraction confidence is recorded on the row.
+
+Two doors that stand open and are deliberately not walked through:
+
+- **Roll-call votes and bills.** The House (`clerk.house.gov/evs`) and the Senate (LIS `roll_call_votes`) publish every vote as XML, and GovInfo publishes bill status in bulk (F.8). They are the most machine-readable primary records in the federal government. They are not ingested, because no Standard in [STANDARDS.md](STANDARDS.md) makes a vote a condition, and a filing set beside a vote is the arrangement of facts that invites the reader to infer what the register will not state ([RELATED.md](RELATED.md) §5.4). Whether they enter is a Council question, not an adapter question.
+- **Lobbying disclosure (F.5, F.6).** Filed by lobbyists and naming counterparties, whom [SUBJECTS.md](SUBJECTS.md) §3 excludes as subjects.
+
+When, counted in sessions rather than dates, because a session is the unit this project is actually built in: House documents and the first Signal, three to five; the Senate roster, one, and the Senate filings, a human step and then two or three; the FEC, two or three; OGE, two to four plus the requests. The federal picture, which is nearly nine in ten of the population, is ten to sixteen sessions of work from the night this section was written. The states follow, five at a time.
+
 The Signal library grows on its own axis and is not tied to coverage. Every Signal cites a Standard ([INVARIANTS.md](INVARIANTS.md) §2), so the library can only grow as far as [STANDARDS.md](STANDARDS.md) reaches. A condition with no standard behind it is not a Signal, whatever the arrangement of facts around it suggests.
 
 ## Standing gates for every session
