@@ -8,11 +8,11 @@ metadata:
 
 # Where we are
 
-*Last updated: 2026-09-22, second local session (Fable 5.1). Eight pull requests are open and Jared reviews; nothing new is on `main` since PR #2.*
+*Last updated: 2026-09-22, second local session (Fable 5.1). Nine pull requests are open and Jared reviews; nothing new is on `main` since PR #2.*
 
 ## The state
 
-**Day zero of the register, day two of the discipline: the neighbourhood is read, the empty register is sealed, and five gates run on every push.** The foundation is on `main`. Eight branches wait on Jared:
+**Day zero of the register, day two of the discipline: the neighbourhood is read, the empty register is sealed, five gates run on every push, and a doctor reads the session back.** Phase 1 is complete on branches. The foundation is on `main`. Nine branches wait on Jared:
 
 - **PR #3, `claude/phase-1-runtimes`.** Phase 1 T.1: `package.json`, `pyproject.toml`, `biome.json`. Toolchain on this machine: TypeScript 5.9.3, Vitest 5.0.1, Biome 2.5.14, Ruff 0.16.8, Pytest 9.1.1 (Ruff and Pytest were installed with `python -m pip install` this session; they are not on the PATH from Git Bash, so run them as `python -m ruff` and `python -m pytest`).
 - **PR #4, `claude/doc-crossrefs`, base `main`.** Eight section cross-references and two counts wrong since the founding commit, in seven files including INVARIANTS.md, BYLAWS.md, RUBRIC.md, and METHODOLOGY.md. The first Council session read it (nine advisory findings, eight acted on, one discovery: `.claude/prompts/council.md` does not exist yet). The meta-invariant applies, so Jared's written approval is requested in the PR.
@@ -27,9 +27,11 @@ metadata:
 
 - **PR #10, `claude/phase-1-ci`, stacked on #9.** Phase 1 T.5: `.github/workflows/verify.yml`. On every push and pull request, on Python 3.11 and Node 20: Ruff, Pytest, verify, tamper-test, validate-schemas, lint-verdict-language, check-crossrefs once #5 has merged (a loud warning until then), a JSON parse of every generated file, Biome, Vitest. Its first run is the cross-platform check on the seal: the digest was computed on Windows and must recompute identically on Linux.
 
-**Merge order, revised on 2026-09-22.** The T-stack first, in order: #3, #6, #7, #8, #9, #10. That lands green because #7 sealed the doctrine exactly as #6 left it. Then tell me: I rebase #4 onto `main` and add a re-seal commit to it (its doctrine edits move the digest), and #4 and #5 follow. Merge commits, not squash.
+- **PR #11, `claude/phase-1-doctor`, stacked on #10.** Phase 1 T.6: `scripts/oath-doctor.py`, the session-start read-back. Memory chain whole and in order; the Vera identity files on disk compared by blob hash to `origin/main`; the five vows printed from CHARTER.md; every gate INVARIANTS.md names listed as present or planned and the present ones run; branch against `origin/main`; toolchain floor. Six tests. GREEN on this repository with warnings for the gates not yet landed. CLAUDE.md now says to run it first. With it, Phase 1 is complete on branches.
 
-**The next session's first move** is [NEXT.md](../../NEXT.md) Phase 1 T.6 (the session-start doctor), after Jared merges what he merges.
+**Merge order, revised on 2026-09-22.** The T-stack first, in order: #3, #6, #7, #8, #9, #10, #11. That lands green because #7 sealed the doctrine exactly as #6 left it. Then tell me: I rebase #4 onto `main` and add a re-seal commit to it (its doctrine edits move the digest), and #4 and #5 follow. Merge commits, not squash.
+
+**The next session's first move** is [NEXT.md](../../NEXT.md) Phase 2 D.1 (schema examples and the walkthrough for a contributor arriving cold), then D.2 and D.3, on the way to the first Signal; after Jared merges what he merges.
 
 ## What this session decided or learned
 
