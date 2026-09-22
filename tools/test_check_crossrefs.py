@@ -56,3 +56,16 @@ def test_main_returns_nonzero_on_failure(capsys):
     assert module.main([str(FIXTURES / "good")]) == 0
     out = capsys.readouterr().out
     assert "FAIL" in out and "OK" in out
+
+
+def test_a_link_to_a_tracked_fixture_document_resolves(tmp_path: Path):
+    """fixtures/ is never scanned, but a link into it still names a real file."""
+    (tmp_path / "fixtures").mkdir()
+    (tmp_path / "fixtures" / "README.md").write_text("# Fixtures\n", encoding="utf-8")
+    (tmp_path / "NEXT.md").write_text(
+        "See [the contract](fixtures/README.md) and [gone](fixtures/no.md).\n",
+        encoding="utf-8",
+    )
+    failures, _ = _load().check(tmp_path)
+    assert [f for f in failures if "fixtures/README.md" in f] == []
+    assert any("fixtures/no.md" in f for f in failures)
