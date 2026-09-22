@@ -1,0 +1,70 @@
+# Publish the rendered register with GitHub Pages. ECOSYSTEM.md §1.5 named GitHub
+# Pages as one of two hosts; keeping everything on GitHub was the maintainer's call
+# on 2026-09-22.
+#
+# Pages is free only for public repositories on a personal account, so this job
+# is inert while the repository is private: it checks the repository's visibility
+# and skips itself. On the day of the public flip, enable Pages with the source
+# set to GitHub Actions (Settings, Pages, or `gh api -X POST repos/<owner>/<repo>/pages
+# -f build_type=workflow`) and the next push to main publishes.
+#
+# Every page published here is one self-contained file rendered from the sealed
+# rows by src/surfaces/render.py, gated by lint-frame-presence, lint-no-ranking
+# and check-mark before it is uploaded.
+
+name: pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    name: render and publish
+    if: ${{ !github.event.repository.private }}
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Python 3.11, the reference runtime
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: The seal must verify before anything is published
+        run: python tools/verify.py
+
+      - name: Render the register
+        run: python src/surfaces/render.py
+
+      - name: The rendering gates
+        run: |
+          python tools/lint-frame-presence.py
+          python tools/lint-no-ranking.py
+          python tools/check-mark.py
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload the rendered site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/build
+
+      - name: Publish
+        id: deployment
+        uses: actions/deploy-pages@v4
