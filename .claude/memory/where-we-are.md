@@ -23,7 +23,9 @@ metadata:
 
 - **PR #8, `claude/phase-1-schemas`, stacked on #7.** Phase 1 T.3: `tools/validate-schemas.py`, a standard-library validator for the subset of JSON Schema draft 2020-12 the seven schemas use (any keyword outside it fails loudly), which meta-checks the schemas, validates their examples, and validates every canonical NDJSON row with file, line, field path, and rule. Sixteen tests. A `date-time` must be UTC, per Invariant §4.
 
-**The next session's first move** is [NEXT.md](../../NEXT.md) Phase 1 T.4 (the verdict-language lint), after Jared merges what he merges.
+- **PR #9, `claude/phase-1-lint`, stacked on #8.** Phase 1 T.4: `tools/lint-verdict-language.py` and `verdict-lint.allowlist`. The blacklist from Invariant §1 in any inflection, over every user-facing surface; the frame sentence always allowed; sixteen allowlist entries with a written reason each (the doctrine quoting the list, statutes' own categories, one misuse example, one data-integrity sense, the code of conduct, three neighbours' names); a stale entry fails. `.claude/` and `docs/related-work/` are excluded and the tool says why. Ten tests. Green on the repository with 72 hits allowlisted.
+
+**The next session's first move** is [NEXT.md](../../NEXT.md) Phase 1 T.5 (the CI workflow that runs the four gates on every push), after Jared merges what he merges.
 
 ## What this session decided or learned
 
