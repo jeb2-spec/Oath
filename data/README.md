@@ -6,7 +6,9 @@ At the founding, this directory was empty except for this README. Since Phase 1 
 
 The register stopped being empty on 2026-09-22, when the House index layer landed: 441 seats, 439 officeholders, and 1,097 filings, each citing the Clerk document it came from. It holds no transactions, no holdings and no Findings, because a filing index carries no transaction dates. Nothing here can fire a Signal, and that is the layer working as designed.
 
-`data/rejected/` is part of the record, not a scratch directory. It is sealed with everything else, because what the adapter refused and why is as much a fact about the build as what it accepted.
+`data/rejected/` is part of the record, not a scratch directory. It is sealed with everything else, because what the adapter refused and why is as much a fact about the build as what it accepted. Its files are named for the captures they came from, so an unchanged source rebuilds an unchanged tree; earlier captures' rejections live in git history.
+
+`data/adapter-runs/` holds one line per build per adapter: which captures it read, their hashes and retrieval times, the hash of any adjudication file that shaped it, and the counts. Sealed too. The provenance of a build lives inside the build.
 
 ## Layout (planned)
 
