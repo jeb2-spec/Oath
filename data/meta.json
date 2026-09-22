@@ -3,9 +3,9 @@
     "note": "This build is not published and not anchored. The first anchored build is Phase 2 S.4 in NEXT.md; until then ANCHORS.md stays empty by design.",
     "state": "none"
   },
-  "build": "0001-house-2025",
-  "built_at": "2026-09-22T21:40:20Z",
-  "digest": "9ec08278b08f59a831b037546b5b1cbeaadd0eb46e2ea9a4c01a0d45c56fe68b",
+  "build": "0002-house-2025",
+  "built_at": "2026-09-22T23:39:32Z",
+  "digest": "9636ab152065d8f337ada3a9443848b9d839c12f915f4115f96218000291d313",
   "disclosures": {
     "affiliations": "The maintainer is not an employee, contractor, or paid contributor of any political party, campaign, or advocacy organisation.",
     "assistant": "An AI collaborator drafted the founding documents and this build's tooling, disclosed in commit trailers and in README.md section 11.",
