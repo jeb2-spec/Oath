@@ -54,19 +54,27 @@ jobs:
       - name: Fetch the roster and the filing index, recording each retrieval
         run: python src/adapters/house-fd/fetch.py --year "$YEAR" | tee fetch.log
 
-      - name: Build the rows from the recorded capture
-        run: python src/adapters/house-fd/build.py --year "$YEAR" | tee build.log
-
-      - name: Did the record change
+      - name: Did the source change
         id: diff
+        # The record changed if and only if the bytes the source served changed. Every row
+        # carries its retrieval time, so a diff of data/ would report a change on every
+        # run even when the Clerk served the same file; the first live run did exactly
+        # that. The capture key names the bytes, and the last build's key is in its run
+        # record on main.
         run: |
-          if git diff --quiet -- data/ && [ -z "$(git ls-files --others --exclude-standard data/)" ]; then
+          NEW="$(python src/adapters/house-fd/build.py --year "$YEAR" --capture-key)"
+          OLD="$(python -c "import glob,json,os;r=sorted(glob.glob('data/adapter-runs/house-fd-'+os.environ['YEAR']+'-*.ndjson'));print(json.load(open(r[-1],encoding='utf-8'))['capture_key'] if r else 'none')")"
+          echo "last built from capture $OLD; the source now serves capture $NEW"
+          if [ "$NEW" = "$OLD" ]; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
-            echo "The record did not change since the last build. Nothing to seal."
+            echo "The source served the same bytes as the last build. The record did not change. Nothing to seal."
           else
             echo "changed=true" >> "$GITHUB_OUTPUT"
-            git status --short data/
           fi
+
+      - name: Build the rows from the recorded capture
+        if: steps.diff.outputs.changed == 'true'
+        run: python src/adapters/house-fd/build.py --year "$YEAR" | tee build.log
 
       - name: Seal the new build (id from the sequence, time from the retrieval)
         if: steps.diff.outputs.changed == 'true'
