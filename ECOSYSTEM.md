@@ -138,6 +138,8 @@ Every build produces a single Oath mark, seeded from the build's digest. This ma
 - **Type as outlines.** Any lettering (the word *oath*, the digest prefix) is embedded as outlines, not as font requests, so a browser without the font renders identically.
 - **A gate strikes and verifies.** Following the errata `check-mark.mjs` precedent, a CI gate strikes the mark against a range of digests and confirms the geometry stays legible (the ring is not clipped, the ticks land on the ring, the wordmark scales correctly). CI fails on any violation.
 
+*Landed 2026-09-22* as `tools/strike-mark.py` and `tools/check-mark.py`, standard-library Python rather than the `.mjs` path recommended above, for the reason recorded in `src/README.md`: one language writes and seals the record. On that date errata's `tools/` held no mark generator, so the precedent named here did not yet exist and Oath's is the first; the pattern is errata's guilloche, not errata's code.
+
 ## 3. The consumer contract
 
 Third-party consumers (journalists, researchers, downstream registers, aggregators) may build on Oath. The contract they hold us to and we hold them to is short.

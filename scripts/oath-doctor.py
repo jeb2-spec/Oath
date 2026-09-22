@@ -55,6 +55,7 @@ GATES = [
     ("§16 evidence bundle", "tools/check-evidence-bundle.py"),
     ("§17 meta-invariant highlight", "tools/highlight-charter-change.py"),
     ("Council §5 mode 7 cross-references", "tools/check-crossrefs.py"),
+    ("ECOSYSTEM §2.4 the mark is struck and legible", "tools/check-mark.py"),
 ]
 
 
