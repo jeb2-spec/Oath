@@ -10,6 +10,32 @@ That is the first shippable public artifact. Everything in Phase 1 and Phase 2 e
 
 Nothing before Phase 3 is worth showing the world, because until Phase 3 the pipeline cannot be trusted. And nothing after Phase 5 was worth building if Phases 1-4 were not real.
 
+The register around that artifact holds the whole chamber from the start, per Phase 3 I.2. One page is the thing a stranger checks; it is not the thing the register covers.
+
+## The shape of full coverage
+
+Full coverage is a finite, small population. This is the most important strategic fact about Oath and it is worth stating before any phase. Counted from [SUBJECTS.md](SUBJECTS.md) §2:
+
+| Group | People | Source family |
+| --- | --- | --- |
+| U.S. House, voting members and delegates | 441 | House Clerk (SOURCES F.1) |
+| U.S. Senate | 100 | Senate eFD (F.2) |
+| Federal executive, §2.2 plus President and Vice President | 37 | OGE 278e (F.3) |
+| Governors | 50 | fifty state regimes |
+| Lieutenant Governors, where separately elected | varies by state | fifty state regimes |
+| **Total** | **about 650** | |
+
+Three adapters reach nearly nine in ten of them. The House, the Senate, and OGE cover 578 people between them; the remaining fifty-odd cost one adapter per state. That ratio, and not editorial interest, is why coverage runs federal first and state last. Cost per officeholder covered is the ordering principle.
+
+The second axis is depth, and it has a cliff in it:
+
+- **The index layer.** Offices, officeholders, and the list of filings. Machine-readable at the source. No document parsing. Produces no Findings at all, because a filing index carries no transaction dates.
+- **The document layer.** Transactions and holdings, which live inside the filings themselves. Bounded by extraction quality; older filings are scanned images (F.1). This is where the expense is, and where every Signal that needs a date lives.
+
+Ship the index layer for a group before the document layer for that group. A register that lists every member of a chamber and fires nothing is complete, honest, and cheap, and it is the state the project should be comfortable sitting in.
+
+The Signal library grows on its own axis and is not tied to coverage. Every Signal cites a Standard ([INVARIANTS.md](INVARIANTS.md) §2), so the library can only grow as far as [STANDARDS.md](STANDARDS.md) reaches. A condition with no standard behind it is not a Signal, whatever the arrangement of facts around it suggests.
+
 ## Standing gates for every session
 
 Read on arrival, run on every push. These are the five vows of the [Charter](CHARTER.md) enforced as tooling. Any session that skips them has drifted before it started.
@@ -71,8 +97,10 @@ Ship this phase as: every voting member of the House in the register, each with 
 
   **The pressure this creates, named in advance.** With a whole chamber ingested, the first question anyone asks is who has the most of something. The register does not answer that. No index sorted by a per-person count, no league table, no "top" anything. Findings are grouped by Signal, never ranked by person, per INVARIANTS.md §13 and METHODOLOGY.md §10.
 - **I.3 First Findings.** Run the S.1 Signal against the ingested data. Sealed build. Anchor stamped.
+- **I.3b The two rendering gates.** `tools/lint-frame-presence.py` (§7) and `tools/lint-no-ranking.py` (§13). Both are rendering-time invariants, and both are unbuilt, so nothing currently stops a page without the frame or an index sorted by a per-person count from shipping. They land with the first template rather than after it, so that by the time a Finding exists every surface that could mishandle it is already gated.
 - **I.4 The per-officeholder page template.** The frame in the header (Invariant §7). The Findings listed with their standards, grouped by signal not by severity (Invariant §13 and METHODOLOGY §10). The filings listed with their source URLs. The rubric visible in a sidebar. The verifier command visible at the foot.
 - **I.5 The mark generator.** `tools/strike-mark.mjs`. Strikes a wax-seal-in-guilloche mark from the officeholder id and the build digest, per ECOSYSTEM.md §2. `tools/check-mark.mjs` verifies the geometry stays legible across a range of digests. Each per-officeholder page carries its own struck seal.
+- **I.5b The index of everyone, quiet.** A page listing every officeholder the register holds, in a fixed order that is not a ranking (INVARIANTS §13), most of them with nothing to show. Built privately; the repository stays private until Phase 5. This is the earliest point the project becomes a thing the maintainer can look at, and it exercises both rendering gates against real names before any Finding exists.
 - **I.6 The colophon.** Every build emits a sealed record of how it was made: the gates that ran and their results, the adapter and Signal versions, the Council sessions linked, the corrections and supersessions counted, the contributor roles (human, co-authored, assistant), the digest, and the anchor state. One line of it prints on every page beside the verifier command, and the build mark's ring counts it. It states what was done and never claims quality; a struck count is record, a badge is reputation. Set on the course by the maintainer on 2026-09-21 as the exhaust of the pipeline made into record. A design pass precedes the build.
 
 Ship gate for the phase: an anchored sealed build; a live page that renders cleanly in both themes; the verifier passes; the reader can click from any claim to its primary source; the per-officeholder seal reproduces byte-identically from the same inputs.
