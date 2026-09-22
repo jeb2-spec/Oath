@@ -1,0 +1,37 @@
+{
+  "anchor": {
+    "note": "This build is not published and not anchored. The first anchored build is Phase 2 S.4 in NEXT.md; until then ANCHORS.md stays empty by design.",
+    "state": "none"
+  },
+  "build": "0000-empty",
+  "built_at": "2026-09-22T00:00:00Z",
+  "digest": "3861aedb75260569baf5133253c6ef59cae6bc47cc43de2a429227ec874626cb",
+  "disclosures": {
+    "affiliations": "The maintainer is not an employee, contractor, or paid contributor of any political party, campaign, or advocacy organisation.",
+    "assistant": "An AI collaborator drafted the founding documents and this build's tooling, disclosed in commit trailers and in README.md section 11.",
+    "license": "CC BY 4.0 for content; MIT for code.",
+    "maintainer": "the maintainer, per BYLAWS.md section 1.1",
+    "non_public_data": "No breached corpora, no leaks, no private tips. Every row that ever enters traces to a public source."
+  },
+  "register": "Oath",
+  "rows": {},
+  "sealed": {
+    "data": "every file under data/ whose name ends in .ndjson",
+    "doctrine": [
+      "CHARTER.md",
+      "RUBRIC.md",
+      "INVARIANTS.md",
+      "BYLAWS.md",
+      "COUNCIL.md",
+      "METHODOLOGY.md",
+      "STANDARDS.md",
+      "SOURCES.md",
+      "LIMITATIONS.md",
+      "SPEC.md",
+      "ECOSYSTEM.md"
+    ],
+    "meta": "data/meta.json with its digest key removed, re-serialised as canonical JSON",
+    "rule": "one line per sealed file, SHA-256 hex then two spaces then the relative path; lines sorted by bytes; the digest is the SHA-256 of the sorted lines"
+  },
+  "state": "Empty by design. No adapter has run, no Signal is defined, no Finding has been published. This build seals that emptiness so the first row, when it comes, is a visible change."
+}
