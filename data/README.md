@@ -2,7 +2,11 @@
 
 The canonical store of the register, and the caches around it.
 
-At the founding, this directory was empty except for this README. Since Phase 1 T.2 it holds `meta.json`, the sealed record of the build: the digest `tools/verify.py` recomputes, the row counts, the disclosures the seal covers, and the anchor state. The register itself is still empty; the empty build is sealed so the first row, when it comes, is a visible change.
+At the founding, this directory was empty except for this README. Since Phase 1 T.2 it holds `meta.json`, the sealed record of the build: the digest `tools/verify.py` recomputes, the row counts, the disclosures the seal covers, and the anchor state.
+
+The register stopped being empty on 2026-09-22, when the House index layer landed: 441 seats, 439 officeholders, and 1,097 filings, each citing the Clerk document it came from. It holds no transactions, no holdings and no Findings, because a filing index carries no transaction dates. Nothing here can fire a Signal, and that is the layer working as designed.
+
+`data/rejected/` is part of the record, not a scratch directory. It is sealed with everything else, because what the adapter refused and why is as much a fact about the build as what it accepted.
 
 ## Layout (planned)
 

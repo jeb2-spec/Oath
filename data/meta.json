@@ -3,9 +3,9 @@
     "note": "This build is not published and not anchored. The first anchored build is Phase 2 S.4 in NEXT.md; until then ANCHORS.md stays empty by design.",
     "state": "none"
   },
-  "build": "0000-empty",
-  "built_at": "2026-09-22T18:52:00Z",
-  "digest": "b86c160e2df5493e9170108d8595b110f3ce57d63251bee3ec6392fd6c642a8e",
+  "build": "0001-house-2025",
+  "built_at": "2026-09-22T21:40:20Z",
+  "digest": "4aff237b406ba78ace565d1d6e287cc4444c09528630993053806260bd83134e",
   "disclosures": {
     "affiliations": "The maintainer is not an employee, contractor, or paid contributor of any political party, campaign, or advocacy organisation.",
     "assistant": "An AI collaborator drafted the founding documents and this build's tooling, disclosed in commit trailers and in README.md section 11.",
@@ -14,7 +14,12 @@
     "non_public_data": "No breached corpora, no leaks, no private tips. Every row that ever enters traces to a public source."
   },
   "register": "Oath",
-  "rows": {},
+  "rows": {
+    "data/filings.ndjson": 1097,
+    "data/officeholders.ndjson": 439,
+    "data/offices.ndjson": 441,
+    "data/rejected/house-fd/2025-2026-09-22.ndjson": 1842
+  },
   "sealed": {
     "data": "every file under data/ whose name ends in .ndjson",
     "doctrine": [
@@ -33,5 +38,5 @@
     "meta": "data/meta.json with its digest key removed, re-serialised as canonical JSON",
     "rule": "one line per sealed file, SHA-256 hex then two spaces then the relative path; lines sorted by bytes; the digest is the SHA-256 of the sorted lines"
   },
-  "state": "Empty by design. No adapter has run, no Signal is defined, no Finding has been published. This build seals that emptiness so the first row, when it comes, is a visible change."
+  "state": "The House index layer, one retrieval. 441 seats of the 119th Congress, 439 of them filled and 2 vacant; 1,097 filings attributed to 393 sitting members from the Clerk 2025 filing index; 1,842 index rows rejected with a reason, the great majority of them candidates, who are out of scope per SUBJECTS.md section 3. No transactions, no holdings, and no Findings: the index carries no transaction dates, so nothing here can fire a Signal. 46 sitting members have no filing attributed and 255 rejected rows carry a surname matching exactly one sitting member whose given names differ. Those gaps are counted, not hidden. Presence in this register is not evidence of wrongdoing."
 }
