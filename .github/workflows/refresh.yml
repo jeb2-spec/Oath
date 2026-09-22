@@ -1,0 +1,144 @@
+# The sustain loop. Re-read the primary source on a schedule; if the record
+# changed, rebuild, re-seal, run every gate, and open a pull request for the
+# maintainer to merge. If nothing changed, say so and stop.
+#
+# The pull request is opened with the workflow's own token, and GitHub does not
+# run further workflows on pushes made with that token, so this job runs the
+# entire gate set itself before it pushes anything. The run log is the evidence;
+# the merge into main runs verify.yml once more on the merged commit.
+#
+# Standing rules kept here: the adapter never guesses (rejected rows are part of
+# the build); the seal's built_at is the retrieval time recorded by fetch.py, never
+# the clock; the build id increments the sequence in data/meta.json.
+
+name: refresh
+
+on:
+  schedule:
+    - cron: "17 9 * * 1" # Mondays, 09:17 UTC; the Clerk's index moves during the week
+  workflow_dispatch:
+    inputs:
+      year:
+        description: "Filing year to refresh"
+        required: true
+        default: "2025"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    name: re-read the House record
+    runs-on: ubuntu-latest
+    env:
+      YEAR: ${{ inputs.year || '2025' }}
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Python 3.11, the reference runtime
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install the Python dev toolchain named in pyproject.toml
+        run: python -m pip install "ruff>=0.16,<0.17" "pytest>=8"
+
+      - name: Fetch the roster and the filing index, recording each retrieval
+        run: python src/adapters/house-fd/fetch.py --year "$YEAR" | tee fetch.log
+
+      - name: Build the rows from the recorded capture
+        run: python src/adapters/house-fd/build.py --year "$YEAR" | tee build.log
+
+      - name: Did the record change
+        id: diff
+        run: |
+          if git diff --quiet -- data/ && [ -z "$(git ls-files --others --exclude-standard data/)" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "The record did not change since the last build. Nothing to seal."
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            git status --short data/
+          fi
+
+      - name: Seal the new build (id from the sequence, time from the retrieval)
+        if: steps.diff.outputs.changed == 'true'
+        run: |
+          python - <<'PY'
+          import json, os, subprocess
+          year = os.environ["YEAR"]
+          meta = json.load(open("data/meta.json", encoding="utf-8"))
+          sequence = int(meta["build"].split("-")[0]) + 1
+          capture = json.load(open("data/cache/house-fd/capture.json", encoding="utf-8"))
+          built_at = capture[f"{year}FD.zip"]["retrieved_at"]
+          build = f"{sequence:04d}-house-{year}"
+          subprocess.run(["python", "tools/seal.py", "--build", build, "--built-at", built_at, "."], check=True)
+          open("build.id", "w").write(build)
+          PY
+
+      - name: Every gate, exactly as verify.yml runs them
+        if: steps.diff.outputs.changed == 'true'
+        run: |
+          python -m ruff check .
+          python -m ruff format --check .
+          python -m pytest -q
+          python tools/verify.py
+          python tools/tamper-test.py
+          python tools/validate-schemas.py
+          python src/surfaces/render.py
+          python tools/lint-frame-presence.py
+          python tools/lint-no-ranking.py
+          python tools/check-mark.py
+          python tools/lint-verdict-language.py
+          python tools/check-crossrefs.py
+
+      - name: Open the pull request
+        if: steps.diff.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          BUILD="$(cat build.id)"
+          DATE="$(python -c "import json;print(json.load(open('data/cache/house-fd/capture.json'))['${YEAR}FD.zip']['retrieved_at'][:10])")"
+          BRANCH="refresh/house-fd-${DATE}-${BUILD%%-*}"
+          git config user.name "oath-refresh"
+          git config user.email "refresh@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git add data/
+          {
+            echo "Refresh: build ${BUILD} from the Clerk's record as retrieved ${DATE}"
+            echo
+            echo "Opened by the scheduled refresh. The adapter re-read the roster and the ${YEAR} filing index, rebuilt the rows, and re-sealed. Every gate ran green in the workflow before this was pushed."
+            echo
+            cat build.log
+          } > commit.msg
+          git commit -F commit.msg
+          git push -u origin "$BRANCH"
+          {
+            echo "## What changed"
+            echo
+            echo "The scheduled refresh re-read the Clerk's roster and the ${YEAR} filing index and found the record different from build \`$(git show main:data/meta.json | python -c 'import json,sys;print(json.load(sys.stdin)["build"])')\`. This is build \`${BUILD}\`, sealed at the retrieval time."
+            echo
+            echo '```'
+            cat fetch.log
+            echo
+            cat build.log
+            echo '```'
+            echo
+            echo "## Gates"
+            echo
+            echo "Ruff, pytest, verify, tamper-test, validate-schemas, render, lint-frame-presence, lint-no-ranking, check-mark, lint-verdict-language and check-crossrefs all passed in this workflow run before the push. A pull request opened by the workflow token does not trigger verify.yml; merging it runs verify.yml on main."
+            echo
+            echo "## Conflict of interest disclosure"
+            echo
+            echo "None. Opened by the refresh workflow; no person chose these rows."
+            echo
+            echo "Presence in the register is not evidence of wrongdoing."
+          } > pr.md
+          gh pr create --base main --head "$BRANCH" --title "Refresh: build ${BUILD} from the record as retrieved ${DATE}" --body-file pr.md
