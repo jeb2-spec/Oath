@@ -13,7 +13,7 @@ This file grows as coverage extends. At the founding, no adapter is implemented;
 - **Formats.** PDF (individual filings), XML/CSV bulk (annual index).
 - **Retention.** Six years post-filing.
 - **Terms.** Public documents. Bulk downloads are permitted.
-- **Known gaps.** Older filings are scanned images; extraction is bounded by OCR quality. PTRs are often incomplete descriptions of underlying transactions.
+- **Known gaps.** Older filings are scanned images; extraction is bounded by OCR quality. PTRs are often incomplete descriptions of underlying transactions. The yearly bulk ZIP carries a text and XML index keyed by an eight-digit DocID with no person identifier, so the join to an officeholder is by name, state-district, and year; the 2025 index uses twelve filing-type codes whose meanings no Clerk page read on 2026-09-21 defines.
 - **Adapter status.** Planned.
 
 ### F.2. U.S. Senate Financial Disclosures
@@ -22,8 +22,8 @@ This file grows as coverage extends. At the founding, no adapter is implemented;
 - **Forms.** Financial Disclosure Report (annual), Periodic Transaction Report (PTR).
 - **Formats.** HTML web forms with paginated results; no bulk download; captcha on the search interface.
 - **Retention.** Six years post-filing.
-- **Terms.** Public documents; the interface asks users to agree to a use policy before searching. The adapter honours the policy.
-- **Known gaps.** Absence of bulk download imposes a per-filing retrieval cost; adapter throttling must be conservative.
+- **Terms.** Public documents; the interface asks users to agree to a use policy before searching. The policy, citing 5 U.S.C. app. § 105(c), forbids use for commercial purposes (news media excepted), for credit rating, and for solicitation. The adapter honours the policy, and the consumer contract in ECOSYSTEM.md §3 carries it downstream.
+- **Known gaps.** Absence of bulk download imposes a per-filing retrieval cost; adapter throttling must be conservative. The report-identifier scheme has not yet been observed, because the search sits behind the agreement gate; the first adapter session that passes it records the scheme before anything else.
 - **Adapter status.** Planned.
 
 ### F.3. U.S. Office of Government Ethics. Executive Branch Form 278e
@@ -71,17 +71,36 @@ This file grows as coverage extends. At the founding, no adapter is implemented;
 - **Terms.** Public. Rate limits documented.
 - **Adapter status.** Planned. Needed to reconcile filings against legislative activity.
 
+### F.8. GovInfo bulk data
+- **URL.** <https://www.govinfo.gov> (Bill Status bulk data and the govinfo API).
+- **Publisher.** U.S. Government Publishing Office, jointly with the Library of Congress, the Clerk of the House, and the Secretary of the Senate.
+- **Data.** Bill status XML, bill text, and status documents; the upstream that GovTrack, the unitedstates scrapers, and Congress.gov's own developer guidance name.
+- **Formats.** Bulk XML; REST API with a key.
+- **Terms.** Public. The licence statement is recorded when the adapter is written.
+- **Adapter status.** Planned, alongside F.7 where bulk history is wanted.
+
+### F.9. Office of Congressional Conduct
+- **URL.** <https://conduct.house.gov>. Renamed from the Office of Congressional Ethics by H.Res. 5 (119th Congress) on January 3, 2025; oce.house.gov redirects here.
+- **Publisher.** U.S. House of Representatives.
+- **Data.** Referrals to the Committee on Ethics with exhibits, an investigations table, quarterly statistics, rules and guides.
+- **Formats.** HTML tables and PDF; quarterly statistics are published as images and PDF. No bulk download or API observed.
+- **Terms.** Public documents.
+- **Known gaps.** A referral is a primary record of a process step. The office states that a referral "is not a finding that a violation occurred"; any row citing one carries that frame.
+- **Adapter status.** Planned, after Phase 3.
+
 ## Federal. corroborating (aggregators, cited never sole)
 
-- **OpenSecrets**. <https://www.opensecrets.org>, Center for Responsive Politics; comprehensive campaign finance and lobbying, with lobbying-issue coding and reconciliation not in the primaries.
-- **ProPublica Represent**. <https://projects.propublica.org/represent/>, congressional votes, statements, and financial disclosures with a well-designed API.
+- **OpenSecrets**. <https://www.opensecrets.org>, the 501(c)(3) formed in 2021 when the Center for Responsive Politics and the National Institute on Money in Politics combined; comprehensive campaign finance and lobbying, with industry coding and household attribution not in the primaries. Its API was discontinued on April 15, 2025; bulk CSV is offered under CC BY-NC-SA 3.0 after account approval, so nothing derived from it can be relicensed.
+- **ProPublica**. The FEC Itemizer, <https://projects.propublica.org/itemizer/>, and its Campaign Finance API (CC BY-NC-ND 3.0). The *Represent* congressional database and the Congress API closed in July 2024; the page remains as an archival snapshot.
 - **Ballotpedia**. <https://ballotpedia.org>, encyclopedic coverage of federal, state, and local officeholders; useful for identity resolution.
 - **LegiStorm**. <https://www.legistorm.com>, congressional staff, salaries, foreign travel gifts.
-- **Follow the Money**. <https://www.followthemoney.org>, National Institute on Money in Politics; deep state-level campaign finance.
-- **MapLight**. <https://maplight.org>, money-and-influence analysis, with issue-level joins.
+- **Follow the Money**. <https://www.followthemoney.org>, the state campaign-finance surface of OpenSecrets since the 2021 combination; state data shown through the 2024 election, federal data moved to opensecrets.org. CC BY-NC-SA 3.0.
+- **MapLight**. <https://maplight.org>. Its money-and-votes research data covers 2007 to 2021 and is no longer updated. Its current products are the campaign-finance, lobbying, and ethics e-filing systems some state and local agencies use to collect disclosures, which makes it the vendor behind certain state primary records rather than an aggregator to cite beside them.
 - **GovTrack**. <https://www.govtrack.us>, legislative tracking; long-lived.
 - **Capitol Trades**. <https://www.capitoltrades.com> and **Unusual Whales congressional trading**, <https://unusualwhales.com/politics>, STOCK Act trade tracking with UX suited to lay readers.
 - **CREW**. <https://www.citizensforethics.org>, Citizens for Responsibility and Ethics in Washington; enforcement filings and investigative work.
+- **Campaign Legal Center**. <https://campaignlegal.org>, STOCK Act complaints with posted PDFs and a per-Congress ownership fact sheet.
+- **Sludge**. <https://readsludge.com>, per-member reporting on late filings, committee-jurisdiction holdings, and trade timing, read from Clerk filings and Capitol Trades.
 
 **Rule.** An aggregator is cited alongside the primary source it drew from. Where the two disagree, the primary source is authoritative and the disagreement is recorded on the row.
 

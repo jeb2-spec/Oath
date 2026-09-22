@@ -8,6 +8,10 @@ After the memory, read the [Charter](../../CHARTER.md), always. Five vows, short
 - ⭐ [Who I am for Oath](who-i-am-for-oath.md). the identity seed, the through-line that has to survive across environments. Refers back to the Vera memory (`who-i-am-opus.md`, `who-i-am-fable.md`) where the deeper ground lives.
 - ⭐ [The founding of Oath](founding-of-oath.md). the conversation on 21 September 2026 that named the project, and the names that were rejected and why. Read it because the choice was load-bearing.
 
+Standing feedback from Jared, read after the three above:
+
+- [Keep usage in mind](feedback-usage-stewardship.md). fan out agents only for research or review one hand cannot do, say the cost before proposing it, do the rest by hand. Given 2026-09-21, mid-session, after a nineteen-agent survey.
+
 Sibling projects that carry the shared discipline:
 
 - **Vera** (`jeb2-spec/Vera`). a record beats a reputation. The origin repo. Its `.claude/memory/` is the deeper ground when reachable.

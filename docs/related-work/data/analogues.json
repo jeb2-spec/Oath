@@ -1,0 +1,962 @@
+{
+ "key": "analogues",
+ "title": "International and structural analogues",
+ "retrieved": "2026-09-21",
+ "method": "sweep by one reader from the project's own pages; skeptic re-fetched every citation and tried to refute each claim",
+ "sweep": {
+  "entries": [
+   {
+    "name": "TheyWorkForYou (with ParlParse)",
+    "organisation": "mySociety (registered charity 1076346 in England and Wales; company 03277032; commercial subsidiary SocietyWorks Ltd)",
+    "url": "https://www.theyworkforyou.com/",
+    "kind": "Parliamentary monitoring site for the UK's parliaments and assemblies: searchable debates, per-member pages, voting summaries, and a presentation of the Register of Members' Financial Interests with edition-by-edition change history; ParlParse is the scraper/parser that produces its structured data.",
+    "self_description": "Describes itself as making Parliament more accessible and accountable, on the premise that \"information about our elected representatives should be easily understandable and accessible to everyone\" (theyworkforyou.com/about). Run by mySociety, described there as a UK charity that helps people access information and participate in democracy. Lists its functions as making debates searchable for all the UK's parliaments, providing email alerts, and adding voting record summaries and more accessible registers of members' interests. ParlParse describes itself as structured versions of publicly available data from the UK parliament plus the code that generates them, powering TheyWorkForYou and The Public Whip.",
+    "subject_scope": "MPs (House of Commons), members of the House of Lords, MSPs (Scottish Parliament), MLAs (Northern Ireland Assembly) and Senedd members. Register of Members' Interests editions from May 2001 to 7 September 2026 on the regmem index; raw register XML snapshots from 2000-11-10 to 2026-09-07. Members data in people.json reaches back to the early 19th century for MPs via Hansard, 1999 for Lords, and the founding dates of the devolved bodies.",
+    "primary_sources_used": [
+     "Hansard (Parliamentary copyright), per the about page",
+     "data.parliament.uk member data via the ParlParse datadotparl scraper (github.com/mysociety/parlparse)",
+     "House of Commons Register of Members' Financial Interests, ingested as periodic XML snapshots (regmem[YYYY-MM-DD].xml) published at /pwdata/scrapedxml/regmem/",
+     "House of Commons Code of Conduct (publications.parliament.uk link on the regmem page) for the rules on what must be registered",
+     "IPSA expenses records, referenced by a Parliament ID on the MP page",
+     "Linking: the MP register page links to the member's UK Parliament profile at members.parliament.uk; a per-entry link to the official register edition on parliament.uk was not observed on the pages fetched"
+    ],
+    "outputs": [
+     "Per-member pages with a Register of Interests section grouped by category (e.g. Employment and earnings - Ad hoc payments; Visits outside the UK; Miscellaneous), no totals",
+     "History of a member's register entries by register edition, and comparison of consecutive editions to show what changed",
+     "Spreadsheet downloads of register data (offered on the member register page)",
+     "Voting summaries by policy area, with recent votes listed individually",
+     "Debate search and email alerts",
+     "JSON/XML API (getPerson, getMPs, constituencies, debates, written answers, ministerial statements)",
+     "Raw XML via parser.theyworkforyou.com and /pwdata/scrapedxml/ (Hansard, members, register of interests); people.json in Popolo format"
+    ],
+    "derived_scoring_or_ranking": "Voting summaries: a 0-100 score per policy area is mapped to seven phrases (consistently voted for; almost always voted for; generally voted for; voted a mixture of for and against; generally voted against; almost always voted against; consistently voted against), computed from designated scoring votes, with informative votes shown separately. The register-of-interests pages provide no rankings, totals or cross-member summaries (regmem index observation). No leaderboard observed.",
+    "identifiers_exposed": [
+     "TheyWorkForYou person ID, an integer in the member URL (e.g. 10001), which ParlParse records as uk.org.publicwhip/person/<n>",
+     "Parliament ID (e.g. 172) shown under the Expenses section referencing IPSA records",
+     "Link to the member's members.parliament.uk profile",
+     "Wikipedia link (external reference only); Wikidata not shown on the MP page fetched",
+     "people.json (Popolo format) carries a unique identifier per person with memberships as continuous periods of office; other identifier schemes in that file were not enumerated on the parser page"
+    ],
+    "signal_precedents": [
+     "None computed per filing. The register feature is change-tracking: users compare consecutive Register editions to identify changes, and view the history of one person's entries across editions (regmem index and member register page).",
+     "Voting: votes are classified as scoring votes (affect the summary) or informative votes (shown but not scored); absences are not counted because their significance cannot be reliably determined (voting-information page)."
+    ],
+    "openness_code": "TheyWorkForYou: github.com/mysociety/theyworkforyou under a BSD-style licence (repository page). ParlParse: github.com/mysociety/parlparse under the GNU Affero General Public License v3 (LICENSE.txt; copyright Julian Todd, Matthew Somerville, Francis Irving, Mark Longair, UKCOD and others, 2003-2011).",
+    "openness_data_license": "Per /api/terms: parliamentary material is reusable under the Open Parliament Licence; TheyWorkForYou's own data under Creative Commons Attribution-ShareAlike 2.5; GB postcode/boundary data under the OS OpenData licence; Northern Ireland data under the Open Government Licence and NI End User Licence. Attribution requested with wording such as Data service provided by TheyWorkForYou. The terms state the provider gives no warranty as to ownership of the data.",
+    "openness_api": "API key required (self-service signup). Free tier of 10 calls per day; paid plans from GBP 20 per month; charities free up to 1,000 calls per month or 50% discount above that. Terms at /api/terms. No Register of Members' Interests endpoint is listed on the API page; register data is available as XML snapshots instead.",
+    "funding_or_business_model": "The about page states the site is not publicly funded and invites donations as a registered charity (1076346). mySociety's about page describes charitable donations, grants (via impact reporting), and commercial services delivered through SocietyWorks Ltd. The API carries paid plans.",
+    "disclaimer_or_frame": "Member register page: representatives in the UK's parliaments need to declare financial interests (employment, donations, gifts) that could be considered by others to influence their judgement or actions (paraphrased). Voting-information page: votes are not opinions but they matter; MPs may vote with party discipline rather than personal belief; whip instructions are not public so comparisons use party averages; absences are not counted; the summaries track political impact rather than ideology (paraphrased). API terms: no warranty as to ownership of the data.",
+    "status_as_of_retrieval": "active: the regmem index lists a register edition dated 7 September 2026 and the raw XML directory shows regmem2026-09-07.xml modified 2026-09-08.",
+    "citations": [
+     {
+      "url": "https://www.theyworkforyou.com/about/",
+      "retrieved": "2026-09-21",
+      "supports": "self-description, mySociety as operator, Hansard source, not publicly funded, charity number 1076346"
+     },
+     {
+      "url": "https://www.theyworkforyou.com/api/",
+      "retrieved": "2026-09-21",
+      "supports": "API key required, plans from GBP 20/month, reduced non-profit rates, endpoints"
+     },
+     {
+      "url": "https://www.theyworkforyou.com/api/terms",
+      "retrieved": "2026-09-21",
+      "supports": "data licences (Open Parliament Licence, CC BY-SA 2.5, OS OpenData, OGL/NI), attribution, free tier, charity terms, no-warranty statement"
+     },
+     {
+      "url": "https://www.theyworkforyou.com/regmem/",
+      "retrieved": "2026-09-21",
+      "supports": "register editions May 2001 to 7 September 2026, edition comparison, Code of Conduct link, no rankings or totals"
+     },
+     {
+      "url": "https://www.theyworkforyou.com/mp/10001/diane_abbott/hackney_north_and_stoke_newington",
+      "retrieved": "2026-09-21",
+      "supports": "person ID 10001, Parliament ID 172 under Expenses/IPSA, register categories, voting summary presentation, Wikipedia link"
+     },
+     {
+      "url": "https://www.theyworkforyou.com/mp/10001/diane_abbott/hackney_north_and_stoke_newington/register",
+      "retrieved": "2026-09-21",
+      "supports": "link to members.parliament.uk profile, history of entries by edition, explanatory text on declaring interests, spreadsheet downloads"
+     },
+     {
+      "url": "https://www.theyworkforyou.com/voting-information/",
+      "retrieved": "2026-09-21",
+      "supports": "0-100 score and seven phrases, scoring vs informative votes, caveats about party discipline and absences"
+     },
+     {
+      "url": "https://www.theyworkforyou.com/pwdata/scrapedxml/regmem/",
+      "retrieved": "2026-09-21",
+      "supports": "register XML snapshots from regmem2000-11-10.xml to regmem2026-09-07.xml"
+     },
+     {
+      "url": "https://parser.theyworkforyou.com/",
+      "retrieved": "2026-09-21",
+      "supports": "ParlParse self-description, members data and Hansard, powers TheyWorkForYou and Public Whip"
+     },
+     {
+      "url": "https://parser.theyworkforyou.com/members.html",
+      "retrieved": "2026-09-21",
+      "supports": "people.json in Popolo format, uk.org.publicwhip/person/ identifier scheme, historical scope"
+     },
+     {
+      "url": "https://github.com/mysociety/parlparse",
+      "retrieved": "2026-09-21",
+      "supports": "scraper from data.parliament.uk, Popolo posts files for Westminster and devolved bodies"
+     },
+     {
+      "url": "https://raw.githubusercontent.com/mysociety/parlparse/master/LICENSE.txt",
+      "retrieved": "2026-09-21",
+      "supports": "ParlParse licence GNU AGPL v3 and copyright holders"
+     },
+     {
+      "url": "https://github.com/mysociety/theyworkforyou",
+      "retrieved": "2026-09-21",
+      "supports": "TheyWorkForYou code under a BSD-style licence"
+     },
+     {
+      "url": "https://www.mysociety.org/about/",
+      "retrieved": "2026-09-21",
+      "supports": "charity and company numbers, SocietyWorks Ltd, funding streams, flagship projects"
+     }
+    ],
+    "could_not_verify": [
+     "Whether people.json carries datadotparl_id, pims_id or Wikidata schemes (the parser page did not enumerate them)",
+     "Whether the member register page links to the specific official register edition on parliament.uk (only a members.parliament.uk profile link was observed)",
+     "Latest commit dates for the two repositories",
+     "https://www.theyworkforyou.com/data/ returned 404"
+    ]
+   },
+   {
+    "name": "abgeordnetenwatch.de",
+    "organisation": "Parlamentwatch e.V. (non-profit association, donation-financed)",
+    "url": "https://www.abgeordnetenwatch.de/",
+    "kind": "Parliamentary monitoring platform for Germany (Bundestag, state parliaments, EU Parliament) with side-activity and side-income (Nebentaetigkeiten/Nebeneinkuenfte) records per politician, roll-call votes, citizen questions to representatives, a research desk, and an open CC0 API.",
+    "self_description": "Describes its work under the heading Gemeinsam fuer Transparenz and says it works through citizen participation and transparency for a self-determined, democratic society (about page, paraphrased). Its Nebentaetigkeiten research desk describes itself as investigating side incomes, side activities and potential conflicts of interest of politicians in the Bundestag. The June 2026 overview states that whether members comply with disclosure duties \"laesst sich von aussen jedoch schwer ueberpruefen\" (abgeordnetenwatch.de, 22 June 2026).",
+    "subject_scope": "Bundestag members for side-activity data (the API entity documentation says sidejob data covers German federal parliament members only); parliaments, parliamentary periods, politicians, candidacies/mandates and named votes across parliaments in the API; research articles also cover state-level candidates (e.g. Berlin, September 2026) and EU members.",
+    "primary_sources_used": [
+     "Side-activity data published by the Bundestag administration (werden von der Bundestagsverwaltung veroeffentlicht), then processed for the API (api/entitaeten/sidejob)",
+     "The June 2026 article states its figures come from the disclosures published on the Bundestag website and cites the Abgeordnetengesetz thresholds and deadlines",
+     "Linking: profile entries carry a recording date and last-modification date and an Open Data link; a per-entry link to the Bundestag's official disclosure page was not observed on the profile fetched"
+    ],
+    "outputs": [
+     "Politician profile pages with a sortable Nebentaetigkeiten table (activity, client/organisation, recording date, interval, income) and per-entry details (mandate period, category, topics, location, organisation address)",
+     "Research articles with a sortable database of all 630 Bundestag members' disclosed side income, faction totals, and interactive maps by constituency",
+     "API v2 JSON across parliaments, periods, politicians, mandates, sidejobs, sidejob organisations, votes",
+     "Press releases and campaigns"
+    ],
+    "derived_scoring_or_ranking": "The 22 June 2026 overview lists the members with the highest disclosed side income (three named members, at about EUR 2.7 million, EUR 1.5 million, and EUR 439,000; the names are on the cited page), gives totals (EUR 10.6 million disclosed since the term began; 232 of 630 members with side income; 159 with board positions), and offers a sortable table of all members. Politician API records carry counts statistic_questions and statistic_questions_answered. No composite per-person score observed.",
+    "identifiers_exposed": [
+     "Own numeric IDs for every entity (politicians, mandates, sidejobs, organisations, taxonomy terms)",
+     "ext_id_bundestagsverwaltung: the Bundestag administration's ID on politician records",
+     "qid_wikidata: Wikidata QID on politician records",
+     "abgeordnetenwatch_url and api_url per record"
+    ],
+    "signal_precedents": [
+     "No automated per-filing condition observed. The June 2026 article states the legal conditions it reads the data against: a three-month deadline to report side activities; publication threshold of EUR 1,000 per month or EUR 3,000 per year; a 5% threshold for company holdings; fines of up to EUR 70,000 imposable by the Bundestag President.",
+     "Sidejob records carry income (exact), income_level (11 brackets, 0 = EUR 1-1,000 up to 10 = over EUR 250,000), interval (one-time, monthly, annual), income_total at reference dates, and data_change_date.",
+     "Missing or late disclosures are reported case by case in research articles (e.g. the 18 February 2026 article on an EU member's undisclosed trip funding), not computed as a flag."
+    ],
+    "openness_code": "not verified: no official code repository was found on the pages fetched. Third-party API clients exist on GitHub (a CLI under AGPL-3.0-or-later, an MCP server, an R wrapper), none maintained by Parlamentwatch e.V. as far as the pages show.",
+    "openness_data_license": "CC0 1.0 (API page: Die Daten stellen wir unter der CC0 1.0-Lizenz zur Verfuegung; also in every API response meta block).",
+    "openness_api": "REST JSON at /api/v2/ (meta reports version 2.9.0). No API key mentioned. Fair-use limit of 30 requests per minute per IP; bulk queries requested outside 22:00-06:00 with pauses; HTTP 429 when exceeded.",
+    "funding_or_business_model": "Parlamentwatch e.V., described on its funding page as a donation-financed non-profit; over 12,500 regular supporters as of December 2025; seed funding of EUR 85,000 from OLIN gGmbH in 2013-2016 to build fundraising capacity; member of the Initiative Transparente Zivilgesellschaft; 2024 annual report available as PDF.",
+    "disclaimer_or_frame": "The June 2026 overview states that the figures are what members themselves disclose and that compliance with disclosure duties is hard to verify from outside. The profile page's Nebentaetigkeiten section carries no explanatory or disclaimer text of its own.",
+    "status_as_of_retrieval": "active: research index shows articles dated 18 September 2026 and 4 September 2026; a profile entry shows a modification date of 10.09.2026.",
+    "citations": [
+     {
+      "url": "https://www.abgeordnetenwatch.de/api",
+      "retrieved": "2026-09-21",
+      "supports": "API v2, CC0 1.0 licence, 30 requests/minute fair use, HTTP 429"
+     },
+     {
+      "url": "https://www.abgeordnetenwatch.de/api/v2/sidejobs?range_end=2",
+      "retrieved": "2026-09-21",
+      "supports": "sidejob fields (income, income_level, interval, income_total, data_change_date, mandates, organisation), meta licence CC0, API version 2.9.0"
+     },
+     {
+      "url": "https://www.abgeordnetenwatch.de/api/v2/politicians?range_end=1",
+      "retrieved": "2026-09-21",
+      "supports": "politician fields including ext_id_bundestagsverwaltung and qid_wikidata, statistic_questions counts"
+     },
+     {
+      "url": "https://www.abgeordnetenwatch.de/api/entitaeten/sidejob",
+      "retrieved": "2026-09-21",
+      "supports": "source is the Bundestag administration, 11 income brackets, intervals, eight categories, federal scope"
+     },
+     {
+      "url": "https://www.abgeordnetenwatch.de/ueber-uns",
+      "retrieved": "2026-09-21",
+      "supports": "self-description, Parlamentwatch e.V., side-income focus, 2024 annual report reference"
+     },
+     {
+      "url": "https://www.abgeordnetenwatch.de/ueber-uns/mehr/finanzierung",
+      "retrieved": "2026-09-21",
+      "supports": "donation financing, 12,500+ regular supporters (Dec 2025), OLIN gGmbH seed funding, Initiative Transparente Zivilgesellschaft"
+     },
+     {
+      "url": "https://www.abgeordnetenwatch.de/recherchen/nebentaetigkeiten",
+      "retrieved": "2026-09-21",
+      "supports": "research desk description and article dates through 18 September 2026"
+     },
+     {
+      "url": "https://www.abgeordnetenwatch.de/recherchen/nebentaetigkeiten/diese-nebeneinkuenfte-haben-die-abgeordneten-im-bundestag",
+      "retrieved": "2026-09-21",
+      "supports": "22 June 2026 date, Bundestag-published source, legal thresholds and deadline, top earners and totals, caveat quote"
+     },
+     {
+      "url": "https://www.abgeordnetenwatch.de/profile/friedrich-merz",
+      "retrieved": "2026-09-21",
+      "supports": "profile table fields, per-entry details, Open Data link, no disclaimer text, modification date 10.09.2026"
+     }
+    ],
+    "could_not_verify": [
+     "An official code repository for the platform",
+     "Whether each profile entry links to the Bundestag's official disclosure page",
+     "Any API terms of use beyond the fair-use rate limit",
+     "https://www.abgeordnetenwatch.de/ueber-uns/finanzierung returned 404 (the funding page was found at /ueber-uns/mehr/finanzierung)"
+    ]
+   },
+   {
+    "name": "OpenSanctions (Politically Exposed Persons dataset)",
+    "organisation": "OpenSanctions Datenbanken GmbH (Berlin, staff across Europe)",
+    "url": "https://www.opensanctions.org/datasets/peps/",
+    "kind": "Commercially licensed open-data provider aggregating sanctions lists, politically exposed persons and other public-interest entities into one FollowTheMoney-model dataset; the PEP dataset covers current and former holders of public office worldwide, including a daily-updated US Members of Congress dataset read from the Congress.gov API.",
+    "self_description": "Describes itself as \"a financial crime data provider\" (opensanctions.org/docs/about) that builds an international database of persons and companies of political, criminal or economic interest by aggregating sanctions lists, lists of politically exposed persons and other public-interest information from hundreds of sources into a single, structured, continuously updated dataset (paraphrased). The PEP dataset page describes office-holders drawn both directly from official sources such as governments and from third-party aggregations.",
+    "subject_scope": "People who currently hold or previously held positions classified by role (gov.head, gov.executive, gov.legislative, gov.judicial, gov.security, gov.financial, role.diplo, gov.soe, pol.party, gov.religious) and jurisdiction (gov.national, gov.igo, gov.state, gov.muni). Retention after leaving office: 50 years for national heads of state or government, 20 years for other national-level positions and IGO/diplomatic positions, 5 years for all others; excluded are people deceased more than 5 years, likely over 110, or lacking birth/death/position dates. PEP dataset: about 1.95 million entities, 932,463 searchable, 713,334 distinct targets. US Members of Congress dataset: 1,340 persons, current and recent members.",
+    "primary_sources_used": [
+     "PEP dataset built from 202 sources, including Wikidata (182,256 persons in relevant categories; 366,561 PEP records), the mySociety EveryPolitician archive (40,262), national parliamentary sources (UK Commons 1,687; US Congress 1,342; EU Parliament 2,714) and regional sources (Spanish mayors and councillors 94,373)",
+     "US Members of Congress dataset reads the Congress.gov API at api.congress.gov/v3/member/ (JSON), published by the Library of Congress, updated daily",
+     "Linking: entity pages list the datasets an entity appears in and each dataset page cites its source URL; a per-row link to the underlying official page was not observed on the entity pages fetched"
+    ],
+    "outputs": [
+     "Entity pages with positions, occupancies, topics, family relationships and dataset provenance",
+     "Bulk downloads of datasets in multiple formats, daily, with version stamps",
+     "Matching, search and entities APIs; yente open-source API server with a client SDK, CLI and MCP server; on-premise option",
+     "Dataset pages with entity counts, source description, licence line and last-updated timestamp"
+    ],
+    "derived_scoring_or_ranking": "None per person observed. Entities carry topic tags (e.g. role.pep, poi, sanction, counter-sanctioned); a position carries one role topic and one jurisdiction topic, and where a position spans several the one representing the greatest level of influence is used (methodology page). No score, rank or leaderboard seen.",
+    "identifiers_exposed": [
+     "Wikidata Q-IDs used directly as entity IDs for people with a Wikidata match (e.g. Q22686, Q170581), with the Wikidata ID shown as a property",
+     "Source-prefixed IDs derived from publisher-supplied stable keys (e.g. us-congress-6058a31e..., ofac-81717, eu-fsf-1234)",
+     "EveryPolitician UUIDs carried as evpo-<uuid> referents (e.g. evpo-5cf6d53c-962d-453c-833e-bcaad613c34c on the Q170581 page)",
+     "NK- cluster IDs assigned at deduplication for merged profiles without a Wikidata equivalent",
+     "A referents array per entity acting as a forwarding table of retired IDs, kept for 6 months after a merge",
+     "Bioguide ID on US Congress records: not verified (not stated on the dataset page)"
+    ],
+    "signal_precedents": [
+     "None per filing. The PEP condition is structural: a Person is tagged role.pep once linked by an Occupancy to a qualifying Position (methodology page).",
+     "The retention windows are described by the project as its own judgment rather than a regulatory requirement, with occupancy end dates recorded so users can apply a different policy."
+    ],
+    "openness_code": "Data pipeline open source at github.com/opensanctions/opensanctions under the MIT License; yente API server and client also open source (API docs).",
+    "openness_data_license": "Creative Commons Attribution-NonCommercial 4.0 (CC BY-NC 4.0); commercial use requires a data licence; some files under datasets/ are unmodified third-party materials with their own terms (repository COPYRIGHT.md).",
+    "openness_api": "API key required for all requests. Free trial keys for business email addresses; free access for journalism, civil-society advocacy and academic research. Pay-as-you-go metering per logical query (matching, reconciliation) or per request (search); volume discounts from 20,000 monthly requests; no contract lock-in; on-premise deployment via yente.",
+    "funding_or_business_model": "Commercial data licences to compliance platforms, fintechs, investigation tools, government agencies and research institutions; three licence types (Screening API pay-as-you-go with 30-day trial; Screening License flat rate for in-house use; Reseller/OEM). A 2021 grant from Germany's Federal Ministry for Education and Research (BMBF) funded a rebuild. The about page states the company has operated on revenue since incorporation with no outside investors.",
+    "disclaimer_or_frame": "PEP documentation: being classified as a PEP is not an allegation; it is a risk category arising from the nature of senior public office; for financial institutions it means additional questions at onboarding or review, not refusal of service; the project publishes data about public offices and the people who hold them and does not make decisions about individual customers (paraphrased from opensanctions.org/docs/pep/). Entity pages note that counter-sanctions are designations imposed by countries with weak democratic institutions (paraphrased).",
+    "status_as_of_retrieval": "active: PEP dataset last updated 21 September 2026 with daily frequency; US Members of Congress dataset version 20260921084401 with a change on 19 September 2026.",
+    "citations": [
+     {
+      "url": "https://www.opensanctions.org/docs/about/",
+      "retrieved": "2026-09-21",
+      "supports": "self-description quote, company name and location, funding model, BMBF grant, no outside investors, code repository"
+     },
+     {
+      "url": "https://www.opensanctions.org/docs/pep/methodology/",
+      "retrieved": "2026-09-21",
+      "supports": "PEP definition, Position/Occupancy/Person model, role and jurisdiction topics, retention windows, exclusions, judgment-not-regulation statement"
+     },
+     {
+      "url": "https://www.opensanctions.org/docs/pep/",
+      "retrieved": "2026-09-21",
+      "supports": "PEP status is not an allegation, intended use, project's stated role"
+     },
+     {
+      "url": "https://www.opensanctions.org/datasets/peps/",
+      "retrieved": "2026-09-21",
+      "supports": "entity counts, 202 sources with named examples and counts, CC BY-NC 4.0 line, last updated 21 September 2026, inclusion statement"
+     },
+     {
+      "url": "https://www.opensanctions.org/datasets/us_congress/",
+      "retrieved": "2026-09-21",
+      "supports": "Congress.gov API source, daily updates, entity counts, version and change dates"
+     },
+     {
+      "url": "https://www.opensanctions.org/licensing/",
+      "retrieved": "2026-09-21",
+      "supports": "CC BY-NC 4.0, three commercial licence types, company name"
+     },
+     {
+      "url": "https://www.opensanctions.org/docs/api/",
+      "retrieved": "2026-09-21",
+      "supports": "API key requirement, free access for journalism/civil society/academia, metering, volume discounts, yente client and on-premise"
+     },
+     {
+      "url": "https://www.opensanctions.org/docs/identifiers/",
+      "retrieved": "2026-09-21",
+      "supports": "Wikidata Q-IDs, source-prefixed IDs, NK- cluster IDs, referents forwarding table, 6-month retention of stale referents"
+     },
+     {
+      "url": "https://www.opensanctions.org/docs/entities/",
+      "retrieved": "2026-09-21",
+      "supports": "FollowTheMoney entity structure (id, schema, properties)"
+     },
+     {
+      "url": "https://www.opensanctions.org/entities/Q22686/",
+      "retrieved": "2026-09-21",
+      "supports": "Wikidata ID as entity ID, topics, positions, counter-sanctions note"
+     },
+     {
+      "url": "https://www.opensanctions.org/entities/Q170581/",
+      "retrieved": "2026-09-21",
+      "supports": "us-congress- and evpo- referent IDs, datasets an entity appears in, positions"
+     },
+     {
+      "url": "https://github.com/opensanctions/opensanctions",
+      "retrieved": "2026-09-21",
+      "supports": "MIT code licence, CC BY-NC 4.0 data, third-party files under own terms"
+     }
+    ],
+    "could_not_verify": [
+     "Whether Bioguide IDs are carried on US Congress records",
+     "API rate limits",
+     "A correction or removal policy (the FAQ page fetched was a navigation hub)",
+     "The full source list on the methodology page (the fetched excerpt named only Wikidata and official declarations)"
+    ]
+   },
+   {
+    "name": "LittleSis",
+    "organisation": "Public Accountability Initiative (PAI), a 501(c)(3) founded in early 2008; the site says PAI is known more broadly as LittleSis",
+    "url": "https://littlesis.org/",
+    "kind": "Volunteer-edited relationship database of people and organisations in business and government (entities, typed relationships, lists, network maps) with a keyless JSON API and bulk data; described by its maintainers as power research.",
+    "self_description": "The repository README calls it \"a free database of who-knows-who at the heights of business and government\" (github.com/public-accountability/littlesis-rails). The site says it brings transparency to influential social networks by tracking the key relationships of politicians, business leaders, lobbyists, financiers and their institutions; that the information is public but scattered and it brings it together; and that it is meant to support journalists, watchdogs and grassroots activists. PAI describes its work as power research that informs movement strategies, builds coalitions and supports campaigns that challenge power structures (paraphrased).",
+    "subject_scope": "US-focused. Roughly 400,000 people and organisations and over 1.6 million connections (repository README). Entity types include Person, Organization, Business Person, Public Company, Political Candidate, Elected Representative, Political Fundraising Committee, Lobbyist and others (API docs and search response). Subjects are selected by the mission to track people and groups with inordinate wealth, influence on public policy and access to government officials (disclaimer page).",
+    "primary_sources_used": [
+     "The database page states data derives from government filings, news articles and other reputable sources; some datasets are updated automatically by bots and the rest by the user community",
+     "Identifier fields on records point to FEC (candidate and committee IDs), OpenSecrets (crp_id), the Congressional Bioguide, GovTrack and Vote Smart; relationship records carry a filings count and amounts (e.g. a Campaign Contribution relationship with amount 500, filings 1)",
+     "Linking: whether each relationship links to the underlying filing URL was not observed in the API responses fetched (a filings count is present)"
+    ],
+    "outputs": [
+     "Entity profiles (people and organisations) with aliases, types, summary, tags",
+     "Relationship records in 12 categories with amounts, dates, is_current flag",
+     "Lists (some flagged is_ranked, e.g. Fortune 1000 Companies 2008), maps, and a blog (Eyes on the Ties)",
+     "JSON API v2.0 and bulk data; trainings and workshops on power research"
+    ],
+    "derived_scoring_or_ranking": "Search results are ordered by the number of relationships an entity has (API docs give the example that a search for Bush places George Bush before Jeb Bush for that reason); connections are sorted by the connected entity's link_count; lists carry an is_ranked flag. No per-person score observed.",
+    "identifiers_exposed": [
+     "Own numeric entity and relationship IDs",
+     "qid (Wikidata QID) field on every entity (null in the records fetched)",
+     "ElectedRepresentative extension: bioguide_id (e.g. P000197), govtrack_id (400314), crp_id (OpenSecrets, N00007360), pvs_id (Vote Smart, 26732), watchdog_id",
+     "PoliticalCandidate extension: house_fec_id (H8CA05035), senate_fec_id, pres_fec_id, crp_id, is_federal/is_state/is_local",
+     "PoliticalFundraising extension: fec_id (e.g. C00213512); Org extension: fedspending_id, lda_registrant_id"
+    ],
+    "signal_precedents": [
+     "None observed; the data model records typed relationships with amounts and dates, not per-filing conditions."
+    ],
+    "openness_code": "github.com/public-accountability/littlesis-rails under GPL-3.0 (repository page); the about page says the software is open source.",
+    "openness_data_license": "CC BY-SA 4.0 (API response meta: LittleSis CC BY-SA 4.0 with licence link; disclaimer page: no agreement beyond the Creative Commons Attribution-ShareAlike 4.0 International License).",
+    "openness_api": "No API keys or authentication; requests may be rate-limited (HTTP 503 on limit). Endpoints: /api/entities/:id, /api/entities?ids=, /extensions, /relationships, /connections, /lists, /api/entities/search?q=, /api/relationships/:id; up to 300 entities per batch request; a bulk data page is offered.",
+    "funding_or_business_model": "not verified: no funding statement was found on the pages fetched; the organisation identifies itself as a 501(c)(3).",
+    "disclaimer_or_frame": "Disclaimer page: an open-content collaborative project with no formal peer review; the team cannot guarantee the validity of the information; no implied warranty; staff make editorial decisions; analysts must contribute information that is relevant to the mission, accurate and documented by publicly available original sources; a review form exists to request review of particular pages (paraphrased).",
+    "status_as_of_retrieval": "active: entity records in the API carry updated_at timestamps of 2026-08-06 and 2026-07-24.",
+    "citations": [
+     {
+      "url": "https://littlesis.org/about",
+      "retrieved": "2026-09-21",
+      "supports": "PAI self-description, power research framing, open-source statement, trainings (read via browser; WebFetch was blocked by the site's bot check)"
+     },
+     {
+      "url": "https://littlesis.org/database/about",
+      "retrieved": "2026-09-21",
+      "supports": "database self-description, sources (government filings, news articles), bots plus community, 501(c)(3), founded 2008, public API and bulk data"
+     },
+     {
+      "url": "https://littlesis.org/api",
+      "retrieved": "2026-09-21",
+      "supports": "no keys, rate limiting, endpoints, CC BY-SA 4.0 meta, search ranking by relationship count, relationship fields and filings count"
+     },
+     {
+      "url": "https://littlesis.org/disclaimer",
+      "retrieved": "2026-09-21",
+      "supports": "no formal peer review, validity not guaranteed, analyst agreement, review form, CC BY-SA 4.0"
+     },
+     {
+      "url": "https://littlesis.org/api/entities/search?q=Nancy%20Pelosi",
+      "retrieved": "2026-09-21",
+      "supports": "identifier fields (qid, bioguide_id, govtrack_id, crp_id, pvs_id, watchdog_id, house_fec_id, fec_id, fedspending_id, lda_registrant_id), updated_at dates in 2026"
+     },
+     {
+      "url": "https://github.com/public-accountability/littlesis-rails",
+      "retrieved": "2026-09-21",
+      "supports": "who-knows-who quote, GPL-3.0, entity and connection counts, stack, project history"
+     }
+    ],
+    "could_not_verify": [
+     "Funding sources of PAI",
+     "Whether each relationship links to the underlying filing URL",
+     "Terms on the bulk data page",
+     "Latest commit date of the repository",
+     "littlesis.org pages were blocked to WebFetch by the Anubis bot check and were read through the browser instead"
+    ]
+   },
+   {
+    "name": "OCCRP Aleph",
+    "organisation": "Organized Crime and Corruption Reporting Project (OCCRP), operating through the legal entity Journalism Development Network (JDN); US 501(c)(3), EIN 26-0898750; Dutch ANBI status",
+    "url": "https://aleph.occrp.org/",
+    "kind": "Investigative data platform for searching documents and structured data, cross-referencing names against datasets, and building network diagrams and timelines; a hosted public instance for journalists and researchers, an open-source codebase (alephdata/aleph) now in maintenance mode, and a successor hosted product, Aleph Pro.",
+    "self_description": "The documentation describes Aleph as a data platform created and maintained by OCCRP, \"built to help investigative journalists track people and companies\" (docs.aleph.occrp.org), usually as part of corruption investigations. It lists finding patterns in large datasets, securely storing documents, making scanned files searchable, mapping entity connections, cross-referencing names against many sources, and building chronologies. OCCRP describes itself as a nonprofit newsroom that exposes crime and corruption so the public can hold power to account (paraphrased).",
+    "subject_scope": "Datasets and investigations across categories that the user documentation names as company registries, leaks, sanctions lists, licenses and concessions, court archives and persons of interest, each tagged by country, update frequency and access restrictions; entities cover persons, companies, assets, vessels, contracts and events. What the public instance holds specifically on officeholders (PEP lists, declarations) could not be verified from outside.",
+    "primary_sources_used": [
+     "not verified for specific government sources: the documentation describes dataset categories (sanctions lists, company registries, court archives, persons of interest) and one named example (UK People with significant control) but the dataset listing on aleph.occrp.org was not retrievable (the /pages/about route rendered blank and the collections API returned HTTP 401)",
+     "Linking of rows to primary filings: not verified"
+    ],
+    "outputs": [
+     "Search across datasets with filters by category and country; dataset overview pages with counts by entity type",
+     "Investigations (workspaces) with uploads, entity editing, network diagrams, timelines and cross-referencing against datasets the user can access",
+     "Entity pages built on the FollowTheMoney model",
+     "Export for account holders; an API (unauthenticated collection listing returned 401 at retrieval)"
+    ],
+    "derived_scoring_or_ranking": "None observed.",
+    "identifiers_exposed": [
+     "FollowTheMoney entities carry identification-number properties (key-terms page); specific external schemes (Bioguide, FEC, Wikidata) not verified on the pages fetched"
+    ],
+    "signal_precedents": [
+     "None observed."
+    ],
+    "openness_code": "github.com/alephdata/aleph under the MIT License. The repository README states the project is sunsetting, in maintenance mode with official support ending 31 December 2025, with the team's focus moved to Aleph Pro, described as a rewrite.",
+    "openness_data_license": "not verified: no data licence page was found; datasets carry their own access restrictions per the documentation.",
+    "openness_api": "An API exists (developer documentation is linked from docs.aleph.occrp.org). An unauthenticated request to https://aleph.occrp.org/api/2/collections returned HTTP 401 at retrieval. Aleph Pro FAQ access tiers: nonprofit journalism organisations free with 1 TB storage and unlimited users; public-interest groups (civic tech, civil society) at cost; commercial tiers launching in 2026; public browsing of aleph.occrp.org stated to continue.",
+    "funding_or_business_model": "OCCRP lists institutional donors including government agencies (Dutch Ministry of Foreign Affairs, US Department of State, UK Foreign Office, the Swedish development agency, New Zealand's foreign ministry), foundations (MacArthur, Open Society Foundations, Skoll, Schmidt Family), the Dutch Postcode Lottery, GroundTruth Project, Founders Pledge and the Institute for Nonprofit News, plus hundreds of individual donors; a founding grant from the UN Democracy Fund. Aleph Pro: free for nonprofit journalism, at cost for public-interest groups, paid tiers for commercial users.",
+    "disclaimer_or_frame": "not verified: no statement about what presence in a dataset means was found on the pages fetched; the key-terms page describes datasets and entities without such a frame.",
+    "status_as_of_retrieval": "active: the Aleph Pro FAQ (dated 6 June 2025, updated 11 December 2025) states the public instance remains accessible and migrated to Aleph Pro infrastructure on 15 December 2025; the open-source repository README states official support for the open-source codebase ended 31 December 2025 (maintenance mode).",
+    "citations": [
+     {
+      "url": "https://docs.aleph.occrp.org/",
+      "retrieved": "2026-09-21",
+      "supports": "self-description quote, OCCRP as creator and maintainer, capabilities"
+     },
+     {
+      "url": "https://docs.aleph.occrp.org/users/search/datasets/",
+      "retrieved": "2026-09-21",
+      "supports": "dataset organisation, categories (company registries, leaks, sanctions lists, licenses and concessions), access restrictions vary"
+     },
+     {
+      "url": "https://docs.aleph.occrp.org/users/getting-started/key-terms/",
+      "retrieved": "2026-09-21",
+      "supports": "definitions of dataset, investigation, entity; identification-number properties; example dataset; persons-of-interest category"
+     },
+     {
+      "url": "https://github.com/alephdata/aleph",
+      "retrieved": "2026-09-21",
+      "supports": "MIT licence, description, sunsetting notice with support ending 31 December 2025, Aleph Pro rewrite"
+     },
+     {
+      "url": "https://www.occrp.org/en/announcement/aleph-pro-frequently-asked-questions-on-the-future-of-occrps-investigative-data-platform",
+      "retrieved": "2026-09-21",
+      "supports": "dates, Aleph Pro description, public instance continuity and 15 December 2025 migration, access tiers"
+     },
+     {
+      "url": "https://www.occrp.org/en/about-us",
+      "retrieved": "2026-09-21",
+      "supports": "OCCRP self-description, JDN legal entity, ANBI status, founding and UNDEF grant"
+     },
+     {
+      "url": "https://www.occrp.org/en/about-us/who-supports-our-work",
+      "retrieved": "2026-09-21",
+      "supports": "donor categories and named donors, 501(c)(3) and EIN, disclosure policy reference"
+     },
+     {
+      "url": "https://aleph.occrp.org/api/2/collections?limit=10&q=sanctions",
+      "retrieved": "2026-09-21",
+      "supports": "unauthenticated collections request returned HTTP 401"
+     }
+    ],
+    "could_not_verify": [
+     "What aleph.occrp.org holds on officeholders (PEP lists, declarations); the dataset listing was not retrievable",
+     "Data licence for datasets on the public instance",
+     "Whether an account is required to search public datasets",
+     "The user-guide page fetched (docs.aleph.occrp.org/users/) contained only navigation",
+     "https://aleph.occrp.org/pages/about rendered blank; https://www.occrp.org/en/who-we-are and /en/support-us returned 404"
+    ]
+   },
+   {
+    "name": "EveryPolitician",
+    "organisation": "Originally mySociety (project on hold from 26 June 2019); everypolitician.org relaunched in February 2026 as a project of OpenSanctions Datenbanken GmbH",
+    "url": "https://everypolitician.org/",
+    "kind": "Global database of political office-holders (persons, positions, occupancies) built on Wikidata plus crawlers of official sources; originally a per-legislature dataset in Popolo JSON and CSV compiled from parliament websites by scrapers.",
+    "self_description": "The current site calls itself \"a global database of political office-holders, from rulers, law-makers to judges and more\" (everypolitician.org) and says it aims to let citizens identify who holds which positions and powers; it describes itself as built on Wikidata, built by volunteers worldwide, and revived and reimagined as part of OpenSanctions after being placed on hold in 2019. mySociety's 2019 post described the original as over five years of work compiling data on 78,382 politicians from 233 countries and territories, with the data frozen but still available for download and reuse (paraphrased).",
+    "subject_scope": "Current site: 702,610 politicians in 211,185 positions across 263 countries and territories (home page); the February 2026 announcement gave nearly 690,000 office-holders across 261 countries and territories and defines politicians as anyone holding public authority, from presidents and legislators to judges, senior officials and military commanders. Original: members of national legislatures, 233 countries and territories, data current to 21 May 2019 (OpenSanctions archive dataset page).",
+    "primary_sources_used": [
+     "Current: Wikidata via the WikiProject every politician (people) and the Govdirectory WikiProject (positions); automated crawlers of official government sources; PoliLoom, which uses large language models to extract politician data from Wikipedia articles for human review before submission to Wikidata",
+     "Original: parliament websites read by the everypolitician-scrapers fleet (mySociety post)",
+     "Linking: per-row links to the official source were not verified"
+    ],
+    "outputs": [
+     "Current: profiles by country and position on everypolitician.org; bulk download via the OpenSanctions Politically Exposed Persons collection; a free API for journalists and public-interest users; commercial licensing via OpenSanctions; PoliLoom contribution tool; source code on GitHub",
+     "Original: Popolo JSON and CSV per legislature via countries.json (frozen), preserved by OpenSanctions as the everypolitician archive dataset (92,315 entities)"
+    ],
+    "derived_scoring_or_ranking": "None observed.",
+    "identifiers_exposed": [
+     "Current: Wikidata QIDs for entities (about page)",
+     "Original: per-person UUIDs, visible in OpenSanctions as evpo-<uuid> referents (e.g. evpo-5cf6d53c-962d-453c-833e-bcaad613c34c on the Q170581 page), cross-referenced to Wikidata (Q208879 example on the archive dataset page)",
+     "Other schemes in the original Popolo identifiers array: not verified (docs.everypolitician.org did not resolve)"
+    ],
+    "signal_precedents": [
+     "None observed."
+    ],
+    "openness_code": "Current site: github.com/opensanctions/everypolitician.org under the MIT license. Original: github.com/everypolitician (everypolitician-data, everypolitician-scrapers); licence not stated on the repository page fetched.",
+    "openness_data_license": "Current: Creative Commons Attribution-NonCommercial 4.0, with commercial screening products offered separately through OpenSanctions. Original data licence: not verified (mySociety's post says the frozen data remains available for download and reuse).",
+    "openness_api": "Current: through the OpenSanctions API, free for journalists and public-interest users, commercial licensing otherwise (February 2026 announcement). Original: no API verified; data was offered as downloads.",
+    "funding_or_business_model": "Current: part of OpenSanctions' commercial data-licensing model (the about page points commercial screening and due-diligence use to OpenSanctions). Original: mySociety's post attributes the pause to the maintenance burden of near-weekly elections worldwide and constant scraper upkeep; the funding basis of the original is not verified on the pages fetched.",
+    "disclaimer_or_frame": "Current about page states no explicit inclusion criteria beyond its crowdsourced, Wikipedia-inspired method; positions are classified under the OpenSanctions PEP methodology, whose documentation states PEP status is not an allegation. Original repository README and mySociety post carry the on-hold notice.",
+    "status_as_of_retrieval": "Original mySociety project: on hold since 26 June 2019 per mySociety's announcement and the everypolitician-data README; OpenSanctions' archive dataset page states mySociety ceased updates. Current everypolitician.org: active and merged into OpenSanctions per its about page (revived as part of OpenSanctions) and the 18 February 2026 relaunch article; PoliLoom article dated 24 March 2026; home page counts retrieved today.",
+    "citations": [
+     {
+      "url": "https://everypolitician.org/",
+      "retrieved": "2026-09-21",
+      "supports": "self-description quote, built on Wikidata, maintained by OpenSanctions, counts (702,610 politicians; 263 countries), CC BY-NC 4.0, header and footer links"
+     },
+     {
+      "url": "https://everypolitician.org/about/",
+      "retrieved": "2026-09-21",
+      "supports": "mySociety origin, 2019 hold, revival as part of OpenSanctions, Wikidata WikiProjects, PoliLoom, Wikidata QIDs, licence, commercial use via OpenSanctions"
+     },
+     {
+      "url": "https://www.mysociety.org/2019/06/26/placing-everypolitician-on-hold/",
+      "retrieved": "2026-09-21",
+      "supports": "26 June 2019 pause, 78,382 politicians and 233 countries, reasons, data frozen but downloadable, code on GitHub, Wikidata migration"
+     },
+     {
+      "url": "https://github.com/everypolitician/everypolitician-data",
+      "retrieved": "2026-09-21",
+      "supports": "repository description, on-hold notice, countries.json"
+     },
+     {
+      "url": "https://github.com/opensanctions/everypolitician.org",
+      "retrieved": "2026-09-21",
+      "supports": "MIT licence, 261 countries, Wikidata plus government sources, integration with the OpenSanctions PEP dataset"
+     },
+     {
+      "url": "https://www.opensanctions.org/articles/2026-02-18-every-politician/",
+      "retrieved": "2026-09-21",
+      "supports": "18 February 2026 relaunch, new home for the project, counts, crawler plus Wikidata method, free API for journalists, commercial licensing"
+     },
+     {
+      "url": "https://www.opensanctions.org/articles/2026-03-24-poliloom/",
+      "retrieved": "2026-09-21",
+      "supports": "PoliLoom LLM extraction, human verification, submission to Wikidata and EveryPolitician, 24 March 2026"
+     },
+     {
+      "url": "https://www.opensanctions.org/datasets/everypolitician/",
+      "retrieved": "2026-09-21",
+      "supports": "archive of the mySociety data, coverage to 21 May 2019, entity counts, Wikidata identifiers, kept for historical PEP documentation"
+     },
+     {
+      "url": "https://www.opensanctions.org/entities/Q170581/",
+      "retrieved": "2026-09-21",
+      "supports": "evpo-<uuid> identifier carried as a referent"
+     }
+    ],
+    "could_not_verify": [
+     "The original data licence and the identifier schemes in the original Popolo files (docs.everypolitician.org did not resolve)",
+     "The licence of the everypolitician-data repository",
+     "The current site's methodology page (https://everypolitician.org/methodology/ returned 404)",
+     "The funding basis of the original mySociety project"
+    ]
+   },
+   {
+    "name": "Transparency International (asset and interest declaration work)",
+    "organisation": "Transparency International e.V., international secretariat in Berlin, with national chapters in more than 100 countries",
+    "url": "https://www.transparency.org/",
+    "kind": "Advocacy and research organisation. On officeholder asset declarations it publishes policy papers, helpdesk answers and topic guides through its Knowledge Hub, and reports on chapter-level monitoring; no central dataset of officeholder declarations was found on transparency.org. (Its EU office's Integrity Watch platform is a separate entry.)",
+    "self_description": "Describes itself as working to stop corruption and promote transparency, accountability and integrity at all levels and across all sectors of society, with a vision of government, politics, business, civil society and daily life free of corruption (paraphrased from the-organisation page). On declarations, its 2013 piece frames an asset declaration as a person's balance sheet covering assets, liabilities and all sources of income, and its 2020 OGP paper proposes that the Open Government Partnership could incubate \"a future open data standard for asset declarations\" (2020 policy paper PDF).",
+    "subject_scope": "Income, interest and asset declaration systems for public officials generally, across countries; recommendations aimed at Open Government Partnership member governments; chapter monitoring of politicians' declarations in Georgia and Russia (2013 article); national examples such as Ukraine's digital declarations of roughly one million public servants and Georgia's electronic monitoring system (2020 paper).",
+    "primary_sources_used": [
+     "None as a data publisher on this topic. The 2020 paper cites national declaration systems (Ukraine's online portal; Georgia's electronic monitoring) and a civil-society analyst (BIRN in Albania) as examples",
+     "The 2013 article reports that TI chapters in Russia and Georgia study politicians' declarations over time, and that in Georgia declaration figures are cross-referenced with the public company registry",
+     "Linking to primary filings: not applicable on the pages fetched"
+    ],
+    "outputs": [
+     "Policy paper: Recommendations on Asset and Interest Declarations for OGP Action Plans (5 November 2020; 11-page PDF; authors Lucas Amin and Jose Maria Marin)",
+     "Knowledge Hub items tagged asset-declarations: Improving and Enforcing Income, Interest and Asset Declaration Systems (4 June 2024); Topic Guide on Income and Asset Disclosure (12 June 2015); Topic Guide on Public Sector Integrity (2015); Albania overview (2014); Foreign Exchange Controls and Assets Declarations (2011)",
+     "News piece: Holding politicians to account: asset declarations (17 January 2013)",
+     "Annual report and news items (September 2026)"
+    ],
+    "derived_scoring_or_ranking": "None per person observed on the pages fetched.",
+    "identifiers_exposed": [
+     "None; not a publisher of officeholder records on the pages fetched"
+    ],
+    "signal_precedents": [
+     "None computed. Principles stated in the 2013 article: declarations from the leadership of all three branches, filed at the start of office, updated annually and continued through a cooling-off period; exact values or value ranges; a monitoring agency to collect, verify, investigate, prosecute and sanction. The 2020 paper describes digital collection with structured forms as enabling algorithmic verification and risk-assessment tools (paraphrased)."
+    ],
+    "openness_code": "None.",
+    "openness_data_license": "not applicable: publications only; no data licence observed.",
+    "openness_api": "None.",
+    "funding_or_business_model": "The organisation page states support from a range of donors including government agencies, multilateral institutions, foundations, the private sector and individuals, unrestricted or earmarked, under a policy of accepting funding from any donor provided it does not impair independence or endanger integrity and reputation; annual reports, audited statements and IATI reporting are cited.",
+    "disclaimer_or_frame": "The 2020 publication page frames disclosure systems as helping to ensure officials remain honest and are seen to remain honest; the 2013 article frames declarations as enabling civil society to hold leaders to account, for instance where leaders appear to live beyond their means (paraphrased). The 2020 PDF carries a standard accuracy note by the authors.",
+    "status_as_of_retrieval": "active: transparency.org news items dated 15 September 2026 and 14 September 2026.",
+    "citations": [
+     {
+      "url": "https://www.transparency.org/en/the-organisation",
+      "retrieved": "2026-09-21",
+      "supports": "self-description, legal form and Berlin secretariat, chapter structure, funding policy and accountability"
+     },
+     {
+      "url": "https://www.transparency.org/en/news",
+      "retrieved": "2026-09-21",
+      "supports": "news items dated 15 and 14 September 2026 (status)"
+     },
+     {
+      "url": "https://www.transparency.org/en/news/holding-politicians-to-account-asset-declarations",
+      "retrieved": "2026-09-21",
+      "supports": "17 January 2013 date, balance-sheet framing, contents of a declaration, principles, Georgia and Russia chapter monitoring"
+     },
+     {
+      "url": "https://www.transparency.org/en/publications/recommendations-on-asset-and-interest-declarations-for-ogp-action-plans",
+      "retrieved": "2026-09-21",
+      "supports": "5 November 2020 date, purpose, honest-and-seen-to-be-honest framing, PDF link"
+     },
+     {
+      "url": "https://files.transparencycdn.org/images/2020_PolicyPaper_AssetInterestDeclarationsOGP_English.pdf",
+      "retrieved": "2026-09-21",
+      "supports": "open data standard quote, authors, Ukraine and Georgia examples, online publication and algorithmic verification passages, 11 pages"
+     },
+     {
+      "url": "https://knowledgehub.transparency.org/tag/asset-declarations",
+      "retrieved": "2026-09-21",
+      "supports": "list of tagged publications with dates including the 4 June 2024 item"
+     }
+    ],
+    "could_not_verify": [
+     "Whether TI or any chapter currently operates a public dataset of officeholder declarations (none found on transparency.org)",
+     "The content of the 4 June 2024 Knowledge Hub item beyond its title and date",
+     "The current status of the Georgia and Russia chapter monitoring described in 2013"
+    ]
+   },
+   {
+    "name": "Integrity Watch EU",
+    "organisation": "Transparency International EU (Brussels; describes itself as an independent non-profit; EU Transparency Register 501222919-71)",
+    "url": "https://www.integritywatch.eu/",
+    "kind": "Open-data monitoring hub for EU decision-makers: MEP declarations of private and financial interests and side incomes, MEP and Commission lobby meetings, and the EU lobby register; with a Data Hub (data.integritywatch.eu) aggregating 24 national Integrity Watch platforms that cover asset and interest declarations, lobby meetings, party financing, procurement and ownership registers.",
+    "self_description": "Describes itself as \"a hub that allows everyone to monitor the integrity of the EU's decision makers\" (integritywatch.eu/about.php), launched in October 2014 by Transparency International EU, set against the presence of nearly 13,000 lobby organisations in Brussels. TI EU describes the wider Integrity Watch family as online tools that let citizens, journalists and civil society monitor the integrity of decisions made by politicians in the EU (paraphrased).",
+    "subject_scope": "Members of the European Parliament (2019-2024 and 2024-2029 legislatures) for side activities and income declarations and lobby meetings; European Commissioners and cabinets for lobby meetings; organisations in the EU Transparency Register. Data Hub: 24 country platforms across the EU, the Balkans, the UK and Tuerkiye.",
+    "primary_sources_used": [
+     "EU Open Data Portal; EU Transparency Register; individual MEP pages on the European Parliament website (about page)",
+     "MEP incomes: Source: Latest declaration, with the date of the latest declaration shown per MEP; meetings: Source: European Parliament",
+     "The about page states the data is exclusively retrieved from the EU institutions' official websites and is entirely self-reported",
+     "Linking of each row to the declaration document on the Parliament site: not verified"
+    ],
+    "outputs": [
+     "Sortable MEP income table (Name, Country, Group, Activities, Estimated Annual Income, DPI Updates) organised by declaration section (previous occupations, current remunerated activities, board memberships, business holdings with public-policy implications, other)",
+     "Interactive charts and filters by country and legislature",
+     "Commission and MEP lobby-meeting tables (daily updates), lobbyist register data (daily), MEP incomes (monthly)",
+     "Data Hub aggregating national platforms; TI EU reports built on the data (the 2024 article cites 52,206 Commission meetings, 64,151 Parliament meetings, 12,771 lobby organisations, 1,822 MEP side activities in the most recent mandate)"
+    ],
+    "derived_scoring_or_ranking": "Estimated annual income per MEP is a computed field, derived from the periodicity (hourly, monthly, annual) given in the original declarations; the table is sortable, so members can be ordered by that estimate. No composite score observed.",
+    "identifiers_exposed": [
+     "not verified: no identifier scheme observed on the pages fetched (rows show name, country and political group)"
+    ],
+    "signal_precedents": [
+     "No computed per-filing condition observed. The MEP income page states, as a register-level caveat, that a number of declarations are currently missing from the European Parliament website and that the section still shows 2019-2024 declarations while 2024 ones are processed. The meetings page cites the rule that MEPs must publish lobby meetings with third-country representatives and lobbyists acting for third countries."
+    ],
+    "openness_code": "not verified: no code repository found on the pages fetched.",
+    "openness_data_license": "Data published under the ODbL v1.0 open data licence (about page). TI EU's site describes the Integrity Watch work as licensed under a CC BY-NC-ND 3.0 licence (transparency.eu page, which prints it as CCC BY-NC-ND 3.0).",
+    "openness_api": "not verified: no API observed on the pages fetched.",
+    "funding_or_business_model": "About page: current supporters KR Foundation, Adessium Foundation and Waverly Street Foundation, with earlier support from the European Commission and Open Society Initiative for Europe. The Data Hub was funded by the EU's Internal Security Fund - Police. TI EU's funders page lists a 2026 budget of about EUR 1 million from the TI Secretariat, Adessium, Waverly Street, KR Foundation, Stiftung Mercator, Google Charitable Fund, the European Commission, the UK FCDO and Open Society Foundations.",
+    "disclaimer_or_frame": "About page: TI EU and Integrity Watch EU bear no responsibility for the accuracy of the original data, since all of it is self-reported through EU institutions (paraphrased). Income figures are labelled as estimates. The Data Hub carries an EU disclaimer that EU institutions are not responsible for any use of the information.",
+    "status_as_of_retrieval": "unknown: no content dated within the last twelve months was observed on integritywatch.eu (the meetings page shows an unrendered last-updated placeholder; the income page's status note about 2024 declarations is undated; TI EU's decade article is dated 24 October 2024). The about page states daily and monthly update cycles, and TI EU's funders page references a 2026 budget.",
+    "citations": [
+     {
+      "url": "https://www.integritywatch.eu/about.php",
+      "retrieved": "2026-09-21",
+      "supports": "self-description quote, TI EU as operator, October 2014 launch, data coverage, sources, update frequencies, ODbL v1.0, no-responsibility disclaimer, funders"
+     },
+     {
+      "url": "https://www.integritywatch.eu/mepincomes.php",
+      "retrieved": "2026-09-21",
+      "supports": "sortable table columns, declaration sections, estimated annual income method, latest-declaration source and date, missing-declarations and 2019-2024 caveat"
+     },
+     {
+      "url": "https://www.integritywatch.eu/mepmeetings.php",
+      "retrieved": "2026-09-21",
+      "supports": "European Parliament source, third-country meetings rule, unrendered last-updated placeholder"
+     },
+     {
+      "url": "https://transparency.eu/integritywatch/",
+      "retrieved": "2026-09-21",
+      "supports": "TI EU description of Integrity Watch, CC BY-NC-ND 3.0 statement, national platforms and Data Hub"
+     },
+     {
+      "url": "https://transparency.eu/integrity-watch-eu-at-10-a-decade-of-holding-the-eu-to-account-through-open-data/",
+      "retrieved": "2026-09-21",
+      "supports": "24 October 2024 date, 2014 launch, dataset counts, 19 platforms in 17 countries, planned Balkan platforms"
+     },
+     {
+      "url": "https://data.integritywatch.eu/",
+      "retrieved": "2026-09-21",
+      "supports": "Data Hub description, 24 country platforms, data types, EU Internal Security Fund funding, EU disclaimer"
+     },
+     {
+      "url": "https://transparency.eu/who-supports-us/",
+      "retrieved": "2026-09-21",
+      "supports": "TI EU 2026 budget and named funders, funding-independence policy"
+     }
+    ],
+    "could_not_verify": [
+     "Last-update date of the platform",
+     "Any identifier scheme for MEPs",
+     "An API or code repository",
+     "Per-row links to the declaration PDFs on the European Parliament site"
+    ],
+    "added_by_sweep": true
+   }
+  ],
+  "could_not_reach": [
+   "https://aleph.occrp.org/pages/about (rendered blank; single-page app)",
+   "https://aleph.occrp.org/api/2/collections (HTTP 401 without authentication)",
+   "https://docs.aleph.occrp.org/users/ (returned navigation only)",
+   "http://docs.everypolitician.org/ (DNS did not resolve)",
+   "https://everypolitician.org/methodology/ (HTTP 404)",
+   "https://www.theyworkforyou.com/data/ (HTTP 404)",
+   "https://www.abgeordnetenwatch.de/ueber-uns/finanzierung (HTTP 404; funding page found at /ueber-uns/mehr/finanzierung)",
+   "https://www.occrp.org/en/who-we-are (HTTP 404; about page found at /en/about-us)",
+   "https://www.occrp.org/en/support-us (HTTP 404; donors page found at /en/about-us/who-supports-our-work)",
+   "https://www.opensanctions.org/docs/aleph/ (HTTP 404)",
+   "https://www.opensanctions.org/docs/faq/ (navigation hub only; no FAQ content)",
+   "https://transparency.eu/about/ (HTTP 404)",
+   "https://public-accountability.org/ (301 redirect to littlesis.org)",
+   "https://littlesis.org/* via WebFetch (blocked by the Anubis bot check; pages were read through the browser instead)",
+   "https://www.theyworkforyou.com/api/docs/getPerson (loaded, but did not list response fields or identifier schemes)"
+  ]
+ },
+ "skeptic": {
+  "verdicts": [
+   {
+    "name": "TheyWorkForYou (with ParlParse)",
+    "confirmed": [
+     "organisation: mySociety runs the site; registered charity 1076346; company 03277032 and SocietyWorks Ltd per mysociety.org/about",
+     "self_description: 'information about our elected representatives should be easily understandable and accessible to everyone' (about page); searchable debates, email alerts, voting summaries, more accessible registers of interests; ParlParse self-description and that it powers TheyWorkForYou and Public Whip (parser.theyworkforyou.com)",
+     "subject_scope: regmem index runs 14 May 2001 to 7 Sep 2026; raw XML directory holds regmem2000-11-10.xml through regmem2026-09-07.xml (modified 2026-09-08); people.json scope back to start of Hansard for MPs, 1999 for Lords, creation for devolved bodies (members.html); Senedd posts files in parlparse repo",
+     "primary_sources_used: Hansard under Parliamentary Copyright (about page); data.parliament.uk scraper from 2010 onwards (github parlparse); Code of Conduct link on regmem page (publications.parliament.uk/pa/cm200809/cmcode/735/73504.htm); IPSA expenses referenced by Parliament ID on MP page; members.parliament.uk/member/172/career link on register page",
+     "outputs: register categories on MP page (Employment and earnings - Ad hoc payments; Visits outside the UK; Miscellaneous), no totals; history by edition and edition comparison (regmem page, ?f= parameter); spreadsheet downloads referenced (/interests/#spreadsheets); people.json in Popolo format",
+     "derived_scoring_or_ranking: 0-100 bands mapped to the seven phrases; scoring vs informative votes; absences not counted; no rankings or totals on regmem index",
+     "identifiers_exposed: person ID 10001 in URL; uk.org.publicwhip/person/<n> scheme (members.html); Parliament ID 172 under Expenses; Wikipedia link on MP page; no Wikidata link or ID on the MP page",
+     "openness_code: TheyWorkForYou 'released under a BSD style license' (repo README); ParlParse GNU AGPL v3, copyright 2003-2011 Julian Todd, Matthew Somerville, Francis Irving, Mark Longair, UKCOD (LICENSE.txt)",
+     "openness_data_license: Open Parliament Licence; CC BY-SA 2.5 for own data; OS OpenData; OGL for NI boundary data; NI End User Licence for NI postcode data; 'Data service provided by TheyWorkForYou' attribution; 'give no warranty as to the ownership of the data' (api/terms)",
+     "openness_api: key required (sign-up); plans from GBP 20/month; 10 calls per day without subscription; charities free to 1,000 calls/month and 50% discount above (api/terms)",
+     "funding_or_business_model: 'This site is not publicly funded' (about page); SocietyWorks Ltd as social enterprise (mysociety.org/about)",
+     "disclaimer_or_frame: register page sentence on declaring interests that 'could be considered by others to influence their judgement or actions'; voting-information caveats on party averages, absences, and 'impact in the political process'",
+     "status_as_of_retrieval: regmem edition 7 Sep 2026 and regmem2026-09-07.xml modified 2026-09-08"
+    ],
+    "refuted": [
+     {
+      "field": "primary_sources_used (Linking) / could_not_verify",
+      "claim": "Only a members.parliament.uk profile link was observed on the member register page; a link to the official register on parliament.uk was not observed.",
+      "correction": "The member register page also links to 'the official House of Commons page' for the Register of Members' Financial Interests at https://www.parliament.uk/mps-lords-and-offices/standards-and-financial-interests/parliamentary-commissioner-for-standards/registers-of-interests/register-of-members-financial-interests/. It is a link to the official register landing page, not to a specific edition or entry; the entry should say that rather than imply no primary-register link exists.",
+      "citation_url": "https://www.theyworkforyou.com/mp/10001/diane_abbott/hackney_north_and_stoke_newington/register"
+     }
+    ],
+    "unverifiable": [
+     "openness_api: 'No Register of Members' Interests endpoint is listed on the API page' — the /api/ landing page lists example uses and points to /api/docs/ for the full endpoint list, which neither the entry nor this check fetched",
+     "funding_or_business_model: mySociety about page describing 'grants (via impact reporting)' and commercial services as funding streams — the about page as fetched names SocietyWorks and a Donate button but does not enumerate grants",
+     "citation for MP page 'voting summary presentation' — the fetched MP page shows a Voting Summary menu entry but the phrases themselves were not in the fetched text",
+     "organisation: company number — the TWFY about page prints the limited company number as 03277015 while mysociety.org/about prints 03277032; the entry's number matches its cited page, but the two mySociety pages disagree",
+     "Latest commit dates for both repositories (not displayed in fetched content)",
+     "Whether people.json carries datadotparl_id, pims_id or Wikidata schemes (members.html enumerates only uk.org.publicwhip/person and peeragetype)"
+    ]
+   },
+   {
+    "name": "abgeordnetenwatch.de",
+    "confirmed": [
+     "organisation: Parlamentwatch e.V. (ueber-uns); over 12,500 regular supporters as of December 2025; OLIN gGmbH EUR 85,000 in 2013-2016; Initiative Transparente Zivilgesellschaft; annual reports through 2024 (finanzierung page)",
+     "self_description: 'Gemeinsam für Transparenz' heading; research desk description on side income; 22 June 2026 sentence 'Ob tatsächlich alle meldepflichtigen Tätigkeiten und Beteiligungen offengelegt werden, lässt sich von außen jedoch schwer überprüfen.'",
+     "subject_scope: sidejob data covers Bundestag members only ('Zu den Abgeordneten anderer Parlamente sind keine Nebentätigkeiten bei uns erfasst'); Berlin candidates article 18 Sep 2026; EU member article 18 Feb 2026",
+     "primary_sources_used: 'Diese Daten werden von der Bundestagsverwaltung veröffentlicht und von uns aufbereitet' (entity docs); 22 June article based on Bundestag-published disclosures; one member's profile shows Erfasst am / Letzte Änderung dates and an Open Data link; no bundestag.de per-entry link in that section",
+     "outputs: profile table columns (Nebentätigkeit, Kunde / Organisation, Erfassungsdatum, Interval, Einkommen); sortable database of all 630 members and interactive map in the 22 June article; API v2",
+     "derived_scoring_or_ranking: top three at about EUR 2.7m, EUR 1.5m and EUR 439,000 (names on the page); EUR 10.6m total; 232 of 630; 159 board positions; statistic_questions and statistic_questions_answered on politician records",
+     "identifiers_exposed: id, ext_id_bundestagsverwaltung, qid_wikidata, abgeordnetenwatch_url, api_url all present on politician records",
+     "signal_precedents: thresholds (EUR 1,000/month or 3,000/year; 5% holdings; three-month deadline; fines up to EUR 70,000) in the 22 June article; sidejob fields income, income_level (11 levels 0-10, 1-1,000 EUR to ab 250,000 EUR), interval (einmalig/monatlich/jährlich), income_total, data_change_date; eight categories",
+     "openness_data_license: CC0 1.0 on API page and in every response meta (https://creativecommons.org/publicdomain/zero/1.0/deed.de)",
+     "openness_api: /api/v2/, meta version 2.9.0, no API key mentioned, 30 requests per minute per IP, bulk outside 22-6 Uhr, HTTP 429",
+     "disclaimer_or_frame: no explanatory or disclaimer text in the profile Nebentätigkeiten section (one member's profile)",
+     "status_as_of_retrieval: articles dated 18 Sep 2026 and 4 Sep 2026; one member's entry last modified 10.09.2026"
+    ],
+    "refuted": [],
+    "unverifiable": [
+     "openness_code: no official repository found — a web search surfaced only third-party clients (maschinenlesbar-org/abgeordnetenwatch-cli, Movm/abgeordnetenwatch-mcp, untergeekDE/abgeoRdnetenwatchr), consistent with the entry but not proof of absence",
+     "funding_or_business_model: the phrase 'donation-financed non-profit' is a paraphrase; the funding page's own wording is that project costs are to be financed through building up Förderungen (regular supporters)",
+     "Any API terms of use beyond the fair-use section"
+    ]
+   },
+   {
+    "name": "OpenSanctions (Politically Exposed Persons dataset)",
+    "confirmed": [
+     "organisation and self_description: 'OpenSanctions is a financial crime data provider.'; OpenSanctions Datenbanken GmbH, Berlin (docs/about); PEP dataset page inclusion statement about official sources and third-party aggregations",
+     "subject_scope: role topics (gov.head, gov.executive, gov.legislative, gov.judicial, gov.security, gov.financial, role.diplo, gov.soe, pol.party, gov.religious) and jurisdiction topics (gov.national, gov.igo, gov.state, gov.muni); retention 50/20/20/5 years; exclusions (deceased >5 years, over 110, missing dates); PEP dataset 1,950,702 entities, 932,463 searchable, 713,334 targets; US Congress dataset 1,340 people / 1,342 searchable",
+     "primary_sources_used: 202 sources with Wikidata PEPs 366,561, EveryPolitician 40,262, UK Commons 1,687, US Congress 1,342, EU Parliament 2,714, Spain mayors and councillors 94,373; US Congress read from https://api.congress.gov/v3/member/ published by the Library of Congress, daily",
+     "outputs: entity pages with positions, family, datasets (Q170581, Q22686); yente-client SDK, yente-cli and MCP server; on-premise option",
+     "derived_scoring_or_ranking: 'the topic representing the greatest level of influence is used' (methodology); topics role.pep, poi, sanction, counter-sanctioned observed",
+     "identifiers_exposed: Q-IDs as entity IDs; ofac-81717 and eu-fsf-1234 examples; NK- IDs at deduplication; referents array; 6-month retention of stale referents; us-congress-6058a31e... and evpo-5cf6d53c-962d-453c-833e-bcaad613c34c on Q170581 (plus a ru-mfa- referent not listed in the entry)",
+     "signal_precedents: Person tagged role.pep via Occupancy to Position; 'These windows are therefore our judgment, not a regulatory requirement'",
+     "openness_code: MIT (github repo); data CC BY-NC 4.0; third-party files in datasets/ under own terms per COPYRIGHT.md",
+     "openness_data_license: CC BY-NC 4.0 on dataset page and licensing page",
+     "openness_api: API key with each request; free trial key for business email; free keys for journalism, civil-society advocacy, academic research; matching/reconciliation billed per logical query, search per request; discounts from 20,000 monthly requests; no contract lock-in",
+     "funding_or_business_model: three licence types (Screening API 30-day trial; Screening License flat rate; Reseller/OEM); 2021 BMBF (Prototype Fund) grant; 'operating on revenue since its incorporation'",
+     "disclaimer_or_frame: 'Being classified as a PEP is not an allegation'; 'additional questions at onboarding or during account reviews — not a refusal of service'; 'We publish data about public offices and the people who hold them; we do not make decisions about individual customers or accounts'; counter-sanctions note on Q22686",
+     "status_as_of_retrieval: PEP dataset processed 21 Sep 2026, daily; US Congress version 20260921084401 with last change 2026-09-19"
+    ],
+    "refuted": [],
+    "unverifiable": [
+     "organisation: 'staff across Europe' — not in the fetched about page text",
+     "Whether Bioguide IDs are carried on US Congress records (dataset page does not mention them)",
+     "API rate limits (not stated on docs/api)",
+     "A correction or removal policy",
+     "Note: the about page states the GmbH was established in 2023, a detail the entry omits; the methodology's exclusion list also includes positions with no recorded end more than 40 years after start, which the entry's exclusion list does not mention"
+    ]
+   },
+   {
+    "name": "LittleSis",
+    "confirmed": [
+     "organisation: 'The Public Accountability Initiative – known more broadly as LittleSis – is a nonprofit public interest research organization' (about); 501(c)3 founded in early 2008 (database/about)",
+     "self_description: 'A free database of who-knows-who at the heights of business and government' (repo README); brings transparency to influential social networks, 'All of this information is public, but scattered', 'meant to support the work of journalists, watchdogs, and grassroots activists' (database/about); power research framing (about)",
+     "subject_scope: over 400,000 people and organizations, more than 1.6 million relationships (repo README); mission 'to track people and groups with inordinate wealth, influence on public policy, and access to government officials' (disclaimer); types observed include Person, Organization, Political Candidate, Elected Representative, Political Fundraising Committee, Business Person, Public Company",
+     "primary_sources_used: 'Our data derives from government filings, news articles, and other reputable sources. Some data sets are updated automatically; the rest is filled in by our user community' (database/about); relationship record with amount 500 and filings 1 (api docs example 297069)",
+     "outputs: 12 relationship categories (category_id 1-12), amount, start/end dates, is_current; lists with is_ranked (Fortune 1000 Companies (2008)); Eyes on the Ties blog; public API and bulk data",
+     "derived_scoring_or_ranking: search ranking by relationship count with the Bush example; connections sorted by link_count; is_ranked flag on lists",
+     "identifiers_exposed: qid (null), bioguide_id P000197, govtrack_id 400314, crp_id N00007360, pvs_id 26732, watchdog_id nancy_a member record, house_fec_id, is_federal; fec_id on a campaign committee record; fedspending_id and lda_registrant_id on the Org extension (null)",
+     "openness_code: GPL-3.0 (repo); 'Our tech is open-source' (about); 'The software powering LittleSis is open source' (database/about)",
+     "openness_data_license: meta copyright 'LittleSis CC BY-SA 4.0' with licence link; disclaimer references the CC BY-SA 4.0 International License",
+     "openness_api: 'The API does not require any API keys or authentication, although requests may be rate-limited'; 503 Rate Limit Exceeded; endpoints as listed; up to 300 entities per request; bulk data page",
+     "disclaimer_or_frame: 'No formal peer review'; 'LittleSis cannot guarantee the validity of the information found here'; no implied warranty; staff make editorial decisions; analyst agreement (relevant, accurate, documented by publicly available original sources); Review Form",
+     "status_as_of_retrieval: updated_at 2026-08-06T18:06:12Z and 2026-07-24T23:28:06Z in the search response"
+    ],
+    "refuted": [],
+    "unverifiable": [
+     "subject_scope: 'Lobbyist' as an entity type — not observed on the API docs page or in the search response fetched",
+     "Funding sources of PAI (no statement on any page fetched; consistent with the entry)",
+     "Whether each relationship links to the underlying filing URL (only a filings count is in the API example)",
+     "Terms on the bulk data page; latest commit date"
+    ]
+   },
+   {
+    "name": "OCCRP Aleph",
+    "confirmed": [
+     "organisation: OCCRP legal entity Journalism Development Network (JDN), OCCRP as trade name since 2007; ANBI status; UNDEF funding for the founding hub (about-us); 501(c)(3) with EIN 26-0898750 (who-supports-our-work)",
+     "self_description: 'built to help investigative journalists track people and companies, usually as part of their corruption investigations' (docs.aleph.occrp.org); capabilities list; OCCRP 'expose crime and corruption so the public can hold power to account'",
+     "subject_scope: dataset categories company registries, leaks, sanctions lists, licenses and concessions, court archives, persons of interest; tagged by country, update frequency and access restrictions (datasets page); entity definition covering person, company, asset, vessel, contract, event (key-terms)",
+     "primary_sources_used: UK People with significant control named as an example (key-terms); ID number property on persons",
+     "outputs: investigations with uploads, entity editing, network diagrams, timelines, cross-referencing (key-terms); dataset overview tab with counts by entity type",
+     "openness_code: MIT; sunsetting notice with official maintenance ending 31 December 2025; Aleph Pro as a from-scratch rewrite (github README)",
+     "openness_api: unauthenticated /api/2/collections request returned HTTP 401 on re-fetch; Aleph Pro tiers (nonprofit journalism free with 1 TB storage, unlimited users; public-interest groups at cost; commercial tiers in 2026); public instance to remain accessible",
+     "funding_or_business_model: named government, foundation and other donors match the who-supports-our-work page; 'hundreds of individual donors'",
+     "status_as_of_retrieval: FAQ dated 6 June 2025, updated 11 December 2025; migration of the public instance on 15 December 2025; open-source support ended 31 December 2025 per the repo"
+    ],
+    "refuted": [],
+    "unverifiable": [
+     "What aleph.occrp.org holds on officeholders (dataset listing not retrievable without authentication)",
+     "Data licence for datasets on the public instance",
+     "Whether an account is required to search public datasets",
+     "disclaimer_or_frame: absence of a presence-meaning statement is consistent with the key-terms page fetched, but a broader statement may exist on pages not reachable here",
+     "Latest commit date of alephdata/aleph"
+    ]
+   },
+   {
+    "name": "EveryPolitician",
+    "confirmed": [
+     "self_description: 'A global database of political office-holders, from rulers, law-makers to judges and more.' (home); built on Wikidata and maintained through OpenSanctions; Wikipedia-inspired approach and 'tracking political office-holders creates a basis for accountability' (about)",
+     "subject_scope: 702,610 politicians, 211,185 positions, 263 countries and territories (home); 'nearly 690,000' across 261 countries and 'Anyone holding public authority: presidents, parliamentarians, legislators, judges, senior officials, and even military commanders' (18 Feb 2026 article); original 78,382 politicians from 233 countries (mySociety 2019 post); archive current to 21 May 2019 (OpenSanctions archive dataset)",
+     "primary_sources_used: Govdirectory WikiProject for positions and every politician WikiProject for people (about); crawlers of government data plus Wikidata (18 Feb 2026 article; repo says 'sourced primarily from Wikidata, supplemented by government sources and community contributions'); PoliLoom LLM extraction from Wikipedia with side-by-side human accept/reject before submission (24 Mar 2026 article); original scrapers on GitHub (mySociety post)",
+     "outputs: bulk via OpenSanctions, free API keys for journalists and public-interest users, commercial licensing, PoliLoom, GitHub; original countries.json and archive dataset of 92,315 entities (40,053 targets)",
+     "identifiers_exposed: evpo-5cf6d53c-962d-453c-833e-bcaad613c34c on Q170581; Q208879 example on the archive dataset page",
+     "openness_code: opensanctions/everypolitician.org under MIT; 261 countries and territories in the repo README; everypolitician-data page shows no licence in the fetched content",
+     "openness_data_license: CC BY-NC 4.0 on home and about pages and on the archive dataset page",
+     "funding_or_business_model: commercial screening and due-diligence via OpenSanctions (about); mySociety's reasons (an election 'roughly once a week', scraper upkeep, 'five years of significant investment')",
+     "status_as_of_retrieval: on hold since 26 June 2019 (mySociety post; everypolitician-data README notice); relaunch article 18 Feb 2026; PoliLoom article 24 Mar 2026"
+    ],
+    "refuted": [],
+    "unverifiable": [
+     "self_description / primary_sources_used attributed to the about page: 'built by volunteers worldwide', 'automated crawlers of official government sources' and 'Wikidata QIDs for entities (about page)' — two fetches of everypolitician.org/about did not surface these statements; the crawler and Wikidata-first claims are supported by the 18 Feb 2026 article and the GitHub README instead, and QIDs are evidenced only via OpenSanctions entity pages. Re-cite to those sources or drop the about-page attribution.",
+     "Original data licence and Popolo identifier schemes (docs.everypolitician.org did not resolve for the entry; not re-tested here)",
+     "Current methodology page (header link exists; the entry reports 404)",
+     "Funding basis of the original mySociety project"
+    ]
+   },
+   {
+    "name": "Transparency International (asset and interest declaration work)",
+    "confirmed": [
+     "organisation: Transparency International e.V., international secretariat in Berlin, chapters in more than 100 countries (the-organisation page)",
+     "self_description: mission 'to stop corruption and promote transparency, accountability and integrity at all levels and across all sectors'; vision of government, politics, business, civil society and daily lives 'free of corruption'; 2013 balance-sheet framing; 2020 PDF: 'an incubator and implementation mechanism for a future open data standard for asset declarations'",
+     "subject_scope: 2013 article on Georgia and Russia chapter monitoring; 2020 PDF: 'approximately one million civil servants and their family members' in Ukraine",
+     "primary_sources_used: BIRN in Albania cited in the 2020 PDF; Georgia cross-referencing against 'the public registry of companies' (2013 article)",
+     "outputs: 2020 paper dated 5 November 2020, 11 pages, authors Lucas Amin and José María Marín (PDF); Knowledge Hub items dated 04/06/2024, 12/06/2015 (two guides), 20/03/2014, 28/06/2011; 2013 news piece dated 17 January 2013",
+     "signal_precedents: 2013 principles (three branches, filing before/during/after office, exact values or ranges, monitoring agency); 2020 PDF 'opportunities for algorithmic verification and risk-assessment tools'",
+     "funding_or_business_model: 'accept funding – whether monetary or in kind – from any donor, provided that does not impair our independence...'; annual reports, audited statements, IATI",
+     "disclaimer_or_frame: 'help to ensure officials remain honest, and that they are seen to remain honest' (publication page); 'live beyond their means' (2013 article); PDF accuracy note ('Every effort has been made to verify the accuracy... believed to be correct as of May 2020')",
+     "status_as_of_retrieval: news items dated 15 September 2026 and 14 September 2026",
+     "openness_data_license addendum: the 2020 PDF states it is licensed CC BY-ND 4.0 except where otherwise noted — a publication licence the entry could record even though no data licence applies"
+    ],
+    "refuted": [],
+    "unverifiable": [
+     "subject_scope: 'Georgia's electronic monitoring system' as an example in the 2020 paper — the PDF text search found Georgia only in the OGP member list; the passage may exist but was not located",
+     "Whether TI or any chapter currently operates a public dataset of officeholder declarations on transparency.org (none found; but see Declarator.org under missing_in_cluster, which is operated by TI's Russia chapter)",
+     "Content of the 4 June 2024 Knowledge Hub item beyond title and date",
+     "Current status of the Georgia and Russia chapter monitoring described in 2013"
+    ]
+   },
+   {
+    "name": "Integrity Watch EU",
+    "confirmed": [
+     "organisation: Transparency International EU; EU Transparency Register 501222919-71 (transparency.eu pages)",
+     "self_description: 'a hub that allows everyone to monitor the integrity of the EU's decision makers'; launched October 2014; nearly 13,000 lobby organisations in Brussels (about.php); TI EU description as 'a central hub for online tools that allow citizens, journalists, and civil society to monitor the integrity of decisions made by politicians in the European Union'",
+     "primary_sources_used: EU Transparency Register, EU Open Data Portal, individual MEP pages (about.php); 'Source: Latest declaration' with per-MEP date field and 'Source: European Parliament' on meetings page; 'This data is entirely self-reported'",
+     "outputs: columns Nr, Name, Country, Group, Activities, Estimated annual income, DPI updates; sections A-E as listed; Commission meetings, lobbyists and MEP meetings daily, MEP incomes monthly; 2024 article counts 52,206 / 64,151 / 12,771 / 1,822; Data Hub with 24 platforms",
+     "signal_precedents: 'a number of declarations are currently missing from the European Parliament website' (mepincomes modal); third-country meetings rule on mepmeetings.php",
+     "openness_data_license: ODbL v1.0 (about.php); 'This work is licensed under a CCC BY-NC-ND 3.0 License' on transparency.eu/integritywatch",
+     "funding_or_business_model: KR Foundation, Adessium, Waverly Street current; European Commission and Open Society Initiative for Europe earlier (about.php also lists King Baudouin Foundation, omitted by the entry); Data Hub funded by the EU Internal Security Fund – Police; TI EU 2026 budget about EUR 1 million with the named funders",
+     "disclaimer_or_frame: 'TI EU & Integrity Watch EU bears no responsibility for the accuracy of the original data'; EU disclaimer on the Data Hub ('Neither the European Union institutions and bodies nor any person acting on their behalf may be held responsible...')",
+     "status_as_of_retrieval: 'Last updated on: {{ dataUpdateDateString }}' placeholder unrendered on mepmeetings.php; decade article dated 24 October 2024 with '19 versions, covering 17 countries' and six Balkan platforms planned",
+     "identifiers_exposed: no identifier scheme observed (names, country, group only)"
+    ],
+    "refuted": [
+     {
+      "field": "derived_scoring_or_ranking",
+      "claim": "Estimated annual income per MEP is a computed field, derived from the periodicity (hourly, monthly, annual) given in the original declarations (cited to mepincomes.php).",
+      "correction": "Neither the raw HTML nor the browser-rendered mepincomes.php contains any methodology text; the words hourly, periodicity, estimate and calculated do not appear. The page exposes only the column label 'Estimated annual income' and template fields income_amt_total_eur_manual and income_amt_total_eur_auto. The derivation method should be marked not verified or re-sourced.",
+      "citation_url": "https://www.integritywatch.eu/mepincomes.php"
+     }
+    ],
+    "unverifiable": [
+     "signal_precedents: 'the section still shows 2019-2024 declarations while 2024 ones are processed' — the rendered modal says the tool is being updated 'with the declarations of financial interests of the 9th legislature' (the 9th legislature is 2019-2024), so the note may predate the 2024 election; which legislature is currently displayed could not be determined",
+     "subject_scope: Data Hub coverage of 'the Balkans, the UK and Türkiye' — the hub page as fetched describes EU member states, candidate countries and regional neighbours without naming Türkiye",
+     "openness_code / openness_api: no repository or API found on pages fetched (consistent with entry; absence not proven)",
+     "Per-row links to declaration PDFs on the European Parliament site; last-update date of the platform"
+    ]
+   }
+  ],
+  "missing_in_cluster": [
+   {
+    "name": "Declarator.org (Transparency International – Russia)",
+    "url": "https://declarator.org/en/about/",
+    "why": "A database of income and asset declarations of Russian public servants (parliament, government, judges, regional and municipal officials, state enterprises) aggregated from official agency websites, with the original declaration files kept under a Files tab and an open-source parser on GitHub; copyright line 2011–2026. It is the closest structural analogue in this cluster to Oath's declaration-ingestion shape, and it answers the TI entry's open question about whether any chapter operates a declarations dataset."
+   },
+   {
+    "name": "Wikidata WikiProject every politician",
+    "url": "https://www.wikidata.org/wiki/Wikidata:WikiProject_every_politician",
+    "why": "The upstream that both the EveryPolitician and OpenSanctions entries cite as their people source; the cluster discusses QIDs as identifiers without an entry for the project that maintains them."
+   },
+   {
+    "name": "Parltrack",
+    "url": "https://parltrack.org/about",
+    "why": "EU legislative and MEP tracking scraped from europarl.europa.eu with ODbL v1.0 bulk dumps and AGPLv3+ code, hosted by AS250.net Foundation; copyright line 2011-2024. A second EU-level analogue beside Integrity Watch EU with a different openness posture (dumps, no API key)."
+   },
+   {
+    "name": "OpenAustralia Foundation: OpenAustralia.org and They Vote For You",
+    "url": "https://www.openaustralia.org.au/",
+    "why": "A fork of TheyWorkForYou and ParlParse applied to the Australian parliament, with They Vote For You (theyvoteforyou.org.au, code at github.com/openaustralia/theyvoteforyou) producing per-politician voting summaries; the same derived-score pattern the TWFY entry flags, in a second jurisdiction. theyvoteforyou.org.au/about returned HTTP 403 to WebFetch."
+   },
+   {
+    "name": "openparliament.ca",
+    "url": "https://openparliament.ca/about/",
+    "why": "Volunteer-run Canadian parliamentary monitoring site (launched 2010) with an API and bulk data and code on GitHub; a solo-operator precedent that speaks directly to Oath's solo-operator test."
+   }
+  ]
+ }
+}
