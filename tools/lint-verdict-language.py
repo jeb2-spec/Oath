@@ -123,8 +123,8 @@ def lint(root: Path) -> tuple[list[str], int, int]:
         rel = path.relative_to(root).as_posix()
         try:
             text = path.read_text(encoding="utf-8")
-        except UnicodeDecodeError:
-            continue
+        except (FileNotFoundError, UnicodeDecodeError):
+            continue  # binary, or tracked but not on disk mid-rename
         for lineno, line in enumerate(text.splitlines(), 1):
             for match in PATTERN.finditer(line):
                 word = match.group(0)
