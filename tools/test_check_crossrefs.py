@@ -16,9 +16,7 @@ FIXTURES = ROOT / "fixtures" / "tools" / "check-crossrefs"
 
 
 def _load():
-    spec = importlib.util.spec_from_file_location(
-        "check_crossrefs", HERE / "check-crossrefs.py"
-    )
+    spec = importlib.util.spec_from_file_location("check_crossrefs", HERE / "check-crossrefs.py")
     module = importlib.util.module_from_spec(spec)
     assert spec.loader is not None
     spec.loader.exec_module(module)
