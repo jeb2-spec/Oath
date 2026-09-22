@@ -17,7 +17,7 @@ A simple, static, symbolic surface at `oath.<domain>` (domain choice deferred). 
 - **Static, prerendered, edge-cached.** No user accounts, no comment forms, no interactive analytics beyond a privacy-respecting counter, no client-side JavaScript that changes what the page says.
 - **The frame appears on every officeholder page.** Presence in the register is not evidence of wrongdoing. Enforced by INVARIANTS.md §7.
 - **The cite-the-build line appears on every page.** Every page prints the digest of the build it was generated from, and a `verify this` link.
-- **No cross-officeholder ranking.** Enforced by INVARIANTS.md §14. The index sorts by office and jurisdiction, or alphabetically, never by signal count.
+- **No cross-officeholder ranking.** Enforced by INVARIANTS.md §13. The index sorts by office and jurisdiction, or alphabetically, never by signal count.
 - **Renders in light and dark themes.** No brand-loud color. The document typography from the errata project (rule-weight hierarchy, hung mono indices, small-caps section labels) carries here.
 - **Works with JavaScript disabled.** JavaScript enhances; the page reads without it.
 

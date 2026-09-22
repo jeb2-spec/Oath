@@ -78,7 +78,7 @@ Errata measures its own errors and publishes them. Oath does the same, one step 
 
 These are not scores of the Officeholders. They are scores of the Signals, published so the reader can see whether the register is calibrated honestly.
 
-The methodology is in [METHODOLOGY.md §8](METHODOLOGY.md). The values will appear in `MEASUREMENT.md` once the first Signal has fired against real data.
+The method will be set down in METHODOLOGY.md, in its own section, and the values in `MEASUREMENT.md`, once the first Signal has fired against real data.
 
 ## The simplest version, if the rest is lost
 

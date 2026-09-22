@@ -39,6 +39,6 @@ Verdict language that made it past the lint. A Signal that fires against structu
 
 ## The reader's independent verification
 
-The register's design assumes that the reader may not trust us. Every published Finding can be verified independently through the paths in [PIPELINE.md §7](PIPELINE.md) and [EVIDENCE.md §5](EVIDENCE.md): the sealed record, the OpenTimestamps anchor against Bitcoin, the Wayback capture, and the IPFS pin. If any of those paths returns a different answer than the register's own, that is itself a security report of the most valuable kind.
+The register's design assumes that the reader may not trust us. Every published Finding can be verified independently through the paths in [PIPELINE.md Stage 7](PIPELINE.md) and [EVIDENCE.md §5](EVIDENCE.md): the sealed record, the OpenTimestamps anchor against Bitcoin, the Wayback capture, and the IPFS pin. If any of those paths returns a different answer than the register's own, that is itself a security report of the most valuable kind.
 
 Report what you find. The register is stronger for it.

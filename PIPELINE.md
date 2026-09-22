@@ -88,7 +88,7 @@ The typed rows and the produced Findings become a written record a reader can re
 - **The build's Oath mark**, struck as guilloche from the build's SHA-256 digest per [ECOSYSTEM.md §2](ECOSYSTEM.md).
 - **Per-officeholder seals**, each parameterised by the officeholder's identifier and the build digest. Change the officeholder's record, the seal changes.
 
-**What must be true.** Every rendered sentence about an officeholder passes the verdict-language lint (Invariant §1). No cross-officeholder ranking appears on any surface (Invariant §14). Every user-facing page carries the frame (Invariant §7). Every rendered Finding descends from a Finding row (no free-standing prose about a person that isn't a rendered row).
+**What must be true.** Every rendered sentence about an officeholder passes the verdict-language lint (Invariant §1). No cross-officeholder ranking appears on any surface (Invariant §13). Every user-facing page carries the frame (Invariant §7). Every rendered Finding descends from a Finding row (no free-standing prose about a person that isn't a rendered row).
 
 **Where it lands.** The static site, deployable to a static host, buildable offline.
 
