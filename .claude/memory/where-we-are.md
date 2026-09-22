@@ -44,6 +44,8 @@ What `main` holds, by the pull request that brought it:
 
 **The adapter is Python, not TypeScript as `src/README.md` said.** The canonical NDJSON is sealed and the sealer is standard-library Python; two languages serialising JSON is two chances to disagree about key order or escaping and move the digest for no visible reason. One writer, one sealer, one language. Signals stay TypeScript. Recorded in `src/README.md`.
 
+**The register has a face. 2026-09-22, same session.** `src/surfaces/render.py` writes `docs/build/` (gitignored, regenerated in CI): an index of all 439 officeholders in seat order and one page each, shaped by ECOSYSTEM.md §1.3, with the frame first, filings linked to the Clerk's documents, the two Signal sections stating that no Signal is defined, and the build digest at the foot. 46 quiet pages say so and link the Clerk's search. Party is in the row and not on the page, per the anatomy and CLAUDE.md. The two rendering gates landed with it and the doctor is down to ten warnings: `lint-frame-presence.py` (INVARIANTS.md §7, frame inside the first header, no shared code with the renderer) and `lint-no-ranking.py` (INVARIANTS.md §13, the index declares a permitted order its rows follow and carries no bare number beside anyone). Movement one's ship gate is met except for the mark (I.5) and anchoring.
+
 **The next session's first move** is [NEXT.md](../../NEXT.md) Phase 2 D.1 (schema examples and the walkthrough for a contributor arriving cold), then D.2 and D.3, on the way to the first Signal. Branch from `main`; every gate is there.
 
 ## What this session decided or learned
