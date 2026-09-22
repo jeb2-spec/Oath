@@ -1,0 +1,31 @@
+# verdict-lint.allowlist. Read by tools/lint-verdict-language.py (INVARIANTS.md §1).
+#
+# One entry per line: path | context | reason. The entry allows blacklisted words
+# on lines of that file that contain the context. The reason says why the word is
+# not a verdict there. An entry that no longer matches any line fails the lint as
+# stale, so this file cannot drift. The frame sentence "not evidence of wrongdoing"
+# needs no entry; it is allowed by the lint itself as Vow II in its own words.
+#
+# The doctrine quotes the blacklist in order to forbid it.
+CHARTER.md | The words we do not use | the Charter defines the blacklist
+INVARIANTS.md | Blacklist (v0) | the Invariant defines the blacklist
+METHODOLOGY.md | It never says | quotes the list to forbid it
+PIPELINE.md | It does not use | quotes the list to forbid it
+README.md | It does not say | quotes the list to forbid it
+CLAUDE.md | it does not use the words | the working stance quotes the list to forbid it
+#
+# The law's own categories, describing statutes and not persons.
+README.md | Criminal statutes bearing on | a category of statute (18 U.S.C. Ch. 11), not a person
+STANDARDS.md | may constitute a criminal violation | the statute's own penalty category
+STANDARDS.md | conflict-of-interest criminal statute | the statute's own category
+#
+# Other senses, and rules about contributors rather than officeholders.
+ECOSYSTEM.md | A republisher who prints | an example of the misuse the consumer contract forbids
+EVIDENCE.md | Our organisation compromised | the data-integrity sense of the word, about our own capture
+CODE_OF_CONDUCT.md | Political disagreement is not misconduct | community conduct of contributors, not an officeholder
+CODE_OF_CONDUCT.md | Personal attack is misconduct | community conduct of contributors, not an officeholder
+#
+# Neighbours' own names, quoted in the related-work section.
+RELATED.md | GovTrack names its | a neighbour's own name for its database, quoted
+RELATED.md | Federal Contractor Misconduct Database | a neighbour's own database name
+RELATED.md | Organized Crime and Corruption Reporting Project | a neighbour's own name
