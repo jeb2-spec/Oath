@@ -1,0 +1,34 @@
+# Oath. Python tooling and verifier.
+#
+# The verifier and the CLI tools are standard library only at runtime, so the
+# project declares no runtime dependencies. Ruff and Pytest are the development
+# toolchain. The reference runtime is Python 3.11 (see where-we-are.md standing
+# decisions); requires-python is a floor, not a match to the local machine.
+
+[project]
+name = "oath-tools"
+version = "0.0.0"
+description = "Python tooling and verifier for the Oath register. Standard library only at runtime."
+requires-python = ">=3.11"
+dependencies = []
+
+# PEP 735 development dependency group. Install with a recent pip
+# (pip install --group dev) or uv, or plainly: pip install ruff pytest.
+[dependency-groups]
+dev = [
+  "ruff>=0.16,<0.17",
+  "pytest>=8",
+]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+src = ["tools", "src"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tools"]
+python_files = ["test_*.py", "*_test.py"]

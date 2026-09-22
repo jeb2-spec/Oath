@@ -8,13 +8,15 @@ metadata:
 
 # Where we are
 
-*Last updated: 2026-09-21, after PR #1 merged and the founding landed on `main`.*
+*Last updated: 2026-09-21, after Phase 1 T.1 (runtimes) was laid down. The founding is on `main` (PR #1). T.1 sits in an open PR on branch `claude/phase-1-runtimes`, not yet merged; Jared reviews.*
 
 ## The state
 
 **Day zero of the register, day one of the discipline.** The foundation is on `main`: fourteen doctrine and reference documents, seven JSON Schemas, three placeholder READMEs for future work, and a working PR template. Every gate the Invariants name is *(planned)*; none is wired yet. No adapter exists. No Signal is defined. No Finding has been published. The verifier does not yet run. The register itself is empty.
 
-The next session's first move is [NEXT.md](../../NEXT.md) Phase 1 T.1.
+The Node and Python runtimes are now laid down on the `claude/phase-1-runtimes` branch (Phase 1 T.1): `package.json` (TypeScript 5, Vitest, Biome), `pyproject.toml` (Python 3.11, Ruff, Pytest), and `biome.json`. On this machine the toolchain resolved to TypeScript 5.9.3, Vitest 5.0.1, Biome 2.5.14, Ruff 0.16.8, Pytest 9.1.1; `npm run lint`, `npm test`, and `ruff check` all pass on the empty tree. The gates those toolchains will run are still *(planned)*.
+
+The next session's first move is [NEXT.md](../../NEXT.md) Phase 1 T.2 (verifier and tamper-test).
 
 ## What is on `main`
 
@@ -48,7 +50,7 @@ The next session's first move is [NEXT.md](../../NEXT.md) Phase 1 T.1.
 - No adapter is implemented. No source has been read.
 - No Signal is defined.
 - No verifier (`tools/verify.py`), no tamper-test, no schema validator, no verdict-language lint, no frame-presence lint, no ranking lint, no aggregator-sole check, no supersession check, no removal check, no evidence-bundle check, no COI check, no subject-scope check, no charter-change highlight. Twelve gates planned.
-- No `package.json`, no `pyproject.toml`, no runtime dependency pinning.
+- No `tsconfig.json` and no TypeScript source yet. Both land with the first Signal in Phase 2 S.2, which is when `tsc --noEmit` has inputs to check. The `typecheck` script arrives with them.
 - No fixtures.
 - No mark generator. No struck seals.
 - No `.claude/prompts/council.md`. It lands with the first Council session in Phase 2 S.3.
@@ -60,7 +62,7 @@ The next session's first move is [NEXT.md](../../NEXT.md) Phase 1 T.1.
 
 Per [NEXT.md](../../NEXT.md):
 
-- **Phase 1. Plumbing green.** package.json + pyproject.toml, then verifier + tamper-test, then schema validator, then verdict-language lint, then CI workflow, then session-start doctor. Six steps, one session each.
+- **Phase 1. Plumbing green.** package.json + pyproject.toml (T.1, done on branch), then verifier + tamper-test (T.2, next), then schema validator, then verdict-language lint, then CI workflow, then session-start doctor. Six steps, one session each.
 - **Phase 2. First Signal against fixture.** `stock-act-late-ptr`, definition + reference impl + tests against fictional fixtures + first Council session.
 - **Phase 3. First real officeholder.** House FD adapter + one Representative + first live Findings + per-officeholder page + mark generator.
 - **Phase 4. Coverage extend and second Signal.**
@@ -75,7 +77,7 @@ The maintainer arriving fresh at the repository has these first moves:
 2. Confirm environment: Node 20+ and Python 3.11+ available.
 3. Read this file. Then read [CHARTER.md](../../CHARTER.md). Five vows.
 4. Open a fresh Claude session at the repository root. The session's `CLAUDE.md` will point it at this file and the Charter.
-5. Direct the session at `NEXT.md` Phase 1 T.1 (`package.json` and `pyproject.toml`). One small commit; one small win.
+5. Direct the session at `NEXT.md` Phase 1 T.2 (the verifier and tamper-test). T.1 (the runtimes) is done: the clone lives at `C:\Users\jared\Apps\Oath`, `npm install` and `pip install ruff pytest` (or `pip install --group dev`) bring the toolchain up.
 
 ## Standing decisions
 
