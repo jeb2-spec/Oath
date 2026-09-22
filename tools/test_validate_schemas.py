@@ -203,9 +203,11 @@ def test_unregistered_data_file_is_reported(register: Path):
 
 
 def test_main_on_the_repository_is_green(capsys):
+    """Green on the real register. It stopped being empty when the House index landed."""
     assert vs.main([str(ROOT)]) == 0
     out = capsys.readouterr().out
-    assert "OK    7 schemas valid" in out and "empty by design" in out
+    assert "OK    7 schemas valid" in out
+    assert "rows across" in out and "NDJSON files validated" in out
 
 
 def test_main_reports_failures_and_exits_nonzero(register: Path, capsys):
