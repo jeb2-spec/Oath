@@ -30,9 +30,7 @@ import sys
 from pathlib import Path
 
 HEADING = re.compile(r"^#{1,6}\s+(.*?)\s*#*\s*$")
-BOLD_NUMBERED = re.compile(
-    r"^\*\*(\d+(?:\.\d+)+)\b"
-)  # **5.2** and **5.2 Title.** alike
+BOLD_NUMBERED = re.compile(r"^\*\*(\d+(?:\.\d+)+)\b")  # **5.2** and **5.2 Title.** alike
 KEY = re.compile(
     r"^(?:§\s*)?(Stage\s+\d+|[A-Z]{1,2}\.?\d+(?:\.\d+)*|\d+(?:\.\d+)*|[IVX]+)\.?(?=\s|$)"
 )
@@ -43,9 +41,7 @@ INVARIANT_BEFORE = re.compile(r"\bInvariants?\s*$")
 LEGAL_BEFORE = re.compile(
     r"(U\.S\.C\.|C\.F\.R\.|CFR|Art\.\s+[IVX]+|Pub\.\s*L\.|Ch\.)\s*(app\.\s*\d+\s*)?$"
 )
-STAGE_REF = re.compile(
-    r"\b(?P<file>[A-Z][A-Z_-]{2,})(?:\.md)?\s+Stage\s+(?P<key>\d+)\b"
-)
+STAGE_REF = re.compile(r"\b(?P<file>[A-Z][A-Z_-]{2,})(?:\.md)?\s+Stage\s+(?P<key>\d+)\b")
 VOW_REF = re.compile(r"\bVow\s+(?P<key>[IVX]+)\b")
 GATE_REF = re.compile(r"\bRubric gate\s+(?P<key>\d)\b")
 LINK = re.compile(r"\]\((?P<target>[^)\s]+)\)")
@@ -109,15 +105,11 @@ def check(root: Path) -> tuple[list[str], int]:
     """Return (failures, references_checked)."""
     files = tracked_markdown(root)
     by_name = {p.name.upper(): p for p in files if p.parent == root}
-    defined = {
-        p: sections(p.read_text(encoding="utf-8", errors="replace")) for p in files
-    }
+    defined = {p: sections(p.read_text(encoding="utf-8", errors="replace")) for p in files}
     failures: list[str] = []
     checked = 0
 
-    def resolve(
-        where: Path, lineno: int, target: Path | None, key: str, shown: str
-    ) -> None:
+    def resolve(where: Path, lineno: int, target: Path | None, key: str, shown: str) -> None:
         nonlocal checked
         checked += 1
         if target is None or target not in defined:
@@ -127,7 +119,8 @@ def check(root: Path) -> tuple[list[str], int]:
             return
         if key not in defined[target][0]:
             failures.append(
-                f"{where.relative_to(root)}:{lineno}: {shown} does not resolve ({target.name} has no section {key})"
+                f"{where.relative_to(root)}:{lineno}: {shown} does not resolve "
+                f"({target.name} has no section {key})"
             )
 
     for path in files:
@@ -152,11 +145,7 @@ def check(root: Path) -> tuple[list[str], int]:
                     target = by_name[fb.group("file") + ".MD"]
                     last_file = target
                     resolve(path, lineno, target, key, f"{fb.group('file')}.md §{key}")
-                elif (
-                    last_file is not None
-                    and key.isdigit()
-                    and not LEGAL_BEFORE.search(prefix)
-                ):
+                elif last_file is not None and key.isdigit() and not LEGAL_BEFORE.search(prefix):
                     resolve(
                         path,
                         lineno,
@@ -176,13 +165,9 @@ def check(root: Path) -> tuple[list[str], int]:
                         m.group(0),
                     )
             for m in VOW_REF.finditer(line):
-                resolve(
-                    path, lineno, by_name.get("CHARTER.MD"), m.group("key"), m.group(0)
-                )
+                resolve(path, lineno, by_name.get("CHARTER.MD"), m.group("key"), m.group(0))
             for m in GATE_REF.finditer(line):
-                resolve(
-                    path, lineno, by_name.get("RUBRIC.MD"), m.group("key"), m.group(0)
-                )
+                resolve(path, lineno, by_name.get("RUBRIC.MD"), m.group("key"), m.group(0))
             for m in LINK.finditer(line):
                 target = m.group("target")
                 if target.startswith(("http://", "https://", "mailto:")):
@@ -194,12 +179,14 @@ def check(root: Path) -> tuple[list[str], int]:
                 checked += 1
                 if file_part and dest not in defined:
                     failures.append(
-                        f"{path.relative_to(root)}:{lineno}: link to {file_part} names a file that is not tracked"
+                        f"{path.relative_to(root)}:{lineno}: link to {file_part} "
+                        "names a file that is not tracked"
                     )
                     continue
                 if anchor and anchor not in defined[dest][1]:
                     failures.append(
-                        f"{path.relative_to(root)}:{lineno}: anchor #{anchor} has no heading in {dest.name}"
+                        f"{path.relative_to(root)}:{lineno}: anchor #{anchor} "
+                        f"has no heading in {dest.name}"
                     )
     return failures, checked
 
@@ -217,14 +204,10 @@ def main(argv: list[str] | None = None) -> int:
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    parser.add_argument(
-        "root", nargs="?", default=".", help="repository root (default: .)"
-    )
+    parser.add_argument("root", nargs="?", default=".", help="repository root (default: .)")
     args = parser.parse_args(argv)
     if hasattr(sys.stdout, "reconfigure"):
-        sys.stdout.reconfigure(
-            encoding="utf-8"
-        )  # the section sign survives a Windows console
+        sys.stdout.reconfigure(encoding="utf-8")  # the section sign survives a Windows console
     root = Path(args.root).resolve()
     failures, checked = check(root)
     for f in failures:
@@ -233,7 +216,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"\n{len(failures)} of {checked} cross-references do not resolve.")
         return 1
     print(
-        f"OK    {checked} cross-references resolve across {len(tracked_markdown(root))} Markdown files."
+        f"OK    {checked} cross-references resolve "
+        f"across {len(tracked_markdown(root))} Markdown files."
     )
     return 0
 
