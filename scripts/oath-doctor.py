@@ -182,6 +182,7 @@ def check_branch(root: Path, rep: Report, fetch: bool) -> None:
     if branch is None:
         rep.bad("not a git repository, or git is not available")
         return
+    branch = branch or "a detached HEAD"  # CI checks out the commit, not the branch
     if fetch and git(root, "fetch", "origin", "--quiet") is None:
         rep.warning("could not fetch origin; comparing against the last known origin/main")
     counts = git(root, "rev-list", "--left-right", "--count", "origin/main...HEAD")
