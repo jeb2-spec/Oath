@@ -2,14 +2,20 @@
 
 The verification tooling that turns the invariants in [INVARIANTS.md](../INVARIANTS.md) from agreed rules into mechanical gates.
 
-At the founding, this directory is empty except for this README. Each tool below lands in [NEXT.md](../NEXT.md) Phase 1.
+At the founding, this directory was empty except for this README. Each planned tool below lands in [NEXT.md](../NEXT.md) Phase 1.
+
+## Landed tools
+
+| Tool | Rule | Job |
+| --- | --- | --- |
+| `verify.py` | §9; RUBRIC gate 4 | Recompute the register's seal and compare it to `data/meta.json`. The seal is one SHA-256 over a sorted manifest of every `data/**/*.ndjson`, the eleven doctrine documents, and `data/meta.json` without its digest as canonical JSON; the rule is written at the top of the file so a stranger can rebuild it with `sha256sum` and `sort`. Prints OK or FAIL and *Integrity is not accuracy* on every run; `--manifest` prints the manifest. 151 lines. |
+| `seal.py` | §9 | The build's last step: writes the build id, the build time it is given (never the clock), the row counts, and the digest into `data/meta.json`. Two runs from the same inputs produce the same bytes. Any change to a sealed file, doctrine included, needs a re-seal in the same commit; the digest change is the loudness the meta-invariant wants. |
+| `tamper-test.py` | §9; RUBRIC gate 4 | Proves the verifier is not decorative: alters one character of a disclosure in a throwaway copy and requires FAIL; runs on the real tree and requires OK; recomputes the digest with code that imports nothing from the verifier and requires equality. |
 
 ## Planned tools
 
 | Tool | Invariant | Job |
 | --- | --- | --- |
-| `verify.py` | §9 | Recompute the register's digest, print OK or FAIL, print *Integrity is not accuracy* every run. Standard-library Python 3.11. |
-| `tamper-test.py` | §9 | Prove the verifier rejects a changed record. Prove it accepts the shipped file. Recompute the digest from the plain-text dump using a parser that shares no code with the builder. |
 | `validate-schemas.py` | §2 §3 §4 §6 | Walk `schemas/` and validate every row of the canonical NDJSON against its schema. Fail on any invalid row. |
 | `lint-verdict-language.py` | §1 | Scan Signal definitions, rendered Findings, templates, and every user-facing Markdown file for the blacklist. Ships with an `.allowlist` for cases the blacklist matches but the context clears. |
 | `lint-frame-presence.py` | §7 | Read every rendered officeholder-facing page and require the presence-is-not-proof frame verbatim in the header region. |
@@ -36,4 +42,4 @@ Both land in Phase 3 with the first per-officeholder page.
 - TypeScript/JS tools are Node 20+ with the smallest useful footprint.
 - Every tool exits non-zero on failure and prints a human-readable diagnosis.
 - Every tool has a `--help` that names its invariant, the specific failure it catches, and one example of a failing input.
-- Every tool has a corresponding fixture test under `fixtures/tools/<tool>/`.
+- Every tool has a corresponding fixture test under `fixtures/tools/<tool>/`, or builds its fixture in a temporary directory inside its `test_*.py` when the fixture is a whole register.
