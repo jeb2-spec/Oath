@@ -20,15 +20,19 @@ The data model of Oath. Every row that enters the register is validated against 
 - **Enums.** Use enums for form types, jurisdictions, and party identifiers. The enum values are the source-side spellings, not project synonyms.
 - **IDs.** Every entity carries an `id` in the schema-defined format. IDs are stable across builds; a change of ID is a break and produces a supersession row.
 
-## Identifier scheme (proposed, v0)
+## Identifier scheme (decided 2026-09-22, NEXT.md D.3)
 
-- **Officeholder.** `oh:<country>:<office-slug>:<person-slug>`. e.g. `oh:us:senate-nc-jr:tillis-thom`.
-- **Office.** `of:<country>:<office-slug>:<term-year>`. e.g. `of:us:house-nc-01:2025`.
-- **Filing.** `fl:<source>:<form>:<source-id>`. e.g. `fl:house:PTR:12345`.
+- **Officeholder.** `oh:<country>:<chamber>:<stable-person-key>`. e.g. `oh:us:house:a000055`.
+- **Office.** `of:<country>:<seat-slug>:<term-year>`. e.g. `of:us:house-al04:2025`.
+- **Filing.** `fl:<source>:<source-form-code>:<source-id>`. e.g. `fl:house-clerk:P:20032062`.
 - **Signal.** `sg:<slug>:v<n>`. e.g. `sg:stock-act-late-ptr:v1`.
-- **Finding.** `fn:<signal-id>:<officeholder-id>:<yyyy-mm-dd>`. e.g. `fn:sg:stock-act-late-ptr:v1:oh:us:senate-nc-jr:tillis-thom:2026-09-21`.
+- **Finding.** `fn:<signal-id>:<officeholder-id>:<yyyy-mm-dd>`.
 
-These are proposed at the founding. They will change once real data lands and the trade-offs become concrete. Change is recorded in `docs/architecture.md`.
+**The person key never carries the office.** The founding draft put the district in the officeholder identifier. Real data killed it inside an hour: two sitting members hold each other's former districts across the Clerk's own two files, and a district-bearing identifier would have made each of them two different people, or forced a supersession for an event that changed nothing about who they are. The key is the Biographical Directory identifier, lowercased, which is the identifier the field already agrees on and which the Clerk publishes for every member.
+
+**The seat does carry the office**, because an Office *is* a seat and a term. A member who changes district gets a second office row and keeps one officeholder identifier, which is the correct shape.
+
+The founding examples here named a sitting Senator and a real district. They are replaced with rows the register actually holds.
 
 ## How to add or change a schema
 
