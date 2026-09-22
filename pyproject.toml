@@ -30,5 +30,5 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 
 [tool.pytest.ini_options]
 minversion = "8.0"
-testpaths = ["tools"]
+testpaths = ["tools", "src"]
 python_files = ["test_*.py", "*_test.py"]

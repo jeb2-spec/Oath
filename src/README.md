@@ -1,8 +1,12 @@
 # src/
 
-Reference implementations. TypeScript for adapters and Signals; Python for the verifier and CLI tooling under `scripts/` and `tools/`.
+Reference implementations. Python for adapters, the verifier, and the CLI tooling under `scripts/` and `tools/`; TypeScript for Signals.
 
-At the founding, this directory is empty except for this README.
+The founding note here said TypeScript for adapters. That changed on 2026-09-22, when the first adapter was written, for one decisive reason: the canonical NDJSON is covered by the Seal, and the tool that computes the Seal is standard-library Python. Two languages serialising JSON is two chances to disagree about key order, Unicode escaping or number formatting, and a disagreement there moves the digest for no reason a reader can see. One writer and one sealer in one language removes the class of bug entirely.
+
+It is cheaper too. `zipfile`, `xml.etree`, `urllib`, `unicodedata` and `hashlib` are standard library, so ingest runs with no dependency install, which is the solo-operator test applied to the part that runs on a schedule.
+
+Signals stay TypeScript. They are pure functions over rows; they never write the sealed store.
 
 ## Layout (planned)
 
