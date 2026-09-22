@@ -47,11 +47,13 @@ GATE_REF = re.compile(r"\bRubric gate\s+(?P<key>\d)\b")
 LINK = re.compile(r"\]\((?P<target>[^)\s]+)\)")
 
 
-def tracked_markdown(root: Path) -> list[Path]:
+def tracked_markdown(root: Path, scan_only: bool = True) -> list[Path]:
     """Every tracked .md file under root, via git when available, else a walk.
 
     Files under `fixtures/` are inputs to tools, not documents, and are left out of a
-    repository scan; a fixture directory passed as the root is scanned in full.
+    repository scan; a fixture directory passed as the root is scanned in full. Pass
+    `scan_only=False` to get them back, which is how a link *to* a fixture document
+    resolves: the file exists and may be linked, it is simply never read for sections.
     """
     files: list[Path] = []
     try:
@@ -68,6 +70,8 @@ def tracked_markdown(root: Path) -> list[Path]:
         for dirpath, dirnames, filenames in os.walk(root):
             dirnames[:] = [d for d in dirnames if d not in {".git", "node_modules"}]
             files.extend(Path(dirpath) / f for f in filenames if f.endswith(".md"))
+    if not scan_only:
+        return sorted(files)
     return sorted(p for p in files if p.relative_to(root).parts[:1] != ("fixtures",))
 
 
@@ -104,6 +108,7 @@ def sections(text: str) -> tuple[set[str], set[str]]:
 def check(root: Path) -> tuple[list[str], int]:
     """Return (failures, references_checked)."""
     files = tracked_markdown(root)
+    linkable = set(tracked_markdown(root, scan_only=False))
     by_name = {p.name.upper(): p for p in files if p.parent == root}
     defined = {p: sections(p.read_text(encoding="utf-8", errors="replace")) for p in files}
     failures: list[str] = []
@@ -178,6 +183,8 @@ def check(root: Path) -> tuple[list[str], int]:
                     continue
                 checked += 1
                 if file_part and dest not in defined:
+                    if dest in linkable:
+                        continue  # tracked but never scanned, so its anchors are unknown
                     failures.append(
                         f"{path.relative_to(root)}:{lineno}: link to {file_part} "
                         "names a file that is not tracked"
