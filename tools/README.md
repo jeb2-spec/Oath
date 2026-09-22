@@ -36,6 +36,10 @@ At the founding, this directory was empty except for this README. Each planned t
 
 Both land in Phase 3 with the first per-officeholder page.
 
+## Continuous integration
+
+`.github/workflows/verify.yml` runs on every push and every pull request, on Python 3.11 and Node 20, the reference runtimes: Ruff (check and format), Pytest, `verify.py`, `tamper-test.py`, `validate-schemas.py`, `lint-verdict-language.py`, `check-crossrefs.py` once its pull request has merged, a parse of every generated JSON file, Biome, and Vitest. A gate that fails fails the build. A gate whose tool is not on the branch warns loudly rather than passing quietly. The seal was first computed on Windows; the Linux job recomputing the same digest is the cross-platform check that `.gitattributes` and LF-only writes are working.
+
 ## Convention
 
 - Python tools are standard-library only unless a specific tool documents a required dependency, and the requirement is minimal.
