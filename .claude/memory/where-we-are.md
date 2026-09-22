@@ -21,7 +21,9 @@ metadata:
 
 - **PR #7, `claude/phase-1-verifier`, stacked on #6.** Phase 1 T.2: `tools/verify.py` (151 lines, standard library), `tools/seal.py`, `tools/tamper-test.py`, eleven tests, and `data/meta.json`, the sealed record of build `0000-empty`. The seal covers every `data/**/*.ndjson`, the eleven doctrine documents, and meta's own disclosures; the manifest rule is written at the top of the verifier. The empty build verifies OK and the tamper-test passes its three checks. Rule that follows: any change to a sealed file, doctrine included, needs `python tools/seal.py --build <id> --built-at <time>` in the same commit, or the verifier fails loudly, which is the point. After #4 and #6 merge into `main`, one re-seal commit on `main` is due; either of us can make it. tools/README.md will conflict trivially with #5 (both add a Landed tools section); resolve by keeping both rows.
 
-**The next session's first move** is [NEXT.md](../../NEXT.md) Phase 1 T.3 (the schema validator), after Jared merges what he merges.
+- **PR #8, `claude/phase-1-schemas`, stacked on #7.** Phase 1 T.3: `tools/validate-schemas.py`, a standard-library validator for the subset of JSON Schema draft 2020-12 the seven schemas use (any keyword outside it fails loudly), which meta-checks the schemas, validates their examples, and validates every canonical NDJSON row with file, line, field path, and rule. Sixteen tests. A `date-time` must be UTC, per Invariant §4.
+
+**The next session's first move** is [NEXT.md](../../NEXT.md) Phase 1 T.4 (the verdict-language lint), after Jared merges what he merges.
 
 ## What this session decided or learned
 
