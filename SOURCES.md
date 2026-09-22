@@ -27,6 +27,8 @@ This file grows as coverage extends. At the founding, no adapter is implemented;
 - **Retention.** Six years post-filing.
 - **Terms.** Public documents; the interface asks users to agree to a use policy before searching. The policy, citing 5 U.S.C. app. § 105(c), forbids use for commercial purposes (news media excepted), for credit rating, and for solicitation. The adapter honours the policy, and the consumer contract in ECOSYSTEM.md §3 carries it downstream.
 - **Known gaps.** Absence of bulk download imposes a per-filing retrieval cost; adapter throttling must be conservative. The report-identifier scheme has not yet been observed, because the search sits behind the agreement gate; the first adapter session that passes it records the scheme before anything else.
+- **The roster.** <https://www.senate.gov/general/contact_information/senators_cfm.xml>, the Senate's own member list, verified reachable as XML on 2026-09-22. It is the identity source for the Senate the way the Clerk's `MemberData.xml` is for the House; its fields are recorded when the adapter is written.
+- **The human step.** The agreement gate and the captcha are not passed by software. A person accepts the agreement and exports the search; the adapter takes the export from there, and the run record names the person and the session. This is the register's first recorded human step in retrieval, and it is a Limit, not a workaround.
 - **Adapter status.** Planned.
 
 ### F.3. U.S. Office of Government Ethics. Executive Branch Form 278e
