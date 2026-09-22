@@ -15,6 +15,8 @@ At the founding, this directory was empty except for this README. Each planned t
 | `lint-verdict-language.py` | §1 | Scans every user-facing surface (root Markdown, `.github/`, `docs/`, `src/`, `fixtures/`, `templates/`, `data/*.ndjson`) for the blacklist in any inflection. The frame sentence is always allowed; every other hit needs an entry in `verdict-lint.allowlist` (`path | context | reason`), and a stale entry fails too. `.claude/` and `docs/related-work/` are not scanned, and the tool says why. |
 | `lint-frame-presence.py` | §7 | Reads every rendered officeholder page under `docs/build/officeholders/` and requires the frame sentence, case and punctuation folded, inside the page's first `<header>`. Shares no code with the renderer, so a renderer that drifts from the sentence is caught rather than followed. |
 | `lint-no-ranking.py` | §13 | Reads the rendered index and requires the officeholders table to declare a permitted order (`seat` or `name`) that its rows actually follow, and to carry no bare number beside any person. A count on an index is a score whether or not the table is sorted by it. |
+| `strike-mark.py` | ECOSYSTEM §2 | Strikes the wax-seal-in-guilloche mark from a seed and the build digest: the officeholder seal from an identifier, the build mark from the digest itself with the wordmark as geometry. Every curve is computed from bytes; same inputs, same bytes, on any machine. Every stroke is `currentColor`, so the page's own ink colours it in either theme. |
+| `check-mark.py` | ECOSYSTEM §2.4 | Strikes against 96 synthetic digests, the build mark, and every officeholder at the real digest, and requires each strike to parse, stay inside its canvas, keep the ring unclipped and the wax inside it, carry exactly the ticks and bars asked for, be byte-identical on a second strike, and stay under a size budget. |
 | `check-crossrefs.py` | COUNCIL.md §5 mode 7 | Resolve every section reference (`INVARIANTS.md §13`, `Invariant §7`, `Vow V`, `Rubric gate 4`, `PIPELINE.md Stage 7`), every in-file anchor, and every relative Markdown link in the tracked `.md` files to a heading or file that exists. Ignores legal citations and fenced code. Fixtures under `fixtures/tools/check-crossrefs/`; tests in `test_check_crossrefs.py`. Landed after the first Council session found eight references in the doctrine that had been wrong since the founding. It would have caught two of them (a dead anchor, a section that does not exist); the other six cited a section that exists but is the wrong one, which no structural check can see. That class stays a reading discipline until a citation convention makes it mechanical. |
 
 ## Planned tools
@@ -29,13 +31,6 @@ At the founding, this directory was empty except for this README. Each planned t
 | `check-coi-disclosure.py` | §15 | Require the `## Conflict of interest disclosure` heading in the PR body with a non-empty statement below it. |
 | `check-subject-scope.py` | SUBJECTS §4 | Fail if any officeholder row has no matching office, or if any office is in a category not in SUBJECTS.md §2. |
 | `highlight-charter-change.py` | §17 (meta) | Diff CHARTER, RUBRIC, INVARIANTS, BYLAWS, COUNCIL against `main`; emit a highlighted CI notice on any change; require the maintainer's explicit review comment. |
-
-## The strike-mark tool
-
-- `strike-mark.mjs` strikes the wax-seal-in-guilloche Oath mark from the build's digest and from per-officeholder identifiers, per [ECOSYSTEM.md §2](../ECOSYSTEM.md).
-- `check-mark.mjs` strikes the mark against a range of digests and confirms geometry stays legible.
-
-Both land in Phase 3 with the first per-officeholder page.
 
 ## Session start
 
