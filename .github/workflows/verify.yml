@@ -1,0 +1,80 @@
+# The gates, on every push and every pull request. NEXT.md Phase 1 T.5.
+#
+# Each step is one gate the doctrine names, in the order a stranger would run
+# them. A gate that fails fails the build. A gate whose tool is not on the branch
+# yet warns loudly instead of passing quietly. The Python floor is 3.11, the
+# reference runtime in pyproject.toml, so the job runs on the floor and not on
+# whatever is newest.
+
+name: verify
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  gates:
+    name: the gates
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Python 3.11, the reference runtime
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install the Python dev toolchain named in pyproject.toml
+        run: python -m pip install "ruff>=0.16,<0.17" "pytest>=8"
+
+      - name: Ruff, check and format
+        run: |
+          python -m ruff check .
+          python -m ruff format --check .
+
+      - name: Pytest, every tool's tests
+        run: python -m pytest -q
+
+      - name: verify, the seal (Invariant 9)
+        run: python tools/verify.py
+
+      - name: tamper-test, the seal is not decorative (Rubric gate 4)
+        run: python tools/tamper-test.py
+
+      - name: validate-schemas (Invariants 2, 3, 4, 6)
+        run: python tools/validate-schemas.py
+
+      - name: lint-verdict-language (Invariant 1)
+        run: python tools/lint-verdict-language.py
+
+      - name: check-crossrefs (Council section 5, mode 7)
+        run: |
+          if [ -f tools/check-crossrefs.py ]; then
+            python tools/check-crossrefs.py
+          else
+            echo "::warning::tools/check-crossrefs.py is not on this branch yet (PR #5); this gate did not run."
+          fi
+
+      - name: Every JSON file the build or the survey wrote still parses
+        run: |
+          for f in data/meta.json docs/related-work/data/*.json schemas/*.json biome.json package.json; do
+            python -m json.tool "$f" > /dev/null || { echo "::error::$f does not parse"; exit 1; }
+          done
+
+      - name: Node 20, the reference runtime for adapters and Signals
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: npm ci
+        run: npm ci
+
+      - name: Biome and Vitest
+        run: |
+          npm run lint
+          npm test
