@@ -153,7 +153,7 @@ If the Maintainer proposes to change any of these at any future date, the propos
 
 ## 10. Amendments to these Bylaws
 
-Amendments to this file are governed by the meta-invariant in INVARIANTS.md §13. A PR that touches BYLAWS.md is highlighted, requires Council review, and requires the Maintainer's written justification. Silent softening is not possible under this rule.
+Amendments to this file are governed by the meta-invariant in INVARIANTS.md §17. A PR that touches BYLAWS.md is highlighted, requires Council review, and requires the Maintainer's written justification. Silent softening is not possible under this rule.
 
 ---
 

@@ -4,8 +4,8 @@
     "state": "none"
   },
   "build": "0000-empty",
-  "built_at": "2026-09-22T00:00:00Z",
-  "digest": "3861aedb75260569baf5133253c6ef59cae6bc47cc43de2a429227ec874626cb",
+  "built_at": "2026-09-22T18:52:00Z",
+  "digest": "b86c160e2df5493e9170108d8595b110f3ce57d63251bee3ec6392fd6c642a8e",
   "disclosures": {
     "affiliations": "The maintainer is not an employee, contractor, or paid contributor of any political party, campaign, or advocacy organisation.",
     "assistant": "An AI collaborator drafted the founding documents and this build's tooling, disclosed in commit trailers and in README.md section 11.",
