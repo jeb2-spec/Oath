@@ -39,6 +39,18 @@ FRAME = "Presence in the register is not evidence of wrongdoing."
 CLERK_SEARCH = "https://disclosures-clerk.house.gov/FinancialDisclosure"
 CHARTER = "https://github.com/jeb2-spec/Oath/blob/main/CHARTER.md"
 
+# The oath every member takes, verbatim. STANDARDS.md C.1; 5 U.S.C. § 3331; U.S. Const.
+# Art. VI § 3. It is the standard the register exists to set the record beside, and
+# it is the same words for everyone, which is why it is printed on every page.
+OATH = (
+    "I, ___, do solemnly swear (or affirm) that I will support and defend the Constitution "
+    "of the United States against all enemies, foreign and domestic; that I will bear true "
+    "faith and allegiance to the same; that I take this obligation freely, without any "
+    "mental reservation or purpose of evasion; and that I will well and faithfully "
+    "discharge the duties of the office on which I am about to enter. So help me God."
+)
+OATH_CITE = "The oath of office. U.S. Const. Art. VI § 3; 5 U.S.C. § 3331. STANDARDS.md C.1."
+
 CSS = """
 :root {
   color-scheme: light dark;
@@ -71,8 +83,15 @@ p.frame { margin: 0 0 1rem; color: var(--ink-2); font-style: italic;
 h1 { font-size: 2.1rem; line-height: 1.15; margin: 0 0 .35rem; font-weight: normal; }
 p.office { margin: 0; color: var(--ink-2); }
 p.lede { margin: .75rem 0 0; max-width: 34rem; }
-figure.seal { margin: 0; width: 132px; }
-figure.seal svg { width: 132px; height: 132px; display: block; margin: 0 auto .35rem; }
+figure.seal { margin: 0; width: 104px; }
+figure.seal svg { width: 104px; height: 104px; display: block; margin: 0 auto .35rem; }
+blockquote.oath { margin: .25rem 0 1rem; padding: .6rem 1rem; border-left: 3px solid var(--rule); }
+blockquote.oath p { margin: 0; font-style: italic; }
+blockquote.oath footer { border: 0; margin: .4rem 0 0; padding: 0; font-size: .8rem; }
+.requires dl { display: grid; grid-template-columns: max-content 1fr; gap: .35rem 1rem; margin: 0; }
+.requires dt, .requires dd { margin: 0; }
+.requires dt { color: var(--ink); }
+.requires dd { color: var(--ink-2); }
 figcaption { font-size: .78rem; line-height: 1.35; color: var(--ink-2); }
 section { border-top: 1px solid var(--rule); padding-top: .9rem; margin-top: 1.75rem; }
 h2 { font-size: 1rem; margin: 0 0 .6rem; }
@@ -97,7 +116,7 @@ code { font-family: var(--mono); font-size: .88em; }
 @media (max-width: 40rem) {
   .masthead { grid-template-columns: 1fr; }
   figure.seal { width: 110px; } figure.seal svg { width: 110px; height: 110px; }
-  .how dl { grid-template-columns: 1fr; }
+  .how dl, .requires dl { grid-template-columns: 1fr; }
 }
 @media print {
   html { font-size: 11pt; background: #fff; color: #000; }
@@ -151,6 +170,9 @@ def how_to_read(person: bool) -> str:
     )
     return (
         '<section class="how">\n<h2>How to read this page</h2>\n<dl>\n'
+        "<dt>The oath</dt><dd>The words every member speaks on taking the seat, printed as the "
+        "statute gives them and cited to it. It is the standard the register sets the record "
+        "beside.</dd>\n"
         "<dt>A filing</dt><dd>A document the officeholder was required to file with the Clerk of "
         "the House, listed here as the Clerk lists it.</dd>\n"
         "<dt>The document</dt><dd>The Clerk's own copy. The register links to it and does not "
@@ -220,6 +242,20 @@ def filings_section(filings: list[dict], build: str) -> str:
     )
 
 
+REQUIRES = (
+    '<section class="requires">\n<h2>What this office requires</h2>\n'
+    '<p class="quiet">The same for every member of the House. Each line cites the rule it '
+    "comes from.</p>\n"
+    f'<blockquote class="oath"><p>{esc(OATH)}</p><footer>{esc(OATH_CITE)}</footer></blockquote>\n'
+    "<dl>\n"
+    "<dt>An annual financial disclosure</dt><dd>Filed with the Clerk of the House for each year "
+    "the office is held. Ethics in Government Act of 1978. STANDARDS.md S.1.</dd>\n"
+    "<dt>A report of each covered transaction</dt><dd>A purchase, sale or exchange of a "
+    "security over $1,000, reported within 30 days of notice of it and no later than 45 days "
+    "after it. STOCK Act of 2012, Pub. L. 112-105. STANDARDS.md S.2.</dd>\n"
+    "</dl>\n</section>"
+)
+
 SIGNALS = (
     "<section>\n<h2>Signals that fired</h2>\n"
     '<p class="quiet">None. No signal is defined in this build, so none has fired for anyone.</p>\n'
@@ -251,7 +287,7 @@ def render_officeholder(holder: dict, filings: list[dict], meta: dict, striker) 
         + "\n</div>\n</header>"
     )
     body = (
-        f'{head}\n<main id="main">\n{filings_section(filings, build)}\n{SIGNALS}\n'
+        f'{head}\n<main id="main">\n{REQUIRES}\n{filings_section(filings, build)}\n{SIGNALS}\n'
         f"{how_to_read(True)}\n</main>\n{footer(meta, home=False)}"
     )
     return page(holder["legal_name"], body)
@@ -291,6 +327,8 @@ def render_index(holders: list[dict], meta: dict, striker) -> str:
         '<p class="lede">This build holds no signals: no condition has been written against the '
         "record yet, so no page reports one. Most pages will stay quiet even when signals exist. "
         "Quiet means the record shows nothing a written rule catches.</p>\n"
+        f'<blockquote class="oath"><p>{esc(OATH)}</p><footer>{esc(OATH_CITE)} Every member '
+        "took it. The register sets the record beside it.</footer></blockquote>\n"
         "</div>\n"
         + seal_figure(
             mark, f"The mark of build {build}, struck from its digest. Every page carries its own."
