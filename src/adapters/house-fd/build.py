@@ -113,7 +113,13 @@ def load_roster(path: Path) -> tuple[list[dict], list[dict]]:
         seat = text_of(member, "statedistrict")
         info = member.find("member-info")
         bioguide = text_of(info, "bioguideID")
-        seats.append({"seat": seat, "congress": congress, "vacant": not bioguide})
+        kind = text_of(info, "district")
+        title = (
+            kind
+            if kind in ("Delegate", "Resident Commissioner")
+            else "United States Representative"
+        )
+        seats.append({"seat": seat, "congress": congress, "vacant": not bioguide, "title": title})
         if not bioguide:
             continue
         people.append(
@@ -262,7 +268,7 @@ def build(year: int, dry_run: bool = False) -> int:
             "state": seat["seat"][:2],
             "district": seat["seat"][2:],
             "seat": seat["seat"],
-            "title": "United States Representative",
+            "title": seat["title"],
             "term_start": term_start,
             "term_end": None,
         }
@@ -300,7 +306,7 @@ def build(year: int, dry_run: bool = False) -> int:
     filings, rejected, adjudicated = [], [], 0
     for row in rows:
         person, reason = match(row, people, by_surname)
-        confidence = "structured"
+        confidence = None  # an index row; the document itself has not been read
         decided = adjudications.get(row["doc_id"]) if person is None else None
         if decided is not None:
             person = person_of_id.get(decided["officeholder_id"])

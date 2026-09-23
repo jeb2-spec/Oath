@@ -115,8 +115,8 @@ jobs:
           BUILD="$(cat build.id)"
           DATE="$(python -c "import json;print(json.load(open('data/cache/house-fd/capture.json'))['${YEAR}FD.zip']['retrieved_at'][:10])")"
           BRANCH="refresh/house-fd-${DATE}-${BUILD%%-*}"
-          git config user.name "oath-refresh"
-          git config user.email "refresh@users.noreply.github.com"
+          git config user.name "Oath operator"
+          git config user.email "operator@veraproject.xyz"
           git checkout -b "$BRANCH"
           git add data/
           {

@@ -138,12 +138,17 @@ def strike(
     seal_r = 88.0
     ring_r = 104.0
     title = "The Oath mark" if with_wordmark else "Oath seal"
+    desc = (
+        f"The mark of build {digest[:12]}, struck from its digest. It changes with every build."
+        if with_wordmark
+        else f"Struck from {seed} at build {digest[:12]}. It changes with every build. "
+        "It says nothing about the person."
+    )
     parts = [
         f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {_f(size)} {_f(size)}" '
         f'width="{_f(size)}" height="{_f(size)}" role="img" aria-labelledby="t d">',
         f'<title id="t">{title}</title>',
-        f'<desc id="d">Struck from {seed} at build {digest[:12]}. '
-        "It changes when the record changes. It says nothing about the person.</desc>",
+        f'<desc id="d">{desc}</desc>',
         '<g stroke="currentColor" fill="none">',
         f'<circle class="ring" cx="{_f(c)}" cy="{_f(c)}" r="{_f(ring_r)}" stroke-width="0.8"/>',
         *ring_marks(c, c, ring_r, ticks, bars),

@@ -37,7 +37,10 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 CACHE = Path("data/cache/house-fd")
-AGENT = "Oath-register/0.1 (public-record research; +https://github.com/jeb2-spec/Oath)"
+AGENT = (
+    "Oath-register/0.1 (public-record research; +https://github.com/jeb2-spec/Oath; "
+    "operator@veraproject.xyz)"
+)
 ROSTER = "https://clerk.house.gov/xml/lists/MemberData.xml"
 INDEX = "https://disclosures-clerk.house.gov/public_disc/financial-pdfs/{year}FD.zip"
 PAUSE_SECONDS = 3
