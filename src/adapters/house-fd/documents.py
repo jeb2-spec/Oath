@@ -8,9 +8,12 @@ captures, so a build is reproducible by anyone holding the same bytes.
 
 Which documents: every filing in `data/filings.ndjson` whose code is in `--codes`
 (default P, the transaction reports, which the Clerk serves from its own ptr-pdfs
-path). `--seats NC` limits a run to one delegation, which is how the extractor was
-piloted. Documents already on disk are adopted, not fetched again: their retrieval
-time comes from the Date header the Clerk sent with them.
+path), and, unless `--no-held`, every held row in `data/rejected/house-fd/` whose
+surname matches the sitting member at that very seat, whatever its code, because
+the document's own header is what decides those rows in `build.py`. `--seats NC`
+limits a run to one delegation, which is how the extractor was piloted. Documents
+already on disk are adopted, not fetched again: their retrieval time comes from the
+Date header the Clerk sent with them.
 
 Politeness: one request at a time, a pause between requests, a user agent that names
 the project and how to reach whoever runs it.
@@ -24,6 +27,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import sys
 import time
 import urllib.request
@@ -38,6 +42,8 @@ AGENT = (
     "operator@veraproject.xyz)"
 )
 PAUSE_SECONDS = 2
+HELD = re.compile(r"surname matches a sitting member \(.+?, ([A-Z]{2}\d{2})\) but")
+CLERK = "https://disclosures-clerk.house.gov/public_disc"
 
 
 def read_ndjson(path: Path) -> list[dict]:
@@ -89,6 +95,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--year", type=int, required=True, help="filing year, e.g. 2025")
     parser.add_argument("--codes", default="P", help="comma-separated Clerk codes (default P)")
     parser.add_argument("--seats", default="", help="comma-separated state codes, e.g. NC,VA")
+    parser.add_argument(
+        "--no-held",
+        dest="held",
+        action="store_false",
+        help="do not capture the documents behind held rows at a member's own seat",
+    )
     args = parser.parse_args(argv)
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
@@ -104,6 +116,20 @@ def main(argv: list[str] | None = None) -> int:
         if states and seat[:2] not in states:
             continue
         wanted.append((f["id"].rsplit(":", 1)[1], f["source"]["url"]))
+    held = 0
+    if args.held:
+        for path in sorted(Path("data/rejected/house-fd").glob(f"{args.year}-*.ndjson")):
+            for r in read_ndjson(path):
+                found = HELD.search(r.get("reason", ""))
+                sr = r.get("source_row", {})
+                if not found or sr.get("state_dst") != found.group(1):
+                    continue
+                if states and found.group(1)[:2] not in states:
+                    continue
+                # The same split build.doc_url makes: the Clerk serves code P from ptr-pdfs.
+                folder = "ptr-pdfs" if sr.get("filing_type") == "P" else "financial-pdfs"
+                wanted.append((sr["doc_id"], f"{CLERK}/{folder}/{args.year}/{sr['doc_id']}.pdf"))
+                held += 1
 
     DOCS.mkdir(parents=True, exist_ok=True)
     manifest = json.loads(MANIFEST.read_text(encoding="utf-8")) if MANIFEST.is_file() else {}
@@ -122,6 +148,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     print(
         f"{len(wanted)} documents wanted for codes {sorted(codes)}"
+        + (f" and {held} held rows at a member's own seat" if held else "")
         + (f" in {sorted(states)}" if states else "")
         + f"; fetched {fetched}, adopted {adopted} already on disk; manifest holds {len(manifest)}"
     )
