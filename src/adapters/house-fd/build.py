@@ -390,6 +390,54 @@ def load_adjudications(path: Path) -> tuple[dict[str, dict], str | None]:
     return decisions, hashlib.sha256(raw).hexdigest()
 
 
+def index_people(people: list[dict]) -> dict[str, list[dict]]:
+    """Give each roster person their comparable tokens and index them by surname word."""
+    by_surname: dict[str, list[dict]] = collections.defaultdict(list)
+    for person in people:
+        person["_tokens"] = tokens(person["last"], person["first"])
+        by_surname[fold(person["last"].split()[0])].append(person)
+    return by_surname
+
+
+def wanted_from_rows(rows: list[dict], people: list[dict]) -> list[dict]:
+    """Which documents a build will want, from the index and the roster alone.
+
+    The document behind every row the name join attributes (the capture stage filters
+    those by code), and the document behind every row held at a member's own seat
+    under the member's surname, whatever its code, because the header decides those.
+    Reads no canonical row, so the capture stage stays pure with respect to the
+    register and a build is never a cycle behind its own source. One entry per DocID.
+    """
+    by_surname = index_people(people)
+    out: dict[str, dict] = {}
+    for row in rows:
+        if row["doc_id"] in out:
+            continue
+        person, reason = match(row, people, by_surname)
+        if person is not None:
+            why, seat = "attributed", person["seat"]
+        else:
+            held = surname_neighbour(row, by_surname) if reason.endswith(HELD_SUFFIX) else None
+            if held is None or row["state_dst"] != held["seat"]:
+                continue
+            why, seat = "held at the member's own seat", held["seat"]
+        out[row["doc_id"]] = {
+            "doc_id": row["doc_id"],
+            "url": doc_url(row),
+            "code": row["filing_type"],
+            "seat": seat,
+            "why": why,
+        }
+    return list(out.values())
+
+
+def wanted_documents(year: int) -> list[dict]:
+    """`wanted_from_rows` over the captures on disk. What `documents.py` asks."""
+    _, people = load_roster(CACHE / "MemberData.xml")
+    rows = load_index(CACHE / f"{year}FD.xml")
+    return wanted_from_rows(rows, people)
+
+
 def build(year: int, dry_run: bool = False) -> int:
     roster_capture = read_capture("MemberData.xml")
     index_capture = read_capture(f"{year}FD.zip")
@@ -398,11 +446,7 @@ def build(year: int, dry_run: bool = False) -> int:
     adjudications, adjudications_hash = load_adjudications(ADJUDICATIONS)
     documents, docs_hash = load_docs_manifest()
 
-    for person in people:
-        person["_tokens"] = tokens(person["last"], person["first"])
-    by_surname: dict[str, list[dict]] = collections.defaultdict(list)
-    for person in people:
-        by_surname[fold(person["last"].split()[0])].append(person)
+    by_surname = index_people(people)
 
     roster_source = {
         "url": roster_capture["url"],

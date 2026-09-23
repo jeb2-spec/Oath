@@ -234,12 +234,33 @@ def test_an_index_docid_listed_twice_identically_is_carried_once_and_says_so():
     )
 
 
-def test_the_capture_stage_recognises_the_adapters_own_held_reason():
-    spec = importlib.util.spec_from_file_location("house_fd_documents", HERE / "documents.py")
-    documents = importlib.util.module_from_spec(spec)
-    assert spec.loader is not None
-    spec.loader.exec_module(documents)
-    people, by_surname = roster(_member("Allen", "Rick", "GA12"))
-    _, why = build.match(row("Allen", "Richard", seat="GA12"), people, by_surname)
-    found = documents.HELD.search(why)
-    assert found and found.group(1) == "GA12", "a wording change here would silently stop captures"
+def test_what_a_build_will_want_comes_from_the_two_captures_alone():
+    people, _ = roster(
+        _member("Allen", "Rick", "GA12"),
+        _member("Johnson", "Mike", "LA04", "J000001"),
+        _member("Johnson", "Dusty", "SD00", "J000002"),
+    )
+    rows = [
+        dict(row("Allen", "Rick", seat="GA12"), doc_id="1", filing_type="P", year="2025"),
+        dict(row("Allen", "Rick", seat="GA12"), doc_id="2", filing_type="O", year="2025"),
+        dict(row("Allen", "Richard W.", seat="GA12"), doc_id="3", filing_type="O", year="2025"),
+        dict(
+            row("Johnson", "James Michael", seat="LA04"), doc_id="4", filing_type="P", year="2025"
+        ),
+        dict(
+            row("Johnson", "James Michael", seat="OH01"), doc_id="5", filing_type="P", year="2025"
+        ),
+        dict(row("Nobody", "At All", seat="GA12"), doc_id="6", filing_type="P", year="2025"),
+        dict(row("Allen", "Rick", seat="GA12"), doc_id="1", filing_type="P", year="2025"),
+    ]
+    wanted = build.wanted_from_rows(rows, people)
+    assert [(w["doc_id"], w["why"]) for w in wanted] == [
+        ("1", "attributed"),
+        ("2", "attributed"),
+        ("3", "held at the member's own seat"),
+        ("4", "held at the member's own seat"),
+    ]
+    assert wanted[0]["url"].endswith("ptr-pdfs/2025/1.pdf") and wanted[1]["url"].endswith(
+        "financial-pdfs/2025/2.pdf"
+    )
+    assert {w["seat"] for w in wanted} == {"GA12", "LA04"}
