@@ -3,9 +3,9 @@
     "note": "This build is not published and not anchored. The first anchored build is Phase 2 S.4 in NEXT.md; until then ANCHORS.md stays empty by design.",
     "state": "none"
   },
-  "build": "0002-house-2025",
-  "built_at": "2026-09-23T11:38:59Z",
-  "digest": "61b123200c4ab3de0ce78e7d61784818bad4873545f4563cfb2820bb5bc1f068",
+  "build": "0003-house-2025",
+  "built_at": "2026-09-23T13:32:48Z",
+  "digest": "41926ff8fd8799e3015ad02d38fc95073a91e0d957484941fa17b5bc35d5f001",
   "disclosures": {
     "affiliations": "The maintainer is not an employee, contractor, or paid contributor of any political party, campaign, or advocacy organisation.",
     "assistant": "An AI collaborator drafted the founding documents and this build's tooling, disclosed in commit trailers and in README.md section 11.",
@@ -15,13 +15,12 @@
   },
   "register": "Oath",
   "rows": {
-    "data/adapter-runs/house-fd-2025-3a7ec1703078.ndjson": 1,
-    "data/adapter-runs/house-fd-2025-82bf87098f8d.ndjson": 1,
-    "data/filings.ndjson": 1097,
+    "data/adapter-runs/house-fd-2025-8b4052227d2a.ndjson": 1,
+    "data/filings.ndjson": 1197,
     "data/officeholders.ndjson": 439,
     "data/offices.ndjson": 441,
-    "data/rejected/house-fd/2025-3a7ec1703078.ndjson": 1842,
-    "data/transactions.ndjson": 6242
+    "data/rejected/house-fd/2025-8b4052227d2a.ndjson": 1737,
+    "data/transactions.ndjson": 7346
   },
   "sealed": {
     "data": "every file under data/ whose name ends in .ndjson",
@@ -41,5 +40,5 @@
     "meta": "data/meta.json with its digest key removed, re-serialised as canonical JSON",
     "rule": "one line per sealed file, SHA-256 hex then two spaces then the relative path; lines sorted by bytes; the digest is the SHA-256 of the sorted lines"
   },
-  "state": "The House index layer and the first document layer. 441 seats of the 119th Congress, 439 of them filled and 2 vacant; 1,097 filings attributed to 393 sitting members from the Clerk 2025 filing index, retrieved 2026-09-22; 1,842 index rows rejected with a reason, the great majority of them candidates, who are out of scope per SUBJECTS.md section 3. Of the 417 transaction reports the index lists for sitting members, 363 were read from the Clerk's documents, retrieved 2026-09-23, and 6,242 transactions written, each checked against the seat and Filing ID printed in its report; 54 are scanned paper filings the register captured, hashed and does not read; 3 of the 363 print a seat other than the roster's and carry that discrepancy on the row. Annual reports are not yet read. No holdings and no Findings: no Signal definition has yet been run, and the transactions are shown on no page pending the Council's reading of that surface. 46 sitting members have no filing attributed and 255 rejected rows carry a surname matching exactly one sitting member whose given names differ. Those gaps are counted, not hidden. Presence in this register is not evidence of wrongdoing."
+  "state": "The House index layer and the first document layer. 441 seats of the 119th Congress, 439 of them filled and 2 vacant; 1,197 filings attributed to 428 sitting members from the Clerk 2025 filing index, retrieved 2026-09-22, 101 of them settled by the document's own header (Status Member at the seat, the Filing ID and the roster surname agreeing) where the name alone could not; 1,737 index rows not attributed, each with a reason: 1,575 match no sitting member's name and are mostly candidates, out of scope per SUBJECTS.md section 3; 162 are held for a person, 127 at a seat other than the member's, 28 whose documents carry no Filing ID line, 6 whose documents print a filer status other than Member, 1 dated before the swearing-in the roster records. The index lists 4 DocIDs more than once, identically, one of them three times; the register keeps one row for each and says so. Of the 463 transaction reports attributed, 409 were read from the Clerk's documents, retrieved 2026-09-23, and 7,346 transactions written, each checked against the seat and Filing ID printed in its report; 54 are scanned paper filings the register captured, hashed and does not read; 3 of the 409 print a seat other than the roster's and carry that discrepancy on the row. 55 annual reports and other forms behind attributed rows had their headers read and hashes recorded; their schedules are not yet read. No holdings and no Findings: no Signal definition has yet been run, and the transactions are shown on no page pending the Council's reading of that surface. 11 sitting members have no filing attributed. Those gaps are counted, not hidden. Presence in this register is not evidence of wrongdoing."
 }
