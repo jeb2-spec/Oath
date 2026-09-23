@@ -15,7 +15,12 @@
     },
     "owner": {
       "type": "string",
-      "enum": ["self", "spouse", "dependent", "joint", "trust", "other"]
+      "enum": ["unmarked", "self", "spouse", "dependent", "joint", "trust", "other"],
+      "description": "Who the form marks as holding the asset. unmarked: the ownership column was left blank; the House PTR form makes marking a spouse's, dependent child's or jointly held asset optional, so a blank is not a statement that the asset is the filer's own. spouse, dependent, joint: as marked. self: a source that states the filer's own holding; no current source emits it, and the House PTR cannot. trust, other: as the source states."
+    },
+    "filing_status": {
+      "type": ["string", "null"],
+      "description": "The filing status the report prints beside the row, as printed: New, Amended or Deleted on the House PTR. Null when the report prints none. A row marked Amended or Deleted is carried as filed, with the mark; the e-filed layout prints no separate statement that the report amends another."
     },
     "asset": { "type": "string" },
     "asset_normalized": { "type": ["string", "null"] },
