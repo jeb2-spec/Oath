@@ -4,8 +4,8 @@
     "state": "none"
   },
   "build": "0001-house-2025",
-  "built_at": "2026-09-22T23:43:18Z",
-  "digest": "a7a4ef1ef60335d5d54abca82344a515e13b0fdc303376e335ed0297e946e29d",
+  "built_at": "2026-09-22T23:58:34Z",
+  "digest": "3fecf208a1ac31e2e32d857b312f2b3c7cbf364ee41d851dec04dab83697db7f",
   "disclosures": {
     "affiliations": "The maintainer is not an employee, contractor, or paid contributor of any political party, campaign, or advocacy organisation.",
     "assistant": "An AI collaborator drafted the founding documents and this build's tooling, disclosed in commit trailers and in README.md section 11.",
