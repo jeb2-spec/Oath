@@ -11,6 +11,7 @@ After the memory, read the [Charter](../../CHARTER.md), always. Five vows, short
 Standing feedback from Jared, read after the three above:
 
 - [Keep usage in mind](feedback-usage-stewardship.md). fan out agents only for research or review one hand cannot do, say the cost before proposing it, do the rest by hand. Given 2026-09-21, mid-session, after a nineteen-agent survey.
+- [Signal to noise](feedback-signal-to-noise.md). Jared's theory of the whole thing and the direction that follows: raise the ratio of checkable statement to inference; label and shelve noise, never pass it off and never erase it; silence is signal. Given 2026-09-23, with the doctrine sentence proposed for his approval.
 
 Sibling projects that carry the shared discipline:
 
