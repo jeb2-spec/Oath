@@ -34,10 +34,11 @@ This file grows as coverage extends. Federal Standards are documented first. Sta
 - **Retention.** Filings are public for six years after filing.
 
 ### S.2. Stop Trading on Congressional Knowledge (STOCK) Act of 2012
-- **Source.** Pub. L. 112–105.
+- **Source.** Pub. L. 112–105 (<https://www.govinfo.gov/app/details/PLAW-112publ105>, read 2026-09-23).
 - **Regulator.** House Committee on Ethics; Senate Select Committee on Ethics.
-- **What it requires.** Members of Congress and covered staff report each purchase, sale, or exchange of any stock, bond, commodity future, or other security involving amounts over $1,000, within 30 days of receiving notice of the transaction and no later than 45 days after the transaction date.
+- **What it requires.** Members of Congress and covered staff report each purchase, sale, or exchange of any stock, bond, commodity future, or other security involving amounts over $1,000, whether the asset is owned by the member, the member's spouse or a dependent child (the Committee's instructions), within 30 days of receiving notice of the transaction and no later than 45 days after the transaction date.
 - **Penalty.** Late fee of $200 per late filing, with escalations. Willful failure to file may constitute a criminal violation.
+- **Regulator's instructions.** The House Committee on Ethics states the deadline as the earlier of 30 days from being made aware of the transaction or 45 days from the transaction (<https://ethics.house.gov/financial-disclosure>, read 2026-09-23). Its Periodic Transaction Report form and instructions for CY 2025 (<https://ethics.house.gov/wp-content/uploads/2026/02/Final-CY-2025-PTR-Form-1.pdf>, read 2026-09-23) define the columns the register carries: the type of transaction (purchase, sale, partial sale, exchange), the SP/DC/JT ownership column, which a filer "may, but [is] not required to" mark, the category of value of the total purchase or sale price (or the fair market value of an exchange), and the dates of transaction and of notification.
 - **Scope note.** The STOCK Act does *not* prohibit congressional trading in general; it prohibits trading on material non-public information obtained through congressional duties (already covered by insider trading law) and it requires timely disclosure. The Signals defined against this Standard surface disclosure violations and disclosed transactions in categories legislated on.
 
 ### S.3. Federal Bribery, Graft, and Conflicts of Interest
