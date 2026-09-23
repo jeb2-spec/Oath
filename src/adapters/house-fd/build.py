@@ -41,6 +41,7 @@ from __future__ import annotations
 import argparse
 import collections
 import hashlib
+import importlib.util
 import json
 import sys
 import unicodedata
@@ -55,6 +56,12 @@ CLERK = "https://disclosures-clerk.house.gov/public_disc"
 # each citing its evidence. Lives beside the adapter, not under data/, because it is
 # an input a person writes; its hash is carried into every run record it shaped.
 ADJUDICATIONS = Path("src/adapters/house-fd/adjudications.ndjson")
+
+# What documents.py captured: the bytes and headers of each filing's document, by DocID.
+# When a filing's document is here, the build reads it, checks it against the roster, and
+# writes its transactions; when it is not, the filing stays an index row.
+DOCS = Path("data/cache/house-fd/docs")
+DOCS_MANIFEST = DOCS / "captures.json"
 
 # The 119th Congress convened on this date under the Twentieth Amendment. It is the
 # term start of the seat, which is not the same as the day a given member was sworn.
@@ -207,10 +214,35 @@ def canonical(obj: dict) -> str:
     return json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=False) + "\n"
 
 
-def capture_key(index_capture: dict, roster_capture: dict) -> str:
-    """Twelve hex characters naming this pair of captures. Same bytes in, same key out."""
-    joined = f"{index_capture['sha256']}\n{roster_capture['sha256']}".encode()
-    return hashlib.sha256(joined).hexdigest()[:12]
+def capture_key(index_capture: dict, roster_capture: dict, docs_hash: str | None = None) -> str:
+    """Twelve hex characters naming these captures. Same bytes in, same key out.
+
+    The document manifest joins the key when it exists, so a week that captured new
+    documents is a changed record even when the index and roster did not move.
+    """
+    joined = f"{index_capture['sha256']}\n{roster_capture['sha256']}"
+    if docs_hash:
+        joined += f"\n{docs_hash}"
+    return hashlib.sha256(joined.encode()).hexdigest()[:12]
+
+
+def load_docs_manifest() -> tuple[dict, str | None]:
+    """The captured documents by DocID, and the manifest's hash; empty when none captured."""
+    if not DOCS_MANIFEST.is_file():
+        return {}, None
+    raw = DOCS_MANIFEST.read_bytes()
+    return json.loads(raw.decode("utf-8")), hashlib.sha256(raw).hexdigest()
+
+
+def load_ptr():
+    """The transaction-report reader beside this file, loaded by path so tests can too."""
+    spec = importlib.util.spec_from_file_location(
+        "house_fd_ptr", Path(__file__).with_name("ptr.py")
+    )
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
 
 
 def load_adjudications(path: Path) -> tuple[dict[str, dict], str | None]:
@@ -242,6 +274,7 @@ def build(year: int, dry_run: bool = False) -> int:
     seats, people = load_roster(CACHE / "MemberData.xml")
     rows = load_index(CACHE / f"{year}FD.xml")
     adjudications, adjudications_hash = load_adjudications(ADJUDICATIONS)
+    documents, docs_hash = load_docs_manifest()
 
     for person in people:
         person["_tokens"] = tokens(person["last"], person["first"])
@@ -349,8 +382,88 @@ def build(year: int, dry_run: bool = False) -> int:
                     "content_hash": None,
                 },
                 "extraction_confidence": confidence,
+                "notes": None,
             }
         )
+
+    # The document layer. For every filing whose document was captured: read it, require
+    # it to agree with the roster seat and the DocID it was attributed to, and write its
+    # transactions. A document that disagrees refuses the filing row itself, because the
+    # document is the primary record and the index row's attribution is what it contradicts.
+    # One exception, recorded rather than guessed: when only the printed seat differs and
+    # the printed name confirms the officeholder by the join's own test, the row stands
+    # and carries the discrepancy in its notes.
+    transactions: list[dict] = []
+    documents_read = documents_refused = documents_unreadable = documents_discrepant = 0
+    if documents:
+        ptr = load_ptr()
+        kept = []
+        for filing in filings:
+            doc_id = filing["id"].rsplit(":", 1)[1]
+            capture = documents.get(doc_id)
+            pdf = DOCS / f"{doc_id}.pdf"
+            if capture is None or not pdf.is_file():
+                kept.append(filing)
+                continue
+            text, pages = ptr.read(pdf)
+            person = person_of_id[filing["officeholder_id"]]
+            status, reason = ptr.verify(
+                text,
+                person["seat"],
+                doc_id,
+                name_confirms=lambda printed, p=person: p["_tokens"] <= tokens(printed),
+            )
+            if status == "unreadable":
+                # The row stands; the document was captured and hashed but not read.
+                documents_unreadable += 1
+                filing["source"]["content_hash"] = capture["sha256"]
+                kept.append(filing)
+                continue
+            if status == "contradiction":
+                documents_refused += 1
+                rejected.append(
+                    {
+                        "adapter": "house-fd",
+                        "reason": f"the document refused the attribution: {reason}",
+                        "source_row": {"doc_id": doc_id, "filing_id": filing["id"]},
+                        "source": {
+                            "url": capture["url"],
+                            "retrieved_at": capture["retrieved_at"],
+                            "content_hash": capture["sha256"],
+                        },
+                    }
+                )
+                continue
+            if status == "discrepancy":
+                documents_discrepant += 1
+                filing["notes"] = (
+                    f"The document prints State/District {ptr.header(text)['seat']}; the "
+                    f"Clerk's roster lists this officeholder at {person['seat']}. The "
+                    "attribution rests on the filer's printed name and the Filing ID, which "
+                    "both agree with the Clerk's index."
+                )
+            documents_read += 1
+            filing["source"]["content_hash"] = capture["sha256"]
+            filing["extraction_confidence"] = "structured"
+            for n, tx in enumerate(ptr.transactions(pages), 1):
+                transactions.append(
+                    {
+                        "id": f"tx:house-clerk:{doc_id}:{n:03d}",
+                        "filing_id": filing["id"],
+                        "officeholder_id": filing["officeholder_id"],
+                        "owner": tx["owner"],
+                        "asset": tx["asset"],
+                        "asset_normalized": tx["ticker"],
+                        "action": tx["action"],
+                        "transaction_date": tx["transaction_date"],
+                        "notified_date": tx["notified_date"],
+                        "amount_range": tx["amount"],
+                        "notes": ptr.notes(tx),
+                    }
+                )
+            kept.append(filing)
+        filings = kept
+    transactions.sort(key=lambda t: (t["officeholder_id"], t["filing_id"], t["id"]))
 
     filings.sort(key=lambda f: (f["officeholder_id"], f["filed_at"], f["id"]))
     officeholders.sort(key=lambda h: h["id"])
@@ -370,6 +483,13 @@ def build(year: int, dry_run: bool = False) -> int:
     for reason, count in sorted(reasons.items(), key=lambda item: -item[1]):
         print(f"              {count:5d}  {reason}")
     print(f"quiet         {quiet} sitting members have no filing in this index")
+    if documents:
+        print(
+            f"documents     {documents_read} read ({documents_discrepant} with a seat "
+            f"discrepancy noted on the row), {documents_unreadable} captured but unreadable "
+            f"(scanned), {documents_refused} refused as contradicting; "
+            f"{len(transactions)} transactions"
+        )
 
     if dry_run:
         print("\ndry run: nothing written")
@@ -378,10 +498,11 @@ def build(year: int, dry_run: bool = False) -> int:
     write(Path("data/offices.ndjson"), offices)
     write(Path("data/officeholders.ndjson"), officeholders)
     write(Path("data/filings.ndjson"), filings)
+    write(Path("data/transactions.ndjson"), transactions)
     # Named for the captures the rows came from, never for the day the build ran: the
     # same bytes rebuild the same file, so an unchanged source is an unchanged tree and
     # the seal holds. Rejections from earlier captures live in git history.
-    key = capture_key(index_capture, roster_capture)
+    key = capture_key(index_capture, roster_capture, docs_hash)
     rejected_dir = Path("data/rejected/house-fd")
     rejected_dir.mkdir(parents=True, exist_ok=True)
     for old in rejected_dir.glob(f"{year}-*.ndjson"):
@@ -406,6 +527,15 @@ def build(year: int, dry_run: bool = False) -> int:
             )
         ],
         "adjudications_sha256": adjudications_hash,
+        "documents": {
+            "manifest_sha256": docs_hash,
+            "captured": len(documents),
+            "read": documents_read,
+            "seat_discrepancies": documents_discrepant,
+            "unreadable": documents_unreadable,
+            "refused": documents_refused,
+            "transactions": len(transactions),
+        },
         "counts": {
             "seats": len(seats),
             "filled": len(people),
@@ -420,7 +550,10 @@ def build(year: int, dry_run: bool = False) -> int:
         "rejected_by_reason": reasons,
     }
     write(Path(f"data/adapter-runs/house-fd-{year}-{key}.ndjson"), [run])
-    print("\nwrote data/offices.ndjson, data/officeholders.ndjson, data/filings.ndjson")
+    print(
+        "\nwrote data/offices.ndjson, data/officeholders.ndjson, data/filings.ndjson, "
+        "data/transactions.ndjson"
+    )
     print(f"wrote data/rejected/house-fd/{year}-{key}.ndjson")
     print(f"wrote data/adapter-runs/house-fd-{year}-{key}.ndjson")
     print("Re-seal in this commit: python tools/seal.py --build <id> --built-at <time>")
@@ -447,7 +580,12 @@ def main(argv: list[str] | None = None) -> int:
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
     if args.capture_key:
-        print(capture_key(read_capture(f"{args.year}FD.zip"), read_capture("MemberData.xml")))
+        _, docs_hash = load_docs_manifest()
+        print(
+            capture_key(
+                read_capture(f"{args.year}FD.zip"), read_capture("MemberData.xml"), docs_hash
+            )
+        )
         return 0
     return build(args.year, args.dry_run)
 
