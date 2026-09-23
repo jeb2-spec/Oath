@@ -1,4 +1,10 @@
-"""Tests for src/surfaces/render.py: the landing page stays a door and never a scoreboard."""
+"""Tests for src/surfaces/render.py: the pages stay a door and a record, never a scoreboard.
+
+The cases here are the Council's first reading of these pages (PR #27), pinned so they
+cannot come back: a quiet page is a matching gap and says so with its count; every
+citation links; the chart shows every matched row; the six seats without a floor vote
+carry the roster's own title; the landing never puts a number beside a person.
+"""
 
 from __future__ import annotations
 
@@ -32,49 +38,50 @@ META = {
 }
 
 
-def office(seat: str) -> dict:
+def office(seat: str, title: str = "United States Representative") -> dict:
     return {
         "id": f"of:us:house-{seat.lower()}:2025",
         "seat": seat,
         "state": seat[:2],
         "district": seat[2:],
-        "title": "United States Representative",
+        "title": title,
         "term_start": "2025-01-03",
         "term_end": None,
         "jurisdiction": "us:federal",
     }
 
 
-def holder(seat: str, name: str, key: str) -> dict:
+def holder(seat: str, name: str, key: str, sworn: str = "2025-01-03", title: str | None = None):
     return {
         "id": f"oh:us:house:{key}",
         "legal_name": name,
-        "offices": [office(seat)],
+        "offices": [office(seat, title) if title else office(seat)],
+        "notes": f"Sworn {sworn}. Presence in the register is not evidence of wrongdoing.",
         "source": {"url": "https://example.com", "retrieved_at": "2026-09-22T21:40:17Z"},
     }
 
 
-def filing(holder_id: str, day: str, n: int) -> dict:
+def filing(holder_id: str, day: str, n: int, code: str = "P") -> dict:
     return {
-        "id": f"fl:house-clerk:P:{n}",
+        "id": f"fl:house-clerk:{code}:{n}",
         "officeholder_id": holder_id,
         "filed_at": day,
-        "form_type": "House-PTR",
-        "source_form_code": "P",
+        "form_type": "House-PTR" if code == "P" else "other",
+        "source_form_code": code,
         "source": {"url": "https://example.com/doc.pdf", "retrieved_at": "2026-09-22T21:40:20Z"},
     }
 
 
-OFFICES = [office("AK00"), office("AL01"), office("AL02"), office("PR00")]
+OFFICES = [office("AK00"), office("AL01"), office("AL02"), office("PR00", "Resident Commissioner")]
 HOLDERS = [
     holder("AK00", "Example Alaska", "a000001"),
-    holder("AL01", "Example Alabama", "a000002"),
-    holder("PR00", "Example Commissioner", "a000003"),
+    holder("AL01", "Example Alabama", "a000002", sworn="2026-09-01"),
+    holder("PR00", "Example Commissioner", "a000003", title="Resident Commissioner"),
 ]
 FILINGS = [
     filing("oh:us:house:a000001", "2025-03-01", 1),
-    filing("oh:us:house:a000001", "2025-03-09", 2),
-    filing("oh:us:house:a000002", "2025-11-30", 3),
+    filing("oh:us:house:a000001", "2025-03-09", 2, code="O"),
+    filing("oh:us:house:a000002", "2026-05-30", 3),
 ]
 RUN = {
     "year": 2025,
@@ -95,45 +102,107 @@ RUN = {
         {"name": "MemberData.xml", "retrieved_at": "2026-09-22T21:40:17Z"},
     ],
 }
+REJECTED = [
+    {
+        "reason": "surname matches exactly one sitting member (Commissioner, Example, PR00) but "
+        "the given names differ; a human decides this one",
+        "source_row": {"state_dst": "PR00", "last": "Commissioner", "first": "E. X."},
+    },
+    {
+        "reason": "surname matches exactly one sitting member (Commissioner, Example, PR00) but "
+        "the given names differ; a human decides this one",
+        "source_row": {"state_dst": "TX99", "last": "Commissioner", "first": "Other"},
+    },
+    {
+        "reason": "no sitting member has this name; the row is a candidate or a former member",
+        "source_row": {"state_dst": "PR00", "last": "Someone", "first": "Else"},
+    },
+]
 
 
-def test_every_state_in_the_data_gets_a_tile():
+def test_held_rows_are_counted_only_at_the_members_own_seat():
+    assert render.held_at_seat(REJECTED) == {"PR00": 1}
+
+
+def test_a_quiet_page_is_a_matching_gap_and_says_so_with_its_count():
+    page = render.render_officeholder(HOLDERS[2], [], META, striker, held_here=1)
+    assert "not yet matched" in page
+    assert "1 row of the index at this seat carries this surname" in page
+    assert "not a statement that no filing was made" in page
+    assert "not a statement about what was filed" in page
+    assert "each link below" not in page, "no links below on a quiet page"
+    assert "Nothing is attributed" not in page
+
+
+def test_a_page_with_rows_prints_bare_codes_and_the_clerks_ownership():
+    page = render.render_officeholder(HOLDERS[0], FILINGS[:2], META, striker)
+    assert '<td class="code">P</td>' in page and '<td class="code">O</td>' in page
+    assert "(other)" not in page and "(House-PTR)" not in page
+    assert "the Clerk does not publicly define it" in page
+
+
+def test_every_citation_links():
+    page = render.render_officeholder(HOLDERS[0], FILINGS[:2], META, striker)
+    for href in (
+        render.USC_3331,
+        render.USC_CH131,
+        render.STOCK_ACT,
+        render.STANDARDS_C1,
+        render.STANDARDS_S1,
+        render.STANDARDS_S2,
+    ):
+        assert f'href="{href}"' in page
+
+
+def test_the_office_line_carries_the_roster_title_and_sworn_date_not_a_term():
+    page = render.render_officeholder(HOLDERS[1], FILINGS[2:], META, striker)
+    assert "sworn 2026-09-01, per the roster read 2026-09-22" in page
+    assert "term 2025-01-03" not in page
+    commissioner = render.render_officeholder(HOLDERS[2], [], META, striker)
+    assert "Resident Commissioner · seat PR00" in commissioner
+
+
+def test_the_seal_caption_says_it_changes_with_every_build():
+    page = render.render_officeholder(HOLDERS[0], FILINGS[:2], META, striker)
+    assert "It changes with every build." in page
+    assert "changes when the record changes" not in page
+
+
+def test_every_state_in_the_data_gets_a_tile_and_nonvoting_seats_are_dashed():
     html = render.tile_map(OFFICES)
     for code in ("AK", "AL", "PR"):
         assert f'href="#state-{code}"' in html
-    assert 'class="tile t"' in html, "a territory without a map position joins the last row"
-    assert ">AL<small>2</small>" in html, "the small number is seats, a fact about the office"
+    assert 'class="tile nv"' in html and ">PR<small>1</small>" in html
+    assert ">AL<small>2</small>" in html
 
 
-def test_the_index_passes_the_no_ranking_gate_with_state_rows_and_a_vacancy():
-    page = render.render_index(HOLDERS, OFFICES, FILINGS, RUN, META, striker)
+def test_the_index_passes_both_gates_with_state_rows_and_a_vacancy():
+    page = render.render_index(HOLDERS, OFFICES, FILINGS, RUN, META, striker, {"PR00": 1})
     assert ranking.check_index(page) == []
-    assert 'id="state-AL"' in page and "Vacant" in page
-
-
-def test_the_index_carries_the_frame_in_its_header():
-    page = render.render_index(HOLDERS, OFFICES, FILINGS, RUN, META, striker)
     assert frame.check_page(page) is None
+    assert 'id="state-AL"' in page and "Vacant" in page
+    assert 'data-id="of:us:house-al02:2025"' in page, "vacant rows carry the office id"
 
 
-def test_the_state_of_the_record_names_no_person_beside_a_number():
-    section = render.state_of_record(META, RUN, HOLDERS, FILINGS, OFFICES)
-    assert "Example" not in section, "no officeholder appears in the state of the record"
-    assert "<dt>7</dt>" in section and "held for a person" in section
+def test_the_state_of_the_record_names_no_person_and_counts_the_nonvoting_seats():
+    section = render.state_of_record(META, RUN, HOLDERS, FILINGS, OFFICES, 1, "https://x/rows")
+    assert "Example" not in section
+    assert "3 with a floor vote" in section and "1 resident commissioner" in section
+    assert "<dt>7</dt>" in section and "1 of them sit at a member's own seat" in section
+    assert 'href="https://x/rows"' in section
     assert "signals defined, so 0 fired" in section
+    assert "width:75%" in section, "the bar floors rather than rounding 3 of 4 up"
 
 
-def test_the_rhythm_counts_months_across_the_chamber():
-    svg = render.rhythm_chart(FILINGS, 2025)
-    assert ">2</text>" in svg and ">1</text>" in svg
-    assert "Mar" in svg and "Nov" in svg and "Example" not in svg
+def test_the_rhythm_shows_every_matched_row_across_years():
+    svg, first, last, total = render.rhythm_chart(FILINGS)
+    assert (first, last, total) == ("Mar 2025", "May 2026", 3)
+    assert "Example" not in svg
 
 
-def test_the_checklist_is_the_same_shape_for_everyone():
-    with_rows = render.checks_section(HOLDERS[0], FILINGS[:2], RUN, held=7)
-    without = render.checks_section(HOLDERS[2], [], RUN, held=7)
-    for text in (with_rows, without):
-        assert "Identity" in text and "Documents" in text and "Signals" in text
-        assert "<b>not yet</b>" in text and "<b>none defined</b>" in text
-    assert "2 filings attributed" in with_rows
-    assert "nothing attributed" in without and "7 rows" in without
+def test_the_lede_no_longer_promises_every_filing():
+    page = render.render_index(HOLDERS, OFFICES, FILINGS, RUN, META, striker)
+    assert "every financial disclosure they have filed" not in page
+    assert "the register could match to the name" in page
+    assert "a written rule catches" not in page
+    assert "Most pages will stay quiet" not in page
