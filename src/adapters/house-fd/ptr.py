@@ -29,11 +29,12 @@ officeholder the index row was attributed to, and the filing ID in the document 
 the DocID the index gave it. A third check is per transaction: the asset text must end
 in the Clerk's bracketed asset code, or the row is marked unconfirmed in its notes.
 
-Owner codes as the form uses them: blank for the filer, SP spouse, JT joint, DC
-dependent child. Transaction types as the form uses them: P purchase, S sale,
-S (partial) partial sale, E exchange. Amount bands as printed, including "Over $X";
-where a filer entered an exact figure instead of a band, the band is the whole
-dollars on either side of it and the notes carry the figure as printed.
+Owner codes as the form uses them: SP spouse, JT joint, DC dependent child; a blank
+column is unmarked, because the form does not require the mark, and the register
+does not read a blank as the filer's own. Transaction types as the form uses them: P
+purchase, S sale, S (partial) partial sale, E exchange. Amount bands as printed,
+including "Over $X"; where a filer entered an exact figure instead of a band, the band
+is the whole dollars on either side of it and the notes carry the figure as printed.
 """
 
 from __future__ import annotations
@@ -83,7 +84,11 @@ HEADING_LAST = "$200?"
 FOOTNOTE = re.compile(r"^\*\s*For the complete list of asset type abbreviations")
 PAGE_FOOTER = re.compile(r"^Filing ID #\d+$")
 
-OWNERS = {None: "self", "SP": "spouse", "JT": "joint", "DC": "dependent"}
+# The form makes marking ownership optional ("You may, but are not required to,
+# indicate that a transaction involves an asset that is held by your spouse or
+# dependent child, or is jointly held"), so a blank column is unmarked, never the
+# filer's own. Committee on Ethics, PTR form and instructions, CY 2025.
+OWNERS = {None: "unmarked", "SP": "spouse", "JT": "joint", "DC": "dependent"}
 ACTIONS = {"P": "purchase", "S": "sale", "S (partial)": "sale-partial", "E": "exchange"}
 
 
@@ -232,7 +237,7 @@ def finish(row: dict) -> dict:
     tag = ASSET_TAG.search(asset_text)
     ticker = TICKER.search(asset_text)
     out = {
-        "owner": OWNERS.get(row["_owner"], "self"),
+        "owner": OWNERS.get(row["_owner"], "other"),
         "asset": ASSET_TAG.sub("", asset_text).strip() if tag else asset_text,
         "asset_code": tag.group("code") if tag else None,
         "asset_confirmed": tag is not None,
@@ -248,6 +253,13 @@ def finish(row: dict) -> dict:
     return out
 
 
+def labelled(label: str, value: str) -> str:
+    """A labelled line of the report, as filed: the register adds a full stop only where
+    the filer's text does not already end in one."""
+    value = value.strip()
+    return f"{label}: {value}" + ("" if value[-1:] in ".!?" else ".")
+
+
 def notes(tx: dict) -> str:
     """The transaction's notes field: the Clerk's code and legend, the type as printed, and
     the document's own labelled lines. Says so when the asset text could not be confirmed."""
@@ -255,14 +267,14 @@ def notes(tx: dict) -> str:
         f"Asset code {tx.get('asset_code') or 'none'} per the Clerk's legend "
         f"({ASSET_CODES_LEGEND}); type printed as {tx['raw_type']}."
     ]
-    if tx.get("subholding_of"):
-        parts.append(f"Subholding of: {tx['subholding_of']}.")
-    if tx.get("location"):
-        parts.append(f"Location, as filed: {tx['location']}.")
-    if tx.get("description"):
-        parts.append(f"Description, as filed: {tx['description']}.")
-    if tx.get("comments"):
-        parts.append(f"Comments, as filed: {tx['comments']}.")
+    for label, key in (
+        ("Subholding of", "subholding_of"),
+        ("Location, as filed", "location"),
+        ("Description, as filed", "description"),
+        ("Comments, as filed", "comments"),
+    ):
+        if tx.get(key):
+            parts.append(labelled(label, tx[key]))
     if tx.get("filing_status") and tx["filing_status"].lower() != "new":
         parts.append(f"Filing status: {tx['filing_status']}.")
     if tx.get("raw_amount") and not is_band(tx["raw_amount"]):

@@ -633,6 +633,7 @@ def build(year: int, dry_run: bool = False) -> int:
                         "transaction_date": tx["transaction_date"],
                         "notified_date": tx["notified_date"],
                         "amount_range": tx["amount"],
+                        "filing_status": tx.get("filing_status"),
                         "notes": ptr.notes(tx),
                     }
                 )

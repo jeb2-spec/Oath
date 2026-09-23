@@ -40,7 +40,7 @@ The project excludes financial details of Officeholders' spouses and children be
 
 ## 9. Private citizens are out of scope
 
-Only Officeholders in the sense defined in the [README](README.md) §3 appear as subjects in the register. Donors, lobbyists, business counterparties, and family members are named only where they appear on a Filing the Officeholder is required by law to make. A donor's or counterparty's independent activity is not the register's subject.
+Only Officeholders in the sense defined in the [README](README.md) §3 appear as subjects in the register. Donors, lobbyists, business counterparties, and family members are named only where they appear on a Filing the Officeholder is required by law to make. A donor's or counterparty's independent activity is not the register's subject. Where a filer writes the name of a private individual into a report's own lines (a trustee, a beneficiary, an account holder), the register carries the line as filed, bound to the report that discloses it and linked to the Clerk's copy, and on no other page; it does not seek such a name out, build any list or search of such names, or say anything about the person named. A filed line changes here only when the filer amends the report with the Clerk; the register then carries the amendment as filed.
 
 ## 10. Aggregators are not primary
 

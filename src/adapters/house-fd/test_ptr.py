@@ -170,7 +170,7 @@ def test_lines_group_fragments_by_baseline_top_to_bottom_left_to_right():
 def test_every_transaction_is_read_in_order_with_owner_type_dates_and_band():
     rows = ptr.transactions(PAGES)
     assert [r["action"] for r in rows] == ["purchase", "sale-partial", "sale", "exchange"]
-    assert [r["owner"] for r in rows] == ["self", "self", "spouse", "joint"]
+    assert [r["owner"] for r in rows] == ["unmarked", "unmarked", "spouse", "joint"]
     assert rows[0]["asset"] == "Example Widgets Inc. Common Stock (EXW)"
     assert rows[0]["ticker"] == "EXW" and rows[0]["asset_code"] == "ST"
     assert rows[0]["transaction_date"] == "2024-12-06"
@@ -310,3 +310,16 @@ def test_a_seat_mismatch_with_a_confirming_name_is_a_discrepancy_not_a_contradic
     assert status == "contradiction"
     status, _ = ptr.verify(TEXT, "XX01", "99", name_confirms=confirms)
     assert status == "contradiction", "a different filing id is never a discrepancy"
+
+
+def test_the_register_adds_no_punctuation_the_filer_did_not_write():
+    assert (
+        ptr.labelled("Description, as filed", "Sold 10 units.")
+        == "Description, as filed: Sold 10 units."
+    )
+    assert (
+        ptr.labelled("Description, as filed", "Sold 10 units")
+        == "Description, as filed: Sold 10 units."
+    )
+    assert ptr.labelled("Comments, as filed", "Why?") == "Comments, as filed: Why?"
+    assert "self" not in ptr.OWNERS.values(), "the House form never states the filer's own"
