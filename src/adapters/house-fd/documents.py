@@ -6,14 +6,16 @@ Clerk, keep the exact bytes and the response headers, record the SHA-256 and the
 retrieval time, and write nothing else. Extraction happens in `build.py`, from these
 captures, so a build is reproducible by anyone holding the same bytes.
 
-Which documents: every filing in `data/filings.ndjson` whose code is in `--codes`
-(default P, the transaction reports, which the Clerk serves from its own ptr-pdfs
-path), and, unless `--no-held`, every held row in `data/rejected/house-fd/` whose
-surname matches the sitting member at that very seat, whatever its code, because
-the document's own header is what decides those rows in `build.py`. `--seats NC`
-limits a run to one delegation, which is how the extractor was piloted. Documents
-already on disk are adopted, not fetched again: their retrieval time comes from the
-Date header the Clerk sent with them.
+Which documents: the build is asked (`build.wanted_documents`), from the two captures
+alone: the document behind every index row the name join attributes whose code is in
+`--codes` (default P, the transaction reports, which the Clerk serves from its own
+ptr-pdfs path), and, unless `--no-held`, the document behind every row held at a
+member's own seat under the member's surname, whatever its code, because the header
+of that document is what decides the row in `build.py`. This stage reads no row of the
+register, so it is pure with respect to it and a build is never a cycle behind its
+source. `--seats NC` limits a run to one delegation, which is how the extractor was
+piloted. Documents already on disk are adopted, not fetched again: their retrieval
+time comes from the Date header the Clerk sent with them.
 
 Politeness: one request at a time, a pause between requests, a user agent that names
 the project and how to reach whoever runs it.
@@ -27,7 +29,6 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import re
 import sys
 import time
 import urllib.request
@@ -42,8 +43,19 @@ AGENT = (
     "operator@veraproject.xyz)"
 )
 PAUSE_SECONDS = 2
-HELD = re.compile(r"surname matches a sitting member \(.+?, ([A-Z]{2}\d{2})\) but")
-CLERK = "https://disclosures-clerk.house.gov/public_disc"
+
+
+def load_build():
+    """The adapter's own build module, for the one question this stage asks it."""
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "house_fd_build", Path(__file__).with_name("build.py")
+    )
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
 
 
 def read_ndjson(path: Path) -> list[dict]:
@@ -107,29 +119,19 @@ def main(argv: list[str] | None = None) -> int:
 
     codes = {c.strip() for c in args.codes.split(",") if c.strip()}
     states = {s.strip().upper() for s in args.seats.split(",") if s.strip()}
-    holders = {h["id"]: h for h in read_ndjson(Path("data/officeholders.ndjson"))}
-    wanted = []
-    for f in read_ndjson(Path("data/filings.ndjson")):
-        if f.get("source_form_code") not in codes:
+    build = load_build()
+    wanted, held = [], 0
+    for doc in build.wanted_documents(args.year):
+        if states and doc["seat"][:2] not in states:
             continue
-        seat = holders[f["officeholder_id"]]["offices"][0]["seat"]
-        if states and seat[:2] not in states:
+        if doc["why"] == "attributed":
+            if doc["code"] not in codes:
+                continue
+        elif not args.held:
             continue
-        wanted.append((f["id"].rsplit(":", 1)[1], f["source"]["url"]))
-    held = 0
-    if args.held:
-        for path in sorted(Path("data/rejected/house-fd").glob(f"{args.year}-*.ndjson")):
-            for r in read_ndjson(path):
-                found = HELD.search(r.get("reason", ""))
-                sr = r.get("source_row", {})
-                if not found or sr.get("state_dst") != found.group(1):
-                    continue
-                if states and found.group(1)[:2] not in states:
-                    continue
-                # The same split build.doc_url makes: the Clerk serves code P from ptr-pdfs.
-                folder = "ptr-pdfs" if sr.get("filing_type") == "P" else "financial-pdfs"
-                wanted.append((sr["doc_id"], f"{CLERK}/{folder}/{args.year}/{sr['doc_id']}.pdf"))
-                held += 1
+        else:
+            held += 1
+        wanted.append((doc["doc_id"], doc["url"]))
 
     DOCS.mkdir(parents=True, exist_ok=True)
     manifest = json.loads(MANIFEST.read_text(encoding="utf-8")) if MANIFEST.is_file() else {}

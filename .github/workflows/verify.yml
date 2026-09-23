@@ -63,6 +63,9 @@ jobs:
       - name: lint-verdict-language (Invariant 1)
         run: python tools/lint-verdict-language.py
 
+      - name: scan-secrets, nothing of a secret or of one person's life lands in git (Invariant 10)
+        run: python tools/scan-secrets.py
+
       - name: check-crossrefs (Council section 5, mode 7)
         run: |
           if [ -f tools/check-crossrefs.py ]; then
