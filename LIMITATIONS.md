@@ -28,6 +28,8 @@ A qualified blind trust under 5 U.S.C. app. 4 § 102(f) removes the Officeholder
 
 Retrospective coverage runs back only to the earliest date the primary source publishes electronically. Earlier filings exist on paper in agency archives. The register will note their existence where the archive is known; it will not synthesise their contents. Where a source's electronic corpus contains scanned images without extracted text, extraction quality is bounded by the OCR pipeline used, and the extraction confidence is recorded on the row.
 
+In the House transaction reports the register has read so far, 54 of 417 are scanned paper filings; the register captures and hashes them and reads nothing from them, so their transactions are absent from `data/transactions.ndjson` and their filing rows say so through a hash without an extraction. What the register does read, it carries as printed: 31 transactions carry a notification date earlier than the transaction date, and a handful carry years no filing period covers. These are the filer's entries, not the register's, and the register does not correct them.
+
 ## 7. Late and amended filings
 
 Filings arrive late. Filings are amended. A Finding computed against a filing set is valid as of the build; a later filing or amendment may change the underlying facts. The register will surface the amendment (as a new row) and, where the amendment invalidates a Finding, will supersede the Finding in the following build.

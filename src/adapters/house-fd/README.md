@@ -42,6 +42,8 @@ The hardest refusal is deliberate. Where a surname matches exactly one sitting m
 | Officeholders with at least one filing | 393 |
 | Index rows rejected | 1,842 |
 | Sitting members with nothing attributed | 46 |
+| Transaction reports read | 363 of 417 |
+| Transactions written | 6,242 |
 
 Of the rejections, 1,587 are rows whose name matches no sitting member, which is the expected shape of a file that is mostly candidates. The other 255 carry a surname matching exactly one sitting member whose given names differ, and every one of them is waiting on a person to decide.
 
@@ -61,9 +63,21 @@ The index is not an annual artefact. The 2025 archive was last modified partway 
 
 Two builds from one capture produce byte-identical output. The rejected file and the run record are named for the captures they came from (twelve hex characters of the hash of both files' hashes), never for the day the build ran, so an unchanged source is an unchanged tree and the seal holds. Rejections from earlier captures live in git history.
 
+## The documents
+
+`documents.py` captures the document behind each filing the same way `fetch.py` captures the index: exact bytes, response headers, SHA-256 and retrieval time, recorded in `data/cache/house-fd/docs/captures.json`. It fetches only the codes asked for (default `P`, the transaction reports) and can be limited to a delegation with `--seats NC`, which is how the reader was piloted on North Carolina's twenty-one reports before it ran on the chamber.
+
+`ptr.py` reads a captured transaction report as pure functions over one document. The document is a table, and it is read as a table: every text fragment pypdf reports carries its position on the page, fragments sharing a baseline form a visual line, and the column a fragment sits in says what it is. A transaction begins on the line that carries a type in the Transaction Type column, with the owner code, the asset's first line, the two dates and the band's first line beside it; further asset lines and the band's second line sit beneath; then come the form's labelled lines (filing status, subholding of, location, description, comments), which may wrap. Reading by position is what makes a page break falling inside a transaction, a label that wraps, and an amendment whose table sits sixteen points to the right all read the same. The register learnt each of those shapes from the documents themselves on 2026-09-23, and the reader's tests carry them.
+
+Two checks the index could never make happen here. The Filing ID printed in the document must be the DocID the index gave it, and the seat printed in the document must be the roster seat of the officeholder it was attributed to. A document that disagrees on the Filing ID refuses the filing row rather than guessing. A document that disagrees on the seat refuses the row unless its printed name confirms the officeholder by the join's own test, in which case the row stands and carries the discrepancy in `notes`: a filer's profile can print the seat held in the previous Congress, and three reports do. A third check is per transaction: the asset text must end in the Clerk's bracketed asset code, or the row's notes say the asset is unconfirmed. A document with no Filing ID line is a scanned paper filing; the row stands, the document's hash is recorded, and nothing is read from it.
+
+On the chamber-wide run of 2026-09-23, 363 of the 417 transaction reports were read (3 with the seat discrepancy noted), 54 were scanned and not read, none was refused, and 6,242 transactions were written, every asset confirmed by its tag. `build.py` does the reading from the captures, sets `content_hash` and `extraction_confidence` on the filing rows it read, and writes `data/transactions.ndjson`. The transactions are in the register and are not yet shown on any page; that surface waits for the Council.
+
+This is the register's one dependency outside the standard library: `pypdf`, declared in `pyproject.toml` under `extract`. The verifier never imports it.
+
 ## Run records
 
-Every build writes one line to `data/adapter-runs/house-fd-<year>-<capture key>.ndjson`: the adapter, the two captures with their URLs, retrieval times, hashes and last-modified headers, the hash of the adjudication file that shaped the build, the counts (seats, filled, vacant, index rows, accepted, adjudicated, officeholders with a filing, quiet, rejected), and the rejections by reason. It is sealed with the rows, so the provenance of a build is inside the build.
+Every build writes one line to `data/adapter-runs/house-fd-<year>-<capture key>.ndjson`: the adapter, the two captures with their URLs, retrieval times, hashes and last-modified headers, the hash of the adjudication file that shaped the build, the documents block (the manifest hash and how many documents were captured, read, read with a seat discrepancy, unreadable, refused, and how many transactions they yielded), the counts (seats, filled, vacant, index rows, accepted, adjudicated, officeholders with a filing, quiet, rejected), and the rejections by reason. It is sealed with the rows, so the provenance of a build is inside the build.
 
 ## Adjudications
 
@@ -71,7 +85,7 @@ A person can decide a held row. `adjudications.ndjson`, beside this README, carr
 
 ## Keeping it current
 
-`.github/workflows/refresh.yml` runs both stages on a schedule and opens a pull request only when the source served different bytes, with every gate already run. The test is the capture key against the last build's run record, never a diff of the rows: every row carries its retrieval time, so a diff reports a change on every run, and the first live run did exactly that and opened a pull request for a non-change. `build.py --capture-key` prints the key without building. Nothing about the loop needs a server, a database, or a secret.
+`.github/workflows/refresh.yml` runs all three stages on a schedule and opens a pull request only when the source served different bytes, with every gate already run. The test is the capture key against the last build's run record, never a diff of the rows: every row carries its retrieval time, so a diff reports a change on every run, and the first live run did exactly that and opened a pull request for a non-change. `build.py --capture-key` prints the key without building. Nothing about the loop needs a server, a database, or a secret.
 
 ## Why this is Python
 
