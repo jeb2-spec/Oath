@@ -10,7 +10,7 @@ Three categories. Each has its own reporting path.
 
 Secrets committed to git, dependency vulnerabilities, injection paths, supply-chain compromise of an adapter, a verifier that returns OK on a tampered file, a hash collision path, a URL parser that misroutes to a look-alike host.
 
-**How to report.** Open a private security advisory via GitHub's *Security → Advisories → New draft security advisory* on this repository. Include what you observed, how to reproduce, and where you tested. If you cannot use GitHub advisories, email the Maintainer with subject `[Oath security] <one-line summary>`; the Maintainer's public email is on their commits.
+**How to report.** Open a private security advisory via GitHub's *Security → Advisories → New draft security advisory* on this repository. Include what you observed, how to reproduce, and where you tested. If you cannot use GitHub advisories, email operator@veraproject.xyz with subject `[Oath security] <one-line summary>`.
 
 **What we commit to.** Acknowledgement within seven days. A written assessment within thirty days. A public write-up in the build's release notes once the fix is out, with credit to the reporter (or anonymity, at the reporter's request).
 
