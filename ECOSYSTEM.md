@@ -57,6 +57,10 @@ Name (legal, as filed)                                  [mark]
 Office · Jurisdiction · Term
 ─────────────────────────────────────────────────────────────
 
+WHAT THE OFFICE REQUIRES
+  The oath of office, verbatim, cited (STANDARDS.md C.1)
+  Each disclosure the office requires · the Standard it comes from
+
 FILINGS
   Year · Form type · Filed · Source URL · Retrieved
   ...
@@ -77,6 +81,8 @@ BUILD: <digest>  ANCHOR: <state>  CITE THIS BUILD: <cmd>
 ```
 
 The page is a static file. It is regenerated on every build. The mark in the top-right is struck from the officeholder's identifier and the build digest, per §2.
+
+**Name first.** These are people, and the page is about a person's record, not about a glyph. The name the Clerk lists is the largest thing on the page. The mark sits beside the record the way a notary's stamp sits beside a signature: smaller than the name, never a badge on the person, never the thing the eye lands on first. The oath the officeholder took is printed on the page verbatim and cited, and so is each disclosure the office requires with the Standard it comes from, because that is the standard the register exists to set the record beside, and it is the same words for everyone. Set by the maintainer on 2026-09-22.
 
 ### 1.4 The landing page
 
