@@ -49,10 +49,13 @@ jobs:
           python-version: "3.11"
 
       - name: Install the Python dev toolchain named in pyproject.toml
-        run: python -m pip install "ruff>=0.16,<0.17" "pytest>=8"
+        run: python -m pip install "ruff>=0.16,<0.17" "pytest>=8" "pypdf>=6,<7"
 
       - name: Fetch the roster and the filing index, recording each retrieval
         run: python src/adapters/house-fd/fetch.py --year "$YEAR" | tee fetch.log
+
+      - name: Capture the transaction reports behind the index, recording each retrieval
+        run: python src/adapters/house-fd/documents.py --year "$YEAR" --codes P | tee -a fetch.log
 
       - name: Did the source change
         id: diff
@@ -86,6 +89,8 @@ jobs:
           sequence = int(meta["build"].split("-")[0]) + 1
           capture = json.load(open("data/cache/house-fd/capture.json", encoding="utf-8"))
           built_at = capture[f"{year}FD.zip"]["retrieved_at"]
+          documents = json.load(open("data/cache/house-fd/docs/captures.json", encoding="utf-8"))
+          built_at = max([built_at] + [d["retrieved_at"] for d in documents.values()])
           build = f"{sequence:04d}-house-{year}"
           subprocess.run(["python", "tools/seal.py", "--build", build, "--built-at", built_at, "."], check=True)
           open("build.id", "w").write(build)
@@ -122,7 +127,7 @@ jobs:
           {
             echo "Refresh: build ${BUILD} from the Clerk's record as retrieved ${DATE}"
             echo
-            echo "Opened by the scheduled refresh. The adapter re-read the roster and the ${YEAR} filing index, rebuilt the rows, and re-sealed. Every gate ran green in the workflow before this was pushed."
+            echo "Opened by the scheduled refresh. The adapter re-read the roster, the ${YEAR} filing index and the transaction reports behind it, rebuilt the rows, and re-sealed. Every gate ran green in the workflow before this was pushed."
             echo
             cat build.log
           } > commit.msg
@@ -131,7 +136,7 @@ jobs:
           {
             echo "## What changed"
             echo
-            echo "The scheduled refresh re-read the Clerk's roster and the ${YEAR} filing index and found the record different from build \`$(git show main:data/meta.json | python -c 'import json,sys;print(json.load(sys.stdin)["build"])')\`. This is build \`${BUILD}\`, sealed at the retrieval time."
+            echo "The scheduled refresh re-read the Clerk's roster, the ${YEAR} filing index and the transaction reports behind it, and found the record different from build \`$(git show main:data/meta.json | python -c 'import json,sys;print(json.load(sys.stdin)["build"])')\`. This is build \`${BUILD}\`, sealed at the retrieval time."
             echo
             echo '```'
             cat fetch.log

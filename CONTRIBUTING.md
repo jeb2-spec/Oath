@@ -24,11 +24,12 @@ The register reads primary sources and nothing else. Each source has an adapter 
 
 ```bash
 python src/adapters/house-fd/fetch.py --year 2025
+python src/adapters/house-fd/documents.py --year 2025 --codes P
 python src/adapters/house-fd/build.py --year 2025
 python tools/seal.py --build <sequence>-house-2025 --built-at <the retrieval time fetch.py recorded>
 ```
 
-`fetch.py` retrieves and records: the URL, the retrieval time, the SHA-256 of the bytes, and the server's last-modified. `build.py` touches no network; it writes rows from the recorded capture, so anyone holding the same bytes gets the same rows. What the adapter cannot attribute beyond doubt goes to `data/rejected/` with the reason, and every run writes a one-line record to `data/adapter-runs/` naming the captures it read. Both are sealed with the rows.
+`fetch.py` retrieves and records: the URL, the retrieval time, the SHA-256 of the bytes, and the server's last-modified. `documents.py` does the same for the document behind each transaction report, two seconds apart, and needs `pypdf` (`python -m pip install -e .[extract]`). `build.py` touches no network; it writes rows from the recorded capture, so anyone holding the same bytes gets the same rows. What the adapter cannot attribute beyond doubt goes to `data/rejected/` with the reason, and every run writes a one-line record to `data/adapter-runs/` naming the captures it read. Both are sealed with the rows.
 
 On a schedule, [`refresh.yml`](.github/workflows/refresh.yml) does the same in GitHub Actions: fetch, build, and if the record changed, re-seal, run every gate, and open a pull request for the maintainer. If nothing changed it says so and stops. A pull request opened by the workflow does not trigger CI on itself, so the workflow runs the full gate set before pushing and its log is the evidence; the merge runs CI on `main`.
 

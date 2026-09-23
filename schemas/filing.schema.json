@@ -103,6 +103,13 @@
       ],
       "description": "How the content was extracted from the source. Rows built from OCR-low sources are flagged in downstream Findings."
     },
+    "notes": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "What the document says about itself that the reader must see beside the row, in plain words: for example, a printed seat that differs from the roster. Null when the document and the index agree in full."
+    },
     "evidence_bundle": {
       "type": "object",
       "required": [

@@ -495,6 +495,22 @@ def aside_sentence(held_here: int) -> str:
     )
 
 
+def documents_read(filings: list[dict]) -> tuple[int, int]:
+    """How many of these filings' documents the register read, and how many it captured
+    but could not read because they are scanned images. A read document carries a
+    content hash and a structured extraction; a scanned one carries the hash alone.
+    """
+    read = scanned = 0
+    for filing in filings:
+        if not filing.get("source", {}).get("content_hash"):
+            continue
+        if filing.get("extraction_confidence") == "structured":
+            read += 1
+        else:
+            scanned += 1
+    return read, scanned
+
+
 def checks_section(holder: dict, filings: list[dict], held_here: int) -> str:
     """What the register can and cannot check here. Identical in shape for everyone."""
     roster_read = holder.get("source", {}).get("retrieved_at", "")[:10]
@@ -504,10 +520,31 @@ def checks_section(holder: dict, filings: list[dict], held_here: int) -> str:
             f"<b>in the register</b> · {n} {plural(n, 'row', 'rows')} of the Clerk's 2025 index "
             "matched to this name."
         )
-        documents = (
-            "<b>not yet</b> · the register has not read the documents; each link below opens the "
-            "Clerk's own copy."
-        )
+        read, scanned = documents_read(filings)
+        pending = n - read - scanned
+        if read == n:
+            documents = (
+                "<b>read</b> · the register read each document, recorded its hash, and confirmed "
+                "the seat and filing ID printed inside it against the roster; the transactions "
+                "the reports list are in the register's rows and not yet shown here, pending "
+                "the Council's reading of that surface."
+            )
+        elif read or scanned:
+            parts = [f"<b>partly read</b> · {read} of {n} documents read and hashed"]
+            if scanned:
+                parts.append(
+                    f"{scanned} {plural(scanned, 'is a', 'are')} scanned "
+                    f"{plural(scanned, 'image', 'images')} the register captured, hashed and "
+                    "does not read"
+                )
+            if pending:
+                parts.append(f"{pending} not yet captured")
+            documents = "; ".join(parts) + ". Each link below opens the Clerk's own copy."
+        else:
+            documents = (
+                "<b>not yet</b> · the register has not read the documents; each link below opens "
+                "the Clerk's own copy."
+            )
     else:
         aside = aside_sentence(held_here) or (
             " No row of the index at this seat carries this surname; rows the register could not "
@@ -702,6 +739,16 @@ def bar(part: int, whole: int) -> str:
     return f'<span class="bar"><i style="width:{pct}%"></i></span>'
 
 
+def scanned_clause(scanned: int) -> str:
+    """The landing's aside for documents captured but not read, or nothing."""
+    if not scanned:
+        return ""
+    return (
+        f"; {scanned} more {plural(scanned, 'is a', 'are')} scanned "
+        f"{plural(scanned, 'image', 'images')} the register captured, hashed and does not read"
+    )
+
+
 def state_of_record(
     meta: dict,
     run: dict,
@@ -722,6 +769,7 @@ def state_of_record(
         "officeholders_with_a_filing", len({f["officeholder_id"] for f in filings})
     )
     matched = counts.get("accepted", len(filings))
+    read, scanned = documents_read(filings)
     held = run.get("rejected_by_reason", {}).get("surname matches exactly one sitting member", 0)
     sources = {s["name"]: s for s in run.get("sources", [])}
     year = run.get("year", 2025)
@@ -762,8 +810,9 @@ def state_of_record(
         f"<dt>{with_row}</dt><dd>of {filled} officeholders have at least one row of the Clerk's "
         f"{year} index matched to their name{bar(with_row, filled)}</dd>\n"
         f"<dt>{matched}</dt><dd>index rows matched, each linked to the Clerk's own document</dd>\n"
-        f"<dt>0</dt><dd>of {matched} documents read by the register so far; the links open the "
-        f"Clerk's copies{bar(0, matched)}</dd>\n"
+        f"<dt>{read}</dt><dd>of {matched} documents read by the register so far, each checked "
+        f"against the seat and filing ID printed inside it{scanned_clause(scanned)}; the links "
+        f"open the Clerk's copies{bar(read, matched)}</dd>\n"
         f"<dt>{held}</dt><dd>index rows set aside for the maintainer to decide by hand, because "
         f"the register does not guess; {at_seat_total} of them sit at a member's own seat under "
         "the member's surname. Whether a page is quiet is decided by whether the name on the "

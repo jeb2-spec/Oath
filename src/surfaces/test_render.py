@@ -206,3 +206,25 @@ def test_the_lede_no_longer_promises_every_filing():
     assert "the register could match to the name" in page
     assert "a written rule catches" not in page
     assert "Most pages will stay quiet" not in page
+
+
+def test_a_scanned_document_is_captured_not_read_and_the_page_says_which():
+    read = dict(filing("oh:us:house:a000001", "2025-03-01", 1))
+    read["source"] = dict(read["source"], content_hash="a" * 64)
+    read["extraction_confidence"] = "structured"
+    scanned = dict(filing("oh:us:house:a000001", "2025-04-01", 2))
+    scanned["source"] = dict(scanned["source"], content_hash="b" * 64)
+    scanned["extraction_confidence"] = None
+    pending = filing("oh:us:house:a000001", "2025-05-01", 3, code="O")
+    assert render.documents_read([read, scanned, pending]) == (1, 1)
+    page = render.render_officeholder(HOLDERS[0], [read, scanned, pending], META, striker)
+    assert "partly read" in page
+    assert "1 of 3 documents read and hashed" in page
+    assert "1 is a scanned image the register captured, hashed and does not read" in page
+    assert "1 not yet captured" in page
+    assert "the register read each document" not in page
+    section = render.state_of_record(
+        META, RUN, HOLDERS, [read, scanned, pending], OFFICES, 1, "https://x/rows"
+    )
+    assert "<dt>1</dt><dd>of 3 documents read" in section
+    assert "1 more is a scanned image" in section
