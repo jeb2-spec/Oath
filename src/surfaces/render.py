@@ -41,6 +41,7 @@ import importlib.util
 import json
 import re
 import sys
+import unicodedata
 from pathlib import Path
 
 FRAME = "Presence in the register is not evidence of wrongdoing."
@@ -196,8 +197,16 @@ TILES = {
     "FL": (8, 7),
 }
 
-HELD_REASON = re.compile(
-    r"surname matches exactly one sitting member \((.+?), ([A-Z]{2}\d{2})\) but"
+HELD_REASON = re.compile(r"surname matches a sitting member \((.+?), ([A-Z]{2}\d{2})\) but")
+BY_HEADER = "Attributed by the document's own header"
+
+# Why a row at a member's own seat under the member's surname waits, read from the
+# reason the adapter wrote. Each kind has the clause the page prints for it.
+HELD_KINDS = (
+    ("no_filing_id", "carries no Filing ID line"),
+    ("status", "not Member"),
+    ("before_sworn", "before the swearing-in"),
+    ("not_captured", "has not been captured"),
 )
 
 CSS = """
@@ -323,18 +332,72 @@ def load_striker(root: Path):
     return module
 
 
-def held_at_seat(rejected: list[dict]) -> dict[str, int]:
-    """Rows set aside whose surname matches the sitting member at that very seat, by seat.
+def folded_words(text: str) -> frozenset[str]:
+    """The words of a name, folded: lowercase letters only, diacritics removed."""
+    out = set()
+    for word in re.split(r"[\s,.\-]+", text):
+        folded = "".join(c for c in unicodedata.normalize("NFKD", word).lower() if c.isalpha())
+        if folded:
+            out.add(folded)
+    return frozenset(out)
 
-    A fact about the index, not a score: the reason string the adapter wrote names the
-    member and the seat, and the row's own state-district must be the same seat.
+
+def surname_tokens(holder: dict) -> frozenset[str]:
+    """The folded words of the roster surname: from the roster's own "Last, First" when the
+    row carries it, else the last word of the legal name without a suffix."""
+    common = holder.get("common_name") or ""
+    if "," in common:
+        return folded_words(common.split(",")[0])
+    legal = re.sub(r",?\s+(Jr\.?|Sr\.?|II|III|IV)$", "", holder.get("legal_name", ""))
+    return folded_words(legal.split()[-1]) if legal.split() else frozenset()
+
+
+def held_kind(reason: str) -> str:
+    for kind, marker in HELD_KINDS:
+        if marker in reason:
+            return kind
+    return "other"
+
+
+def held_at_seat(rejected: list[dict], holders: list[dict]) -> dict[str, dict[str, int]]:
+    """Rows set aside under a member's surname, by the member's seat and by why they wait.
+
+    A fact about the index, not a score. A row counts at a seat when its state-district
+    is that holder's seat and its surname carries every word of that holder's surname,
+    whatever reason the adapter gave, so the count is zero only when no such row exists.
+    A held row whose reason names the member but whose state-district is another seat
+    counts under "elsewhere" for that member, without naming the other seat.
     """
-    counts: dict[str, int] = {}
+    tokens_of_seat = {}
+    for holder in holders:
+        for office in holder.get("offices", []):
+            tokens_of_seat[office.get("seat", "")] = surname_tokens(holder)
+    counts: dict[str, dict[str, int]] = {}
     for row in rejected:
-        match = HELD_REASON.search(row.get("reason", ""))
-        if match and row.get("source_row", {}).get("state_dst", "").strip() == match.group(2):
-            counts[match.group(2)] = counts.get(match.group(2), 0) + 1
+        source = row.get("source_row", {})
+        seat = source.get("state_dst", "").strip()
+        reason = row.get("reason", "")
+        words = folded_words(source.get("last") or "")
+        if seat in tokens_of_seat and tokens_of_seat[seat] and tokens_of_seat[seat] <= words:
+            kind = held_kind(reason)
+            counts.setdefault(seat, {})[kind] = counts.get(seat, {}).get(kind, 0) + 1
+            continue
+        named = HELD_REASON.search(reason)
+        if named and named.group(2) != seat:
+            member_seat = named.group(2)
+            counts.setdefault(member_seat, {})["elsewhere"] = (
+                counts.get(member_seat, {}).get("elsewhere", 0) + 1
+            )
     return counts
+
+
+def held_total(at_seat: dict) -> int:
+    """Rows set aside at members' own seats, from kinds dicts or bare counts; rows that
+    sit at another seat are not at the member's own seat and are not counted here."""
+    return sum(
+        sum(n for k, n in v.items() if k != "elsewhere") if isinstance(v, dict) else int(v)
+        for v in at_seat.values()
+    )
 
 
 def sworn_date(holder: dict) -> str:
@@ -429,8 +492,14 @@ def how_to_read(person: bool) -> str:
             (
                 "A row of the index",
                 "A line in the Clerk's public index of financial disclosure documents that the "
-                "register matched to this officeholder's name on the roster, listed as the Clerk "
-                "lists it.",
+                "register attributed to this officeholder, listed as the Clerk lists it.",
+            ),
+            (
+                "How",
+                "What attributed the row. Name: the name on the form matched the roster exactly. "
+                "Document: the index wrote the name in another form, and the Clerk's document "
+                "prints Status Member at this seat with this Filing ID. Decision: a person's "
+                "cited adjudication.",
             ),
             (
                 "The document",
@@ -449,9 +518,9 @@ def how_to_read(person: bool) -> str:
     rows += [
         (
             "Set aside",
-            "A row of the Clerk's index the register could not match to a name beyond an exact "
-            "match. It waits for the maintainer to decide by hand, with evidence; it is never "
-            "guessed.",
+            "A row of the Clerk's index that neither the name on the form nor the Clerk's "
+            "document could attribute to an officeholder. It waits for the maintainer to decide "
+            "by hand, with evidence; it is never guessed.",
         ),
         (
             "A signal",
@@ -485,20 +554,70 @@ def how_to_read(person: bool) -> str:
 # ---- the officeholder page --------------------------------------------------------------
 
 
-def aside_sentence(held_here: int) -> str:
-    if not held_here:
-        return ""
-    return (
-        f" {held_here} {plural(held_here, 'row', 'rows')} of the index at this seat "
-        f"{plural(held_here, 'carries', 'carry')} this surname and "
-        f"{plural(held_here, 'is', 'are')} set aside for the maintainer to decide by hand."
+HELD_CLAUSES = {
+    "no_filing_id": "whose {docs} {carry} no Filing ID line (scanned paper, or a form that "
+    "prints none) and cannot confirm the filer",
+    "status": "whose {docs} {print} a filer status other than Member",
+    "before_sworn": "dated by the index before the swearing-in the roster records for this "
+    "Congress",
+    "not_captured": "whose {docs} the register has not yet captured",
+    "other": "whose {docs} {print} another seat or another Filing ID, or were set aside for "
+    "another recorded reason",
+}
+
+
+def aside_sentence(held_here) -> str:
+    """The rows at this seat under this surname that wait, and why, from the adapter's
+    reasons. `held_here` is the kinds dict from held_at_seat, or a bare count."""
+    kinds = dict(
+        held_here if isinstance(held_here, dict) else ({"unknown": held_here} if held_here else {})
     )
+    elsewhere = kinds.pop("elsewhere", 0)
+    away = (
+        f" {elsewhere} {plural(elsewhere, 'row', 'rows')} of the index under this surname "
+        f"{plural(elsewhere, 'sits', 'sit')} at another seat; the register holds "
+        f"{plural(elsewhere, 'it', 'them')} because the surname alone matched, and does not say "
+        f"whose {plural(elsewhere, 'it is', 'they are')}."
+        if elsewhere
+        else ""
+    )
+    total = sum(kinds.values())
+    if not total:
+        return away
+    clauses = []
+    for kind, n in kinds.items():
+        if kind in HELD_CLAUSES:
+            clauses.append(
+                f"{n} "
+                + HELD_CLAUSES[kind].format(
+                    docs=plural(n, "document", "documents"),
+                    carry=plural(n, "carries", "carry"),
+                    mark=plural(n, "marks", "mark"),
+                    print=plural(n, "prints", "print"),
+                )
+            )
+    why = f": {'; '.join(clauses)}" if clauses else ""
+    return (
+        f" {total} {plural(total, 'row', 'rows')} of the index at this seat "
+        f"{plural(total, 'carries', 'carry')} this surname and "
+        f"{plural(total, 'is', 'are')} set aside for the maintainer to decide by hand{why}." + away
+    )
+
+
+def how_attributed(filing: dict) -> str:
+    """By the name on the form, by the document's own header, or by a person's decision."""
+    if (filing.get("notes") or "").startswith(BY_HEADER):
+        return "document"
+    if filing.get("extraction_confidence") == "manual":
+        return "decision"
+    return "name"
 
 
 def documents_read(filings: list[dict]) -> tuple[int, int]:
     """How many of these filings' documents the register read, and how many it captured
-    but could not read because they are scanned images. A read document carries a
-    content hash and a structured extraction; a scanned one carries the hash alone.
+    but did not read: scanned paper, or a form whose schedules the register does not
+    yet read. A read document carries a content hash and a structured extraction; an
+    unread one carries the hash alone.
     """
     read = scanned = 0
     for filing in filings:
@@ -511,14 +630,22 @@ def documents_read(filings: list[dict]) -> tuple[int, int]:
     return read, scanned
 
 
-def checks_section(holder: dict, filings: list[dict], held_here: int) -> str:
+def checks_section(holder: dict, filings: list[dict], held_here) -> str:
     """What the register can and cannot check here. Identical in shape for everyone."""
     roster_read = holder.get("source", {}).get("retrieved_at", "")[:10]
     n = len(filings)
     if n:
+        by_header = sum(1 for f in filings if how_attributed(f) == "document")
+        route = (
+            f", {by_header} of them by the document's own header: the index writes the name "
+            "in another form, and the Clerk's document prints Status Member at this seat with "
+            "this Filing ID"
+            if by_header
+            else ""
+        )
         index_line = (
             f"<b>in the register</b> · {n} {plural(n, 'row', 'rows')} of the Clerk's 2025 index "
-            "matched to this name."
+            f"attributed to this officeholder{route}.{aside_sentence(held_here)}"
         )
         read, scanned = documents_read(filings)
         pending = n - read - scanned
@@ -533,9 +660,8 @@ def checks_section(holder: dict, filings: list[dict], held_here: int) -> str:
             parts = [f"<b>partly read</b> · {read} of {n} documents read and hashed"]
             if scanned:
                 parts.append(
-                    f"{scanned} {plural(scanned, 'is a', 'are')} scanned "
-                    f"{plural(scanned, 'image', 'images')} the register captured, hashed and "
-                    "does not read"
+                    f"{scanned} captured and hashed, not read: scanned paper, or a form the "
+                    "register does not yet read"
                 )
             if pending:
                 parts.append(f"{pending} not yet captured")
@@ -552,8 +678,9 @@ def checks_section(holder: dict, filings: list[dict], held_here: int) -> str:
         )
         index_line = (
             "<b>not yet matched</b> · the register attributes a row only on an exact name match "
-            f"against the Clerk's roster.{aside} This is a gap in the register's matching, not a "
-            "statement that no filing was made."
+            "against the Clerk's roster, or on the Clerk's document printing Status Member at "
+            f"this seat with this Filing ID.{aside} This is a gap in the register's matching, "
+            "not a statement that no filing was made."
         )
         documents = "<b>not yet</b> · the register has not read any document for this record."
     return (
@@ -567,7 +694,7 @@ def checks_section(holder: dict, filings: list[dict], held_here: int) -> str:
     )
 
 
-def filings_section(filings: list[dict], held_here: int) -> str:
+def filings_section(filings: list[dict], held_here) -> str:
     heading = "<h2>What the Clerk's index lists for this officeholder</h2>\n"
     if not filings:
         return (
@@ -586,27 +713,29 @@ def filings_section(filings: list[dict], held_here: int) -> str:
             f'<td class="code">{esc(f.get("source_form_code") or "")}</td>'
             f'<td><a href="{esc(f["source"]["url"])}">Open the Clerk\'s copy</a></td>'
             f'<td class="idx">{esc(f["source"]["retrieved_at"][:10])}</td>'
+            f'<td class="code">{how_attributed(f)}</td>'
             "</tr>"
         )
     n = len(rows)
     return (
         f"<section>\n{heading}<table>\n"
-        f"<caption>{n} {plural(n, 'row', 'rows')} of the Clerk's 2025 index matched to this name, "
-        "oldest first. The one-letter code is the Clerk's own and the Clerk does not publicly "
+        f"<caption>{n} {plural(n, 'row', 'rows')} of the Clerk's 2025 index attributed to this "
+        'officeholder, oldest first. "How" says what attributed the row: the name on the form '
+        "matching the roster; the Clerk's document printing Status Member at this seat with this "
+        "Filing ID; or a person's cited decision. "
+        "The one-letter code is the Clerk's own and the Clerk does not publicly "
         "define it; the register does not interpret it. Open the document to see what it is. "
         "Rows coded P are served from the Clerk's transaction-report path, which is the one code "
         f'the register files as a transaction report (<a href="{SOURCES_F1}">SOURCES.md F.1</a>).'
         "</caption>\n"
         "<thead><tr><th>Date filed</th><th>The Clerk's code</th>"
-        "<th>The document</th><th>Fetched</th></tr></thead>\n<tbody>\n"
+        "<th>The document</th><th>Fetched</th><th>How</th></tr></thead>\n<tbody>\n"
         + "\n".join(rows)
         + "\n</tbody>\n</table>\n</section>"
     )
 
 
-def render_officeholder(
-    holder: dict, filings: list[dict], meta: dict, striker, held_here: int = 0
-) -> str:
+def render_officeholder(holder: dict, filings: list[dict], meta: dict, striker, held_here=0) -> str:
     office = holder["offices"][0] if holder.get("offices") else {}
     seal = striker.strike(holder["id"], meta.get("digest", ""), ticks=0, bars=0)
     roster_read = holder.get("source", {}).get("retrieved_at", "")[:10]
@@ -744,8 +873,8 @@ def scanned_clause(scanned: int) -> str:
     if not scanned:
         return ""
     return (
-        f"; {scanned} more {plural(scanned, 'is a', 'are')} scanned "
-        f"{plural(scanned, 'image', 'images')} the register captured, hashed and does not read"
+        f"; {scanned} more captured and hashed, not read: scanned paper, or a form the "
+        "register does not yet read"
     )
 
 
@@ -770,7 +899,8 @@ def state_of_record(
     )
     matched = counts.get("accepted", len(filings))
     read, scanned = documents_read(filings)
-    held = run.get("rejected_by_reason", {}).get("surname matches exactly one sitting member", 0)
+    by_header = sum(1 for f in filings if how_attributed(f) == "document")
+    held = run.get("rejected_by_reason", {}).get("surname matches a sitting member", 0)
     sources = {s["name"]: s for s in run.get("sources", [])}
     year = run.get("year", 2025)
     index_src = sources.get(f"{year}FD.zip", {})
@@ -808,16 +938,20 @@ def state_of_record(
         f"<dt>{seats}</dt><dd>seats in the House{nonvoting}; {filled} filled, {seats - filled} "
         f"vacant{bar(filled, seats)}</dd>\n"
         f"<dt>{with_row}</dt><dd>of {filled} officeholders have at least one row of the Clerk's "
-        f"{year} index matched to their name{bar(with_row, filled)}</dd>\n"
-        f"<dt>{matched}</dt><dd>index rows matched, each linked to the Clerk's own document</dd>\n"
+        f"{year} index attributed to them{bar(with_row, filled)}</dd>\n"
+        f"<dt>{matched}</dt><dd>index rows attributed, each linked to the Clerk's own document; "
+        f"{by_header} of them by the document's own header where the index wrote the name in "
+        "another form</dd>\n"
         f"<dt>{read}</dt><dd>of {matched} documents read by the register so far, each checked "
         f"against the seat and filing ID printed inside it{scanned_clause(scanned)}; the links "
         f"open the Clerk's copies{bar(read, matched)}</dd>\n"
         f"<dt>{held}</dt><dd>index rows set aside for the maintainer to decide by hand, because "
         f"the register does not guess; {at_seat_total} of them sit at a member's own seat under "
         "the member's surname. Whether a page is quiet is decided by whether the name on the "
-        f'form matched the roster exactly, not by what was filed. <a href="{rejected_url}">The '
-        "rows, with reasons</a>.</dd>\n"
+        "form matched the roster, or the Clerk's document confirmed the filer at that seat, "
+        f'not by what was filed. <a href="{rejected_url}">The '
+        "rows, with reasons</a>; every row there is a line of the Clerk's index the register did "
+        "not attribute, and presence in that file is not evidence of anything about anyone.</dd>\n"
         "<dt>0</dt><dd>signals defined, so 0 fired; silence is a legitimate result</dd>\n"
         "</dl>\n"
         f'<p class="quiet">{fresh}The seal fixes exactly this reading.</p>\n'
@@ -832,7 +966,7 @@ def render_index(
     run: dict,
     meta: dict,
     striker,
-    at_seat: dict[str, int] | None = None,
+    at_seat: dict[str, dict[str, int]] | None = None,
     rejected_url: str = REPO + "data/rejected/house-fd/",
 ) -> str:
     at_seat = at_seat or {}
@@ -917,7 +1051,7 @@ def render_index(
         "<tbody>\n" + "\n".join(rows) + "\n</tbody>\n</table>\n</section>"
     )
     record = state_of_record(
-        meta, run, holders, filings, offices, sum(at_seat.values()), rejected_url
+        meta, run, holders, filings, offices, held_total(at_seat), rejected_url
     )
     body = (
         f'{head}\n<main id="main">\n{door}\n{tile_map(offices)}\n{record}\n{table}\n'
@@ -927,6 +1061,31 @@ def render_index(
 
 
 # ---- main ---------------------------------------------------------------------------------
+
+
+def pick_run(root: Path) -> tuple[dict, list[Path]]:
+    """The run record this tree's rows came from, and the set-aside files.
+
+    The tree carries one run record per adapter and year, `house-fd-<year>-<key>`, and
+    one set-aside file per year named `<year>-<key>` for the same capture key. A record
+    is the build's when a set-aside file pairs with it by year and key. A tree with no
+    pair, or with more than one (a record whose set-aside file is gone, or two years,
+    which the landing has no design for yet), is refused rather than guessed, because a
+    page once read a superseded record that happened to sort last.
+    """
+    runs = sorted((root / "data" / "adapter-runs").glob("house-fd-*.ndjson"))
+    rejected_files = sorted((root / "data" / "rejected" / "house-fd").glob("*.ndjson"))
+    if not runs:
+        return {}, rejected_files
+    pairs = {path.stem for path in rejected_files}
+    paired = [path for path in runs if path.stem.removeprefix("house-fd-") in pairs]
+    if len(paired) != 1:
+        raise SystemExit(
+            f"{len(runs)} run records in data/adapter-runs and {len(paired)} pair with a set-aside "
+            "file by year and key; the tree should carry one run record per adapter and year, "
+            "each with its set-aside file, and the landing reads one year"
+        )
+    return read_ndjson(paired[0])[0], rejected_files
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -946,11 +1105,9 @@ def main(argv: list[str] | None = None) -> int:
     holders = read_ndjson(root / "data" / "officeholders.ndjson")
     filings = read_ndjson(root / "data" / "filings.ndjson")
     offices = read_ndjson(root / "data" / "offices.ndjson")
-    runs = sorted((root / "data" / "adapter-runs").glob("house-fd-*.ndjson"))
-    run = read_ndjson(runs[-1])[0] if runs else {}
-    rejected_files = sorted((root / "data" / "rejected" / "house-fd").glob("*.ndjson"))
+    run, rejected_files = pick_run(root)
     rejected = read_ndjson(rejected_files[-1]) if rejected_files else []
-    at_seat = held_at_seat(rejected)
+    at_seat = held_at_seat(rejected, holders)
     rejected_url = (
         REPO + rejected_files[-1].relative_to(root).as_posix()
         if rejected_files
@@ -965,7 +1122,9 @@ def main(argv: list[str] | None = None) -> int:
         seat = h["offices"][0]["seat"] if h.get("offices") else ""
         target = out / "officeholders" / f"{slug(h['id'])}.html"
         target.write_text(
-            render_officeholder(h, by_holder.get(h["id"], []), meta, striker, at_seat.get(seat, 0)),
+            render_officeholder(
+                h, by_holder.get(h["id"], []), meta, striker, at_seat.get(seat, {})
+            ),
             encoding="utf-8",
             newline="\n",
         )
