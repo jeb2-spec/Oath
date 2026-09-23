@@ -70,8 +70,9 @@ def test_a_seat_change_does_not_break_the_join():
     assert got is not None, "the name carries the join; the seat only corroborates"
 
 
-def test_a_candidate_at_a_members_seat_is_refused():
-    """Monica Sanchez filed at CA38, where Linda Sánchez sits. Different people."""
+def test_a_row_at_a_members_seat_with_another_given_name_is_held_not_matched():
+    """A CA38 row under the sitting member's surname with a different given name. The name
+    join holds it; it does not decide who filed it."""
     people, by_surname = roster(person("Sánchez", "Linda", seat="CA38"))
     got, why = build.match(row("Sanchez", "Monica", seat="CA38"), people, by_surname)
     assert got is None
@@ -129,3 +130,116 @@ def test_the_capture_key_names_the_bytes_and_nothing_else():
     assert len(key) == 12 and all(c in "0123456789abcdef" for c in key)
     assert build.capture_key(later_a, b) == key
     assert build.capture_key(b, a) != key
+
+
+def _member(last, first, seat, bioguide="X000001", sworn="20250103", official=None):
+    return dict(
+        person(last, first, seat=seat, bioguide=bioguide),
+        sworn=sworn,
+        official_name=official or f"{first} {last}",
+    )
+
+
+def test_the_surname_pick_is_the_one_member_or_the_one_at_the_rows_seat():
+    people, by_surname = roster(
+        _member("Allen", "Rick", "GA12"),
+        _member("Johnson", "Mike", "LA04", "J000001"),
+        _member("Johnson", "Dusty", "SD00", "J000002"),
+        _member("Van Duyne", "Beth", "TX24", "V000001"),
+        _member("Van Drew", "Jeff", "NJ02", "V000002"),
+    )
+    assert (
+        build.surname_neighbour(row("Allen", "Richard", seat="GA12"), by_surname)["seat"] == "GA12"
+    )
+    assert (
+        build.surname_neighbour(row("Allen", "Richard", seat="TX34"), by_surname)["seat"] == "GA12"
+    )
+    assert (
+        build.surname_neighbour(row("Johnson", "James Michael", seat="LA04"), by_surname)["seat"]
+        == "LA04"
+    )
+    assert build.surname_neighbour(row("Johnson", "James Michael", seat="OH01"), by_surname) is None
+    assert (
+        build.surname_neighbour(row("Van Duyne", "Elizabeth Ann", seat="TX24"), by_surname)["seat"]
+        == "TX24"
+    )
+    assert (
+        build.surname_neighbour(row("Van Drew", "Jeff Mr", seat="NJ02"), by_surname)["seat"]
+        == "NJ02"
+    )
+    assert build.surname_neighbour(row("Nobody", "At All"), by_surname) is None
+    _, cruz = roster(_member("De La Cruz", "Monica", "TX15", "D000001"))
+    assert build.surname_neighbour(row("De Barros", "Jonathan", seat="CT05"), cruz) is None, (
+        "a shared particle is not a shared surname"
+    )
+    assert build.surname_neighbour(row("De La Cruz", "Carlos", seat="TX35"), cruz)["seat"] == "TX15"
+    got, why = build.match(row("Johnson", "James Michael", seat="LA04"), people, by_surname)
+    assert got is None and why.startswith("surname matches a sitting member (Johnson, Mike, LA04)")
+
+
+def test_the_document_header_attributes_or_holds_and_never_says_who_a_filer_is_not():
+    """Roster 'Rick', index 'Richard W.', same seat. The document, not a guess, settles it."""
+    member = _member("Allen", "Rick", "GA12", official="Rick W. Allen")
+    index_row = dict(row("Allen", "Richard W.", seat="GA12"), doc_id="10074380")
+    head = {
+        "name": "Hon. Richard W. Allen",
+        "status": "Member",
+        "seat": "GA12",
+        "filing_id": "10074380",
+    }
+    verdict, clause = build.attribute_by_header(head, index_row, member, "2025-05-15")
+    assert verdict == "attributed" and "Status Member, State/District GA12" in clause
+
+    candidate = dict(head, status="Congressional Candidate", name="Someone Else")
+    verdict, clause = build.attribute_by_header(candidate, index_row, member, "2025-05-15")
+    assert verdict == "held"
+    assert "Status 'Congressional Candidate' for the filer named 'Someone Else'" in clause
+    assert "is not" not in clause, "the register never says who a filer is not"
+
+    verdict, clause = build.attribute_by_header(
+        dict(head, filing_id=""), index_row, member, "2025-05-15"
+    )
+    assert verdict == "held" and "carries no Filing ID line" in clause and "scanned" in clause
+    assert (
+        build.attribute_by_header(dict(head, filing_id="99"), index_row, member, "2025-05-15")[0]
+        == "held"
+    )
+    assert (
+        build.attribute_by_header(dict(head, seat="GA11"), index_row, member, "2025-05-15")[0]
+        == "held"
+    )
+    verdict, clause = build.attribute_by_header(
+        dict(head, name="Hon. Richard W. Other"), index_row, member, "2025-05-15"
+    )
+    assert verdict == "held" and "does not carry the roster surname" in clause
+    verdict, clause = build.attribute_by_header(head, index_row, member, "2025-01-01")
+    assert verdict == "held"
+    assert "before the swearing-in for this Congress that the roster records (2025-01-03)" in clause
+    assert "the roster does not say who held the seat before that date" in clause
+
+
+def test_an_index_docid_listed_twice_identically_is_carried_once_and_says_so():
+    a = {"doc_id": "1", "last": "A", "first": "A", "state_dst": "XX01", "filing_type": "P"}
+    b = {"doc_id": "2", "last": "B", "first": "B", "state_dst": "XX02", "filing_type": "O"}
+    b2 = dict(b, filing_type="X")
+    capture = {"url": "u", "retrieved_at": "t", "sha256": "h"}
+    rejected = []
+    kept, duplicated = build.collapse_duplicates([a, dict(a), b], rejected, capture)
+    assert kept == [a, b] and duplicated == {"1": 2} and rejected == []
+    rejected = []
+    kept, duplicated = build.collapse_duplicates([a, b, b2], rejected, capture)
+    assert kept == [a] and duplicated == {}
+    assert len(rejected) == 2 and all(
+        "more than once with differing rows" in r["reason"] for r in rejected
+    )
+
+
+def test_the_capture_stage_recognises_the_adapters_own_held_reason():
+    spec = importlib.util.spec_from_file_location("house_fd_documents", HERE / "documents.py")
+    documents = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(documents)
+    people, by_surname = roster(_member("Allen", "Rick", "GA12"))
+    _, why = build.match(row("Allen", "Richard", seat="GA12"), people, by_surname)
+    found = documents.HELD.search(why)
+    assert found and found.group(1) == "GA12", "a wording change here would silently stop captures"

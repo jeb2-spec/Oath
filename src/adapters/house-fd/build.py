@@ -6,10 +6,9 @@ Reads two captures written by `fetch.py` and writes canonical rows:
   MemberData.xml   the Clerk's roster. Authoritative for *who holds a seat*.
   <year>FD.xml     the Clerk's filing index. Authoritative for *what was filed*.
 
-It writes offices, officeholders, and filings. It writes no transactions and no
-holdings, because the index carries neither; those live inside the documents and
-are I.1b. It therefore produces no Findings, which is the point of shipping it
-on its own.
+It writes offices, officeholders and filings from the two captures, and, from the
+documents `documents.py` captured, the transactions the reports list (I.1b). It
+writes no holdings and produces no Findings; no Signal is defined.
 
 The join is the whole problem. The filing index carries no person identifier, so
 a filing reaches an officeholder only through a name and a state-district. Two
@@ -26,11 +25,13 @@ measured facts about the 2025 index shape the rule below:
 So the rule matches on the *name* and treats the seat as corroboration, never the
 other way around. A row is accepted only when the roster's name tokens equal the
 index's or are a subset of them. Anything weaker is written to `data/rejected/`
-with the reason, including the case where a surname is unique in the roster but
+with the reason, including the case where a surname matches a sitting member but
 the given names disagree. That case is almost certainly the same person, and the
-adapter still refuses it, because "almost certainly" is not the standard the
-Charter's fourth vow sets. A human adjudicates a rejected row; the adapter never
-guesses one into the register.
+adapter still does not accept it on the name, because "almost certainly" is not
+the standard the Charter's fourth vow sets. Where the index places such a row at
+the member's own seat, the Clerk's document decides it by its printed header
+(`attribute_by_header`); what the document cannot settle, a human adjudicates. The
+adapter never guesses a row into the register.
 
     python src/adapters/house-fd/build.py --year 2025
     python src/adapters/house-fd/build.py --year 2025 --dry-run
@@ -171,6 +172,129 @@ def load_index(path: Path) -> list[dict]:
     return rows
 
 
+HELD_SUFFIX = "; a human decides this one"
+
+
+def surname_neighbour(row: dict, by_surname: dict) -> dict | None:
+    """The sitting member the row's surname points at, or None.
+
+    A member is near when every token of the roster surname is in the row's surname, so
+    a shared particle (De, Van) is not a shared name. The one near member; or, when
+    several are near (Johnson, Davis), the one of them who holds the seat the row names.
+    The seat corroborates the pick and the document then decides the row; the name
+    alone decides nothing here.
+    """
+    parts = row["last"].split()
+    if not parts:
+        return None
+    row_tokens = tokens(row["last"])
+    near = [p for p in by_surname.get(fold(parts[0]), []) if tokens(p["last"]) <= row_tokens]
+    if len(near) == 1:
+        return near[0]
+    at_seat = [p for p in near if p["seat"] == row.get("state_dst")]
+    return at_seat[0] if len(at_seat) == 1 else None
+
+
+def sworn_iso(person: dict) -> str | None:
+    """The roster's sworn date as ISO, or None when the roster carries none."""
+    sworn = person.get("sworn") or ""
+    return f"{sworn[:4]}-{sworn[4:6]}-{sworn[6:]}" if len(sworn) == 8 else None
+
+
+def attribute_by_header(
+    head: dict, row: dict, member: dict, filed_at: str | None
+) -> tuple[str, str]:
+    """Whether the document's own header settles a held row at the member's own seat.
+
+    The index placed the row at the member's seat and the surnames agree; the given
+    names do not. The document settles it when it prints Status Member, that seat, this
+    row's DocID as its Filing ID, and a filer name carrying the roster surname, and the
+    index dates the filing no earlier than the swearing-in the roster records for this
+    Congress. Returns (status, clause): status is "attributed" or "held"; the clause is
+    what the document printed, for the filing row's notes or the held row's reason. The
+    register never says who a filer is not; a document that prints another status holds
+    the row with that status quoted, and a person decides it.
+    """
+    if not head["filing_id"]:
+        return (
+            "held",
+            "the document carries no Filing ID line (scanned paper, or a form that prints "
+            "none) and cannot confirm the filer",
+        )
+    if head["filing_id"] != str(row["doc_id"]):
+        return (
+            "held",
+            f"the document prints Filing ID {head['filing_id']}, not this row's DocID",
+        )
+    if head["status"] != "Member":
+        return (
+            "held",
+            f"the document prints Status {head['status']!r} for the filer named "
+            f"{head['name']!r} at {head['seat']}, not Member; the header does not attribute "
+            "the row to the seat's member",
+        )
+    if head["seat"] != member["seat"]:
+        return (
+            "held",
+            f"the document prints State/District {head['seat']}, not the member's {member['seat']}",
+        )
+    if not tokens(member["last"]) <= tokens(head["name"]):
+        return (
+            "held",
+            f"the document prints the filer as {head['name']!r}, which does not carry the "
+            "roster surname",
+        )
+    sworn = sworn_iso(member)
+    if filed_at and sworn and filed_at < sworn:
+        return (
+            "held",
+            f"the index dates the filing {filed_at}, before the swearing-in for this Congress "
+            f"that the roster records ({sworn}); the roster does not say who held the seat "
+            "before that date, so the register does not",
+        )
+    return (
+        "attributed",
+        f"the document prints {head['name']!r}, Status Member, State/District "
+        f"{head['seat']}, Filing ID {head['filing_id']}",
+    )
+
+
+def collapse_duplicates(
+    rows: list[dict], rejected: list[dict], index_capture: dict
+) -> tuple[list[dict], dict[str, int]]:
+    """One row per DocID. The Clerk's index has listed a DocID twice, identically; such a
+    row is carried once and says so. A DocID listed more than once with differing rows is
+    carried not at all, every copy set aside with the reason."""
+    groups: dict[str, list[dict]] = {}
+    for row in rows:
+        groups.setdefault(row["doc_id"], []).append(row)
+    kept, duplicated = [], {}
+    for doc_id, group in groups.items():
+        if len(group) == 1:
+            kept.append(group[0])
+        elif all(g == group[0] for g in group):
+            kept.append(group[0])
+            duplicated[doc_id] = len(group)
+        else:
+            for g in group:
+                rejected.append(
+                    {
+                        "adapter": "house-fd",
+                        "reason": (
+                            "the Clerk's index lists this DocID more than once with differing "
+                            "rows; the register carries none of them"
+                        ),
+                        "source_row": g,
+                        "source": {
+                            "url": index_capture["url"],
+                            "retrieved_at": index_capture["retrieved_at"],
+                            "content_hash": index_capture["sha256"],
+                        },
+                    }
+                )
+    return kept, duplicated
+
+
 def match(row: dict, people: list[dict], by_surname: dict) -> tuple[dict | None, str]:
     """Return the officeholder this filing belongs to, or None and the reason why not."""
     row_tokens = tokens(row["last"], row["first"])
@@ -184,13 +308,11 @@ def match(row: dict, people: list[dict], by_surname: dict) -> tuple[dict | None,
         return subset[0], "the roster's name tokens are contained in the index row's"
     if len(exact) > 1 or len(subset) > 1:
         return None, "the name matches more than one sitting member"
-    surname = fold(row["last"].split()[0]) if row["last"].split() else ""
-    near = by_surname.get(surname, [])
-    if len(near) == 1:
-        held = near[0]
+    held = surname_neighbour(row, by_surname)
+    if held is not None:
         return None, (
-            f"surname matches exactly one sitting member ({held['namelist']}, "
-            f"{held['seat']}) but the given names differ; a human decides this one"
+            f"surname matches a sitting member ({held['namelist']}, {held['seat']}) but the "
+            f"given names differ{HELD_SUFFIX}"
         )
     return None, "no sitting member has this name; the row is a candidate or a former member"
 
@@ -336,10 +458,53 @@ def build(year: int, dry_run: bool = False) -> int:
         holder_of_bioguide[person["bioguide"]] = holder
         person_of_id[holder["id"]] = person
 
-    filings, rejected, adjudicated = [], [], 0
+    ptr = load_ptr() if documents else None
+    filings, rejected, adjudicated, attributed_by_document = [], [], 0, 0
+    index_rows = len(rows)
+    rows, duplicated = collapse_duplicates(rows, rejected, index_capture)
     for row in rows:
         person, reason = match(row, people, by_surname)
         confidence = None  # an index row; the document itself has not been read
+        notes = None
+        filed_at = iso(row["filing_date"])
+        held = surname_neighbour(row, by_surname) if reason.endswith(HELD_SUFFIX) else None
+        document_block = None
+        dup_note = (
+            f"The Clerk's index lists this DocID {duplicated[row['doc_id']]} times, identically; "
+            "the register keeps one row for it."
+            if row["doc_id"] in duplicated
+            else None
+        )
+        if person is None and held is not None and row["state_dst"] == held["seat"]:
+            # The index placed the row at the member's own seat under the member's
+            # surname. The document decides it; a human decides what the document cannot.
+            pdf = DOCS / f"{row['doc_id']}.pdf"
+            capture = documents.get(row["doc_id"])
+            if ptr is not None and capture is not None and pdf.is_file():
+                head = ptr.header(ptr.extract_text(pdf))
+                verdict, clause = attribute_by_header(head, row, held, filed_at)
+                document_block = {
+                    "url": capture["url"],
+                    "retrieved_at": capture["retrieved_at"],
+                    "content_hash": capture["sha256"],
+                }
+                if verdict == "attributed":
+                    person = held
+                    attributed_by_document += 1
+                    index_name = f"{row['first']} {row['last']} {row.get('suffix', '')}".strip()
+                    roster_name = held["official_name"] or f"{held['first']} {held['last']}"
+                    notes = (
+                        "Attributed by the document's own header: the Clerk's index writes the "
+                        f"filer as {index_name!r}; {clause}; the Clerk's roster names the holder "
+                        f"of {held['seat']} {roster_name.strip()!r}."
+                    )
+                else:
+                    reason = f"{reason.removesuffix(HELD_SUFFIX)}; {clause}{HELD_SUFFIX}"
+            else:
+                reason = (
+                    f"{reason.removesuffix(HELD_SUFFIX)}; the document has not been captured"
+                    f"{HELD_SUFFIX}"
+                )
         decided = adjudications.get(row["doc_id"]) if person is None else None
         if decided is not None:
             person = person_of_id.get(decided["officeholder_id"])
@@ -349,7 +514,6 @@ def build(year: int, dry_run: bool = False) -> int:
                     f"{decided['officeholder_id']}, which is not in the roster"
                 )
             confidence, adjudicated = "manual", adjudicated + 1
-        filed_at = iso(row["filing_date"])
         if person is None or filed_at is None:
             rejected.append(
                 {
@@ -361,10 +525,14 @@ def build(year: int, dry_run: bool = False) -> int:
                         "retrieved_at": index_capture["retrieved_at"],
                         "content_hash": index_capture["sha256"],
                     },
+                    **({"document": document_block} if document_block else {}),
+                    **({"notes": dup_note} if dup_note else {}),
                 }
             )
             continue
         holder = holder_of_bioguide[person["bioguide"]]
+        if dup_note:
+            notes = " ".join(part for part in (notes, dup_note) if part)
         filings.append(
             {
                 "id": f"fl:house-clerk:{row['filing_type'] or 'none'}:{row['doc_id']}",
@@ -382,7 +550,7 @@ def build(year: int, dry_run: bool = False) -> int:
                     "content_hash": None,
                 },
                 "extraction_confidence": confidence,
-                "notes": None,
+                "notes": notes,
             }
         )
 
@@ -395,8 +563,8 @@ def build(year: int, dry_run: bool = False) -> int:
     # and carries the discrepancy in its notes.
     transactions: list[dict] = []
     documents_read = documents_refused = documents_unreadable = documents_discrepant = 0
+    documents_header_only = 0
     if documents:
-        ptr = load_ptr()
         kept = []
         for filing in filings:
             doc_id = filing["id"].rsplit(":", 1)[1]
@@ -436,14 +604,21 @@ def build(year: int, dry_run: bool = False) -> int:
                 continue
             if status == "discrepancy":
                 documents_discrepant += 1
-                filing["notes"] = (
+                discrepancy = (
                     f"The document prints State/District {ptr.header(text)['seat']}; the "
                     f"Clerk's roster lists this officeholder at {person['seat']}. The "
                     "attribution rests on the filer's printed name and the Filing ID, which "
                     "both agree with the Clerk's index."
                 )
-            documents_read += 1
+                filing["notes"] = " ".join(p for p in (filing["notes"], discrepancy) if p)
             filing["source"]["content_hash"] = capture["sha256"]
+            if filing["source_form_code"] != PTR_CODE:
+                # An annual report or another form: its header was read and its hash
+                # recorded; the register does not yet read its schedules.
+                documents_header_only += 1
+                kept.append(filing)
+                continue
+            documents_read += 1
             filing["extraction_confidence"] = "structured"
             for n, tx in enumerate(ptr.transactions(pages), 1):
                 transactions.append(
@@ -475,10 +650,23 @@ def build(year: int, dry_run: bool = False) -> int:
     print(
         f"roster        {len(seats)} seats, {len(people)} filled, {len(seats) - len(people)} vacant"
     )
-    print(f"index         {len(rows)} rows for {year}")
+    print(
+        f"index         {index_rows} rows for {year}"
+        + (
+            f", {len(duplicated)} DocID{'s' if len(duplicated) != 1 else ''} listed more than "
+            "once identically and carried once"
+            if duplicated
+            else ""
+        )
+    )
     print(f"accepted      {len(filings)} filings against {attributed} officeholders")
     if adjudicated:
         print(f"              {adjudicated} of them by a person's adjudication, citing evidence")
+    if attributed_by_document:
+        print(
+            f"              {attributed_by_document} of them by the document's own header: "
+            "Status Member at the seat, Filing ID agreeing"
+        )
     print(f"rejected      {len(rejected)} rows")
     for reason, count in sorted(reasons.items(), key=lambda item: -item[1]):
         print(f"              {count:5d}  {reason}")
@@ -487,7 +675,8 @@ def build(year: int, dry_run: bool = False) -> int:
         print(
             f"documents     {documents_read} read ({documents_discrepant} with a seat "
             f"discrepancy noted on the row), {documents_unreadable} captured but unreadable "
-            f"(scanned), {documents_refused} refused as contradicting; "
+            f"(scanned), {documents_header_only} header read and hashed, contents not yet "
+            f"read, {documents_refused} refused as contradicting; "
             f"{len(transactions)} transactions"
         )
 
@@ -533,6 +722,7 @@ def build(year: int, dry_run: bool = False) -> int:
             "read": documents_read,
             "seat_discrepancies": documents_discrepant,
             "unreadable": documents_unreadable,
+            "header_only": documents_header_only,
             "refused": documents_refused,
             "transactions": len(transactions),
         },
@@ -540,16 +730,25 @@ def build(year: int, dry_run: bool = False) -> int:
             "seats": len(seats),
             "filled": len(people),
             "vacant": len(seats) - len(people),
-            "index_rows": len(rows),
+            "index_rows": index_rows,
+            "index_rows_duplicated": len(duplicated),
             "accepted": len(filings),
             "adjudicated": adjudicated,
+            "attributed_by_document": attributed_by_document,
             "officeholders_with_a_filing": attributed,
             "quiet": quiet,
             "rejected": len(rejected),
         },
         "rejected_by_reason": reasons,
     }
-    write(Path(f"data/adapter-runs/house-fd-{year}-{key}.ndjson"), [run])
+    # One run record per adapter and year in the tree, like the set-aside file: the
+    # record of an earlier capture lives in git history with the build it sealed. Two
+    # records in the tree once let a page read the wrong one by filename order.
+    runs_dir = Path("data/adapter-runs")
+    for old in runs_dir.glob(f"house-fd-{year}-*.ndjson"):
+        if old.name != f"house-fd-{year}-{key}.ndjson":
+            old.unlink()
+    write(runs_dir / f"house-fd-{year}-{key}.ndjson", [run])
     print(
         "\nwrote data/offices.ndjson, data/officeholders.ndjson, data/filings.ndjson, "
         "data/transactions.ndjson"

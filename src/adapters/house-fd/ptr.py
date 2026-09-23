@@ -45,7 +45,7 @@ from datetime import datetime
 ASSET_CODES_LEGEND = "https://fd.house.gov/reference/asset-type-codes.aspx"
 
 HEADER_NAME = re.compile(r"Name:\s*(.+)")
-HEADER_STATUS = re.compile(r"Status:\s*(\S+)")
+HEADER_STATUS = re.compile(r"Status:\s*([^\n]+)")
 HEADER_SEAT = re.compile(r"State/District:\s*([A-Z]{2}\d{2})")
 FILING_ID = re.compile(r"Filing ID #(\d+)")
 
