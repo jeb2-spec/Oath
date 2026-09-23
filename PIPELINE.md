@@ -182,13 +182,24 @@ For the engineer descending to the level where a fork could be built or a check 
 
 ### Adapter contract
 
-Every adapter lives at `src/adapters/<source>/`. It exports:
+The founding wrote this contract as a guess. The first adapter (`src/adapters/house-fd/`, landed 2026-09-22 and 23) grew into the shape below, and the shape is now the contract; the founding's version stays in git history. This is the union the next adapter must fit, whatever its source.
 
-- `run(config): AdapterRunResult`. the entrypoint the scheduler calls.
-- `metadata.json`. describing the source (matching a row in SOURCES.md), the cadence, the throttle policy, the known gaps.
-- Rows written to canonical NDJSON files under `data/` on successful validation.
-- Rows written to `data/rejected/<source>/<date>.ndjson` on failed validation, with the field name and rule that failed.
-- A run log at `data/adapter-runs/<source>-<date>.log` with row counts, HTTP status distributions, and any retry-after events.
+Every adapter lives at `src/adapters/<source>/` and is three stages, each a script one maintainer can run by hand:
+
+- **Capture** (`fetch.py`; and `documents.py` where the source keeps documents behind an index). Retrieves the exact bytes and records, for each retrieval, the URL, the time, the SHA-256 and the response headers the source sent, into `data/cache/<source>/` (ignored by git) with a manifest. It touches the network and touches nothing under `data/` that is sealed. It is polite: one request at a time, a pause between them, a user agent naming the project and the operator's address. It decides what to capture from the source's own index and the build's join, never from the register's rows, so the capture stage is pure with respect to the register and a build is never a cycle behind its source.
+- **Build** (`build.py`). Reads the captures and nothing else; touches no network. Writes the canonical rows under `data/` that validate against `schemas/`. Writes every row it did not accept to `data/rejected/<source>/<year>-<capture key>.ndjson` with the reason, in the source's own words where the source spoke. Writes one run record to `data/adapter-runs/<source>-<year>-<capture key>.ndjson` naming the captures (URL, time, hash, last-modified), the counts, the rejections by reason, the documents read and not read, and the hash of any adjudication file that shaped the build. The capture key is the hash of the captures' hashes, so the same bytes rebuild the same tree byte for byte and the seal holds; the tree carries one run record and one set-aside file per adapter and year, and the record of an earlier capture lives in git history with the build it sealed.
+- **Seal** (`tools/seal.py`, shared by every adapter). Re-run in the same commit as any change to a sealed file. `built_at` is a time from the record, the latest retrieval or the tip the build came from, never the clock. The seal refuses a state text that does not carry the build's own figures and a run record with no set-aside file beside it.
+
+What every adapter must do, learnt from the first:
+
+- Attribute a row to a person only on the source's own evidence (the roster's name; the document's own header), never on a likelihood. Hold what it cannot settle for a person, with the reason and the evidence cited on the row. Refuse nothing on an inference about who a filer is not.
+- Carry the source's codes, marks and words as printed, and cite the source's own legend rather than restate it. Where the source's form makes a mark optional, a blank is unmarked, not a fact.
+- Say on the row what it could not do (a document captured and not read; a column not read; a source that lists a row twice), and count it in the run record, so that absence is said rather than guessed.
+- Keep every fact it learnt about the source's shape in [SOURCES.md](SOURCES.md) with the date it was measured, and every shape in a test with no real person in it.
+- Need nothing but the standard library to build; declare any extraction dependency under an optional group in `pyproject.toml`, and never import it in the verifier.
+- Run under the refresh loop: capture, compare the capture key with the last run record, build, seal, every gate, and a pull request only when the source served different bytes.
+
+Grafting the next adapter, the checklist: a [SOURCES.md](SOURCES.md) entry naming the door and its terms, and whether a human step stands in it; the [STANDARDS.md](STANDARDS.md) entry for what the source's office requires; the three scripts and their tests; a README beside them saying what one retrieval produced and what it refused; the run record's counts on the landing; and a Council reading before any page names a person through it.
 
 An adapter is *pure with respect to the register*: it does not read from the canonical NDJSON, only write. If a downstream process needs adapter A's output as adapter B's input, that is a build orchestration matter, not an adapter concern.
 
