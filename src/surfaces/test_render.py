@@ -336,3 +336,188 @@ def test_the_run_record_is_picked_by_the_set_aside_files_key_never_by_filename(t
     (runs / "house-fd-2024-aaaa.ndjson").write_text('{"capture_key": "aaaa"}\n')
     with pytest.raises(SystemExit):
         render.pick_run(tmp_path), "two years each pair; the landing has no design for that yet"
+
+
+def transaction(filing_id: str, n: int, **over) -> dict:
+    row = {
+        "id": f"tx:house-clerk:{filing_id.rsplit(':', 1)[1]}:{n:03d}",
+        "filing_id": filing_id,
+        "officeholder_id": "oh:us:house:a000001",
+        "owner": "unmarked",
+        "asset": "Example Widgets Inc. Common Stock (EXW)",
+        "asset_normalized": "EXW",
+        "action": "purchase",
+        "transaction_date": "2025-02-10",
+        "notified_date": "2025-02-12",
+        "amount_range": {"min": 1001, "max": 15000, "currency": "USD"},
+        "notes": (
+            "Asset code ST per the Clerk's legend "
+            "(https://fd.house.gov/reference/asset-type-codes.aspx); type printed as P."
+        ),
+    }
+    row.update(over)
+    return row
+
+
+def test_transactions_are_listed_as_filed_grouped_by_report_and_interpreted_not_at_all():
+    read = dict(filing("oh:us:house:a000001", "2025-03-01", 1))
+    read["source"] = dict(read["source"], content_hash="a" * 64)
+    read["extraction_confidence"] = "structured"
+    later = dict(filing("oh:us:house:a000001", "2025-06-01", 2))
+    later["source"] = dict(later["source"], content_hash="c" * 64)
+    later["extraction_confidence"] = "structured"
+    rows = [
+        transaction(read["id"], 1, filing_status="Deleted"),
+        transaction(
+            read["id"],
+            2,
+            owner="spouse",
+            action="sale-partial",
+            amount_range={"min": 50000000, "max": None, "currency": "USD"},
+            notes="Asset code GS per the Clerk's legend (x); type printed as S (partial). "
+            "Description, as filed: Called Security.",
+        ),
+        transaction(
+            later["id"],
+            1,
+            owner="joint",
+            action="exchange",
+            amount_range={"min": 823, "max": 824, "currency": "USD"},
+            notes="Asset code none per the Clerk's legend (x); type printed as E. "
+            "Amount printed as $823.45, an exact figure rather than one of the form's bands.",
+        ),
+    ]
+    page = render.render_officeholder(HOLDERS[0], [read, later], META, striker, 0, rows)
+    section = page[page.index('<section id="transactions">') : page.index("<h2>Signals that fired")]
+    assert "Transactions reported" in section
+    assert "House Committee on Ethics</a>" in section and "the form and" in section
+    assert (
+        "does not require the mark, so a row that is not marked says nothing about ownership"
+        in section
+    )
+    assert "whether held by the member, the member's spouse or a dependent child" in section
+    assert "not a gain or loss" in section and "appears under each" in section
+    assert "<th>Transaction date</th>" in section and "<td>purchase, marked Deleted</td>" in section
+    assert "· 2 rows, 1 marked Deleted ·" in section
+    assert "the report itself may list them in another order" in section
+    assert section.count('<h3 id="report-') == 2, "one heading per report read, in date order"
+    assert section.index('id="report-1"') < section.index('id="report-2"')
+    assert "Reports, by date filed (rows):" in section and "2025-03-01 (2)" in section
+    assert (
+        "<td>not marked</td>" in section
+        and "<td>SP, spouse</td>" in section
+        and "<td>JT, jointly held</td>" in section
+    )
+    assert "<td>partial sale</td>" in section and "<td>exchange</td>" in section
+    assert '<td class="amt">$1,001 - $15,000</td>' in section
+    assert '<td class="amt">Over $50,000,000</td>' in section
+    assert '<td class="amt">$823.45</td>' in section, (
+        "an exact figure is printed as the filer printed it"
+    )
+    assert '<span class="code">[ST]</span>' in section and "[none]" not in section
+    assert '<span class="note">Description, as filed: Called Security.</span>' in section
+    assert "Asset code" not in section.split("<tbody>")[1], (
+        "the legend clause stays out of the cells"
+    )
+    for word in ("total", "average", "rank", "most", "largest"):
+        assert word not in section.lower().split("<tbody>")[1]
+
+
+def test_unread_and_absent_transaction_reports_are_said_plainly():
+    scanned = dict(filing("oh:us:house:a000001", "2025-04-01", 3))
+    scanned["source"] = dict(scanned["source"], content_hash="b" * 64)
+    scanned["extraction_confidence"] = None
+    page = render.render_officeholder(HOLDERS[0], [scanned], META, striker, 0, [])
+    assert "The report filed 2025-04-01 is captured and not read" in page
+    assert "its transactions are not listed here. It is linked above." in page
+    quiet = render.render_officeholder(HOLDERS[0], [FILINGS[1]], META, striker, 0, [], 12)
+    assert (
+        "No transaction report in the Clerk's 2025 index is attributed to this officeholder"
+        in quiet
+    )
+    assert (
+        "12 transaction reports at this seat under this surname are set aside and not attributed"
+        in quiet
+    )
+    assert "the transactions the reports list are below, as filed" not in quiet
+
+
+def test_the_landing_counts_transactions_and_names_no_one_by_them():
+    rows = [transaction(FILINGS[0]["id"], n) for n in range(1, 8)] + [
+        transaction(FILINGS[0]["id"], 9, filing_status="Amended")
+    ]
+    section = render.state_of_record(
+        META, RUN, HOLDERS, FILINGS, OFFICES, 1, "https://x/rows", rows
+    )
+    assert (
+        "<dt>8</dt><dd>rows the read reports list, as filed (1 of them marked Amended or Deleted"
+        in section
+    )
+    assert "no page sums the amounts, averages them, or compares them with anyone else's" in section
+    assert "Example" not in section
+
+
+def test_the_landing_takes_the_set_aside_link_and_the_transaction_count_in_that_order():
+    page = render.render_index(
+        HOLDERS,
+        OFFICES,
+        FILINGS,
+        RUN,
+        META,
+        striker,
+        {"PR00": 1},
+        "https://x/rows",
+        [transaction(FILINGS[0]["id"], n) for n in range(1, 6)],
+    )
+    assert "<dt>5</dt><dd>rows the read reports list" in page
+    assert 'href="https://x/rows">The rows, with reasons' in page
+
+
+def test_held_transaction_reports_at_the_seat_are_counted_by_code():
+    rows = [
+        {
+            "reason": "surname matches a sitting member (Commissioner, Example, PR00) but the "
+            "given names differ; the document carries no Filing ID line; a human decides this one",
+            "source_row": {
+                "state_dst": "PR00",
+                "last": "Commissioner",
+                "first": "R.",
+                "filing_type": "P",
+            },
+        },
+        {
+            "reason": "surname matches a sitting member (Commissioner, Example, PR00) but the "
+            "given names differ; a human decides this one",
+            "source_row": {
+                "state_dst": "PR00",
+                "last": "Commissioner",
+                "first": "R.",
+                "filing_type": "O",
+            },
+        },
+    ]
+    assert render.held_reports_at_seat(rows, HOLDERS) == {"PR00": 1}
+
+
+def test_labelled_lines_stand_on_their_own_and_the_filer_owns_the_punctuation():
+    tx = transaction(
+        FILINGS[0]["id"],
+        1,
+        notes="Asset code ST per the Clerk's legend (x); type printed as P. "
+        "Subholding of: Example Trust. Description, as filed: Sold 10 units. "
+        "Comments, as filed: Per best practices.",
+    )
+    cell = render.asset_cell(tx)
+    assert cell.count('<span class="note">') == 3
+    assert '<span class="note">Description, as filed: Sold 10 units.</span>' in cell
+    assert "Filing status" not in cell
+
+
+def test_the_glossary_links_the_legend_and_the_limitation_on_private_names():
+    page = render.render_officeholder(HOLDERS[0], FILINGS[:1], META, striker, 0, [])
+    how = page[page.index("<h2>How to read this page</h2>") :]
+    assert 'href="https://fd.house.gov/reference/asset-type-codes.aspx"' in how
+    assert "LIMITATIONS.md#9-private-citizens-are-out-of-scope" in how
+    assert "on an amendment" not in page, (
+        "the register does not read whether a report amends another"
+    )

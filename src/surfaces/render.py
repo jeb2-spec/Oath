@@ -63,6 +63,12 @@ USC_CH131 = (
     "&num=0&edition=prelim"
 )
 STOCK_ACT = "https://www.govinfo.gov/app/details/PLAW-112publ105"
+# The regulator's own statement of the rule and the form that defines the columns the
+# register carries. Both read 2026-09-23; STANDARDS.md S.2 records them.
+ETHICS_FD = "https://ethics.house.gov/financial-disclosure"
+PTR_FORM = "https://ethics.house.gov/wp-content/uploads/2026/02/Final-CY-2025-PTR-Form-1.pdf"
+ASSET_LEGEND = "https://fd.house.gov/reference/asset-type-codes.aspx"
+LIMITATIONS_9 = REPO + "LIMITATIONS.md#9-private-citizens-are-out-of-scope"
 
 # The oath every member takes, verbatim. STANDARDS.md C.1; 5 U.S.C. § 3331, verified against
 # uscode.house.gov on 2026-09-22; U.S. Const. Art. VI § 3. The same words for everyone.
@@ -260,6 +266,11 @@ td.idx { font-family: var(--mono); font-size: .88rem; color: var(--ink-2); white
          width: 5.5rem; }
 td.code { font-family: var(--mono); }
 p.quiet { color: var(--ink-2); max-width: 36rem; }
+h3 { font-size: 1rem; font-weight: 600; margin: 1.4rem 0 .3rem; }
+h3 a { font-weight: 400; }
+nav.reports { font-size: .85rem; color: var(--ink-2); line-height: 1.7; }
+span.note { display: block; font-size: .82rem; color: var(--ink-2); }
+td.amt { white-space: nowrap; }
 dl.terms { display: grid; grid-template-columns: max-content 1fr; gap: .35rem 1rem; margin: 0; }
 dl.terms dt, dl.terms dd { margin: 0; }
 dl.terms dt { color: var(--ink); }
@@ -391,6 +402,25 @@ def held_at_seat(rejected: list[dict], holders: list[dict]) -> dict[str, dict[st
     return counts
 
 
+def held_reports_at_seat(rejected: list[dict], holders: list[dict]) -> dict[str, int]:
+    """Set-aside rows coded P at a holder's seat under the holder's surname, by seat: the
+    transaction reports the page must say are set aside and not read."""
+    tokens_of_seat = {}
+    for holder in holders:
+        for office in holder.get("offices", []):
+            tokens_of_seat[office.get("seat", "")] = surname_tokens(holder)
+    counts: dict[str, int] = {}
+    for row in rejected:
+        source = row.get("source_row", {})
+        seat = source.get("state_dst", "").strip()
+        if source.get("filing_type") != "P" or seat not in tokens_of_seat:
+            continue
+        words = folded_words(source.get("last") or "")
+        if tokens_of_seat[seat] and tokens_of_seat[seat] <= words:
+            counts[seat] = counts.get(seat, 0) + 1
+    return counts
+
+
 def held_total(at_seat: dict) -> int:
     """Rows set aside at members' own seats, from kinds dicts or bare counts; rows that
     sit at another seat are not at the member's own seat and are not counted here."""
@@ -464,9 +494,12 @@ REQUIRES = (
     "<dt>A report of each purchase, sale, or exchange of any stock, bond, commodity future, "
     "or other security over $1,000</dt><dd>Within 30 days of receiving notice of the "
     f'transaction and no later than 45 days after it. <a href="{STOCK_ACT}">STOCK Act of 2012, '
-    f'Pub. L. 112-105</a>. <a href="{STANDARDS_S2}">STANDARDS.md S.2</a>. The Act does not '
-    "prohibit the transactions it requires reported; a report listed below is the requirement "
-    "being met, as the Clerk records it.</dd>\n"
+    f'Pub. L. 112-105</a>. <a href="{STANDARDS_S2}">STANDARDS.md S.2</a>. The House Committee '
+    "on Ethics states it as the earlier of 30 days from being made aware of the transaction "
+    f'or 45 days from the transaction (<a href="{ETHICS_FD}">Financial Disclosure</a>). '
+    "The Act does not "
+    "prohibit the transactions it requires reported; a report listed below is a filing made "
+    "under that requirement, as the Clerk records it.</dd>\n"
     "</dl>\n</section>"
 )
 
@@ -477,6 +510,10 @@ SIGNALS = (
     '<p class="quiet">None to list. When signals exist, every one that did not fire is named here '
     "with its version, so silence is shown rather than assumed.</p>\n</section>"
 )
+
+
+class Raw(str):
+    """A glossary entry that carries its own links; every other entry is escaped."""
 
 
 def how_to_read(person: bool) -> str:
@@ -506,6 +543,29 @@ def how_to_read(person: bool) -> str:
                 "The Clerk's own copy. The register links to it and does not host it.",
             ),
             ("Fetched", "The day the register last read the Clerk's index."),
+            (
+                "A row of a report",
+                Raw(
+                    "One line of a transaction report, as the officeholder filed it: what was "
+                    "bought, sold or exchanged, in which category of value, on what date, and when "
+                    "the filer was notified. A line the filer marked Amended or Deleted in the "
+                    "report's filing-status column is shown with that mark. The bracketed code "
+                    "after an asset is the Clerk's asset type code "
+                    f'(<a href="{ASSET_LEGEND}">legend</a>). The report\'s ID column, its '
+                    "capital-gains mark and its IPO statement are not read by the register and do "
+                    "not appear. A name a filer wrote into a report's own lines is carried as "
+                    f'filed; <a href="{LIMITATIONS_9}">LIMITATIONS.md §9</a> says what the '
+                    "register "
+                    "does and does not do with it. The form that defines each column is linked "
+                    "above the rows."
+                ),
+            ),
+            (
+                "Owner, as marked",
+                "SP, DC or JT when the filer marked the asset as a spouse's, a dependent child's "
+                'or jointly held. The form does not require the mark, so "not marked" says '
+                "nothing about who holds the asset.",
+            ),
         ]
     else:
         rows += [
@@ -544,7 +604,9 @@ def how_to_read(person: bool) -> str:
             "not the page.",
         ),
     ]
-    body = "\n".join(f"<dt>{esc(k)}</dt><dd>{esc(v)}</dd>" for k, v in rows)
+    body = "\n".join(
+        f"<dt>{esc(k)}</dt><dd>{v if isinstance(v, Raw) else esc(v)}</dd>" for k, v in rows
+    )
     return (
         '<section class="how">\n<h2>How to read this page</h2>\n<dl class="terms">\n'
         f"{body}\n</dl>\n</section>"
@@ -653,8 +715,7 @@ def checks_section(holder: dict, filings: list[dict], held_here) -> str:
             documents = (
                 "<b>read</b> · the register read each document, recorded its hash, and confirmed "
                 "the seat and filing ID printed inside it against the roster; the transactions "
-                "the reports list are in the register's rows and not yet shown here, pending "
-                "the Council's reading of that surface."
+                "the reports list are below, as filed."
             )
         elif read or scanned:
             parts = [f"<b>partly read</b> · {read} of {n} documents read and hashed"]
@@ -735,7 +796,208 @@ def filings_section(filings: list[dict], held_here) -> str:
     )
 
 
-def render_officeholder(holder: dict, filings: list[dict], meta: dict, striker, held_here=0) -> str:
+TYPE_WORDS = {
+    "purchase": "purchase",
+    "sale": "sale",
+    "sale-partial": "partial sale",
+    "exchange": "exchange",
+}
+OWNER_WORDS = {
+    "unmarked": "not marked",
+    "spouse": "SP, spouse",
+    "joint": "JT, jointly held",
+    "dependent": "DC, dependent child",
+}
+LABELS_IN_NOTES = re.compile(
+    r"(?=(?:Subholding of|Location, as filed|Description, as filed|Comments, as filed|"
+    r"Filing status|Asset text unconfirmed|Amount printed as))"
+)
+NOTE_LEAD = re.compile(
+    r"^Asset code (\S+) per the Clerk's legend \([^)]*\); type printed as [^.]+\.\s*"
+)
+EXACT = re.compile(r"Amount printed as (\$[\d,]+(?:\.\d{2})?)")
+
+
+def amount_text(tx: dict) -> str:
+    """The category of value as the form prints it, or the exact figure a filer entered."""
+    exact = EXACT.search(tx.get("notes") or "")
+    if exact:
+        return exact.group(1)
+    band = tx.get("amount_range") or {}
+    low, high = band.get("min"), band.get("max")
+    if low is None:
+        return "not printed"
+    if high is None:
+        return f"Over ${low:,}"
+    return f"${low:,} - ${high:,}"
+
+
+def asset_cell(tx: dict) -> str:
+    """The asset as named, the Clerk's code after it, and each of the report's own labelled
+    lines beneath it on a line of its own. The filing status is shown in the Type cell and
+    the exact-figure note in the Amount cell, so neither repeats here."""
+    notes = tx.get("notes") or ""
+    lead = NOTE_LEAD.match(notes)
+    code = lead.group(1) if lead and lead.group(1) != "none" else ""
+    rest = notes[lead.end() :].strip() if lead else notes.strip()
+    cell = esc(tx.get("asset") or "")
+    if code:
+        cell += f' <span class="code">[{esc(code)}]</span>'
+    for line in LABELS_IN_NOTES.split(rest):
+        line = line.strip()
+        if not line or line.startswith(("Filing status", "Amount printed as")):
+            continue
+        cell += f'<span class="note">{esc(line)}</span>'
+    return cell
+
+
+def type_cell(tx: dict) -> str:
+    """The type as the form's box names it, with the row's filing status where the report
+    marks one other than New."""
+    word = TYPE_WORDS.get(tx["action"], tx["action"])
+    status = (tx.get("filing_status") or "").strip()
+    if status and status.lower() != "new":
+        return f"{esc(word)}, marked {esc(status)}"
+    return esc(word)
+
+
+def marked_counts(rows: list[dict]) -> dict[str, int]:
+    """How many rows the report marks with a filing status other than New, by status."""
+    out: dict[str, int] = {}
+    for t in rows:
+        status = (t.get("filing_status") or "").strip()
+        if status and status.lower() != "new":
+            out[status] = out.get(status, 0) + 1
+    return out
+
+
+def marked_clause(rows: list[dict]) -> str:
+    counts = marked_counts(rows)
+    if not counts:
+        return ""
+    return ", " + ", ".join(f"{n} marked {esc(status)}" for status, n in sorted(counts.items()))
+
+
+def transactions_section(
+    filings: list[dict], transactions: list[dict], held_reports: int = 0
+) -> str:
+    """What the reports the register read list, as filed, grouped by report.
+
+    The record, not a judgement of it: no total of amounts, no average, no comparison.
+    A row the filer marked Amended or Deleted is shown with the mark in its Type cell and
+    counted as a row. A report captured and not read is named by its filed date and its
+    rows are absent rather than guessed. A page with no transaction report attributed
+    says so, and says how many such reports at the seat are set aside.
+    """
+    lead = (
+        "<p>Every transaction listed in the reports the register has read, as filed. A Periodic "
+        "Transaction Report is the form on which a member reports each purchase, sale or "
+        "exchange of a stock, bond, commodity future or other security over $1,000, whether "
+        "held by the member, the member's spouse or a dependent child "
+        f'(<a href="{ETHICS_FD}">House Committee on Ethics</a>; <a href="{PTR_FORM}">the form and '
+        f'its instructions</a>; <a href="{STANDARDS_S2}">STANDARDS.md S.2</a>). The Act does not '
+        "prohibit the transactions it requires reported.</p>\n"
+        "<p>Each row is one line of a report as the officeholder filed it: the date of the "
+        "transaction, the date the filer was notified, the type marked, the owner marked, the "
+        "asset as named, and the category of value the form provides for the total purchase or "
+        "sale price, or the fair market value of an exchange. That category is the size of the "
+        "transaction, not a gain or loss, which the form says is irrelevant to it; where a filer "
+        "printed an exact figure instead of a category, the row carries the figure as the filer "
+        "printed it. The form lets a filer mark an asset as a spouse's, a dependent child's or "
+        "jointly held and does not require the mark, so a row that is not marked says nothing "
+        "about ownership. A row the filer marked Amended or Deleted in the report's "
+        "filing-status column is listed as filed with the mark shown; the register merges "
+        "nothing, so a transaction reported on more than one report appears under each. The "
+        "register interprets nothing here.</p>\n"
+    )
+    reports = sorted(
+        (f for f in filings if f.get("source_form_code") == "P"),
+        key=lambda f: (f["filed_at"], f["id"]),
+    )
+    held = (
+        f'<p class="quiet">{held_reports} transaction '
+        f"{plural(held_reports, 'report', 'reports')} at "
+        f"this seat under this surname {plural(held_reports, 'is', 'are')} set aside and not "
+        "attributed to this officeholder (see What the register can check here); none is read."
+        "</p>\n"
+        if held_reports
+        else ""
+    )
+    if not reports:
+        return (
+            f'<section id="transactions">\n<h2>Transactions reported</h2>\n{lead}'
+            '<p class="quiet">No transaction report in the Clerk\'s 2025 index is attributed to '
+            f"this officeholder.</p>\n{held}</section>"
+        )
+    read = [f for f in reports if f.get("extraction_confidence") == "structured"]
+    unread = [f for f in reports if f.get("extraction_confidence") != "structured"]
+    by_report: dict[str, list[dict]] = {}
+    for tx in transactions:
+        by_report.setdefault(tx["filing_id"], []).append(tx)
+    parts = [lead]
+    if unread:
+        dates = ", ".join(esc(f["filed_at"]) for f in unread)
+        n = len(unread)
+        parts.append(
+            f'<p class="quiet">The {plural(n, "report", "reports")} filed {dates} '
+            f"{plural(n, 'is', 'are')} captured and not read (no Filing ID line: scanned paper, "
+            f"or a form that prints none); {plural(n, 'its', 'their')} transactions are not listed "
+            "here. "
+            f"{plural(n, 'It is', 'They are')} linked above.</p>\n"
+        )
+    parts.append(held)
+    if len(read) > 1:
+        links = " · ".join(
+            f'<a href="#report-{esc(f["id"].rsplit(":", 1)[1])}">{esc(f["filed_at"])} '
+            f"({len(by_report.get(f['id'], []))})</a>"
+            for f in read
+        )
+        parts.append(f'<nav class="reports">Reports, by date filed (rows): {links}</nav>\n')
+    for f in read:
+        doc_id = f["id"].rsplit(":", 1)[1]
+        rows = sorted(by_report.get(f["id"], []), key=lambda t: (t["transaction_date"], t["id"]))
+        n = len(rows)
+        parts.append(
+            f'<h3 id="report-{esc(doc_id)}">Report filed {esc(f["filed_at"])} · {n} '
+            f"{plural(n, 'row', 'rows')}{marked_clause(rows)} · "
+            f'<a href="{esc(f["source"]["url"])}">Open the Clerk\'s copy</a></h3>\n'
+        )
+        if not rows:
+            continue
+        body = "\n".join(
+            "<tr>"
+            f'<td class="idx">{esc(t["transaction_date"])}</td>'
+            f'<td class="idx">{esc(t["notified_date"])}</td>'
+            f"<td>{type_cell(t)}</td>"
+            f"<td>{esc(OWNER_WORDS.get(t['owner'], t['owner']))}</td>"
+            f"<td>{asset_cell(t)}</td>"
+            f'<td class="amt">{esc(amount_text(t))}</td>'
+            "</tr>"
+            for t in rows
+        )
+        parts.append(
+            f"<table>\n<caption>{n} {plural(n, 'row', 'rows')} of the report, oldest transaction "
+            "date first; the report itself may list them in another order.</caption>\n"
+            "<thead><tr><th>Transaction date</th><th>Notified</th><th>Type</th>"
+            "<th>Owner, as marked</th><th>Asset, as named</th><th>Amount</th></tr></thead>\n"
+            f"<tbody>\n{body}\n</tbody>\n</table>\n"
+        )
+    return (
+        '<section id="transactions">\n<h2>Transactions reported</h2>\n'
+        + "".join(parts)
+        + "</section>"
+    )
+
+
+def render_officeholder(
+    holder: dict,
+    filings: list[dict],
+    meta: dict,
+    striker,
+    held_here=0,
+    transactions: list[dict] | None = None,
+    held_reports: int = 0,
+) -> str:
     office = holder["offices"][0] if holder.get("offices") else {}
     seal = striker.strike(holder["id"], meta.get("digest", ""), ticks=0, bars=0)
     roster_read = holder.get("source", {}).get("retrieved_at", "")[:10]
@@ -761,7 +1023,10 @@ def render_officeholder(holder: dict, filings: list[dict], meta: dict, striker, 
     )
     body = (
         f'{head}\n<main id="main">\n{REQUIRES}\n{checks_section(holder, filings, held_here)}\n'
-        f"{filings_section(filings, held_here)}\n{SIGNALS}\n{how_to_read(True)}\n</main>\n"
+        f"{filings_section(filings, held_here)}\n"
+        f"{transactions_section(filings, transactions or [], held_reports)}\n{SIGNALS}\n"
+        f"{how_to_read(True)}\n"
+        "</main>\n"
         f"{footer(meta, home=False)}"
     )
     return page(holder["legal_name"], body)
@@ -886,8 +1151,12 @@ def state_of_record(
     offices: list[dict],
     at_seat_total: int,
     rejected_url: str,
+    transactions: list[dict] | None = None,
 ) -> str:
     """Numbers about the register and the chamber as a whole. None is about a person."""
+    transactions = transactions or []
+    marked = sum(marked_counts(transactions).values())
+    marked_note = f" ({marked} of them marked Amended or Deleted by the filer)" if marked else ""
     counts = run.get("counts", {})
     seats = counts.get("seats", len(offices))
     filled = counts.get("filled", len(holders))
@@ -945,6 +1214,9 @@ def state_of_record(
         f"<dt>{read}</dt><dd>of {matched} documents read by the register so far, each checked "
         f"against the seat and filing ID printed inside it{scanned_clause(scanned)}; the links "
         f"open the Clerk's copies{bar(read, matched)}</dd>\n"
+        f"<dt>{len(transactions)}</dt><dd>rows the read reports list, as filed{marked_note}, each "
+        "on its officeholder's page grouped by report; no page sums the amounts, averages them, "
+        "or compares them with anyone else's</dd>\n"
         f"<dt>{held}</dt><dd>index rows set aside for the maintainer to decide by hand, because "
         f"the register does not guess; {at_seat_total} of them sit at a member's own seat under "
         "the member's surname. Whether a page is quiet is decided by whether the name on the "
@@ -968,6 +1240,7 @@ def render_index(
     striker,
     at_seat: dict[str, dict[str, int]] | None = None,
     rejected_url: str = REPO + "data/rejected/house-fd/",
+    transactions: list[dict] | None = None,
 ) -> str:
     at_seat = at_seat or {}
     holder_by_seat = {h["offices"][0]["seat"]: h for h in holders}
@@ -1051,7 +1324,7 @@ def render_index(
         "<tbody>\n" + "\n".join(rows) + "\n</tbody>\n</table>\n</section>"
     )
     record = state_of_record(
-        meta, run, holders, filings, offices, held_total(at_seat), rejected_url
+        meta, run, holders, filings, offices, held_total(at_seat), rejected_url, transactions
     )
     body = (
         f'{head}\n<main id="main">\n{door}\n{tile_map(offices)}\n{record}\n{table}\n'
@@ -1105,9 +1378,15 @@ def main(argv: list[str] | None = None) -> int:
     holders = read_ndjson(root / "data" / "officeholders.ndjson")
     filings = read_ndjson(root / "data" / "filings.ndjson")
     offices = read_ndjson(root / "data" / "offices.ndjson")
+    transactions_path = root / "data" / "transactions.ndjson"
+    transactions = read_ndjson(transactions_path) if transactions_path.is_file() else []
+    tx_by_holder: dict[str, list[dict]] = {}
+    for t in transactions:
+        tx_by_holder.setdefault(t["officeholder_id"], []).append(t)
     run, rejected_files = pick_run(root)
     rejected = read_ndjson(rejected_files[-1]) if rejected_files else []
     at_seat = held_at_seat(rejected, holders)
+    held_reports = held_reports_at_seat(rejected, holders)
     rejected_url = (
         REPO + rejected_files[-1].relative_to(root).as_posix()
         if rejected_files
@@ -1123,13 +1402,21 @@ def main(argv: list[str] | None = None) -> int:
         target = out / "officeholders" / f"{slug(h['id'])}.html"
         target.write_text(
             render_officeholder(
-                h, by_holder.get(h["id"], []), meta, striker, at_seat.get(seat, {})
+                h,
+                by_holder.get(h["id"], []),
+                meta,
+                striker,
+                at_seat.get(seat, {}),
+                tx_by_holder.get(h["id"], []),
+                held_reports.get(seat, 0),
             ),
             encoding="utf-8",
             newline="\n",
         )
     (out / "index.html").write_text(
-        render_index(holders, offices, filings, run, meta, striker, at_seat, rejected_url),
+        render_index(
+            holders, offices, filings, run, meta, striker, at_seat, rejected_url, transactions
+        ),
         encoding="utf-8",
         newline="\n",
     )
