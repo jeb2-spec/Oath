@@ -219,3 +219,18 @@ def test_main_reports_failures_and_exits_nonzero(register: Path, capsys):
     assert vs.main([str(register)]) == 1
     out = capsys.readouterr().out
     assert "FAIL  data/offices.ndjson:1: $.term_start: required field is missing" in out
+
+
+def test_a_repeated_id_within_a_file_is_refused(tmp_path):
+    """An id is a key. The Clerk's index once listed a DocID twice; the register must not."""
+    vs = load()
+    root = Path(__file__).resolve().parent.parent
+    schemas = vs.load_schemas(root)
+    first = (root / "data" / "officeholders.ndjson").read_text(encoding="utf-8").splitlines()[0]
+    (tmp_path / "data").mkdir()
+    (tmp_path / "data" / "officeholders.ndjson").write_text(
+        first + "\n" + first + "\n", encoding="utf-8"
+    )
+    problems, rows, files = vs.check_rows(tmp_path, schemas)
+    assert rows == 2 and files == 1
+    assert any("already appears at line 1; an id is a key" in p for p in problems), problems

@@ -11,6 +11,8 @@ from __future__ import annotations
 import importlib.util
 from pathlib import Path
 
+import pytest
+
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent.parent
 
@@ -92,7 +94,7 @@ RUN = {
         "accepted": 3,
         "officeholders_with_a_filing": 2,
     },
-    "rejected_by_reason": {"surname matches exactly one sitting member": 7},
+    "rejected_by_reason": {"surname matches a sitting member": 7},
     "sources": [
         {
             "name": "2025FD.zip",
@@ -104,12 +106,13 @@ RUN = {
 }
 REJECTED = [
     {
-        "reason": "surname matches exactly one sitting member (Commissioner, Example, PR00) but "
-        "the given names differ; a human decides this one",
+        "reason": "surname matches a sitting member (Commissioner, Example, PR00) but "
+        "the given names differ; the document carries no Filing ID line (scanned paper, or a "
+        "form that prints none) and cannot confirm the filer; a human decides this one",
         "source_row": {"state_dst": "PR00", "last": "Commissioner", "first": "E. X."},
     },
     {
-        "reason": "surname matches exactly one sitting member (Commissioner, Example, PR00) but "
+        "reason": "surname matches a sitting member (Commissioner, Example, PR00) but "
         "the given names differ; a human decides this one",
         "source_row": {"state_dst": "TX99", "last": "Commissioner", "first": "Other"},
     },
@@ -120,14 +123,30 @@ REJECTED = [
 ]
 
 
-def test_held_rows_are_counted_only_at_the_members_own_seat():
-    assert render.held_at_seat(REJECTED) == {"PR00": 1}
+def test_held_rows_are_counted_only_at_the_members_own_seat_by_why_they_wait():
+    assert render.held_at_seat(REJECTED, HOLDERS) == {"PR00": {"no_filing_id": 1, "elsewhere": 1}}
+    also = REJECTED + [
+        {
+            "reason": "no sitting member has this name; the row is a candidate or a former member",
+            "source_row": {"state_dst": "PR00", "last": "Commissioner", "first": "Third"},
+        }
+    ]
+    counted = render.held_at_seat(also, HOLDERS)
+    assert counted == {"PR00": {"no_filing_id": 1, "elsewhere": 1, "other": 1}}, (
+        "a same-surname row at the seat is counted whatever reason the adapter gave"
+    )
+    assert render.held_total(counted) == 2
 
 
 def test_a_quiet_page_is_a_matching_gap_and_says_so_with_its_count():
-    page = render.render_officeholder(HOLDERS[2], [], META, striker, held_here=1)
+    page = render.render_officeholder(HOLDERS[2], [], META, striker, held_here={"no_filing_id": 1})
     assert "not yet matched" in page
+    assert "or on the Clerk's document printing Status Member at this seat" in page
     assert "1 row of the index at this seat carries this surname" in page
+    assert (
+        "1 whose document carries no Filing ID line (scanned paper, or a form that prints none)"
+        in page
+    )
     assert "not a statement that no filing was made" in page
     assert "not a statement about what was filed" in page
     assert "each link below" not in page, "no links below on a quiet page"
@@ -220,11 +239,100 @@ def test_a_scanned_document_is_captured_not_read_and_the_page_says_which():
     page = render.render_officeholder(HOLDERS[0], [read, scanned, pending], META, striker)
     assert "partly read" in page
     assert "1 of 3 documents read and hashed" in page
-    assert "1 is a scanned image the register captured, hashed and does not read" in page
+    assert "1 captured and hashed, not read: scanned paper, or a form" in page
     assert "1 not yet captured" in page
     assert "the register read each document" not in page
     section = render.state_of_record(
         META, RUN, HOLDERS, [read, scanned, pending], OFFICES, 1, "https://x/rows"
     )
     assert "<dt>1</dt><dd>of 3 documents read" in section
-    assert "1 more is a scanned image" in section
+    assert "1 more captured and hashed, not read" in section
+
+
+def test_a_row_attributed_by_the_document_says_so_on_the_page_and_the_landing():
+    by_header = dict(filing("oh:us:house:a000001", "2025-06-01", 9))
+    by_header["notes"] = (
+        "Attributed by the document's own header: the Clerk's index writes the filer as "
+        "'Ex A. Alaska'; the document prints 'Hon. Ex A. Alaska', Status Member, State/District "
+        "AK00, Filing ID 9; the Clerk's roster names the holder of AK00 'Example Alaska'."
+    )
+    page = render.render_officeholder(
+        HOLDERS[0], [FILINGS[0], by_header], META, striker, held_here={"before_sworn": 1}
+    )
+    assert "2 rows of the Clerk's 2025 index attributed to this officeholder" in page
+    assert "1 of them by the document's own header" in page
+    assert "matched to this name" not in page
+    assert '<td class="code">document</td>' in page and '<td class="code">name</td>' in page
+    assert "<th>How</th>" in page
+    assert "1 dated by the index before the swearing-in" in page, "held rows show on every page"
+    section = render.state_of_record(
+        META, RUN, HOLDERS, [FILINGS[0], by_header], OFFICES, 1, "https://x/rows"
+    )
+    assert "1 of them by the document's own header" in section
+    assert "or the Clerk's document confirmed the filer at that seat" in section
+    assert "matched to their name" not in section
+
+
+def test_rows_under_the_surname_at_another_seat_are_said_without_naming_the_seat():
+    moved = [
+        {
+            "reason": "surname matches a sitting member (Commissioner, Example, PR00) but the "
+            "given names differ; a human decides this one",
+            "source_row": {"state_dst": "TX99", "last": "Commissioner", "first": "Other"},
+        }
+    ]
+    counted = render.held_at_seat(moved, HOLDERS)
+    assert counted == {"PR00": {"elsewhere": 1}}
+    assert render.held_total(counted) == 0, "a row at another seat is not at the member's own seat"
+    page = render.render_officeholder(HOLDERS[2], [], META, striker, held_here=counted["PR00"])
+    assert "1 row of the index under this surname sits at another seat" in page
+    assert "holds it because the surname alone matched, and does not say whose it is" in page
+    assert "TX99" not in page
+    assert "No row of the index at this seat carries this surname" not in page
+
+
+def test_a_shared_particle_is_not_the_members_surname_on_the_page_count():
+    holder_cruz = holder("TX15", "Monica De La Cruz", "d000001")
+    holder_cruz["common_name"] = "De La Cruz, Monica"
+    rows = [
+        {
+            "reason": "no sitting member has this name; the row is a candidate or a former member",
+            "source_row": {"state_dst": "TX15", "last": "De Barros", "first": "J."},
+        },
+        {
+            "reason": "surname matches a sitting member (De La Cruz, Monica, TX15) but the given "
+            "names differ; the document carries no Filing ID line and cannot confirm the filer; "
+            "a human decides this one",
+            "source_row": {"state_dst": "TX15", "last": "De La Cruz", "first": "Carlos"},
+        },
+    ]
+    assert render.held_at_seat(rows, [holder_cruz]) == {"TX15": {"no_filing_id": 1}}
+
+
+def test_the_run_record_is_picked_by_the_set_aside_files_key_never_by_filename(tmp_path):
+    runs = tmp_path / "data" / "adapter-runs"
+    held = tmp_path / "data" / "rejected" / "house-fd"
+    runs.mkdir(parents=True)
+    held.mkdir(parents=True)
+    (runs / "house-fd-2025-8b40.ndjson").write_text(
+        '{"capture_key": "8b40", "counts": {"accepted": 2}}\n'
+    )
+    (runs / "house-fd-2025-a652.ndjson").write_text(
+        '{"capture_key": "a652", "counts": {"accepted": 1}}\n'
+    )
+    (held / "2025-8b40.ndjson").write_text("")
+    run, files = render.pick_run(tmp_path)
+    assert run["capture_key"] == "8b40" and [f.name for f in files] == ["2025-8b40.ndjson"]
+    (held / "2025-8b40.ndjson").unlink()
+    (held / "2025-ffff.ndjson").write_text("")
+    with pytest.raises(SystemExit):
+        render.pick_run(tmp_path)
+    (held / "2025-ffff.ndjson").unlink()
+    (held / "2025-8b40.ndjson").write_text("")
+    (runs / "house-fd-2025-a652.ndjson").unlink()
+    run, _ = render.pick_run(tmp_path)
+    assert run["capture_key"] == "8b40", "one record needs no key to be picked"
+    (held / "2024-aaaa.ndjson").write_text("")
+    (runs / "house-fd-2024-aaaa.ndjson").write_text('{"capture_key": "aaaa"}\n')
+    with pytest.raises(SystemExit):
+        render.pick_run(tmp_path), "two years each pair; the landing has no design for that yet"

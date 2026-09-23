@@ -66,7 +66,7 @@ jobs:
         # record on main.
         run: |
           NEW="$(python src/adapters/house-fd/build.py --year "$YEAR" --capture-key)"
-          OLD="$(python -c "import glob,json,os;r=sorted(glob.glob('data/adapter-runs/house-fd-'+os.environ['YEAR']+'-*.ndjson'));print(json.load(open(r[-1],encoding='utf-8'))['capture_key'] if r else 'none')")"
+          OLD="$(python -c "import glob,json,os;r=glob.glob('data/adapter-runs/house-fd-'+os.environ['YEAR']+'-*.ndjson');assert len(r)<=1,'one run record per adapter and year';print(json.load(open(r[0],encoding='utf-8'))['capture_key'] if r else 'none')")"
           echo "last built from capture $OLD; the source now serves capture $NEW"
           if [ "$NEW" = "$OLD" ]; then
             echo "changed=false" >> "$GITHUB_OUTPUT"

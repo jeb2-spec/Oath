@@ -247,6 +247,7 @@ def check_rows(root: Path, schemas: dict[str, dict]) -> tuple[list[str], int, in
             continue
         schema = schemas[f"{schema_name}.schema.json"]
         files += 1
+        seen: dict[str, int] = {}
         with path.open("r", encoding="utf-8") as fh:
             for lineno, line in enumerate(fh, 1):
                 if not line.strip():
@@ -259,6 +260,14 @@ def check_rows(root: Path, schemas: dict[str, dict]) -> tuple[list[str], int, in
                     continue
                 for err in validate(row, schema, schemas, f"{schema_name}.schema.json"):
                     problems.append(f"data/{path.name}:{lineno}: {err}")
+                rid = row.get("id") if isinstance(row, dict) else None
+                if isinstance(rid, str):
+                    if rid in seen:
+                        problems.append(
+                            f"data/{path.name}:{lineno}: id {rid!r} already appears at line "
+                            f"{seen[rid]}; an id is a key"
+                        )
+                    seen.setdefault(rid, lineno)
     return problems, rows, files
 
 

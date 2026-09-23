@@ -45,6 +45,7 @@ def register(tmp_path: Path) -> Path:
         '{"id":"fl:fixture:1"}\n\n', encoding="utf-8", newline="\n"
     )
     meta = {
+        "state": "A fixture register: 2 officeholders and 1 filing, sealed for the tests.",
         "register": "fixture",
         "disclosures": {"assistant": "disclosed", "non_public_data": "none"},
         "digest": "",

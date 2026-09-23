@@ -37,7 +37,7 @@ Adapters are Python, standard library, for the reason in [`src/README.md`](src/R
 
 ## Adjudicating a held row
 
-The adapter refuses a filing whose name matches a sitting member's surname but not their given names, because that is usually the same person and also the exact shape of a relative running for the seat. Those rows are held in `data/rejected/` for a person to decide, and there are a few hundred of them.
+The adapter does not attribute a filing on a surname alone, because a surname with a different given name is usually the same person and also the exact shape of a relative running for the seat. Where the index places such a row at the member's own seat, the document behind it decides: the adapter attributes the row when the Clerk's document prints Status `Member`, that seat, that Filing ID and a filer name carrying the roster surname, and the index dates it no earlier than the swearing-in the roster records. Everything else is held in `data/rejected/` for a person to decide, with what the document printed quoted on the row: a document that prints another filer status, a scanned filing, a row at a seat other than the member's, a filing dated before the swearing-in. There are about a hundred and sixty of them.
 
 To decide one: open an issue with the *Adjudicate a held row* template, or go straight to a PR that adds one line to [`src/adapters/house-fd/adjudications.ndjson`](src/adapters/house-fd/adjudications.ndjson):
 
