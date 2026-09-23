@@ -104,7 +104,14 @@ Understand the discipline:
   [ Charter (five vows) ]
 ```
 
-The landing is the door. The Charter is one click behind it. The example is one click behind it. The index is one click behind it. Nothing else on the landing.
+The landing is the door. The Charter is one click behind it. The example is one click behind it. The index is one click behind it.
+
+Two more things stand on the landing, added by the maintainer's direction on 2026-09-22 to make the register usable by someone who is not an expert, and each is bounded by the invariants:
+
+- **Find your representative.** A tile map of the states: every state one square, placed roughly where it sits, every square the same size on purpose, each a door to that state's delegation in the roll below. The only number on a square is the state's count of seats, a fact about the office. A reader who does not know their district is sent to the House's own finder, which takes a ZIP code.
+- **The state of the record.** What the register holds at this build: seats and vacancies, officeholders with a filing attributed, filings attributed, documents read, rows held for a person, signals defined and fired, the source's last-modified and last-read dates, and the rhythm of filings by month across the whole chamber. Every number is about the register or the chamber as a whole; none is about a person, nothing is sorted by anything the register computes about one, and the rhythm carries a caption saying so. This is the state of the union the register can honestly report: the state of the record.
+
+Every officeholder page carries the same idea in miniature, *What the register can check here*: identity, the filings index, the documents, the signals, each marked in the register, not yet, or none defined, in the same shape for everyone. Nothing else on the landing.
 
 ### 1.5 Technology
 
