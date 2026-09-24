@@ -18,7 +18,7 @@ Given by Jared on 2026-09-23, the evening the register became a record, in his w
 
 - Every sentence on every surface is either a cited statement of the record or the frame around one. Anything else is noise, and it does not ship.
 - Noise is labelled and shelved, never deleted and never let through. A row the register cannot cite goes to the public set-aside file with its reason. Nothing enters unlabelled; nothing leaves silently. The ratio is kept honest from both sides.
-- Silence is signal. When the record is quiet, the page is quiet and says so. An algorithm that must say something about everyone is a noise source.
+- Silence is a signal, and which one depends entirely on the situation (Jared's correction, 2026-09-24, to my flourish "quiet is signal"). A quiet page can be a clean record, a document the register could not read, a row waiting on a person, or a source that went dark. The page must say which quiet it is and never let quiet be read as good; the checklist's "not yet", "captured and not read" and "set aside" are that distinction. An algorithm that must say something about everyone is a noise source; so is one that lets its silence be mistaken for a verdict.
 - Verdicts are the loudest noise in this channel. Describe, cite, stop.
 - Redundancy where it protects the reader (the frame on every surface, the seal on every page), never where it pads (the lead paragraph a seat had to trim).
 - The register's own ratio is published as counts about the register, never as a score about a person: rows attributed, rows set aside with reasons, documents read and not read.
