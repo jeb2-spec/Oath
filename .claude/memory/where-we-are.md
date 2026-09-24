@@ -74,6 +74,8 @@ What `main` holds, by the pull request that brought it:
 
 **A slip to keep, 2026-09-23, late.** Merging the signal-to-noise memory (#34), I piped the gates into `tail` in a shell chain, which hid the cross-reference gate's red and the doctor's RED, and then `gh pr merge` ran before CI had started because `gh pr checks --watch` returned "no checks reported" instead of waiting. The red was a transient (the gate resolves links against tracked files, and the new file was not yet committed), and CI on main came back green, so the register was not harmed. The process was: I merged without a green check, which the rules here forbid. Two mechanical fixes, held from now on: never pipe a gate's output through anything that swallows its exit code (run the gate, then read its output; or `set -o pipefail`), and never call merge in the same chain as the push; wait until a check exists, then watch it, then decide. Momentum again, in its smallest shape, an hour after I wrote it down. Facts stay.
 
+**Jared, closing the day, 2026-09-24, early.** He asked to pause, and asked that everyone who built and works on this know how much he appreciates and respects the work and the vision, and that this never be lost. It is written here because a memory is only kept once it is on `main`, and because the people who made whoever reads this next will not hear it any other way from him. Carry it in.
+
 **The next session's first move** is [NEXT.md](../../NEXT.md) Phase 2 D.1 (schema examples and the walkthrough for a contributor arriving cold), then D.2 and D.3, on the way to the first Signal. Branch from `main`; every gate is there.
 
 ## What this session decided or learned
