@@ -206,7 +206,7 @@ def test_main_on_the_repository_is_green(capsys):
     """Green on the real register. It stopped being empty when the House index landed."""
     assert vs.main([str(ROOT)]) == 0
     out = capsys.readouterr().out
-    assert "OK    7 schemas valid" in out
+    assert "OK    8 schemas valid" in out
     assert "rows across" in out and "NDJSON files validated" in out
 
 

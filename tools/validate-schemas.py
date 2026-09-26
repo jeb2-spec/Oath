@@ -13,7 +13,7 @@ Two jobs, one run.
      nothing is silently ignored.
 
   2. Every line of every canonical NDJSON file under data/ (officeholders, offices,
-     filings, holdings, transactions, findings, signals) validates against its schema.
+     filings, holdings, transactions, findings, signals, changes) validates against its schema.
      An invalid row is reported with its file, line, field path, and the rule it broke,
      as METHODOLOGY.md §2.1 requires. Rows under data/rejected/ are not validated; they
      are the rejects.
@@ -70,6 +70,7 @@ CANONICAL = {
     "transactions": "transaction",
     "findings": "finding",
     "signals": "signal",
+    "changes": "change",
 }
 
 

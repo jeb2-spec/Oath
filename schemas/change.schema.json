@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://oath.jeb2-spec.dev/schemas/change/v0.json",
+  "title": "Change",
+  "description": "What a later capture of a primary source showed about a row the register had already published: that the source no longer lists it, or lists it again. The published row stays, exactly as published (CHARTER Vow V; INVARIANTS §14); this row shows the change beside it. Written by the adapter (src/adapters/house-fd/build.py, carry_forward) only where the build read the source; a change row never changes and is never removed.",
+  "type": "object",
+  "required": ["id", "row_id", "rows", "change", "capture"],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^ch:(not-listed|listed-again):.+:\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$",
+      "description": "ch:<change>:<row id>:<the capture's retrieved_at>. One change per row per capture."
+    },
+    "row_id": {
+      "type": "string",
+      "description": "The id of the published row the change is about."
+    },
+    "rows": {
+      "type": "string",
+      "enum": ["officeholders", "filings", "transactions"],
+      "description": "Which of the register's files holds that row."
+    },
+    "change": {
+      "type": "string",
+      "enum": ["not listed", "listed again"],
+      "description": "not listed: the capture does not list the row (the Clerk's roster no longer lists the officeholder, the index the filing, the document the transaction). listed again: a later capture lists a row an earlier one did not."
+    },
+    "capture": {
+      "type": "object",
+      "required": ["url", "retrieved_at", "content_hash"],
+      "additionalProperties": false,
+      "description": "The capture that shows the change: the source's URL, when it was retrieved, and the SHA-256 of the bytes.",
+      "properties": {
+        "url": { "type": "string", "format": "uri" },
+        "retrieved_at": { "type": "string", "format": "date-time" },
+        "content_hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      }
+    }
+  },
+  "examples": [
+    {
+      "id": "ch:not-listed:oh:us:example:example:2027-01-11T09:17:00Z",
+      "row_id": "oh:us:example:example",
+      "rows": "officeholders",
+      "change": "not listed",
+      "capture": {
+        "url": "https://example.com/MemberData.xml",
+        "retrieved_at": "2027-01-11T09:17:00Z",
+        "content_hash": "0000000000000000000000000000000000000000000000000000000000000000"
+      }
+    }
+  ]
+}
