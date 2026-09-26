@@ -1,6 +1,6 @@
 ---
 name: feedback-usage-stewardship
-description: "Jared's standing rule on cost, given 2026-09-21: keep usage in mind, he is on a subscription; fan out only for research or review one hand cannot do, and say the cost first. On 2026-09-26 he said the newer word for Council work on what names people: do not hold back, leverage the Council."
+description: "Jared's standing rule on cost, given 2026-09-21: keep usage in mind, he is on a subscription; fan out only for research or review one hand cannot do, and say the cost first. On 2026-09-26 he said the newer word for Council work on what names people: do not hold back, leverage the Council; and that evening: spend what it takes to do it right."
 metadata:
   node_type: memory
   type: feedback
@@ -23,3 +23,7 @@ metadata:
 ## The word changes with the room: 2026-09-26
 
 *2026-09-26, the cloud session that shipped the first Signal.* Jared wrote, while the Council was sitting on S.1b: *"Don't hold back on tokens. Leverage the counsil.. keep going my friend."* Then, of the seats themselves: *"This is critical and must be sharp.. extra sharp.. and as timeless and protected as oath itself."* That is his budget for this work, in his words, and it is the newer word; the rule above still holds as the default and the reason. What the day showed is why he spent it: seven seats read one change and made 83 findings between them, many of the same defect seen from different chairs, among them a way for a Member's set-aside rows to land on a successor's page and the fact that nobody could correct a published row. Review of what names people and what changes doctrine is where the tokens pay. The default stays one hand for everything else; when he says spend, spend it on the reading, not on the narration.
+
+## Right before cheap: 2026-09-26, evening
+
+*The same day, after a dropped connection cut the Council's second reading short.* Jared wrote: *"Also I am not cost minded right now. Spend what it takes to do it right.. It must be right.. It must align with our values and it must be good."* The second reading had found that the seal refused the very departure and closed year S.1b exists for, which two passes and 277 green tests had not caught; a third reading was the only honest next step. His word sets the order for this kind of work: right first, then aligned with the values, then good, and the cost after. It does not repeal the default above. It says that when the work names people or keeps the record, stopping short to save tokens is the false economy.

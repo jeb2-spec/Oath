@@ -253,11 +253,15 @@ jobs:
             echo
             echo "If the correction moves a fact of a published row (a filing's date, its attribution), write that first, with the same evidence, and the gate lets exactly that move through:"
             echo
-            echo '    python tools/correct.py --row <row-id> --field <fact> --now <value> --kind source --because "<what the evidence shows>" --evidence-url <URL at a primary source> --evidence-file <a copy of it> --decided-by "the maintainer"'
+            echo '    python tools/correct.py --row <row-id> --field <fact> --now <value> --kind source --because "<what the evidence shows>" --evidence-url <URL at a primary source> --evidence-file <a copy of it> --evidence-retrieved-at <when those bytes were fetched, UTC> --decided-by "the maintainer"'
+            echo
+            echo "Moving a filing's officeholder moves its office and each of its transactions with it, each a correction row of its own."
             echo
             echo "The next refresh then goes through."
             echo
-            echo "If the failing step is **Build the rows from the recorded capture**, the adapter refused, and the log names the row and why. Either the join would attribute a published filing to another officeholder, or a filing's document refuses its published attribution: a person decides with tools/correct.py, moving the attribution or recording with --stands that it stands, citing the evidence. Or the bytes a published row was read from now read otherwise: nothing about the source changed, the register's reading did, and a change to the register's code must not rewrite what it published; revert it, or correct the rows with tools/correct.py. If the failing step is **Every gate** and the gate is check-removals, a published row would have disappeared or a published fact moved without a correction naming it; the log names each."
+            echo "If the failing step is **Build the rows from the recorded capture**, the adapter refused, and the log names the row and why. Either the join would attribute a published filing to another officeholder, or a filing's document refuses its published attribution: the maintainer decides with tools/correct.py, moving the attribution or recording with --stands that it stands, citing the evidence. Or the source's bytes for a row are unchanged and this build reads them otherwise, or no longer lists a row whose entry the bytes still carry: nothing about the source changed, the register's reading did, and a change to the register's code must not be recorded as the source's; revert it, or, for a fact, correct the row with tools/correct.py. If the failing step is **Every gate** and the gate is check-removals, a published row would have disappeared, a published fact moved without a correction naming it, or a correction lacks its reason, its decider or primary-source evidence; the log names each."
+            echo
+            echo "If the failing step is **Seal the new build**, the sentence the seal derived does not carry one of the build's own figures, and the log names which. That is a defect in tools/seal.py, not in the record: fix the sentence's derivation and run the refresh again. The seal stamps no change row with a build it did not seal, so nothing needs undoing."
             echo
             echo "Any other step is an ordinary failure to read, build or gate, and the log says which."
             echo
