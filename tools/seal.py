@@ -194,14 +194,15 @@ def derive_state(root: Path, meta: dict) -> str:
         reasons = dict(run.get("rejected_by_reason", {}))
         held = reasons.pop(HELD_REASON, 0)
         index = next((s for s in run.get("sources", []) if s["name"].endswith("FD.zip")), {})
+        roster = next((s for s in run.get("sources", []) if s["name"] == "MemberData.xml"), {})
         starts = sorted({o["term_start"] for h in holders for o in h.get("offices", [])[:1]})
-        congress = (
-            f" of the {ordinal((int(starts[0][:4]) - 1789) // 2 + 1)} Congress" if starts else ""
-        )
+        congress = f" of the {congress_named(int(starts[0][:4]))}" if starts else ""
         attributed = (
-            f"{plural(counts.get('accepted', 0), 'filing', 'filings')} attributed to "
-            f"{counts.get('officeholders_with_a_filing', 0):,} sitting members from the Clerk's "
-            f"{run.get('year')} filing index, retrieved {index.get('retrieved_at', '')[:10]}, "
+            f"{plural(counts.get('filings', counts.get('accepted', 0)), 'filing', 'filings')} "
+            f"of the Clerk's {run.get('year')} filing index (the reports it lists under "
+            f"{run.get('year')}), retrieved {index.get('retrieved_at', '')[:10]}, attributed to "
+            + plural(counts.get("officeholders_with_a_filing", 0), "officeholder", "officeholders")
+            + ", "
             f"{counts.get('attributed_by_document', 0):,} of them settled by the document's own "
             "header where the name alone could not"
         )
@@ -229,7 +230,8 @@ def derive_state(root: Path, meta: dict) -> str:
             f"The House index layer and the transaction reports behind it. "
             f"{counts.get('seats', 0):,} seats{congress}, "
             f"{counts.get('filled', 0):,} of them filled "
-            f"and {counts.get('vacant', 0):,} vacant; {attributed}. "
+            f"and {counts.get('vacant', 0):,} vacant on the Clerk's roster read "
+            f"{roster.get('retrieved_at', '')[:10]}; {attributed}. "
             f"{counts.get('rejected', 0):,} index rows are not attributed, each with a reason: "
             f"{not_attributed}."
         )
@@ -261,14 +263,14 @@ def derive_state(root: Path, meta: dict) -> str:
         sentence += (
             f". {forms} "
             "behind attributed rows had their headers read and hashed; their schedules are not yet "
-            f"read, and no holdings are. {counts.get('quiet', 0):,} sitting members have no filing "
-            "attributed."
+            f"read, and no holdings are. {counts.get('quiet', 0):,} Members the roster lists "
+            "have no filing attributed."
         )
         congress = run.get("congress", {})
         if congress.get("closed"):
             sentence = closed_sentence(run, len(holders), len(filings), transactions, offices)
-        elif any(run.get("carried", {}).get(k) for k in ("officeholders", "filings")):
-            sentence += " " + carried_sentence(run, len(holders), len(filings), transactions)
+        if run.get("changes"):
+            sentence += " " + changes_sentence(run)
         sentences.append(sentence)
     latest: dict[str, dict] = {}
     for row in signals.values():
@@ -314,11 +316,12 @@ def derive_state(root: Path, meta: dict) -> str:
             f"{by_state.get('not read', 0):,} reports were not read. It cannot reach "
             f"{plural(cannot['paper_only'], 'officeholder', 'officeholders')} whose transaction "
             f"reports are all scanned paper, or some of the reports of "
-            f"{cannot['some_paper']:,} more; it does not evaluate the rows dated before this "
-            "Congress's swearing-in on the reports of "
+            f"{cannot['some_paper']:,} more; it does not evaluate the rows dated before the "
+            f"swearing-in the roster records for the {congress_of_register(holders)} on the "
+            "reports of "
             f"{plural(cannot['before_swearing_in'], 'officeholder', 'officeholders')}; and the "
             f"{plural(set_aside, 'transaction report', 'transaction reports')} the index sets "
-            "aside, not attributed to a sitting member, are outside it."
+            "aside, not attributed to an officeholder, are outside it."
         )
     sentences.append(
         f"{ledger_sentence(findings)} Those gaps are counted, not hidden. Presence in this "
@@ -327,43 +330,68 @@ def derive_state(root: Path, meta: dict) -> str:
     return " ".join(sentences)
 
 
-def carried_sentence(run: dict, holders: int, filings: int, transactions: int) -> str:
-    """What the build kept exactly as published because it did not derive it again, and the
-    totals the register holds with it (NEXT.md S.1b)."""
-    carried = run.get("carried", {})
-    gone = carried.get("officeholders", 0)
-    who = (
-        f"the rows of {plural(gone, 'officeholder', 'officeholders')} the roster no longer "
-        "lists, and "
-        if gone
-        else ""
+def congress_named(year: int) -> str:
+    """The Congress whose terms begin in an odd year, named with its terms, as the Twentieth
+    Amendment, section 1, sets them: from noon on 3 January to noon on 3 January two years
+    on. A later reader needs the dates, not the number."""
+    n = (year - 1787) // 2
+    start = 1787 + 2 * n
+    return (
+        f"{ordinal(n)} Congress (terms from noon, 3 January {start}, "
+        f"to noon, 3 January {start + 2})"
+    )
+
+
+def congress_of_register(holders: list[dict]) -> str:
+    starts = sorted({o["term_start"] for h in holders for o in h.get("offices", [])[:1]})
+    return f"{ordinal((int(starts[0][:4]) - 1787) // 2)} Congress" if starts else "Congress"
+
+
+CHANGE_WORDS = {
+    "not listed": "no longer listed by a later capture",
+    "listed again": "listed again",
+    "read otherwise": "stated otherwise by a later capture",
+    "replaced": "served in other bytes that read otherwise",
+    "corrected": "corrected or confirmed by a person, citing the evidence",
+}
+
+
+def changes_sentence(run: dict) -> str:
+    """What later captures showed about published rows, and what people corrected, in totals
+    by kind; never a count of any one person's rows (the Council's reading of S.1b)."""
+    changes = run.get("changes", {})
+    total = sum(changes.values())
+    kinds = ", ".join(
+        f"{changes[kind]:,} {words}" for kind, words in CHANGE_WORDS.items() if changes.get(kind)
     )
     return (
-        f"The register also keeps, exactly as published, {who}"
-        f"{plural(carried.get('filings', 0), 'filing', 'filings')} and "
-        f"{plural(carried.get('transactions', 0), 'transaction', 'transactions')} this build did "
-        f"not derive again, so it holds {holders:,} officeholders, "
-        f"{plural(filings, 'filing', 'filings')} and "
-        f"{plural(transactions, 'transaction', 'transactions')} in all; each change a later "
-        "capture showed is a row of its own, and nothing published was removed."
+        "Every row the register has published stays as published, and changes only by a "
+        "person's correction, which is a row of its own; "
+        f"{plural(total, 'change is', 'changes are')} recorded beside the rows they concern, "
+        f"each with the capture that shows it, which the register keeps: {kinds}."
     )
 
 
 def closed_sentence(run: dict, holders: int, filings: int, transactions: int, offices: int) -> str:
-    """A filing year whose Congress has ended: its rows kept as published, none derived again."""
+    """A filing year whose Congress has ended: the register has closed it, keeps its rows as
+    published, and attributes a new row of it only by a person's cited decision."""
     congress = run.get("congress", {})
     counts = run.get("counts", {})
     reasons = run.get("rejected_by_reason", {})
     index = next((s for s in run.get("sources", []) if s["name"].endswith("FD.zip")), {})
+    ours = congress.get("filing_year", 0)
     not_attributed = ", ".join(
         f"{n:,} because {reason}"
         for reason, n in sorted(reasons.items(), key=lambda item: (-item[1], item[0]))
     )
     return (
-        f"Filing year {run.get('year')}, of the {ordinal(congress.get('filing_year', 0))} "
-        f"Congress, is closed: the roster the register reads lists the "
-        f"{ordinal(congress.get('roster', 0))}, so this build derives no row of that year again "
-        f"and attributes no new one. It keeps, exactly as published, "
+        f"The register has closed filing year {run.get('year')} (the reports the Clerk's index "
+        f"lists under {run.get('year')}): they belong to the {congress_named(1787 + 2 * ours)}, "
+        "whose terms ended under the Twentieth Amendment, section 1, and the roster the "
+        f"register reads lists the {ordinal(congress.get('roster', 0))}. It keeps every row of "
+        f"the year as published, gives the {ordinal(ours)} Congress's offices the day their "
+        "terms ended, and attributes a new row of the year only by a person's cited decision; "
+        f"the Clerk may still list reports under {run.get('year')}. It holds "
         f"{plural(offices, 'office', 'offices')}, {holders:,} officeholders, "
         f"{plural(filings, 'filing', 'filings')} and "
         f"{plural(transactions, 'transaction', 'transactions')}; "
@@ -410,8 +438,30 @@ def anchor_pointer(build: str) -> dict:
     }
 
 
+def stamp_changes(root: Path, build: str) -> int:
+    """Name, on each change row not yet sealed, the build that first seals it, so a later
+    reader holding one build's files can say when the register recorded a change (the
+    Council's reading of S.1b). A stamped row is never touched again."""
+    path = root / "data" / "changes.ndjson"
+    if not path.is_file():
+        return 0
+    lines, stamped = [], 0
+    for line in path.read_text(encoding="utf-8").splitlines(keepends=True):
+        row = json.loads(line)
+        if "build" not in row:
+            row["build"] = build
+            line = json.dumps(row, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+            line += "\n"
+            stamped += 1
+        lines.append(line)
+    if stamped:
+        path.write_text("".join(lines), encoding="utf-8", newline="\n")
+    return stamped
+
+
 def seal(root: Path, build: str, built_at: str, derive: bool = False) -> str:
     verify = load_verify(Path(__file__).resolve().parent)
+    stamp_changes(root, build)
     meta_path = root / verify.META
     meta = json.loads(meta_path.read_text(encoding="utf-8"))
     meta["build"] = build

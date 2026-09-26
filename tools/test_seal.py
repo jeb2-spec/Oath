@@ -194,31 +194,75 @@ def the_run(root: Path) -> tuple[Path, dict]:
     return path, json.loads(path.read_text("utf-8"))
 
 
-def test_rows_kept_for_a_member_who_left_are_counted_in_the_sealed_sentence(tmp_path):
-    """NEXT.md S.1b. A build that carries a departed Member's rows seals a sentence that says
-    so and carries the register's totals, or the seal refuses it."""
+def test_changes_are_counted_by_kind_and_never_by_anyone_s_rows(tmp_path):
+    """NEXT.md S.1b and the Council's reading of it: a build whose register records changes
+    seals a sentence that says so, in totals by kind; a count of one Member's filings or
+    transactions beside their leaving is never in it."""
     import json
 
     seal = load()
     verify = seal.load_verify(HERE)
     root = copy_register(tmp_path)
-    holders = root / "data" / "officeholders.ndjson"
-    kept = json.loads(holders.read_text("utf-8").splitlines()[0])
-    kept["id"] = "oh:us:example:example"
-    holders.write_text(holders.read_text("utf-8") + json.dumps(kept) + "\n", encoding="utf-8")
     path, run = the_run(root)
-    run["carried"] = {"officeholders": 1, "offices": 0, "filings": 0, "transactions": 0}
+    run["changes"] = {"not listed": 1, "read otherwise": 2}
     path.write_text(json.dumps(run) + "\n", encoding="utf-8")
     meta = json.loads((ROOT / "data" / "meta.json").read_text("utf-8"))
     meta["rows"] = verify.row_counts(root)
     text = seal.derive_state(root, meta)
     assert seal.state_text_lacks({**meta, "state": text}, run) == ""
-    assert "the rows of 1 officeholder the roster no longer lists" in text
-    assert f"so it holds {meta['rows']['data/officeholders.ndjson']:,} officeholders" in text
-    assert "nothing published was removed" in text
+    assert (
+        "Every row the register has published stays as published, and changes only by a "
+        "person's correction, which is a row of its own; 3 changes are recorded beside the "
+        "rows they concern, each with the capture that shows it, which the register keeps: 1 no "
+        "longer listed by a later capture, 2 stated otherwise by a later capture."
+    ) in text
+    assert "carried" not in text and "derive again" not in text
 
 
-def test_a_closed_year_seals_a_sentence_that_says_it_is_closed(tmp_path):
+def test_the_congress_is_named_with_its_terms_and_nothing_leans_on_the_present(tmp_path):
+    """A later reader needs the Congress's dates, not its number, and no "sitting" or "this
+    Congress" (the Council's reading of S.1b, Seat G)."""
+    import json
+
+    seal = load()
+    verify = seal.load_verify(HERE)
+    root = copy_register(tmp_path)
+    meta = json.loads((ROOT / "data" / "meta.json").read_text("utf-8"))
+    meta["rows"] = verify.row_counts(root)
+    text = seal.derive_state(root, meta)
+    assert (
+        "seats of the 119th Congress (terms from noon, 3 January 2025, to noon, 3 January 2027)"
+    ) in text
+    assert "the swearing-in the roster records for the 119th Congress" in text
+    assert "this Congress" not in text and "sitting members" not in text, (
+        "only the adapter's own reasons, quoted, say sitting, beside the roster's date"
+    )
+    assert seal.congress_named(2027).startswith("120th Congress (terms from noon, 3 January 2027")
+
+
+def test_a_change_row_is_stamped_with_the_build_that_first_seals_it(tmp_path):
+    import json
+
+    seal = load()
+    data = tmp_path / "data"
+    data.mkdir()
+    first = {"id": "ch:1", "build": "0005-house-2025"}
+    second = {"id": "ch:2"}
+    (data / "changes.ndjson").write_text(
+        "".join(
+            json.dumps(r, sort_keys=True, separators=(",", ":")) + "\n" for r in (first, second)
+        ),
+        encoding="utf-8",
+    )
+    before = (data / "changes.ndjson").read_text("utf-8").splitlines()[0]
+    assert seal.stamp_changes(tmp_path, "0006-house-2025") == 1
+    lines = (data / "changes.ndjson").read_text("utf-8").splitlines()
+    assert lines[0] == before, "a stamped row is never touched again"
+    assert json.loads(lines[1])["build"] == "0006-house-2025"
+    assert seal.stamp_changes(tmp_path, "0007-house-2025") == 0
+
+
+def test_a_closed_year_seals_a_sentence_that_says_the_register_closed_it(tmp_path):
     import json
 
     seal = load()
@@ -226,10 +270,11 @@ def test_a_closed_year_seals_a_sentence_that_says_it_is_closed(tmp_path):
     root = copy_register(tmp_path)
     path, run = the_run(root)
     reason = (
-        "filing year 2025 is of the 119th Congress, and the roster this build read lists the 120th"
+        "filing year 2025 is of the 119th Congress, whose terms ended at noon on 2027-01-03, and "
+        "the roster this build read lists the 120th"
     )
     run["congress"] = {"filing_year": 119, "roster": 120, "closed": True}
-    run["counts"] = dict.fromkeys(("seats", "filled", "vacant", "accepted", "quiet"), 0)
+    run["counts"] = dict.fromkeys(("seats", "filled", "vacant", "filings", "quiet"), 0)
     run["counts"]["rejected"] = 2
     run["documents"] = {"read": 0, "transactions": 0}
     run["rejected_by_reason"] = {reason: 2}
@@ -239,7 +284,10 @@ def test_a_closed_year_seals_a_sentence_that_says_it_is_closed(tmp_path):
     text = seal.derive_state(root, meta)
     assert seal.state_text_lacks({**meta, "state": text}, run) == ""
     assert text.startswith(
-        "Filing year 2025, of the 119th Congress, is closed: the roster the register reads "
-        "lists the 120th"
+        "The register has closed filing year 2025 (the reports the Clerk's index lists under "
+        "2025): they belong to the 119th Congress (terms from noon, 3 January 2025, to noon, 3 "
+        "January 2027), whose terms ended under the Twentieth Amendment, section 1, and the "
+        "roster the register reads lists the 120th."
     )
+    assert "gives the 119th Congress's offices the day their terms ended" in text
     assert "0 seats" not in text and f"2 because {reason}" in text
