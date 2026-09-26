@@ -57,13 +57,13 @@ def test_an_order_the_invariant_does_not_permit_fails():
 
 def test_an_undeclared_order_fails():
     page = index(None, [("AK00", "A")])
-    assert "the officeholders table declares no data-order" in lint.check_index(page)
+    assert "the officeholders list declares no data-order" in lint.check_index(page)
 
 
 def test_a_bare_number_beside_a_person_fails():
     page = index("seat", [("AK00", "A"), ("AL01", "B")], extra_cell="7")
     failures = lint.check_index(page)
-    assert any("bare number" in f for f in failures)
+    assert any("number beside a person" in f for f in failures)
 
 
 def test_a_date_is_not_a_bare_number():
@@ -77,9 +77,10 @@ def test_missing_table_fails():
     ]
 
 
-def test_nothing_rendered_is_not_a_failure(tmp_path: Path, capsys):
-    assert lint.main([str(tmp_path)]) == 0
-    assert "nothing rendered" in capsys.readouterr().out
+def test_nothing_rendered_is_a_failure(tmp_path: Path, capsys):
+    """A gate that reads nothing proves nothing; CI renders before it runs this."""
+    assert lint.main([str(tmp_path)]) == 1
+    assert "reads nothing" in capsys.readouterr().out
 
 
 def listing(attributes: str, rows: list[tuple[str, str, str]]) -> str:
@@ -106,7 +107,7 @@ def test_a_signal_page_in_seat_order_with_dates_passes():
 def test_a_table_that_links_to_officeholders_is_checked_undeclared():
     """A list of persons is one whatever its author called it."""
     page = listing('id="fired"', [("", "AL01", "2025-03-01"), ("", "AK00", "2025-04-02")])
-    assert "the fired table declares no data-order" in lint.check_summary(page)
+    assert "the fired list declares no data-order" in lint.check_summary(page)
 
 
 def test_a_signal_page_ordered_by_its_findings_fails():
@@ -123,7 +124,7 @@ def test_a_count_beside_a_name_on_a_signal_page_fails():
         [('data-seat="AK00"', "AK00", "4"), ('data-seat="AL01"', "AL01", "1")],
     )
     failures = lint.check_summary(page)
-    assert "row 1 carries a bare number (4) beside a person" in failures
+    assert any(f.startswith("row 1 carries a number beside a person") for f in failures)
 
 
 def test_a_summary_page_that_lists_no_one_passes():
@@ -142,3 +143,38 @@ def test_the_walk_reads_every_signal_page_and_names_the_failing_one(tmp_path: Pa
     assert lint.main([str(tmp_path), "--site", "."]) == 1
     out = capsys.readouterr().out
     assert "signals/a-signal/v1.html: rows are not in the declared seat order" in out
+
+
+def test_a_count_in_words_beside_a_name_fails():
+    """Seat C's case: seat order, and '3 reports' is still a score."""
+    page = listing(
+        'id="fired" data-order="seat" data-lists="officeholders"',
+        [('data-seat="AK00"', "AK00", "3 reports"), ('data-seat="AL01"', "AL01", "82 rows after")],
+    )
+    failures = lint.check_summary(page)
+    assert sum("number beside a person" in f for f in failures) == 2
+
+
+def test_an_ordered_list_of_names_with_counts_fails():
+    """Seat C's case: an <ol> is a list of persons as much as a table is."""
+    page = (
+        '<html><body><ol><li><a href="../../officeholders/b.html">B</a> 3 reports</li>'
+        '<li><a href="../../officeholders/a.html">A</a> 1 report</li></ol></body></html>'
+    )
+    failures = lint.check_summary(page)
+    assert "the unnamed list declares no data-order" in failures
+    assert any("number beside a person" in f for f in failures)
+
+
+def test_a_link_to_a_person_outside_a_declared_list_fails():
+    page = (
+        '<html><body><p>See <a href="../../officeholders/a.html">A</a>.</p>'
+        + listing(
+            'id="fired" data-order="seat" data-lists="officeholders"',
+            [('data-seat="AK00"', "AK00", "2025-03-01")],
+        )
+        + "</body></html>"
+    )
+    assert "1 links to officeholders' pages stand outside a declared list" in (
+        lint.check_summary(page)
+    )

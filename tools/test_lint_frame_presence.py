@@ -69,9 +69,20 @@ def test_site_walk_names_the_failing_page(tmp_path: Path):
     ]
 
 
-def test_nothing_rendered_is_not_a_failure(tmp_path: Path, capsys):
-    assert lint.main([str(tmp_path)]) == 0
-    assert "nothing rendered" in capsys.readouterr().out
+def test_nothing_rendered_is_a_failure(tmp_path: Path, capsys):
+    """A gate that reads nothing proves nothing; CI renders before it runs this."""
+    assert lint.main([str(tmp_path)]) == 1
+    assert "reads nothing" in capsys.readouterr().out
+
+
+def test_a_page_of_a_kind_the_gate_does_not_name_is_read_too(tmp_path: Path):
+    (tmp_path / "officeholders").mkdir()
+    (tmp_path / "officeholders" / "a.html").write_text(FRAMED, encoding="utf-8")
+    (tmp_path / "signals").mkdir()
+    (tmp_path / "signals" / "index.html").write_text(MISSING, encoding="utf-8")
+    failures, checked = lint.check(tmp_path)
+    assert checked == 2
+    assert [f.replace("\\", "/") for f in failures] == ["signals/index.html: the frame is missing"]
 
 
 def test_every_page_that_names_an_officeholder_is_read(tmp_path: Path):

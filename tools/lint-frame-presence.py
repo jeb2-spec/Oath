@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-"""Every rendered page that names an officeholder opens with the frame. INVARIANTS.md §7.
+"""Every rendered page opens with the frame. INVARIANTS.md §7; CHARTER Vow II.
 
-Reads every page under `docs/build/officeholders/`, the index, which lists every seat,
-and every page under `docs/build/signals/`, which lists the officeholders a Signal's
-Findings are attributed to, and requires the sentence *Presence in the register is not
-evidence of wrongdoing* to appear, verbatim after case and punctuation are folded away,
-inside the page's first `<header>` element, which is the header region ECOSYSTEM.md
-§1.3 puts it in. A page with the frame anywhere else, or nowhere, fails. A page that
-lists names is where a reader is likeliest to take presence for proof, so a Signal's
-page is held to the rule its Findings' pages are. Standard library.
+Reads every page under `docs/build/`: each officeholder's page, the index, which lists
+every seat, each Signal's page, which lists the officeholders its Findings are attributed
+to, and any page a later build adds, because the frame stays on every surface. It requires
+the sentence *Presence in the register is not evidence of wrongdoing* to appear, verbatim
+after case and punctuation are folded away, inside the page's first `<header>` element,
+which is the header region ECOSYSTEM.md §1.3 puts it in. A page with the frame anywhere
+else, or nowhere, fails, and so does a site with no page at all: a gate that reads nothing
+proves nothing, and CI renders before it runs this. Standard library.
 
 This gate shares no code with the renderer. The sentence is written here on its
 own so that a renderer which drifts from it is caught rather than followed.
@@ -56,9 +56,13 @@ KINDS = (
 
 
 def pages(site: Path) -> list[tuple[str, Path]]:
+    """Every page, each with its kind; a page of no named kind is read as another page."""
     if not site.is_dir():
         return []
-    return [(kind, path) for kind, pattern in KINDS for path in sorted(site.glob(pattern))]
+    named = [(kind, path) for kind, pattern in KINDS for path in sorted(site.glob(pattern))]
+    seen = {path for _, path in named}
+    other = [("other", path) for path in sorted(site.rglob("*.html")) if path not in seen]
+    return named + other
 
 
 def check(site: Path) -> tuple[list[str], int]:
@@ -92,12 +96,12 @@ def main(argv: list[str] | None = None) -> int:
     for line in failures:
         print(f"FAIL  {line}")
     if failures:
-        print(f"\n{len(failures)} of {checked} pages that name an officeholder lack the frame.")
+        print(f"\n{len(failures)} of {checked} pages lack the frame.")
         return 1
     if checked == 0:
-        print(f"OK    0 pages under {args.site}; nothing rendered, so nothing is unframed.")
+        print(f"FAIL  0 pages under {args.site}; a gate that reads nothing proves nothing.")
         print("      Render first: python src/surfaces/render.py")
-        return 0
+        return 1
     print(f"OK    {tally(site)} carry the frame in their header.")
     return 0
 

@@ -17,7 +17,8 @@ in their own names and words; they name no officeholder and are appendix, not
 surface). Everything that names or describes an officeholder is scanned.
 
 One phrase is always allowed: the register's own frame, "not evidence of
-wrongdoing", which is Vow II in its own words.
+wrongdoing", which is Vow II in its own words. Only the phrase is allowed: a blacklisted
+word elsewhere on the same line, or in the same NDJSON row, is still a hit.
 
 Every other hit fails unless verdict-lint.allowlist at the repository root allows
 it. An entry is one line, `path | context | reason`: the hit's file, a substring
@@ -72,9 +73,15 @@ EXCLUDED_PREFIXES = (".claude/", "docs/related-work/", "node_modules/")
 SITE = "docs/build"
 
 
-def is_frame_word(line: str, word: str) -> bool:
-    """The frame's own word, inside the frame sentence: the one hit always allowed."""
-    return bool(FRAME.search(line)) and word.lower() == "wrongdoing"
+def without_the_frame(line: str) -> str:
+    """The line with each occurrence of the frame phrase blanked, character for character, so
+    the phrase itself is always allowed and every other word on the line is still read."""
+    return FRAME.sub(lambda m: " " * len(m.group(0)), line)
+
+
+def hits(line: str) -> list[str]:
+    """The blacklisted words on one line, outside the frame phrase."""
+    return [m.group(0) for m in PATTERN.finditer(without_the_frame(line))]
 
 
 def scanned_files(root: Path) -> list[Path]:
@@ -137,10 +144,8 @@ def lint(root: Path) -> tuple[list[str], int, int]:
         except (FileNotFoundError, UnicodeDecodeError):
             continue  # binary, or tracked but not on disk mid-rename
         for lineno, line in enumerate(text.splitlines(), 1):
-            for match in PATTERN.finditer(line):
+            for match in PATTERN.finditer(without_the_frame(line)):
                 word = match.group(0)
-                if is_frame_word(line, word):
-                    continue
                 hit_allowed = False
                 for i, (e_path, context, _reason, _n) in enumerate(entries):
                     if e_path == rel and context in line:

@@ -155,3 +155,16 @@ def test_a_rendered_page_is_read_once_without_git(repo: Path):
     )
     failures, scanned, _ = lint.lint(repo)
     assert failures == [] and scanned == 2
+
+
+def test_the_frame_allows_only_itself(repo: Path):
+    """Seat C's case: one NDJSON row is one line, and it may carry the frame and a verdict."""
+    write(
+        repo,
+        "data/findings.ndjson",
+        '{"notes":"Presence in the register is not evidence of wrongdoing, but this report '
+        'shows wrongdoing."}\n',
+    )
+    failures, _, _ = lint.lint(repo)
+    assert len(failures) == 1 and '"wrongdoing"' in failures[0]
+    assert lint.hits("Presence in the register is not evidence of wrongdoing.") == []
