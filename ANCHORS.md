@@ -13,7 +13,9 @@ A build made where the OpenTimestamps calendar servers cannot be reached ships w
 Written by `python tools/anchor.py --ledger` from the files under [`data/anchors/`](data/anchors/), never by hand. `python tools/anchor.py` fails CI when this table and the proofs disagree, or when a proof does not commit to the manifest beside it.
 
 <!-- anchors:table:start (written by tools/anchor.py --ledger; do not edit by hand) -->
-*No build has been stamped yet, and no stamp is owed.*
+| Build id | Digest (SHA-256, prefix) | Built at (UTC) | Anchor state | Bitcoin block | Note |
+| --- | --- | --- | --- | --- | --- |
+| `0005-house-2025` | `285e2961dce8966e…` | 2026-09-23T14:13:28Z | owed | - | stamp owed; the manifest is written and the calendars have not yet taken it |
 <!-- anchors:table:end -->
 
 The rendered register has been public on GitHub Pages since 2026-09-23 and the repository since 2026-09-26. Builds before `0005-house-2025` were sealed and never stamped, and are not stamped now: a stamp made today proves only that a digest existed today, which says nothing about the day those builds were published.
@@ -62,7 +64,7 @@ Without a node, `ots -v info` prints every intermediate value, and the one on th
 
 ## When a stamp is owed and later confirmed
 
-The anchor workflow (`.github/workflows/anchor.yml`) runs on every push to `main` and once a day. It stamps the current build if it has no proof, retries every owed stamp, and completes every pending proof once Bitcoin holds it, then opens a pull request with the proofs and this table. A proof is only ever added to or completed; a manifest is never rewritten; the history of both is the git history of `data/anchors/` and of this file. A job that cannot stamp or upgrade fails, and says so in an issue, rather than pass quietly.
+The weekly refresh (`.github/workflows/refresh.yml`) stamps each new build as soon as it seals it, so the pull request that proposes the build carries its manifest and its pending proof. The anchor workflow (`.github/workflows/anchor.yml`) runs on every push to `main` that seals a build and once a day. It stamps the current build if it has no proof, retries every owed stamp, and completes every pending proof once Bitcoin holds it, then opens a pull request with the proofs and this table. A proof is only ever added to or completed; a manifest is never rewritten; the history of both is the git history of `data/anchors/` and of this file. A stamp the calendars cannot take is recorded as owed in that pull request, and the run then fails and says so in an issue, rather than pass quietly.
 
 An owed stamp that goes six months without a successful retry is escalated in the build's release notes and in the next Council session as a governance question, per BYLAWS.md §2.
 
