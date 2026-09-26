@@ -60,6 +60,7 @@ GATES = [
     ("Council §5 mode 7 cross-references", "tools/check-crossrefs.py"),
     ("ECOSYSTEM §2.4 the mark is struck and legible", "tools/check-mark.py"),
     ("RUBRIC gate 4 every Finding regenerates", "tools/rebuild.py"),
+    ("NEXT S.4 ANCHORS.md says what the proofs say", "tools/anchor.py"),
 ]
 
 

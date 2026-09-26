@@ -19,6 +19,11 @@
 # and the last step opens an issue saying so. The correction is a person's to write,
 # by supersession, with the evidence (docs/signals/README.md).
 #
+# The loop stamps the new build too, as soon as it is sealed, so its OpenTimestamps
+# proof is as early as the build: the pull request carries the manifest and the
+# pending proof, and anchor.yml completes the proof once Bitcoin holds it. A stamp the
+# calendars cannot take is owed, not a failure of the refresh; anchor.yml retries it.
+#
 # Every step runs in bash with pipefail, so a step that tees its log still fails
 # when the program before the pipe does.
 
@@ -67,8 +72,8 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install the Python dev toolchain named in pyproject.toml
-        run: python -m pip install "ruff>=0.16,<0.17" "pytest>=8" "pypdf>=6,<7"
+      - name: Install the Python dev toolchain named in pyproject.toml, and the OpenTimestamps client
+        run: python -m pip install "ruff>=0.16,<0.17" "pytest>=8" "pypdf>=6,<7" "opentimestamps-client>=0.7,<0.8"
 
       - name: Fetch the roster and the filing index, recording each retrieval
         run: python src/adapters/house-fd/fetch.py --year "$YEAR" | tee fetch.log
@@ -124,6 +129,10 @@ jobs:
         if: steps.diff.outputs.changed == 'true'
         run: python tools/seal.py --build "$BUILD" --built-at "$BUILT_AT" --derive-state
 
+      - name: Stamp the new build (owed, not failed, when the calendars cannot take it)
+        if: steps.diff.outputs.changed == 'true'
+        run: python tools/anchor.py --stamp || [ $? -eq 3 ]
+
       - name: Every gate, exactly as verify.yml runs them
         if: steps.diff.outputs.changed == 'true'
         run: |
@@ -137,6 +146,7 @@ jobs:
           python tools/check-signal-versions.py
           python tools/check-supersessions.py
           python tools/check-aggregator-sole.py
+          python tools/anchor.py
           python src/surfaces/render.py
           python tools/lint-frame-presence.py
           python tools/lint-no-ranking.py
@@ -169,7 +179,7 @@ jobs:
           git config user.name "Oath operator"
           git config user.email "operator@veraproject.xyz"
           git checkout -b "$BRANCH"
-          git add data/
+          git add data/ ANCHORS.md
           {
             echo "Refresh: build ${BUILD} from the Clerk's record as retrieved ${DATE}"
             echo
@@ -184,7 +194,8 @@ jobs:
           {
             echo "## What changed"
             echo
-            echo "The scheduled refresh re-read the Clerk's roster, the ${YEAR} filing index and the transaction reports behind it, and found the record different from build \`$(git show main:data/meta.json | python -c 'import json,sys;print(json.load(sys.stdin)["build"])')\`. This is build \`${BUILD}\`, sealed at the retrieval time, with every Signal run over the new rows. Every Finding already published is in it unchanged; any new one carries this build's time."
+            echo "The scheduled refresh re-read the Clerk's roster, the ${YEAR} filing index and the transaction reports behind it, and found the record different from build \`$(git show main:data/meta.json | python -c 'import json,sys;print(json.load(sys.stdin)["build"])')\`. This is build \`${BUILD}\`, sealed at the retrieval time, with every Signal run over the new rows. Every Finding already published is in it unchanged; any new one carries this build's time. Its anchor: $(python tools/anchor.py --status | grep "^${BUILD} " || echo "not stamped")."
+
             echo
             echo '```'
             cat fetch.log
@@ -196,7 +207,7 @@ jobs:
             echo
             echo "## Gates"
             echo
-            echo "Ruff, pytest, verify, tamper-test, validate-schemas, rebuild, check-signal-versions, check-supersessions, check-aggregator-sole, render, lint-frame-presence, lint-no-ranking, check-mark, lint-verdict-language, check-crossrefs, Biome, tsc and Vitest all passed in this workflow run before the push. A pull request opened by the workflow token does not trigger verify.yml; merging it runs verify.yml on main."
+            echo "Ruff, pytest, verify, tamper-test, validate-schemas, rebuild, check-signal-versions, check-supersessions, check-aggregator-sole, anchor, render, lint-frame-presence, lint-no-ranking, check-mark, lint-verdict-language, check-crossrefs, Biome, tsc and Vitest all passed in this workflow run before the push. A pull request opened by the workflow token does not trigger verify.yml; merging it runs verify.yml on main."
             echo
             echo "## Conflict of interest disclosure"
             echo
@@ -221,9 +232,9 @@ jobs:
           {
             echo "The scheduled refresh failed, and nothing was pushed: ${RUN_URL}"
             echo
-            echo "If the failing step is **Run every Signal over the new rows**, the Clerk's record no longer supports a published Finding as it was published. The runner refused to rewrite or drop it and names it in the log. Facts stay: a person checks the record at the source and writes the correction by supersession, with the evidence, as docs/signals/README.md describes, one command per Finding named:"
+            echo "If the failing step is **Run every Signal over the new rows**, the Clerk's record no longer supports a published Finding as it was published. The runner refused to rewrite or drop it and names it in the log. Facts stay: a person checks the record at the source and writes the correction by supersession, with the evidence, as docs/signals/README.md describes. Its kind is \`source\` when the record changed and \`register\` when the register misread it, and its reason cites a primary source by URL. When one change moves several Findings, give one \`--correct\`, \`--kind\` and \`--because\` for each, in one run:"
             echo
-            echo '    python src/signals/run.py --at <built_at> --correct <finding-id> --because "<what changed, and the URL that shows it>"'
+            echo '    python src/signals/run.py --at <built_at> --correct <finding-id> --kind source --because "<what changed, and the URL that shows it>"'
             echo
             echo "The next refresh then goes through."
             echo

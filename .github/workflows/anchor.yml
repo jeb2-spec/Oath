@@ -8,8 +8,11 @@
 # can be added and completed without moving the digest it is over.
 #
 # On every push to main that seals a build, and once a day: stamp the current build if it
-# has no proof, retry an owed stamp, complete every proof Bitcoin now holds, regenerate the
-# ledger, and open a pull request when any proof moved. The workflow token cannot push to a
+# has no proof, retry every owed stamp, complete every proof Bitcoin now holds, regenerate
+# the ledger, and open a pull request when any proof moved. A stamp the calendars cannot
+# take is recorded as owed, in the same pull request, and then fails the run, so ANCHORS.md
+# says so on main and the maintainer hears of it. The weekly refresh stamps each new build
+# as it seals it, so this job's usual work is completing proofs. The workflow token cannot push to a
 # protected main, and a proof that lands through review is a proof somebody looked at.
 # While an anchor pull request is open, a run records nothing new, so two proofs of one
 # build never race; tomorrow's run picks up after the merge. A run that cannot stamp or
@@ -72,9 +75,17 @@ jobs:
         if: steps.open.outputs.open == '0'
         run: python tools/verify.py
 
-      - name: Stamp the current build, or retry its owed stamp
+      - name: Stamp the current build, and retry every owed stamp
+        id: stamp
         if: steps.open.outputs.open == '0'
-        run: python tools/anchor.py --stamp
+        run: |
+          code=0
+          python tools/anchor.py --stamp || code=$?
+          if [ "$code" -eq 3 ]; then
+            echo "owed=true" >> "$GITHUB_OUTPUT"
+          elif [ "$code" -ne 0 ]; then
+            exit "$code"
+          fi
 
       - name: Complete every proof Bitcoin now holds
         if: steps.open.outputs.open == '0'
@@ -129,6 +140,12 @@ jobs:
           } > pr.md
           gh pr create --base main --head "$BRANCH" --title "Anchor: the proofs as of $(date -u +%Y-%m-%d)" --body-file pr.md
 
+      - name: A stamp still owed fails the run, once it is recorded
+        if: steps.open.outputs.open == '0' && steps.stamp.outputs.owed == 'true'
+        run: |
+          echo "::error::A stamp is owed: the OpenTimestamps calendars did not take it. ANCHORS.md says so once the pull request is merged, and the next run retries."
+          exit 1
+
       - name: Say so where the maintainer will see it, when anything above failed
         if: failure()
         env:
@@ -144,7 +161,7 @@ jobs:
           {
             echo "The anchor workflow failed: ${RUN_URL}"
             echo
-            echo "If the failing step is **Stamp the current build**, the calendars could not be reached and the stamp is owed; ANCHORS.md says so, and tomorrow's run retries. If it is **The build verifies**, main does not verify against its own seal, which is a larger problem than the anchor. If it is **The ledger says what the proofs say**, a proof or the table was changed by hand; \`python tools/anchor.py\` names it."
+            echo "If the failing step is **A stamp still owed fails the run**, the calendars could not be reached and the stamp is owed; the pull request this run opened records it in ANCHORS.md, and the run after its merge retries. If it is **Stamp the current build**, the tool refused, because a manifest changed or a proof did not commit to its digest, and the log says which. If it is **The build verifies**, main does not verify against its own seal, which is a larger problem than the anchor. If it is **The ledger says what the proofs say**, a proof or the table was changed by hand; \`python tools/anchor.py\` names it."
             echo
             echo "Presence in the register is not evidence of wrongdoing."
           } > issue.md

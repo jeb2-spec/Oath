@@ -6,10 +6,13 @@
 # reference runtime in pyproject.toml, so the job runs on the floor and not on
 # whatever is newest.
 #
-# Three gates compare this tree with the published record, main as it stands:
-# a published Finding never changes or disappears (Invariants 12 and 14), and a
-# published Signal version never changes (Invariant 11). They read origin/main,
-# so the job fetches it first; a gate that cannot read it fails rather than pass.
+# Two gates compare this tree with the published record: a published Finding never
+# changes or disappears (Invariants 12 and 14), and a published Signal version never
+# changes (Invariant 11). On a pull request the published record is its base, main as
+# it stands. On a push to main it is main as it stood before the push, because by then
+# main is the pushed commit and a gate comparing it with itself would prove nothing (the
+# Council's reading of the first Signal, 2026-09-26). A gate that cannot read the record
+# fails rather than pass.
 
 name: verify
 
@@ -28,8 +31,21 @@ jobs:
       - name: Check out
         uses: actions/checkout@v4
 
-      - name: The published record, main as it stands, for the gates that compare against it
-        run: git fetch --no-tags --depth=1 origin main:refs/remotes/origin/main
+      - name: The published record the comparing gates read, main before this push or the base of this pull request
+        env:
+          EVENT: ${{ github.event_name }}
+          REF: ${{ github.ref }}
+          BEFORE: ${{ github.event.before }}
+        run: |
+          if [ "$EVENT" = "push" ] && [ "$REF" = "refs/heads/main" ] && [ -n "$BEFORE" ] \
+            && [ "$BEFORE" != "0000000000000000000000000000000000000000" ]; then
+            git fetch --no-tags --depth=1 origin "$BEFORE"
+            echo "OATH_PUBLISHED_REF=$BEFORE" >> "$GITHUB_ENV"
+            echo "Comparing with main as it stood before this push: $BEFORE"
+          else
+            git fetch --no-tags --depth=1 origin main:refs/remotes/origin/main
+            echo "Comparing with main as it stands: $(git rev-parse refs/remotes/origin/main)"
+          fi
 
       - name: Python 3.11, the reference runtime
         uses: actions/setup-python@v5
@@ -67,6 +83,9 @@ jobs:
 
       - name: check-aggregator-sole, every Finding rests on a primary source (Invariant 5)
         run: python tools/check-aggregator-sole.py
+
+      - name: anchor, ANCHORS.md says what the proofs say, and each proof commits to its build's digest (NEXT.md S.4)
+        run: python tools/anchor.py
 
       - name: render the register as static pages (ECOSYSTEM section 1.3)
         run: python src/surfaces/render.py
