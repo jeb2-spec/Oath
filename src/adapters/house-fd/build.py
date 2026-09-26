@@ -68,9 +68,10 @@ DOCS_MANIFEST = DOCS / "captures.json"
 
 def term_start(congress: int) -> str:
     """The day the seats' terms of a Congress begin: the term start of an office, which is
-    not the day a given member was sworn. Under the Twentieth Amendment, section 1, the
-    terms of Representatives end at noon on 3 January and their successors' terms then
-    begin, so from the 74th Congress (1935) the nth Congress's terms begin on 3 January of
+    not the day a given member was sworn. Under the Twentieth Amendment, section 1
+    (https://constitution.congress.gov/constitution/amendment-20/), the terms of
+    Representatives end at noon on 3 January and their successors' terms then begin, so from
+    the 74th Congress (1935) the nth Congress's terms begin at noon on 3 January of
     1787 + 2n: the 119th on 2025-01-03, the 120th on 2027-01-03. A Congress may convene on
     another day; its terms do not move."""
     if congress < 74:
@@ -79,9 +80,9 @@ def term_start(congress: int) -> str:
 
 
 def congress_of(year: int) -> int:
-    """The Congress whose terms run through a filing year: the 119th for 2025 and 2026. A
-    year's first two days belong to the Congress before; an index is a year's, and the
-    register takes the Congress that holds all but those two days."""
+    """The Congress whose terms run through a filing year: the 119th for 2025 and 2026. In an
+    odd year the Congress before holds the days until noon on 3 January; an index is a
+    year's, and the register takes the Congress that holds the rest of it."""
     return (year - 1787) // 2
 
 
@@ -219,7 +220,12 @@ def sworn_iso(person: dict) -> str | None:
 
 
 def attribute_by_header(
-    head: dict, row: dict, member: dict, filed_at: str | None
+    head: dict,
+    row: dict,
+    member: dict,
+    filed_at: str | None,
+    others: list[tuple[str, frozenset[str]]] = (),
+    congress: int | None = None,
 ) -> tuple[str, str]:
     """Whether the document's own header settles a held row at the member's own seat.
 
@@ -227,10 +233,14 @@ def attribute_by_header(
     names do not. The document settles it when it prints Status Member, that seat, this
     row's DocID as its Filing ID, and a filer name carrying the roster surname, and the
     index dates the filing no earlier than the swearing-in the roster records for this
-    Congress. Returns (status, clause): status is "attributed" or "held"; the clause is
-    what the document printed, for the filing row's notes or the held row's reason. The
-    register never says who a filer is not; a document that prints another status holds
-    the row with that status quoted, and a person decides it.
+    Congress. A printed name carrying the given name and surname of another officeholder
+    the register holds at the seat (`others`, as (given name, surname tokens)), and not the
+    member's given name, holds the row too: a Member who left files after their successor
+    is sworn in, and the surname alone would give the report to the successor. Returns
+    (status, clause): status is "attributed" or "held"; the clause is what the document
+    printed, for the filing row's notes or the held row's reason. The register never says
+    who a filer is not; a document that prints another status holds the row with that
+    status quoted, and a person decides it.
     """
     if not head["filing_id"]:
         return (
@@ -261,11 +271,22 @@ def attribute_by_header(
             f"the document prints the filer as {head['name']!r}, which does not carry the "
             "roster surname",
         )
-    sworn = sworn_iso(member)
-    if filed_at and sworn and filed_at < sworn:
+    printed = tokens(head["name"])
+    given = next((fold(p) for p in member["first"].split() if fold(p) not in NOISE), "")
+    if given not in printed and any(
+        name and name in printed and surname <= printed for name, surname in others
+    ):
         return (
             "held",
-            f"the index dates the filing {filed_at}, before the swearing-in for this Congress "
+            f"the document prints the filer as {head['name']!r}, which carries the given name "
+            "and surname of another officeholder the register holds at this seat",
+        )
+    sworn = sworn_iso(member)
+    if filed_at and sworn and filed_at < sworn:
+        which = f"the {ordinal(congress)} Congress" if congress else "this Congress"
+        return (
+            "held",
+            f"the index dates the filing {filed_at}, before the swearing-in for {which} "
             f"that the roster records ({sworn}); the roster does not say who held the seat "
             "before that date, so the register does not",
         )
@@ -277,11 +298,15 @@ def attribute_by_header(
 
 
 def collapse_duplicates(
-    rows: list[dict], rejected: list[dict], index_capture: dict
+    rows: list[dict],
+    rejected: list[dict],
+    index_capture: dict,
+    published_docs: set[str] | frozenset[str] = frozenset(),
 ) -> tuple[list[dict], dict[str, int]]:
     """One row per DocID. The Clerk's index has listed a DocID twice, identically; such a
     row is carried once and says so. A DocID listed more than once with differing rows is
-    carried not at all, every copy set aside with the reason."""
+    attributed from none of them, every copy set aside with the reason; a published one keeps
+    the row the register published, as published."""
     groups: dict[str, list[dict]] = {}
     for row in rows:
         groups.setdefault(row["doc_id"], []).append(row)
@@ -299,7 +324,12 @@ def collapse_duplicates(
                         "adapter": "house-fd",
                         "reason": (
                             "the Clerk's index lists this DocID more than once with differing "
-                            "rows; the register carries none of them"
+                            "rows; "
+                            + (
+                                "the register keeps the row it published, as published"
+                                if doc_id in published_docs
+                                else "the register carries none of them"
+                            )
                         ),
                         "source_row": g,
                         "source": {
@@ -416,20 +446,30 @@ def load_adjudications(path: Path) -> tuple[dict[str, dict], str | None]:
 # ---- the published register, an input to every build --------------------------------------
 #
 # A row the register has published is a fact it recorded from a primary source, and it
-# stays (CHARTER Vow V; INVARIANTS §14). So a build reads the published rows first and
-# weighs them against what it derives from the captures:
+# stays, byte for byte (CHARTER Vow V; INVARIANTS §14). So a build reads the published rows
+# first, and what it derives from its captures only adds to them:
 #
-#   - where the build re-derives a published row, the derived row stands, and
-#     tools/check-removals.py holds it to every fact the published row carries;
-#   - a published row the build does not re-derive is carried exactly as published;
-#   - where the build read the source and the source no longer lists the row, that is a
-#     new fact, written as its own row in data/changes.ndjson with the capture that shows
-#     it ("not listed", and "listed again" should the source list it once more); where the
-#     build did not read the source, nothing was observed and nothing is written;
-#   - a published attribution stands: the join may attribute a new row, never move a
-#     published one, and a build that would move one refuses.
+#   - a published row is written back exactly as published. A fact it did not yet carry (a
+#     null, a missing key, a term at the end of a list) is filled when a capture shows it;
+#     no fact it carries moves;
+#   - where a capture later than the one a published row was read from shows the row
+#     otherwise, that is a new fact about the source. It is written as its own row in
+#     data/changes.ndjson, with the capture that shows it, and the bytes of that capture are
+#     kept under data/captures/sha256/, named by their SHA-256, so the change can be checked
+#     from the repository alone once the source serves something else: "not listed" and "listed
+#     again" (the roster no longer lists an officeholder, or the index a filing, or lists
+#     them again), "read otherwise" (the source gives one of the row's facts another value),
+#     and "replaced" (the Clerk serves other bytes for a document, and they read otherwise);
+#   - where the bytes a published row was read from now read otherwise, the source did not
+#     change; the register's reading did. The build refuses, because a change to the
+#     register's code must not rewrite what it published: a person reverts it, or corrects
+#     the rows with tools/correct.py, citing the evidence;
+#   - the join attributes new rows only. A build that would attribute a published filing to
+#     another officeholder refuses, and a person decides it with tools/correct.py.
 #
-# So a Member who leaves office keeps the rows the register published, and a page; a
+# A person's correction is a change row too ("corrected"): tools/correct.py moves the fact
+# and keeps what it was, and tools/check-removals.py lets a moved fact through only where
+# such a row names it. So a Member who leaves office keeps their rows and their page; a
 # filing the Clerk's index stops listing stays, with the change shown beside it; and a
 # filing year whose Congress has ended is carried as published, never re-derived from the
 # next Congress's roster, whose swearing-in dates would put every transaction before them.
@@ -441,7 +481,14 @@ PUBLISHED = {
     "transactions": Path("data/transactions.ndjson"),
     "changes": Path("data/changes.ndjson"),
 }
+CAPTURES = Path("data/captures/sha256")
+FRAME = "Presence in the register is not evidence of wrongdoing."
 NOT_LISTED, LISTED_AGAIN = "not listed", "listed again"
+READ_OTHERWISE, REPLACED, CORRECTED = "read otherwise", "replaced", "corrected"
+# The facts of a filing that the Clerk's index row states, and of an officeholder that the
+# roster states, weighed against the published row when a later capture lists it again.
+INDEX_FACTS = ("filed_at", "form_type", "source_form_code")
+ROSTER_FACTS = ("legal_name", "common_name", "party", "sworn_at")
 YEAR_IN_URL = re.compile(rf"^{re.escape(CLERK)}/(?:ptr-pdfs|financial-pdfs)/(\d{{4}})/\w+\.pdf$")
 
 
@@ -462,6 +509,23 @@ def read_published() -> dict[str, list[dict]]:
     }
 
 
+def published_set_aside(year: int) -> list[dict]:
+    """The rows of this year's index the tree's last build set aside, with their reasons."""
+    rows: list[dict] = []
+    for path in sorted(Path("data/rejected/house-fd").glob(f"{year}-*.ndjson")):
+        rows += [json.loads(line) for line in path.read_text("utf-8").splitlines() if line]
+    return rows
+
+
+def published_run(year: int) -> dict:
+    """The tree's run record for this year, from the last build; empty when there is none."""
+    for path in sorted(Path("data/adapter-runs").glob(f"house-fd-{year}-*.ndjson")):
+        lines = [line for line in path.read_text("utf-8").splitlines() if line.strip()]
+        if lines:
+            return json.loads(lines[-1])
+    return {}
+
+
 def index_year(filing: dict) -> int:
     """The index a filing row came from, as the Clerk's own URL for its document names it
     (`doc_url`; SOURCES.md F.1). A build refuses a row whose URL does not."""
@@ -479,112 +543,177 @@ def doc_of(row_id: str) -> str:
     return row_id.rsplit(":", 1)[1]
 
 
-def latest_changes(changes: list[dict]) -> dict[str, dict]:
-    """Each row's latest recorded change, by the time of the capture that showed it."""
-    latest: dict[str, dict] = {}
-    for change in sorted(changes, key=lambda c: (c["capture"]["retrieved_at"], c["id"])):
-        latest[change["row_id"]] = change
-    return latest
+def keep_capture(path: Path, sha256: str) -> str:
+    """Keep the bytes of a capture a change row cites, write-once, named by their SHA-256,
+    and return where. A cache that no longer holds the bytes its record names refuses."""
+    target = CAPTURES / f"{sha256}{path.suffix}"
+    if target.is_file():
+        return target.as_posix()
+    body = path.read_bytes() if path.is_file() else b""
+    if hashlib.sha256(body).hexdigest() != sha256:
+        raise SystemExit(
+            f"refusing to build: {path} does not hold the bytes its capture record names "
+            f"({sha256[:12]}), and a change row must cite bytes the register keeps"
+        )
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_bytes(body)
+    return target.as_posix()
 
 
-def change_row(row_id: str, rows: str, change: str, capture: dict) -> dict:
-    """A change the source made to a published row, with the capture that shows it."""
+def change_row(row_id: str, rows: str, change: str, capture: dict, **facts) -> dict:
+    """A change a later capture showed about a published row, with the capture that shows
+    it. `facts` carries the field and its values where the change is about one fact, and
+    `before`, when the register last built from a capture of the same source: the change
+    fell between the two reads, and the register does not know when."""
+    field = f":{facts['field']}" if change == READ_OTHERWISE else ""
+    if not facts.get("before"):
+        facts.pop("before", None)
     return {
-        "id": f"ch:{change.replace(' ', '-')}:{row_id}:{capture['retrieved_at']}",
+        "id": f"ch:{change.replace(' ', '-')}:{row_id}{field}:{capture['retrieved_at']}",
         "row_id": row_id,
         "rows": rows,
         "change": change,
+        **facts,
         "capture": {
             "url": capture["url"],
             "retrieved_at": capture["retrieved_at"],
             "content_hash": capture["content_hash"],
         },
+        "frame": FRAME,
     }
 
 
-def carry_forward(
-    published: dict[str, list[dict]],
-    built: dict[str, list[dict]],
-    year: int,
-    observed: dict,
-) -> tuple[dict[str, list[dict]], list[dict], dict[str, int]]:
-    """The rows to write, the change rows this build adds, and what it carried, counted.
+class Observed:
+    """The change rows this build adds. One per row, kind, field and capture, and only from a
+    capture later than the latest one already recorded for that row and kind, so a capture
+    re-read, or read out of order, never writes a second change or reverses a later one."""
 
-    `built` is what this build derived from its captures, by file. `observed` is what it
-    read, as source blocks ({url, retrieved_at, content_hash}): "roster", when it read a
-    roster of the filing year's Congress, else None; "index", and "index_doc_ids", every
-    DocID the index lists; "documents", every document it read, by DocID. Filings and
-    transactions of other years are untouched.
-    """
-    latest = latest_changes(published["changes"])
-    changes: list[dict] = []
+    def __init__(self, published_changes: list[dict], before: dict | None = None) -> None:
+        self.before = before or {}  # by source URL: when the register last built from it
+        self.past: dict[tuple, list[dict]] = {}
+        for change in sorted(
+            published_changes, key=lambda c: (c["capture"]["retrieved_at"], c["id"])
+        ):
+            self.past.setdefault(self.thread(change), []).append(change)
+        self.new: list[dict] = []
+        self.bytes: dict[str, Path] = {}
 
-    def record(row_id: str, rows: str, listed: bool, capture: dict) -> None:
-        was = latest.get(row_id, {}).get("change")
-        if not listed and was != NOT_LISTED:
-            changes.append(change_row(row_id, rows, NOT_LISTED, capture))
-        elif listed and was == NOT_LISTED:
-            changes.append(change_row(row_id, rows, LISTED_AGAIN, capture))
+    @staticmethod
+    def thread(change: dict) -> tuple:
+        kind = change["change"]
+        if kind in (NOT_LISTED, LISTED_AGAIN):
+            return (change["row_id"], "listed")
+        return (change["row_id"], kind, change.get("field"))
 
-    out: dict[str, list[dict]] = {}
-    carried = {"offices": 0, "officeholders": 0, "filings": 0, "transactions": 0}
+    def last(self, key: tuple) -> dict | None:
+        return self.past[key][-1] if self.past.get(key) else None
 
-    for name in ("offices", "officeholders"):
-        made = {row["id"] for row in built[name]}
-        kept = [row for row in published[name] if row["id"] not in made]
-        out[name] = built[name] + kept
-        carried[name] = len(kept)
-        if name == "officeholders" and observed["roster"] is not None:
-            for row in kept:
-                record(row["id"], name, False, observed["roster"])
-            for row in built[name]:
-                record(row["id"], name, True, observed["roster"])
+    def add(self, row: dict, path: Path) -> None:
+        self.new.append(row)
+        self.past.setdefault(self.thread(row), []).append(row)
+        self.bytes[row["capture"]["content_hash"]] = path
 
-    others = [row for row in published["filings"] if index_year(row) != year]
-    mine = {row["id"]: row for row in published["filings"] if index_year(row) == year}
-    filings = []
-    for row in built["filings"]:
-        was = mine.get(row["id"])
-        if was is None:
-            filings.append(row)
-            continue
-        if (was["officeholder_id"], was["office_id"]) != (row["officeholder_id"], row["office_id"]):
-            raise SystemExit(
-                f"refusing to build: {row['id']} is published as {was['officeholder_id']}'s "
-                f"({was['office_id']}), and this build's join attributes it to "
-                f"{row['officeholder_id']} ({row['office_id']}). The join never moves a "
-                "published attribution; a person does, with the evidence, as a correction."
-            )
-        read_before = was.get("extraction_confidence") or was["source"].get("content_hash")
-        if read_before and doc_of(row["id"]) not in observed["documents"]:
-            # This build did not read the document behind a row an earlier build read. The
-            # published row stands, with the transactions read from it.
-            filings.append(was)
-        else:
-            filings.append(row)
-    made = {row["id"] for row in built["filings"]}
-    kept = [row for filing_id, row in mine.items() if filing_id not in made]
-    carried["filings"] = len(kept)
-    filings += kept
-    for row in filings:
-        listed = doc_of(row["id"]) in observed["index_doc_ids"]
-        record(row["id"], "filings", listed, observed["index"])
-    out["filings"] = filings + others
+    def listed(self, row_id: str, rows: str, listed: bool, capture: dict, path: Path) -> None:
+        last = self.last((row_id, "listed"))
+        if last and capture["retrieved_at"] <= last["capture"]["retrieved_at"]:
+            return
+        if listed == (last is None or last["change"] == LISTED_AGAIN):
+            return
+        kind = LISTED_AGAIN if listed else NOT_LISTED
+        before = self.before.get(capture["url"])
+        self.add(change_row(row_id, rows, kind, capture, before=before), path)
 
-    this_year = {row["id"] for row in filings}
-    made = {row["id"] for row in built["transactions"]}
-    kept = [row for row in published["transactions"] if row["id"] not in made]
-    for row in kept:
-        if row["filing_id"] not in this_year:
-            continue
-        carried["transactions"] += 1
-        document = observed["documents"].get(doc_of(row["filing_id"]))
-        if document is not None:
-            record(row["id"], "transactions", False, document)
-    for row in built["transactions"]:
-        record(row["id"], "transactions", True, observed["documents"][doc_of(row["filing_id"])])
-    out["transactions"] = built["transactions"] + kept
-    return out, changes, carried
+    def read(self, row_id: str, rows: str, field: str, was, now, capture: dict, path: Path):
+        last = self.last((row_id, READ_OTHERWISE, field))
+        if last and capture["retrieved_at"] <= last["capture"]["retrieved_at"]:
+            return
+        if now == (last["now"] if last else was):
+            return
+        before = self.before.get(capture["url"])
+        self.add(
+            change_row(
+                row_id, rows, READ_OTHERWISE, capture, field=field, was=was, now=now, before=before
+            ),
+            path,
+        )
+
+    def replaced(self, row_id: str, was: str, capture: dict, path: Path, differs: bool) -> None:
+        """The Clerk serves other bytes for a published filing's document. Recorded when they
+        read otherwise than the rows published from it, or when a recorded replacement ends."""
+        last = self.last((row_id, REPLACED, "source.content_hash"))
+        if last and capture["retrieved_at"] <= last["capture"]["retrieved_at"]:
+            return
+        seen = last["now"] if last else was
+        if capture["content_hash"] == seen or not (differs or last):
+            return
+        self.add(
+            change_row(
+                row_id,
+                "filings",
+                REPLACED,
+                capture,
+                field="source.content_hash",
+                was=was,
+                now=capture["content_hash"],
+            ),
+            path,
+        )
+
+
+def decided(changes: list[dict], row_id: str, field: str) -> bool:
+    """Whether a person has recorded a decision about this fact of this row."""
+    return any(
+        c["change"] == CORRECTED and c["row_id"] == row_id and c.get("field") == field
+        for c in changes
+    )
+
+
+def accrue(published: dict, derived: dict) -> dict:
+    """The published row with every fact it lacked filled from the derived one: a null, a
+    missing key, the end of a longer list. No fact it carries moves."""
+    if not isinstance(published, dict) or not isinstance(derived, dict):
+        return published
+    out = dict(published)
+    for key, value in derived.items():
+        if key not in out or out[key] is None:
+            out[key] = value
+        elif isinstance(out[key], dict):
+            out[key] = accrue(out[key], value)
+        elif isinstance(out[key], list) and isinstance(value, list) and len(value) > len(out[key]):
+            out[key] = out[key] + value[len(out[key]) :]
+    return out
+
+
+def given_and_surname(name: str) -> tuple[str, frozenset[str]]:
+    """The first given name, folded, and the surname tokens of a published officeholder's
+    common name ("Last, First") or legal name ("First M. Last, Jr.")."""
+    if "," in name and not name.rstrip().endswith((", Jr.", ", Sr.", ", II", ", III", ", IV")):
+        last, first = name.split(",", 1)
+    else:
+        parts = [p for p in name.replace(",", " ").split() if fold(p) not in NOISE]
+        last, first = (parts[-1], parts[0]) if parts else ("", "")
+    given = next((fold(p) for p in first.split() if fold(p) and fold(p) not in NOISE), "")
+    return given, tokens(last)
+
+
+def person_kept(holder: dict, office: dict) -> dict:
+    """A published officeholder the roster no longer lists, in the roster's shape, so a
+    person's adjudication can still attribute a row to them and their document be read."""
+    common = holder.get("common_name") or holder["legal_name"]
+    last, first = (common.split(",", 1) + [""])[:2] if "," in common else (common, "")
+    sworn = (holder.get("sworn_at") or "").replace("-", "")
+    return {
+        "bioguide": holder["biographical_ids"]["bioguide_id"],
+        "last": last.strip(),
+        "first": first.strip(),
+        "seat": office["seat"],
+        "sworn": sworn,
+        "official_name": holder["legal_name"],
+        "namelist": common,
+        "_tokens": tokens(last, first),
+        "_kept": holder["id"],
+        "_office": office["id"],
+    }
 
 
 def index_people(people: list[dict]) -> dict[str, list[dict]]:
@@ -662,33 +791,51 @@ def build(year: int, dry_run: bool = False) -> int:
     adjudications, adjudications_hash = load_adjudications(ADJUDICATIONS)
     documents, docs_hash = load_docs_manifest()
     published = read_published()
-    published_ids = {row["id"] for row in published["filings"] if index_year(row) == year}
     listed_doc_ids = {row["doc_id"] for row in rows}
+    last_run = published_run(year)
+    last_read = {s["url"]: s["retrieved_at"] for s in last_run.get("sources", [])}
 
-    # A filing year is built against the roster of its own Congress. Once the roster lists
-    # a later one, the year is closed: its rows are carried as published, and no new row of
-    # it is attributed, because the later roster's seats and swearing-in dates are not the
-    # year's. Nothing of the roster or the documents shapes a closed year's rows.
+    # A filing year is built against the roster of its own Congress. Once the roster lists a
+    # later one, the year is closed. The roster is not read for it, because the later
+    # roster's seats and swearing-in dates are not the year's; its rows are carried as
+    # published; a row set aside keeps the reason it was set aside for; a row new to the
+    # index is set aside, unless a person's decision attributes it to an officeholder the
+    # register holds; and the offices of the ended Congress get the day their terms ended.
     congress = roster_congress(CACHE / "MemberData.xml")
     closed = closed_year(year, congress)
+    ours = congress_of(year)
+    began, ended = term_start(ours), term_start(ours + 1)
     closed_reason = (
-        f"filing year {year} is of the {ordinal(congress_of(year))} Congress, and the roster "
-        f"this build read lists the {ordinal(congress)}; the register holds the "
-        f"{ordinal(congress_of(year))} Congress's roster only as the rows it published, so it "
-        "attributes no new row of that year"
+        f"filing year {year} is of the {ordinal(ours)} Congress, whose terms ended at noon on "
+        f"{ended}, and the roster this build read lists the {ordinal(congress)}; the register "
+        "attributes a new row of that year only by a person's decision, citing evidence"
     )
     if closed:
         seats, people, documents, docs_hash = [], [], {}, None
 
     by_surname = index_people(people)
-
     roster_source = {
         "url": roster_capture["url"],
         "retrieved_at": roster_capture["retrieved_at"],
         "content_hash": roster_capture["sha256"],
     }
+    index_source = {
+        "url": index_capture["url"],
+        "retrieved_at": index_capture["retrieved_at"],
+        "content_hash": index_capture["sha256"],
+    }
+    roster_bytes, index_bytes = CACHE / "MemberData.xml", CACHE / f"{year}FD.zip"
+    seen = Observed(published["changes"], last_read)
+    last_roster_read = (
+        last_run.get("congress", {}).get("last_roster_read") or last_read.get(roster_capture["url"])
+        if closed
+        else roster_capture["retrieved_at"]
+    )
 
-    offices, office_of_seat = [], {}
+    # Offices: every published one kept, a new one added; nothing the roster says moves a
+    # published office. A closed year's offices get the day their terms ended.
+    offices_by_id = {o["id"]: o for o in published["offices"]}
+    office_of_seat = {}
     for seat in seats:
         start = term_start(seat["congress"])
         office = {
@@ -703,10 +850,21 @@ def build(year: int, dry_run: bool = False) -> int:
             "term_start": start,
             "term_end": None,
         }
-        offices.append(office)
-        office_of_seat[seat["seat"]] = office
+        offices_by_id[office["id"]] = accrue(offices_by_id.get(office["id"], office), office)
+        office_of_seat[seat["seat"]] = offices_by_id[office["id"]]
 
-    officeholders, holder_of_bioguide, person_of_id = [], {}, {}
+    def ended_term(office: dict) -> dict:
+        if closed and office.get("term_start") == began and office.get("term_end") is None:
+            return {**office, "term_end": ended}
+        return office
+
+    offices_by_id = {oid: ended_term(o) for oid, o in offices_by_id.items()}
+
+    # Officeholders: every published one kept as published; the roster may add a new one, a
+    # term at the end of one's list, and a fact one lacked. A roster that states one of their
+    # facts otherwise is a change of its own, never an edit.
+    holders_by_id = {h["id"]: h for h in published["officeholders"]}
+    holder_of_bioguide, person_of_id = {}, {}
     for person in people:
         office = office_of_seat[person["seat"]]
         sworn = person["sworn"]
@@ -731,32 +889,151 @@ def build(year: int, dry_run: bool = False) -> int:
                 if len(sworn) == 8
                 else ""
             )
-            + "Presence in the register is not evidence of wrongdoing.",
+            + FRAME,
         }
-        officeholders.append(holder)
-        holder_of_bioguide[person["bioguide"]] = holder
+        holder_of_bioguide[person["bioguide"]] = holder["id"]
         person_of_id[holder["id"]] = person
+        was = holders_by_id.get(holder["id"])
+        if was is None:
+            holders_by_id[holder["id"]] = holder
+            continue
+        same_bytes = was["source"].get("content_hash") == roster_capture["sha256"]
+        for field in ROSTER_FACTS:
+            if was.get(field) is None or decided(published["changes"], holder["id"], field):
+                continue
+            if same_bytes and holder[field] != was[field]:
+                raise SystemExit(
+                    f"refusing to build: the roster bytes {holder['id']} was read from now read "
+                    f"its {field} as {holder[field]!r}, where the register published "
+                    f"{was[field]!r}. The source did not change; the register's reading did, "
+                    "and a change to the register's code must not rewrite what it published. "
+                    "Revert it, or correct the row with tools/correct.py, citing the evidence."
+                )
+            seen.read(
+                holder["id"],
+                "officeholders",
+                field,
+                was[field],
+                holder[field],
+                roster_source,
+                roster_bytes,
+            )
+        terms = [o["id"] for o in was.get("offices", [])]
+        grown = was
+        if office["id"] not in terms:
+            grown = {**was, "offices": [*was.get("offices", []), office]}
+        holders_by_id[holder["id"]] = accrue(grown, holder)
 
+    for hid, holder in holders_by_id.items():
+        terms = [ended_term(o) for o in holder.get("offices", [])]
+        if terms != holder.get("offices", []):
+            holders_by_id[hid] = {**holder, "offices": terms}
+    of_this_congress = {
+        hid
+        for hid, h in holders_by_id.items()
+        if any(o.get("term_start") == began for o in h.get("offices", []))
+    }
+    if not closed:
+        for hid in sorted(of_this_congress):
+            seen.listed(hid, "officeholders", hid in person_of_id, roster_source, roster_bytes)
+
+    # Whom a person's decision may name besides the roster's members: an officeholder of this
+    # Congress the register holds and the roster no longer lists, at their own seat, for a
+    # filing the index dates no later than the last roster read that listed them, or the end
+    # of the Congress's terms. SUBJECTS.md §1 enters no new filing for an officeholder after
+    # their term; the roster does not say when a term ended, so the register takes the last
+    # day it can show the person still listed.
+    kept_people = {}
+    for hid in of_this_congress - set(person_of_id):
+        holder = holders_by_id[hid]
+        office = next(o for o in holder["offices"] if o.get("term_start") == began)
+        last = seen.last((hid, "listed"))
+        until = ended
+        if last and last["change"] == NOT_LISTED:
+            until = min(until, (last.get("before") or holder["source"]["retrieved_at"])[:10])
+        kept_people[hid] = dict(person_kept(holder, office), _until=until)
+    names_at_seat: dict[str, list[tuple[str, str, frozenset]]] = {}
+    for hid in of_this_congress:
+        holder = holders_by_id[hid]
+        given, surname = given_and_surname(holder.get("common_name") or holder["legal_name"])
+        for office in holder["offices"]:
+            names_at_seat.setdefault(office["seat"], []).append((hid, given, surname))
+
+    # Filings. A DocID the register published is never attributed again: the index row is
+    # weighed against the published row, and what it states otherwise is a change of its own.
+    published_by_doc = {doc_of(f["id"]): f for f in published["filings"]}
+    filings_by_id = {f["id"]: f for f in published["filings"]}
+    set_aside_before = (
+        {
+            canonical(r["source_row"]): r
+            for r in published_set_aside(year)
+            if "doc_id" in r.get("source_row", {})
+        }
+        if closed
+        else {}
+    )
     ptr = load_ptr() if documents else None
-    filings, rejected, adjudicated, attributed_by_document = [], [], 0, 0
+    new_filings, rejected, adjudicated_now, attributed_by_document_now = [], [], 0, 0
     index_rows = len(rows)
-    rows, duplicated = collapse_duplicates(rows, rejected, index_capture)
+    rows, duplicated = collapse_duplicates(rows, rejected, index_capture, set(published_by_doc))
     for row in rows:
         filing_id = f"fl:house-clerk:{row['filing_type'] or 'none'}:{row['doc_id']}"
-        if closed:
-            if filing_id not in published_ids:
-                rejected.append(
-                    {
-                        "adapter": "house-fd",
-                        "reason": closed_reason,
-                        "source_row": row,
-                        "source": {
-                            "url": index_capture["url"],
-                            "retrieved_at": index_capture["retrieved_at"],
-                            "content_hash": index_capture["sha256"],
-                        },
-                    }
+        was = published_by_doc.get(row["doc_id"])
+        if was is not None:
+            facts = {
+                "filed_at": iso(row["filing_date"]),
+                "form_type": "House-PTR" if row["filing_type"] == PTR_CODE else "other",
+                "source_form_code": row["filing_type"] or None,
+            }
+            same_row = was.get("index_row") == row if "index_row" in was else None
+            for field in INDEX_FACTS:
+                if was.get(field) is None or decided(published["changes"], was["id"], field):
+                    continue
+                if same_row and facts[field] != was[field]:
+                    raise SystemExit(
+                        f"refusing to build: the Clerk's index row {was['id']} was read from "
+                        f"is unchanged, and this build reads its {field} as {facts[field]!r} "
+                        f"where the register published {was[field]!r}. The source did not "
+                        "change; the register's reading did, and a change to the register's "
+                        "code must not rewrite what it published. Revert it, or correct the "
+                        "row with tools/correct.py, citing the evidence."
+                    )
+                seen.read(
+                    was["id"], "filings", field, was[field], facts[field], index_source, index_bytes
                 )
+            if "index_row" not in was and all(
+                facts[f] == was[f] for f in INDEX_FACTS if was.get(f) is not None
+            ):
+                filings_by_id[was["id"]] = {**filings_by_id[was["id"]], "index_row": row}
+            if (
+                not closed
+                and row["doc_id"] not in adjudications
+                and not decided(published["changes"], was["id"], "officeholder_id")
+            ):
+                person, _ = match(row, people, by_surname)
+                joined = holder_of_bioguide[person["bioguide"]] if person else None
+                if joined is not None and joined != was["officeholder_id"]:
+                    raise SystemExit(
+                        f"refusing to build: {was['id']} is published as "
+                        f"{was['officeholder_id']}'s, and this build's join attributes it to "
+                        f"{joined}. The join never moves a published attribution. If it is "
+                        "wrong, correct it with tools/correct.py, citing the primary source; if "
+                        "it stands, record that with tools/correct.py --stands, and the build "
+                        "goes on."
+                    )
+            continue
+        if closed and row["doc_id"] not in adjudications:
+            before = set_aside_before.get(canonical(row))
+            rejected.append(
+                before
+                if before is not None
+                else {
+                    "adapter": "house-fd",
+                    "reason": closed_reason,
+                    "source_row": row,
+                    "source": index_source,
+                }
+            )
             continue
         person, reason = match(row, people, by_surname)
         confidence = None  # an index row; the document itself has not been read
@@ -777,7 +1054,12 @@ def build(year: int, dry_run: bool = False) -> int:
             capture = documents.get(row["doc_id"])
             if ptr is not None and capture is not None and pdf.is_file():
                 head = ptr.header(ptr.extract_text(pdf))
-                verdict, clause = attribute_by_header(head, row, held, filed_at)
+                others = [
+                    (given, surname)
+                    for hid, given, surname in names_at_seat.get(held["seat"], [])
+                    if hid != holder_of_bioguide[held["bioguide"]]
+                ]
+                verdict, clause = attribute_by_header(head, row, held, filed_at, others, ours)
                 document_block = {
                     "url": capture["url"],
                     "retrieved_at": capture["retrieved_at"],
@@ -785,7 +1067,7 @@ def build(year: int, dry_run: bool = False) -> int:
                 }
                 if verdict == "attributed":
                     person = held
-                    attributed_by_document += 1
+                    attributed_by_document_now += 1
                     index_name = f"{row['first']} {row['last']} {row.get('suffix', '')}".strip()
                     roster_name = held["official_name"] or f"{held['first']} {held['last']}"
                     notes = (
@@ -800,43 +1082,47 @@ def build(year: int, dry_run: bool = False) -> int:
                     f"{reason.removesuffix(HELD_SUFFIX)}; the document has not been captured"
                     f"{HELD_SUFFIX}"
                 )
-        decided = adjudications.get(row["doc_id"]) if person is None else None
-        if decided is not None:
-            person = person_of_id.get(decided["officeholder_id"])
-            if person is None and filing_id in published_ids:
-                continue  # published on that decision; its officeholder's rows are carried
+        decision = adjudications.get(row["doc_id"]) if person is None else None
+        if decision is not None:
+            person = person_of_id.get(decision["officeholder_id"]) or kept_people.get(
+                decision["officeholder_id"]
+            )
             if person is None:
                 raise SystemExit(
                     f"adjudication for DocID {row['doc_id']} names "
-                    f"{decided['officeholder_id']}, which is not in the roster"
+                    f"{decision['officeholder_id']}, whom the register does not hold as an "
+                    f"officeholder of the {ordinal(ours)} Congress"
                 )
-            confidence, adjudicated = "manual", adjudicated + 1
-        if (person is None or filed_at is None) and filing_id in published_ids:
-            continue  # published with its attribution, which stands; carry_forward keeps it
+            if person.get("_until") and filed_at and filed_at > person["_until"]:
+                reason = (
+                    f"a person's decision names {decision['officeholder_id']}, and the index "
+                    f"dates the filing {filed_at}, after {person['_until']}, the last day the "
+                    "register can show them in office; SUBJECTS.md §1 enters no new filing for "
+                    "an officeholder after their term"
+                )
+                person = None
+            else:
+                confidence, adjudicated_now = "manual", adjudicated_now + 1
         if person is None or filed_at is None:
             rejected.append(
                 {
                     "adapter": "house-fd",
                     "reason": reason if person is None else "the filing date will not parse",
                     "source_row": row,
-                    "source": {
-                        "url": index_capture["url"],
-                        "retrieved_at": index_capture["retrieved_at"],
-                        "content_hash": index_capture["sha256"],
-                    },
+                    "source": index_source,
                     **({"document": document_block} if document_block else {}),
                     **({"notes": dup_note} if dup_note else {}),
                 }
             )
             continue
-        holder = holder_of_bioguide[person["bioguide"]]
         if dup_note:
             notes = " ".join(part for part in (notes, dup_note) if part)
-        filings.append(
+        kept_id = person.get("_kept")
+        new_filings.append(
             {
-                "id": f"fl:house-clerk:{row['filing_type'] or 'none'}:{row['doc_id']}",
-                "officeholder_id": holder["id"],
-                "office_id": office_of_seat[person["seat"]]["id"],
+                "id": filing_id,
+                "officeholder_id": kept_id or holder_of_bioguide[person["bioguide"]],
+                "office_id": person["_office"] if kept_id else office_of_seat[person["seat"]]["id"],
                 "form_type": "House-PTR" if row["filing_type"] == PTR_CODE else "other",
                 "source_form_code": row["filing_type"] or None,
                 "filed_at": filed_at,
@@ -850,89 +1136,84 @@ def build(year: int, dry_run: bool = False) -> int:
                 },
                 "extraction_confidence": confidence,
                 "notes": notes,
+                "index_row": row,
             }
         )
+    for filing in published["filings"]:
+        if index_year(filing) == year:
+            seen.listed(
+                filing["id"],
+                "filings",
+                doc_of(filing["id"]) in listed_doc_ids,
+                index_source,
+                index_bytes,
+            )
 
-    # The document layer. For every filing whose document was captured: read it, require
-    # it to agree with the roster seat and the DocID it was attributed to, and write its
-    # transactions. A document that disagrees refuses the filing row itself, because the
-    # document is the primary record and the index row's attribution is what it contradicts.
-    # One exception, recorded rather than guessed: when only the printed seat differs and
-    # the printed name confirms the officeholder by the join's own test, the row stands
-    # and carries the discrepancy in its notes.
-    transactions: list[dict] = []
-    documents_read = documents_refused = documents_unreadable = documents_discrepant = 0
-    documents_header_only = 0
+    # The document layer. A new filing's document is read, required to agree with the
+    # officeholder and the DocID it was attributed to, and its transactions written; a
+    # document that disagrees refuses the new row, because the document is the primary
+    # record and the index row's attribution is what it contradicts. One exception, recorded
+    # rather than guessed: when only the printed seat differs and the printed name confirms
+    # the officeholder by the join's own test, the row stands and carries the discrepancy in
+    # its notes. A published filing's document is read again: the same bytes must read as
+    # they did, and other bytes that read otherwise are a change of their own, "replaced",
+    # with the rows published from the first bytes carried as they are.
+    published_tx: dict[str, list[dict]] = collections.defaultdict(list)
+    for tx in published["transactions"]:
+        published_tx[tx["filing_id"]].append(tx)
+    transactions_by_id = {t["id"]: t for t in published["transactions"]}
+    documents_refused = documents_replaced = documents_same_reading = 0
     read_documents: dict[str, dict] = {}
     if documents:
-        kept = []
-        for filing in filings:
-            doc_id = filing["id"].rsplit(":", 1)[1]
+        kept_new = []
+        this_year = [f for f in filings_by_id.values() if index_year(f) == year] + new_filings
+        for filing in this_year:
+            doc_id = doc_of(filing["id"])
             capture = documents.get(doc_id)
             pdf = DOCS / f"{doc_id}.pdf"
+            is_new = filing["id"] not in filings_by_id
             if capture is None or not pdf.is_file():
-                kept.append(filing)
+                if is_new:
+                    kept_new.append(filing)
                 continue
+            person = person_of_id.get(filing["officeholder_id"]) or kept_people.get(
+                filing["officeholder_id"]
+            )
+            if person is None:
+                if is_new:
+                    kept_new.append(filing)
+                continue
+            seat = (
+                person["seat"]
+                if is_new or filing["office_id"] not in offices_by_id
+                else offices_by_id[filing["office_id"]]["seat"]
+            )
             text, pages = ptr.read(pdf)
-            read_documents[doc_id] = {
+            doc_source = {
                 "url": capture["url"],
                 "retrieved_at": capture["retrieved_at"],
                 "content_hash": capture["sha256"],
             }
-            person = person_of_id[filing["officeholder_id"]]
+            read_documents[doc_id] = doc_source
             status, reason = ptr.verify(
                 text,
-                person["seat"],
+                seat,
                 doc_id,
                 name_confirms=lambda printed, p=person: p["_tokens"] <= tokens(printed),
             )
-            if status == "unreadable":
-                # The row stands; the document was captured and hashed but not read.
-                documents_unreadable += 1
-                filing["source"]["content_hash"] = capture["sha256"]
-                kept.append(filing)
-                continue
-            if status == "contradiction" and filing["id"] in published_ids:
-                raise SystemExit(
-                    f"refusing to build: the document behind the published filing {filing['id']} "
-                    f"now refuses its attribution ({reason}). The register does not drop a "
-                    "published row; a person decides, with the evidence, as a correction."
-                )
-            if status == "contradiction":
-                documents_refused += 1
-                rejected.append(
-                    {
-                        "adapter": "house-fd",
-                        "reason": f"the document refused the attribution: {reason}",
-                        "source_row": {"doc_id": doc_id, "filing_id": filing["id"]},
-                        "source": {
-                            "url": capture["url"],
-                            "retrieved_at": capture["retrieved_at"],
-                            "content_hash": capture["sha256"],
-                        },
-                    }
-                )
-                continue
+            derived = dict(filing, source=dict(filing["source"], content_hash=capture["sha256"]))
+            rows_read: list[dict] = []
             if status == "discrepancy":
-                documents_discrepant += 1
                 discrepancy = (
                     f"The document prints State/District {ptr.header(text)['seat']}; the "
-                    f"Clerk's roster lists this officeholder at {person['seat']}. The "
+                    f"Clerk's roster lists this officeholder at {seat}. The "
                     "attribution rests on the filer's printed name and the Filing ID, which "
                     "both agree with the Clerk's index."
                 )
-                filing["notes"] = " ".join(p for p in (filing["notes"], discrepancy) if p)
-            filing["source"]["content_hash"] = capture["sha256"]
-            if filing["source_form_code"] != PTR_CODE:
-                # An annual report or another form: its header was read and its hash
-                # recorded; the register does not yet read its schedules.
-                documents_header_only += 1
-                kept.append(filing)
-                continue
-            documents_read += 1
-            filing["extraction_confidence"] = "structured"
-            for n, tx in enumerate(ptr.transactions(pages), 1):
-                transactions.append(
+                derived["notes"] = " ".join(p for p in (filing["notes"], discrepancy) if p)
+            if status in ("ok", "discrepancy") and filing["source_form_code"] == PTR_CODE:
+                derived["extraction_confidence"] = "structured"
+                rows_read = [
                     {
                         "id": f"tx:house-clerk:{doc_id}:{n:03d}",
                         "filing_id": filing["id"],
@@ -948,44 +1229,109 @@ def build(year: int, dry_run: bool = False) -> int:
                         "filing_status": tx.get("filing_status"),
                         "notes": ptr.notes(tx),
                     }
+                    for n, tx in enumerate(ptr.transactions(pages), 1)
+                ]
+            if is_new:
+                if status == "contradiction":
+                    documents_refused += 1
+                    rejected.append(
+                        {
+                            "adapter": "house-fd",
+                            "reason": f"the document refused the attribution: {reason}",
+                            "source_row": {"doc_id": doc_id, "filing_id": filing["id"]},
+                            "source": doc_source,
+                        }
+                    )
+                    continue
+                kept_new.append(derived)
+                for tx in rows_read:
+                    transactions_by_id[tx["id"]] = tx
+                continue
+            # A published filing: weigh this reading against what was published from it.
+            was = filing
+            before = sorted(published_tx.get(was["id"], []), key=lambda t: t["id"])
+            differs = status == "contradiction" or reads_otherwise(before, rows_read)
+            if was["source"].get("content_hash") not in (None, capture["sha256"]):
+                seen.replaced(was["id"], was["source"]["content_hash"], doc_source, pdf, differs)
+                documents_replaced += 1 if differs else 0
+                documents_same_reading += 0 if differs else 1
+                continue
+            first_read = was["source"].get("content_hash") is None
+            if status == "contradiction" and not decided(
+                published["changes"], was["id"], "officeholder_id"
+            ):
+                raise SystemExit(
+                    f"refusing to build: the document behind the published filing {was['id']} "
+                    f"{'now ' if not first_read else ''}refuses its attribution ({reason}). The "
+                    "register does not drop or move a published row: if the attribution is "
+                    "wrong, correct it with tools/correct.py, citing the document; if it "
+                    "stands, record that with tools/correct.py --stands, and the build goes on."
                 )
-            kept.append(filing)
-        filings = kept
+            if before and differs and was.get("extraction_confidence") == "structured":
+                raise SystemExit(
+                    f"refusing to build: the document behind {was['id']} holds the bytes its "
+                    "rows were published from, and this build reads them otherwise. The source "
+                    "did not change; the register's reading did, and a change to the "
+                    "register's code must not rewrite what it published. Revert it, or correct "
+                    "the rows with tools/correct.py, citing the evidence."
+                )
+            filings_by_id[was["id"]] = accrue(filings_by_id[was["id"]], derived)
+            for tx in rows_read:
+                transactions_by_id[tx["id"]] = accrue(transactions_by_id.get(tx["id"], tx), tx)
+        new_filings = kept_new
 
-    # What this build read and attributed, before anything published is carried.
-    attributed = len({f["officeholder_id"] for f in filings})
-    quiet = len(people) - attributed
-    accepted = len(filings)
-    written = len(transactions)
-
-    observed = {
-        "roster": None if closed else roster_source,
-        "index": {
-            "url": index_capture["url"],
-            "retrieved_at": index_capture["retrieved_at"],
-            "content_hash": index_capture["sha256"],
-        },
-        "index_doc_ids": listed_doc_ids,
-        "documents": read_documents,
-    }
-    built = {
-        "offices": offices,
-        "officeholders": officeholders,
-        "filings": filings,
-        "transactions": transactions,
-    }
-    rows_out, new_changes, carried = carry_forward(published, built, year, observed)
-    offices, officeholders = rows_out["offices"], rows_out["officeholders"]
-    filings, transactions = rows_out["filings"], rows_out["transactions"]
-    new_changes.sort(key=lambda c: c["id"])
-    changes = published["changes"] + new_changes
-    changed = dict(collections.Counter(c["change"] for c in new_changes))
-
+    filings = list(filings_by_id.values()) + new_filings
+    transactions = list(transactions_by_id.values())
     transactions.sort(key=lambda t: (t["officeholder_id"], t["filing_id"], t["id"]))
     filings.sort(key=lambda f: (f["officeholder_id"], f["filed_at"], f["id"]))
-    officeholders.sort(key=lambda h: h["id"])
-    offices.sort(key=lambda o: o["id"])
+    officeholders = sorted(holders_by_id.values(), key=lambda h: h["id"])
+    offices = sorted(offices_by_id.values(), key=lambda o: o["id"])
+    new_changes = sorted(seen.new, key=lambda c: c["id"])
+    changes = published["changes"] + new_changes
+
+    # The register's own figures for this year, over the rows it holds after this build, so a
+    # second build from the same captures writes the same record (not this build's deltas).
+    mine = [f for f in filings if index_year(f) == year]
+    mine_ids = {f["id"] for f in mine}
+    listed_now = {hid for hid in of_this_congress if latest_listing(changes, hid) != NOT_LISTED}
+    with_a_filing = {f["officeholder_id"] for f in mine}
     reasons = dict(collections.Counter(r["reason"].split(" (")[0] for r in rejected))
+    counts = {
+        "seats": len(seats),
+        "filled": len(people),
+        "vacant": len(seats) - len(people),
+        "index_rows": index_rows,
+        "index_rows_duplicated": len(duplicated),
+        "filings": len(mine),
+        "reports": sum(1 for f in mine if f["form_type"] == "House-PTR"),
+        "adjudicated": sum(1 for f in mine if doc_of(f["id"]) in adjudications),
+        "attributed_by_document": sum(
+            1 for f in mine if (f.get("notes") or "").startswith("Attributed by the document")
+        ),
+        "officeholders_with_a_filing": len(with_a_filing),
+        "quiet": len(listed_now - with_a_filing),
+        "rejected": len(rejected),
+    }
+    reports = [f for f in mine if f["form_type"] == "House-PTR"]
+    documents_count = {
+        "manifest_sha256": docs_hash,
+        "captured": len(documents),
+        "read": sum(1 for f in reports if f.get("extraction_confidence") == "structured"),
+        "seat_discrepancies": sum(
+            1 for f in mine if "The document prints State/District" in (f.get("notes") or "")
+        ),
+        "unreadable": sum(
+            1
+            for f in reports
+            if f["source"].get("content_hash") and f.get("extraction_confidence") != "structured"
+        ),
+        "header_only": sum(
+            1 for f in mine if f["form_type"] != "House-PTR" and f["source"].get("content_hash")
+        ),
+        "refused": documents_refused,
+        "transactions": sum(1 for t in transactions if t["filing_id"] in mine_ids),
+    }
+
     print(
         f"roster        {len(seats)} seats, {len(people)} filled, {len(seats) - len(people)} vacant"
     )
@@ -1000,39 +1346,37 @@ def build(year: int, dry_run: bool = False) -> int:
     )
     if closed:
         print(f"closed        {closed_reason}")
-    print(f"accepted      {accepted} filings against {attributed} officeholders")
-    if adjudicated:
-        print(f"              {adjudicated} of them by a person's adjudication, citing evidence")
-    if attributed_by_document:
+    print(
+        f"register      {len(mine)} filings of {year} against {len(with_a_filing)} officeholders; "
+        f"{len(new_filings)} new in this build"
+    )
+    if adjudicated_now:
+        print(f"              {adjudicated_now} new by a person's adjudication, citing evidence")
+    if attributed_by_document_now:
         print(
-            f"              {attributed_by_document} of them by the document's own header: "
+            f"              {attributed_by_document_now} new by the document's own header: "
             "Status Member at the seat, Filing ID agreeing"
         )
     print(f"rejected      {len(rejected)} rows")
     for reason, count in sorted(reasons.items(), key=lambda item: -item[1]):
         print(f"              {count:5d}  {reason}")
-    print(f"quiet         {quiet} sitting members have no filing in this index")
+    print(f"quiet         {counts['quiet']} listed officeholders have no filing of {year}")
     if documents:
         print(
-            f"documents     {documents_read} read ({documents_discrepant} with a seat "
-            f"discrepancy noted on the row), {documents_unreadable} captured but unreadable "
-            f"(scanned), {documents_header_only} header read and hashed, contents not yet "
-            f"read, {documents_refused} refused as contradicting; "
-            f"{written} transactions"
+            f"documents     {len(read_documents)} read in this build; {documents_refused} "
+            f"refused as contradicting; {documents_replaced} published ones served in other "
+            f"bytes that read otherwise, {documents_same_reading} in other bytes that read "
+            "the same"
         )
-    if any(carried.values()):
-        print(
-            f"carried       as published: {carried['officeholders']} officeholders, "
-            f"{carried['offices']} offices, {carried['filings']} filings and "
-            f"{carried['transactions']} transactions this build did not re-derive"
-        )
-    for change, count in sorted(changed.items()):
-        print(f"changes       {count} published rows the source now shows as {change}")
+    for change, count in sorted(collections.Counter(c["change"] for c in new_changes).items()):
+        print(f"changes       {count} new: {change}")
 
     if dry_run:
         print("\ndry run: nothing written")
         return 0
 
+    for sha256, path in seen.bytes.items():
+        print(f"kept          {keep_capture(path, sha256)}")
     write(Path("data/offices.ndjson"), offices)
     write(Path("data/officeholders.ndjson"), officeholders)
     write(Path("data/filings.ndjson"), filings)
@@ -1062,38 +1406,20 @@ def build(year: int, dry_run: bool = False) -> int:
                 "last_modified": capture.get("last_modified"),
             }
             for name, capture in (
-                ("MemberData.xml", roster_capture),
+                *((("MemberData.xml", roster_capture),) if not closed else ()),
                 (f"{year}FD.zip", index_capture),
             )
         ],
         "adjudications_sha256": adjudications_hash,
-        "documents": {
-            "manifest_sha256": docs_hash,
-            "captured": len(documents),
-            "read": documents_read,
-            "seat_discrepancies": documents_discrepant,
-            "unreadable": documents_unreadable,
-            "header_only": documents_header_only,
-            "refused": documents_refused,
-            "transactions": written,
+        "documents": documents_count,
+        "congress": {
+            "filing_year": ours,
+            "roster": congress,
+            "closed": closed,
+            "last_roster_read": last_roster_read,
         },
-        "congress": {"filing_year": congress_of(year), "roster": congress, "closed": closed},
-        "carried": carried,
-        "changes": changed,
-        "counts": {
-            "seats": len(seats),
-            "filled": len(people),
-            "vacant": len(seats) - len(people),
-            "index_rows": index_rows,
-            "index_rows_duplicated": len(duplicated),
-            "accepted": accepted,
-            "reports": sum(1 for f in built["filings"] if f["form_type"] == "House-PTR"),
-            "adjudicated": adjudicated,
-            "attributed_by_document": attributed_by_document,
-            "officeholders_with_a_filing": attributed,
-            "quiet": quiet,
-            "rejected": len(rejected),
-        },
+        "changes": dict(collections.Counter(c["change"] for c in changes)),
+        "counts": counts,
         "rejected_by_reason": reasons,
     }
     # One run record per adapter and year in the tree, like the set-aside file: the
@@ -1112,6 +1438,29 @@ def build(year: int, dry_run: bool = False) -> int:
     print(f"wrote data/adapter-runs/house-fd-{year}-{key}.ndjson")
     print("Re-seal in this commit: python tools/seal.py --build <id> --built-at <time>")
     return 0
+
+
+def reads_otherwise(published: list[dict], read: list[dict]) -> bool:
+    """Whether a document's rows, as this build reads them, differ from those published from
+    it: another set of rows, or a fact a published row carries given another value. A fact a
+    published row lacked is not a difference; it accrues."""
+    if [t["id"] for t in published] != [t["id"] for t in read]:
+        return bool(published) or bool(read)
+    for was, now in zip(published, read, strict=True):
+        for key, value in now.items():
+            if was.get(key) is not None and was[key] != value:
+                return True
+    return False
+
+
+def latest_listing(changes: list[dict], row_id: str) -> str | None:
+    """The latest "not listed" or "listed again" recorded for a row, or None."""
+    listing = [
+        c for c in changes if c["row_id"] == row_id and c["change"] in (NOT_LISTED, LISTED_AGAIN)
+    ]
+    if not listing:
+        return None
+    return max(listing, key=lambda c: (c["capture"]["retrieved_at"], c["id"]))["change"]
 
 
 def write(path: Path, rows: list[dict]) -> None:

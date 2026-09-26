@@ -110,6 +110,22 @@
       ],
       "description": "What the document says about itself that the reader must see beside the row, in plain words: for example, a printed seat that differs from the roster. Null when the document and the index agree in full."
     },
+    "index_row": {
+      "type": "object",
+      "required": ["last", "first", "suffix", "filing_type", "state_dst", "year", "filing_date", "doc_id"],
+      "additionalProperties": false,
+      "description": "The row of the Clerk's filing index the filing was read from, verbatim, under the adapter's names for the index's fields. Kept so a later index that states a fact otherwise can be told apart from a change in the register's own reading, and so a later reader sees what the index said. A row published before 2026-09-27 gains it the first time a later index lists it unchanged.",
+      "properties": {
+        "last": { "type": "string" },
+        "first": { "type": "string" },
+        "suffix": { "type": "string" },
+        "filing_type": { "type": "string" },
+        "state_dst": { "type": "string" },
+        "year": { "type": "string" },
+        "filing_date": { "type": "string" },
+        "doc_id": { "type": "string" }
+      }
+    },
     "evidence_bundle": {
       "type": "object",
       "required": [
