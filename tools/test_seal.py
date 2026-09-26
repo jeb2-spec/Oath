@@ -204,17 +204,46 @@ def test_changes_are_counted_by_kind_and_never_by_anyone_s_rows(tmp_path):
     verify = seal.load_verify(HERE)
     root = copy_register(tmp_path)
     path, run = the_run(root)
-    run["changes"] = {"not listed": 1, "read otherwise": 2}
+
+    def change(kind: str, n: int, **more) -> dict:
+        at = f"2026-10-0{n}T09:17:00Z"
+        return {
+            "id": f"ch:{kind}:{n}",
+            "row_id": f"fl:x:{n}",
+            "change": kind,
+            "capture": {"retrieved_at": at},
+            **more,
+        }
+
+    decision = {
+        "decided_at": "2026-10-06T12:00:00Z",
+        "decided_by": "the maintainer",
+        "because": "b",
+    }
+    rows = [
+        change("not listed", 1),
+        change("read otherwise", 2),
+        change("read otherwise", 3),
+        *(change("corrected", n, **decision) for n in (4, 5, 6)),
+    ]
+    (root / "data" / "changes.ndjson").write_text(
+        "".join(json.dumps(r) + "\n" for r in rows), encoding="utf-8"
+    )
+    run["changes"] = {"not listed": 1}  # a run record a correction never rewrote (Seat C, N-8)
     path.write_text(json.dumps(run) + "\n", encoding="utf-8")
     meta = json.loads((ROOT / "data" / "meta.json").read_text("utf-8"))
     meta["rows"] = verify.row_counts(root)
     text = seal.derive_state(root, meta)
     assert seal.state_text_lacks({**meta, "state": text}, run) == ""
     assert (
-        "3 changes are recorded, each a row of its own with the copy of the source that shows "
-        "it, which the register keeps: 1 no longer listed by a later capture, 2 stated otherwise "
-        "by a later capture."
-    ) in text
+        "3 changes later reads showed are recorded, each a row of its own citing the read, of "
+        "these kinds: a row a later read no longer lists and a fact a later read states "
+        "otherwise; 1 decision the maintainer recorded, correcting a published fact or recording "
+        "that it stands, each citing the evidence."
+    ) in text, "counted from the changes themselves, decisions as decisions"
+    assert "1 no longer" not in text and "2 stated" not in text, (
+        "no count by kind, which, small, is a count about one person (Seat C, N-9)"
+    )
     assert text.startswith(
         "The register holds 441 offices, 439 officeholders, 1,197 filings and 7,346 "
         "transactions. A row it has published stays, gaining only facts it lacked;"
@@ -300,3 +329,19 @@ def test_a_closed_year_seals_a_sentence_that_says_the_register_closed_it(tmp_pat
     assert "the roster the register reads" not in text and " now" not in text
     assert "gives the 119th Congress's offices the day their terms ended" in text
     assert "0 seats" not in text and f"2 because {reason}" in text
+
+
+def test_a_state_that_lacks_the_changes_is_refused():
+    """Seat G on the third reading (R3-4): the check read no change, so a sentence that left
+    the maintainer's corrections out sealed."""
+    seal = load()
+    changes = [
+        {"id": "a", "change": "not listed"},
+        {"id": "b", "change": "corrected", "decided_at": "t", "decided_by": "m", "because": "x"},
+        {"id": "c", "change": "corrected", "decided_at": "t", "decided_by": "m", "because": "x"},
+    ]
+    lacking = seal.state_text_lacks({"state": "Nothing about changes.", "rows": {}}, None, changes)
+    assert "changes later reads showed 1" in lacking and "the maintainer's decisions 1" in lacking
+    assert (
+        seal.state_text_lacks({"state": "1 change; 1 decision.", "rows": {}}, None, changes) == ""
+    )

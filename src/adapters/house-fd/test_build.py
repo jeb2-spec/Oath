@@ -1235,7 +1235,8 @@ def test_a_departure_builds_seals_and_validates(register):
         "The register holds 3 offices, 3 officeholders, 3 filings and 0 transactions."
     ), "every officeholder the register holds, the one the roster stopped listing among them"
     assert "2 of them filled and 1 vacant on the Clerk's roster read 2026-02-02" in state
-    assert "1 change is recorded" in state and "1 no longer listed by a later capture" in state
+    assert "1 change a later read showed is recorded" in state
+    assert "of these kinds: a row a later read no longer lists." in state
     (change,) = changes_of(register)
     assert change["build"] == "0002-house-2025", "stamped with the build that sealed it"
     assert (

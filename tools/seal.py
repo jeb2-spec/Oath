@@ -69,19 +69,35 @@ def run_figures(run: dict) -> list[tuple[int, str]]:
     return [(int(n), label) for n, label in figures if n]
 
 
-def state_text_lacks(meta: dict, run: dict | None = None) -> str:
+def change_figures(changes: list[dict]) -> list[tuple[int, str]]:
+    """The figures the changes sentence carries: later reads, and the maintainer's decisions."""
+    reads = sum(1 for c in changes if c.get("change") != "corrected")
+    decided = len(
+        {
+            (c.get("decided_at"), c.get("decided_by"), c.get("because"))
+            for c in changes
+            if c.get("change") == "corrected"
+        }
+    )
+    return [(reads, "changes later reads showed"), (decided, "the maintainer's decisions")]
+
+
+def state_text_lacks(meta: dict, run: dict | None = None, changes: list[dict] | None = None) -> str:
     """Which of the build's own figures the hand-written state text fails to carry.
 
     The state text is the one sentence a reader gets about the whole build, and it is
     sealed. A build whose figures changed and whose sentence did not is a count in prose
     the table contradicts. Checked: the row counts of the counted files, and, when the
-    run record is given, the figures in it that move between builds. Each must appear as
-    a whole number with thousands separators, not inside a larger number. Returns an
-    empty string when every figure is present.
+    run record is given, the figures in it that move between builds; and, when the change rows
+    are given, how many changes later reads showed and how many decisions the maintainer
+    recorded (the Council's third reading of S.1b, Seat G). Each must appear as a whole number
+    with thousands separators, not inside a larger number. Returns an empty string when every
+    figure is present.
     """
     state = meta.get("state", "")
     wanted = [(meta.get("rows", {}).get(path), label) for path, label in COUNTED]
     wanted += run_figures(run or {})
+    wanted += change_figures(changes or [])
     missing = []
     for count, label in wanted:
         if not count:
@@ -197,17 +213,25 @@ def derive_state(root: Path, meta: dict) -> str:
         roster = next((s for s in run.get("sources", []) if s["name"] == "MemberData.xml"), {})
         starts = sorted({o["term_start"] for h in holders for o in h.get("offices", [])[:1]})
         congress = f" of the {congress_named(int(starts[0][:4]))}" if starts else ""
+        mine = [f for f in filings if f"/{run.get('year')}/" in f.get("source", {}).get("url", "")]
+        reads = sorted({f["source"]["retrieved_at"][:10] for f in mine if f.get("source")})
+        latest = index.get("retrieved_at", "")[:10]
+        span = (
+            f"as the register read them from {reads[0]} to {latest}"
+            if reads and reads[0] != latest
+            else f"as the register read them on {latest}"
+        )
         attributed = (
             f"{plural(counts.get('filings', counts.get('accepted', 0)), 'filing', 'filings')} "
             f"of the Clerk's {run.get('year')} filing index (the reports it lists under "
-            f"{run.get('year')}), retrieved {index.get('retrieved_at', '')[:10]}, attributed to "
+            f"{run.get('year')}), {span}, attributed to "
             + plural(counts.get("officeholders_with_a_filing", 0), "officeholder", "officeholders")
             + ", "
             f"{counts.get('attributed_by_document', 0):,} of them settled by the document's own "
             "header where the name alone could not"
         )
         if counts.get("adjudicated"):
-            attributed += f", {counts['adjudicated']:,} by a person's cited decision"
+            attributed += f", {counts['adjudicated']:,} by the maintainer's recorded decision"
         not_attributed = ", ".join(
             f"{n:,} because {reason}"
             for reason, n in sorted(reasons.items(), key=lambda item: (-item[1], item[0]))
@@ -223,8 +247,8 @@ def derive_state(root: Path, meta: dict) -> str:
                 )
             )
             not_attributed += (
-                f"{', and ' if not_attributed else ''}{held:,} held for a person to decide because "
-                f"the {HELD_REASON}" + (f": {why}" if why else "")
+                f"{', and ' if not_attributed else ''}{held:,} set aside for the maintainer to "
+                f"decide by hand because the {HELD_REASON}" + (f": {why}" if why else "")
             )
         closed = run.get("congress", {}).get("closed")
         lead = (
@@ -240,14 +264,18 @@ def derive_state(root: Path, meta: dict) -> str:
         )
         sentence = (
             f"{lead}{attributed}. "
-            f"{counts.get('rejected', 0):,} index rows are not attributed, each with "
+            f"{counts.get('rejected', 0):,} index rows are not attributed"
             + (
-                "the reason the register gave it when it set the row aside, while the year was "
-                "open or since: "
-                if closed
-                else "a reason: "
+                (
+                    ", each with the reason the register gave it when it set the row aside, while "
+                    "the year was open or since: "
+                    if closed
+                    else ", each with a reason: "
+                )
+                + f"{not_attributed}."
+                if not_attributed
+                else "."
             )
-            + f"{not_attributed}."
         )
         if counts.get("index_rows_duplicated"):
             sentence += (
@@ -286,8 +314,9 @@ def derive_state(root: Path, meta: dict) -> str:
             )
             + " have no filing attributed."
         )
-        if run.get("changes"):
-            sentence += " " + changes_sentence(run)
+        changes = read_rows(root / "data" / "changes.ndjson")
+        if changes:
+            sentence += " " + changes_sentence(changes)
         sentences.append(sentence)
     latest: dict[str, dict] = {}
     for row in signals.values():
@@ -380,26 +409,43 @@ def register_sentence(offices: int, holders: int, filings: int, transactions: in
 
 
 CHANGE_WORDS = {
-    "not listed": "no longer listed by a later capture",
-    "listed again": "listed again",
-    "read otherwise": "stated otherwise by a later capture",
-    "replaced": "served in other bytes that read otherwise",
-    "corrected": "corrected or confirmed by the maintainer, citing the evidence",
+    "not listed": "a row a later read no longer lists",
+    "listed again": "a row a later read lists again",
+    "read otherwise": "a fact a later read states otherwise",
+    "replaced": "a document the Clerk later serves as a different file, which reads otherwise",
 }
 
 
-def changes_sentence(run: dict) -> str:
-    """What later captures showed about published rows, and what people corrected, in totals
-    by kind; never a count of any one person's rows (the Council's reading of S.1b)."""
-    changes = run.get("changes", {})
-    total = sum(changes.values())
-    kinds = ", ".join(
-        f"{changes[kind]:,} {words}" for kind, words in CHANGE_WORDS.items() if changes.get(kind)
-    )
-    return (
-        f"{plural(total, 'change is', 'changes are')} recorded, each a row of its own with the "
-        f"copy of the source that shows it, which the register keeps: {kinds}."
-    )
+def changes_sentence(changes: list[dict]) -> str:
+    """What later reads showed about published rows, and what the maintainer decided, from
+    data/changes.ndjson itself, never from a run record a correction does not rewrite (the
+    Council's third reading of S.1b, Seats C, D and G): the total, and the kinds without a
+    count for each, since a small count by kind is a count about one person (Seat C, N-9); and
+    the maintainer's decisions counted as decisions, not as the rows one decision writes."""
+    reads = [c for c in changes if c.get("change") != "corrected"]
+    decided = {
+        (c.get("decided_at"), c.get("decided_by"), c.get("because"))
+        for c in changes
+        if c.get("change") == "corrected"
+    }
+    parts = []
+    if reads:
+        kinds = [
+            words for kind, words in CHANGE_WORDS.items() if any(c["change"] == kind for c in reads)
+        ]
+        listed = kinds[0] if len(kinds) == 1 else ", ".join(kinds[:-1]) + " and " + kinds[-1]
+        shown = plural(
+            len(reads), "change a later read showed is", "changes later reads showed are"
+        )
+        parts.append(
+            f"{shown} recorded, each a row of its own citing the read, of these kinds: {listed}"
+        )
+    if decided:
+        parts.append(
+            f"{plural(len(decided), 'decision', 'decisions')} the maintainer recorded, "
+            "correcting a published fact or recording that it stands, each citing the evidence"
+        )
+    return "; ".join(parts) + "."
 
 
 def closed_sentence(run: dict) -> str:
@@ -495,10 +541,11 @@ def seal(root: Path, build: str, built_at: str, derive: bool = False) -> str:
     if derive:
         meta["state"] = derive_state(root, meta)
     runs = current_runs(root)
+    changes = read_rows(root / "data" / "changes.ndjson")
     stale = (
-        state_text_lacks(meta)
+        state_text_lacks(meta, None, changes)
         if not runs
-        else ", ".join(s for s in (state_text_lacks(meta, run) for run in runs) if s)
+        else ", ".join(s for s in (state_text_lacks(meta, run, changes) for run in runs) if s)
     )
     if stale:
         raise SystemExit(
