@@ -1072,6 +1072,20 @@ def test_other_bytes_that_read_otherwise_are_a_replacement_shown_beside_the_rows
     assert build.build(2025) == 0 and len(changes_of(reports)) == 1, "once"
 
 
+def test_other_bytes_that_list_a_row_more_are_a_replacement_never_an_accrual(reports):
+    """Seat G on the third reading (R3-1): the rule that a row read after every published one
+    accrues is for the very bytes the rows came from. Other bytes that list the published
+    trades and one more are a different file the Clerk serves: recorded, and kept."""
+    before = {name: rows_of(reports, name) for name in ("filings", "transactions")}
+    more = [TX, dict(TX, asset="Other Holdings"), dict(TX, asset="Third Holdings")]
+    sha = document(reports, "20000001", ADA, more, "2026-02-02T00:00:00Z")
+    assert build.build(2025) == 0
+    assert {name: rows_of(reports, name) for name in before} == before, "carried as published"
+    (change,) = changes_of(reports)
+    assert (change["change"], change["now"]) == ("replaced", sha)
+    assert f"{sha}.pdf" in kept(reports)
+
+
 def test_other_bytes_that_read_the_same_change_nothing(reports):
     before = {name: rows_of(reports, name) for name in ("filings", "transactions")}
     document(

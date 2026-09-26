@@ -1456,7 +1456,11 @@ def build(year: int, dry_run: bool = False) -> int:
             # A published filing: weigh this reading against what was published from it.
             was = filing
             before = sorted(published_tx.get(was["id"], []), key=lambda t: t["id"])
-            differs = status == "contradiction" or reads_otherwise(before, rows_read)
+            # Rows read after every published one accrue only from the very bytes the rows
+            # were published from; other bytes that list more are a different file, compared
+            # strictly (the Council's third reading of S.1b, Seat G).
+            same = was["source"].get("content_hash") in (None, capture["sha256"])
+            differs = status == "contradiction" or reads_otherwise(before, rows_read, extend=same)
             if was["source"].get("content_hash") not in (None, capture["sha256"]):
                 seen.replaced(was["id"], was["source"]["content_hash"], doc_source, pdf, differs)
                 documents_replaced += 1 if differs else 0
@@ -1647,13 +1651,16 @@ def build(year: int, dry_run: bool = False) -> int:
     return 0
 
 
-def reads_otherwise(published: list[dict], read: list[dict]) -> bool:
+def reads_otherwise(published: list[dict], read: list[dict], extend: bool = False) -> bool:
     """Whether a document's rows, as this build reads them, differ from those published from
     it: a published row missing or out of its place, or a fact a published row carries given
-    another value. A fact a published row lacked is not a difference, and neither is a row
-    read after every published one: both accrue, as facts the register lacked, never as a
-    change at the source (the Council's second reading of S.1b)."""
-    if [t["id"] for t in read[: len(published)]] != [t["id"] for t in published]:
+    another value. A fact a published row lacked is not a difference. With `extend`, for the
+    very bytes the rows were published from, neither is a row read after every published
+    one: it accrues, as a fact the register lacked, never as a change at the source (the
+    Council's second reading of S.1b). Other bytes are compared strictly: a row more is a
+    different file, and says so (its third reading)."""
+    kept = read[: len(published)] if extend else read
+    if [t["id"] for t in kept] != [t["id"] for t in published]:
         return bool(published) or bool(read)
     for was, now in zip(published, read, strict=False):
         for key, value in now.items():
