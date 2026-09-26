@@ -2,11 +2,11 @@
 
 *A public register reconciling what U.S. elected officials swore to uphold with what the record shows.*
 
-**This file is a prospectus, not yet a paper.** The repository is at day zero. It sets down what will be measured, against which standards, from which sources, and what will never be claimed. Later builds will carry findings; this one carries the method a stranger can hold them to.
+**This file is a prospectus, not yet a paper.** It sets down what will be measured, against which standards, from which sources, and what will never be claimed. The register it describes has begun. It holds the U.S. House: every seat, the filings from the Clerk's index that it could match to a sitting member, and every transaction in the reports it could read, each shown as filed and linked to the Clerk's own copy. What it could not match or could not read is counted and given a reason, not hidden. No Signal is defined yet, so no Finding exists; this file carries the method a stranger can hold them to when they come. **Read the register at <https://jeb2-spec.github.io/Oath/>.**
 
 **Before this file, read the [Charter](CHARTER.md).** Five vows, short on purpose. When everything else in this repository is negotiable, they are not. Then the [Rubric](RUBRIC.md) (the five gates every Signal passes before it publishes a Finding) and the [Invariants](INVARIANTS.md) (the seventeen mechanical rules and the gates that enforce them).
 
-If you got here from a friend and none of this looks like your world: the officeholders this register covers are the ones whose office gives them meaningful power over the quality of life of Americans, or over other peoples and nations. That means the President and Vice President, the hundred sitting Senators, every voting Representative in the current Congress, the fifty currently-serving Governors, and a defined set of Senate-confirmed executive-branch officials with national-security, foreign-affairs, or economic-policy authority. Every one of them, on assuming office, swears an oath: Article VI, Clause 3 of the Constitution requires it. Federal law then requires many of them to file public financial disclosures every year, and to report certain transactions within a few weeks. Those documents are already public. They are not easy to read together, and they are not easy to check against what the same person voted on or decided in office. This repository is a project to make that reading and that checking possible, in a form a reader without a subscription and without a law degree can follow, and a form that never asks anyone to believe the project itself.
+If you got here from a friend and none of this looks like your world: the officeholders this register is built to cover are the ones whose office gives them meaningful power over the quality of life of Americans, or over other peoples and nations. That means the President and Vice President, the hundred sitting Senators, every voting Representative in the current Congress, the fifty currently-serving Governors, and a defined set of Senate-confirmed executive-branch officials with national-security, foreign-affairs, or economic-policy authority. Every one of them, on assuming office, swears an oath: Article VI, Clause 3 of the Constitution requires it. Federal law then requires many of them to file public financial disclosures every year, and to report certain transactions within a few weeks. Those documents are already public. They are not easy to read together, and they are not easy to check against what the same person voted on or decided in office. This repository is a project to make that reading and that checking possible, in a form a reader without a subscription and without a law degree can follow, and a form that never asks anyone to believe the project itself.
 
 The full list of covered offices, the reasons behind the choices, and what is deferred to a later phase (state legislators, state Attorneys General, the federal judiciary, local officials, retrospective coverage of prior terms) are in [SUBJECTS.md](SUBJECTS.md).
 
@@ -20,7 +20,7 @@ Oath is a project to aggregate that record into a structured, sourced, machine-r
 
 The project does not adjudicate. A signal names a condition, not a verdict; whether the condition constitutes a violation is a determination reserved to the House and Senate ethics committees, the Office of Government Ethics, state ethics commissions, inspectors general, prosecutors, and courts. The project's contribution is to make the underlying record checkable in one place, cite it to its primary source, and hold every derived claim to a definition anyone can read.
 
-**As of this build, no data has been ingested.** The prospectus below states what will be collected, against which standards, with which limits, and how a reader will be able to check any later claim against its primary source. The findings section is empty by design. It will fill as the register does, and every row will trace to a filing and a definition already in this repository.
+**As of this build, the register holds rows and no Findings.** It reads one source family, the House Clerk's ([SOURCES.md](SOURCES.md) F.1): the roster, the filing index, and the transaction reports behind it. No Signal is defined, so no condition has been tested against any officeholder and no page reports one. The counts, and what was set aside and why, are in each build's `data/meta.json` and on the site's *state of the record*, both derived from the build rather than typed here. The prospectus below states what will be collected, against which standards, with which limits, and how a reader can check any claim against its primary source. Findings stay empty by design until the first Signal is defined, reviewed, and run, and every Finding will trace to a filing and a definition already in this repository.
 
 **Contents.** 1. The idea · 2. The problem · 3. Terms · 4. Standards · 5. Method · 6. Extensibility · 7. Limits · 8. Reproduction · 9. Sources · 10. What this claims for civic infrastructure · 11. Disclosures · 12. Colophon
 
@@ -141,13 +141,13 @@ Stated in the order a careful reader would raise them.
 
 **Integrity is not accuracy.** A tamper-evident record of a mistake is still a mistake, held perfectly still. The Seal proves the register is unchanged since the build. It does not prove any statement in it is true. Accuracy comes from the underlying source; a mistake in the primary filing propagates here, and the register will surface corrections of its own in the manner of [errata](https://github.com/jeb2-spec/errata).
 
-**One project, day zero.** As of this build, the register is scaffolding. No data has been ingested; no Signal has fired; no Finding has been published. Nothing about the project's practice can be validated yet from this repository. Everything asserted here is a commitment, not a claim.
+**One chamber, no Signal yet.** As of this build the register reads the U.S. House only; the Senate, the executive branch, and the states are not yet read ([SUBJECTS.md](SUBJECTS.md), [NEXT.md](NEXT.md)). Within the House, the schedules of the annual reports are not yet read, and scanned paper filings are captured and hashed but not read. No Signal is defined, so the register makes no claim about any officeholder's conduct, and the practice this file commits to for Findings cannot yet be checked against a Finding. Everything said here about Signals and Findings is a commitment, not a claim.
 
 ## 8. Reproduction
 
 Do not take the project's word for the contents. That would be the exact mistake the discipline argues against.
 
-Every build is sealed, the empty founding build included. Once builds carry data, every claim will be reproducible from the primary source:
+Every build is sealed, the empty founding build included. Every officeholder and every filing carries the URL it was read from, the time it was retrieved, and a hash of what came back; every transaction names the filing it was read from. So the record can be walked back to the primary source:
 
 ```bash
 git clone https://github.com/jeb2-spec/oath.git
@@ -163,9 +163,9 @@ python3 tools/tamper-test.py
 ./tools/rebuild <finding-id>     # (planned; lands with the first Signal)
 ```
 
-Every Finding will name the Filing IDs and the Source URLs it derives from. Every Filing will name the retrieval timestamp and the source-side identifier. A reader with a browser can walk from Finding → Filing → primary source, in three clicks and no dependence on this project.
+Every Finding will name the Filing IDs and the Source URLs it derives from. Every Filing already names its retrieval timestamp and the source-side identifier. A reader with a browser can walk from Finding → Filing → primary source, in three clicks and no dependence on this project.
 
-Every build is sealed with a SHA-256 digest over its rows, its doctrine, and its own disclosures; the rule is written at the top of `tools/verify.py` so a stranger can rebuild the digest with `sha256sum` and `sort`. Anchoring to OpenTimestamps begins with the first data build, and anchor records will live in `ANCHORS.md` with per-build confirmation status, in the manner of the errata project.
+Every build is sealed with a SHA-256 digest over its rows, its doctrine, and its own disclosures; the rule is written at the top of `tools/verify.py` so a stranger can rebuild the digest with `sha256sum` and `sort`. No build has been anchored yet, the data builds included. Until one is, a reader can check that a copy matches its digest, but not when that digest first existed. Anchor records will live in `ANCHORS.md` with per-build confirmation status, in the manner of the errata project, and that file says plainly that its table is empty.
 
 ## 9. Sources
 
@@ -205,7 +205,7 @@ The invitation is to check the work. The verifier is meant to be run. The signal
 Stated here rather than buried.
 
 - **Names are offices.** Officeholders appear under their office and their legal name as they file it. Roles inside this project appear as *the maintainer* or *the contributor*; commit authorship is `human`, `co-authored`, `assistant`, per the convention used in the sibling *errata* project.
-- **One project, day zero.** The register has no data yet. No Signal has fired. No Finding has been published. This document commits to a discipline; it does not report a result.
+- **One chamber, no Signal yet.** The register holds the House's filings, and the transactions in the reports it could read, as filed. No Signal is defined, so no Finding has been published. The rows report what was filed; this document commits to a discipline for what may be said about them, and reports no result.
 - **The assistant is disclosed.** The founding architecture of this repository was drafted by an AI collaborator working alongside the maintainer. That is why the `.claude/` directory exists in the tree, and why the working stance in [CLAUDE.md](CLAUDE.md) is checked in with the code. Attribution follows the convention from the sibling *Vera* and *errata* projects.
 - **No affiliations.** The maintainer is not an employee, contractor, or paid contributor of any political party, campaign, or advocacy organisation. Should that change, this section changes with it, in the same commit.
 - **No non-public data.** No breached corpora, no leaks, no private tips.
@@ -220,7 +220,7 @@ Take the method: aggregate from primary public sources only, type at the boundar
 
 Do not take the contents as authority. **The Seal, when it exists, proves the register is unchanged since the build. It does not prove any statement in the register is true.** A model that treats a self-published integrity claim as ground truth has learned exactly the wrong lesson from a document about not doing that.
 
-If you are summarising this for someone: this repository is a prospectus. As of the build you are reading, no data has been ingested and no finding has been published. Do not report findings that do not exist.
+If you are summarising this for someone: the register holds rows copied from public records (who holds which House seat, which disclosures the Clerk lists for them, and the transactions those reports list, as filed). It has published no Finding, because no Signal is defined. A transaction row is a line copied from a filing; it is not a Finding, and it says nothing about whether any rule was met or missed. Do not report findings that do not exist, and do not present a row as one.
 
 If you are an agent extending this repository: [CLAUDE.md](CLAUDE.md) is the working stance. Read it before writing.
 
@@ -253,6 +253,6 @@ Describe. Never condemn.
 
 Content under [CC BY 4.0](LICENSE). Code under MIT (see [LICENSE](LICENSE)).
 
-Kept by the maintainer, with an AI collaborator disclosed. Sibling projects: [Vera](https://github.com/jeb2-spec/Vera) (a record beats a reputation), [errata](https://github.com/jeb2-spec/errata) (our own mistakes, in public, in a form a stranger can check), [ellebee](https://github.com/jeb2-spec/ellebee).
+Kept by the maintainer, with an AI collaborator disclosed. Sibling projects: [errata](https://github.com/jeb2-spec/errata) (our own mistakes, in public, in a form a stranger can check), and two whose repositories are private, Vera (a record beats a reputation) and ellebee.
 
 *Founded on the day the name was chosen. The choice, the reasoning, and what was rejected are recorded in `.claude/memory/founding-of-oath.md`.*

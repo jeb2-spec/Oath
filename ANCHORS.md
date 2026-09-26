@@ -10,7 +10,7 @@ A build made where the OpenTimestamps calendar servers cannot be reached ships w
 
 ## Table
 
-*No published builds yet. The founding is a private-repo prospectus; the first anchored build lands with the first Signal fired against real data (per NEXT.md Phase 3).*
+*No build has been anchored yet. The rendered register has been public on GitHub Pages since 2026-09-23 and the repository since 2026-09-26, and every build is sealed; none yet carries a third-party timestamp. Until one does, a reader can check that a copy matches its digest, but not when that digest first existed.*
 
 Once builds are published, the table below fills in this shape:
 

@@ -4,7 +4,7 @@
 #
 # The maintainer enabled Pages with GitHub Actions as its source and flipped the site
 # public on 2026-09-23, after the Council's first reading of the pages (PR #27). The
-# repository may stay private; the site is public. Every push to main publishes.
+# repository itself went public on 2026-09-26. Every push to main publishes.
 #
 # Every page published here is one self-contained file rendered from the sealed
 # rows by src/surfaces/render.py, gated by lint-frame-presence, lint-no-ranking
