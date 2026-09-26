@@ -15,7 +15,7 @@ Written by `python tools/anchor.py --ledger` from the files under [`data/anchors
 <!-- anchors:table:start (written by tools/anchor.py --ledger; do not edit by hand) -->
 | Build id | Digest (SHA-256, prefix) | Built at (UTC) | Anchor state | Bitcoin block | Note |
 | --- | --- | --- | --- | --- | --- |
-| `0005-house-2025` | `6a28c538b177ca4a…` | 2026-09-23T14:13:28Z | owed | - | stamp owed; the manifest is written and the calendars have not yet taken it |
+| `0005-house-2025` | `6a28c538b177ca4a…` | 2026-09-23T14:13:28Z | pending | - | the calendars hold it; awaiting a Bitcoin block |
 <!-- anchors:table:end -->
 
 The rendered register has been public on GitHub Pages since 2026-09-23 and the repository since 2026-09-26. Builds before `0005-house-2025` were sealed and never stamped, and are not stamped now: a stamp made today proves only that a digest existed today, which says nothing about the day those builds were published.
