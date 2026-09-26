@@ -1157,14 +1157,11 @@ def build(year: int, dry_run: bool = False, expect_not_listed: int = 0) -> int:
         if was is None:
             holders_by_id[holder["id"]] = holder
             continue
-        # The row's entry in these bytes, against the one it was read from: an unchanged
-        # entry can say nothing new, and a row read before entries were kept is weighed
-        # against the bytes it was read from.
+        # The row's entry in these bytes, against the one the register last read for it: an
+        # unchanged entry can say nothing new. A row read before entries were kept has none,
+        # and only the very bytes the last build read (`same_bytes`) protect it.
         entry = roster_now.get(person["bioguide"])
-        row_entry = (last_entries or {}).get(holder["id"]) or (
-            was.get("roster_entry_sha256")
-            or (entry if was["source"].get("content_hash") == roster_capture["sha256"] else None)
-        )
+        row_entry = (last_entries or {}).get(holder["id"]) or was.get("roster_entry_sha256")
         reads_as_published = True
         for field in ROSTER_FACTS:
             if was.get(field) is None:
@@ -1279,14 +1276,10 @@ def build(year: int, dry_run: bool = False, expect_not_listed: int = 0) -> int:
                 "form_type": "House-PTR" if row["filing_type"] == PTR_CODE else "other",
                 "source_form_code": row["filing_type"] or None,
             }
-            # The row's entry in these bytes, against the one it was read from. A row read
-            # before entries were kept is weighed against the index row it was read from, where
-            # it carries one; an unchanged entry can say nothing new.
+            # The row's entry in these bytes, against the one the register last read for it; an
+            # unchanged entry can say nothing new.
             entry = index_now.get(row["doc_id"])
-            row_entry = (last_entries or {}).get(was["id"]) or (
-                was.get("index_entry_sha256")
-                or (entry if "index_row" in was and was["index_row"] == row else None)
-            )
+            row_entry = (last_entries or {}).get(was["id"]) or was.get("index_entry_sha256")
             reads_as_published = True
             for field in INDEX_FACTS:
                 if was.get(field) is None:

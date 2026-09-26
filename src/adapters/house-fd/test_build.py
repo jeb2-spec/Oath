@@ -1541,3 +1541,109 @@ def test_a_fact_the_source_changed_once_is_weighed_against_the_entry_last_read(
     monkeypatch.setattr(build, "load_roster", misread)
     with pytest.raises(SystemExit, match="x000002 was last read from is unchanged"):
         build.build(2025)
+
+
+# ---- each guard has a failing input (the Council's third reading of S.1b, Seat C, N-5) -----
+
+
+def test_both_readings_losing_a_row_on_the_very_bytes_last_read_refuse(register, monkeypatch):
+    """The plain pattern and the parser both stop finding a row, and the bytes are the very
+    ones the register last built from: the source did not change, so nothing is recorded."""
+    real_index, real_entries = build.load_index, build.index_entries
+    monkeypatch.setattr(
+        build, "load_index", lambda p: [r for r in real_index(p) if r["doc_id"] != "30000002"]
+    )
+    monkeypatch.setattr(
+        build,
+        "index_entries",
+        lambda p: {k: v for k, v in real_entries(p).items() if k != "30000002"},
+    )
+    with pytest.raises(SystemExit, match="from the very bytes the register last built from"):
+        build.build(2025)
+    assert not changes_of(register)
+
+
+def test_a_fact_read_otherwise_from_the_very_bytes_last_read_refuses(register, monkeypatch):
+    """Even where the entry patterns themselves change, the very bytes the register last built
+    from can say nothing new about a fact."""
+    real_index, real_entries = build.load_index, build.index_entries
+    monkeypatch.setattr(
+        build,
+        "load_index",
+        lambda p: [
+            dict(r, filing_date="5/16/2026") if r["doc_id"] == "30000002" else r
+            for r in real_index(p)
+        ],
+    )
+    monkeypatch.setattr(build, "index_entries", lambda p: {k: "f" * 64 for k in real_entries(p)})
+    with pytest.raises(SystemExit, match="was last read from is unchanged"):
+        build.build(2025)
+    assert not changes_of(register)
+
+
+def test_a_roster_entry_is_the_seat_and_the_member_info_and_nothing_else(tmp_path):
+    """The seat is a fact the register reads, so a move of seat is a change of entry; the
+    committees are not, so a change of committee is not (Seat C's mutations M5 and M6)."""
+    base = roster_xml(119, [ADA, BEA], "20250103")
+    moved = base.replace(
+        "<statedistrict>XX02</statedistrict>", "<statedistrict>XX09</statedistrict>"
+    )
+    committees = base.replace(
+        "</member-info></member>", "</member-info><committees>x</committees></member>", 1
+    )
+
+    def entries(text: str) -> dict[str, str]:
+        path = tmp_path / "MemberData.xml"
+        path.write_text(text, encoding="utf-8")
+        return build.roster_entries(path)
+
+    first, seat, committee = entries(base), entries(moved), entries(committees)
+    assert first["X000002"] != seat["X000002"], "a move of seat changes the entry"
+    assert first["X000001"] == committee["X000001"], "a committee's bytes do not"
+
+
+def test_a_filing_gains_its_entry_only_from_one_that_states_what_it_carries(register):
+    """A published filing without its entry gains it, and its index row, only from a later
+    entry that states the facts it carries (Seat C's mutation M9)."""
+    stripped = []
+    for line in rows_of(register, "filings").values():
+        row = json.loads(line)
+        row.pop("index_entry_sha256")
+        row.pop("index_row")
+        stripped.append(build.canonical(row))
+    (register / "data" / "filings.ndjson").write_text("".join(stripped), encoding="utf-8")
+    later(
+        register,
+        [ADA, BEA],
+        [(ADA, "30000001"), (BEA, "30000002", "O", "5/16/2026")],
+        "2026-02-02T00:00:00Z",
+    )
+    assert build.build(2025) == 0
+    filings = {k: json.loads(v) for k, v in rows_of(register, "filings").items()}
+    assert "index_entry_sha256" in filings["fl:house-clerk:O:30000001"]
+    assert "index_entry_sha256" not in filings["fl:house-clerk:O:30000002"]
+    assert "index_row" not in filings["fl:house-clerk:O:30000002"]
+
+
+def test_the_read_that_closed_a_year_is_carried_not_the_latest(register):
+    """A closed year's record names the read that closed it, whatever roster the register
+    reads later (Seat C's mutation M14)."""
+    rows = [(ADA, "30000001"), (BEA, "30000002")]
+    captures(
+        register,
+        roster_xml(120, [ADA], "20270103"),
+        index_xml(rows),
+        "2027-01-11T00:00:00Z",
+        "2027-01-11T00:00:01Z",
+    )
+    assert build.build(2025) == 0
+    closing = run_record(register)["congress"]["closed_by"]
+    captures(
+        register,
+        roster_xml(120, [ADA, CAL], "20270103"),
+        index_xml(rows),
+        "2027-02-01T00:00:00Z",
+        "2027-02-01T00:00:01Z",
+    )
+    assert build.build(2025) == 0
+    assert run_record(register)["congress"]["closed_by"] == closing

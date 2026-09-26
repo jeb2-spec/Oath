@@ -1597,3 +1597,30 @@ def test_a_replaced_document_says_which_rows_differ_and_that_neither_file_is_kep
     )
     assert "it lists 1 row the first file does not" in note
     assert "The register keeps neither file" in note and "the copy the register kept" not in note
+
+
+def test_the_landing_counts_the_rows_no_decision_attributes_apart():
+    """Seats A, D and E on the third reading: the landing said every held row waited for the
+    maintainer to decide by hand, while a departed Member's page said one could not be
+    attributed. The landing counts them as the pages class them."""
+    gone = HOLDERS[0]
+    rows = [
+        {
+            "reason": "the roster no longer lists the member at this seat whose surname the row "
+            "carries, and the index dates the filing after the last roster read the register "
+            "built from that listed them (Alaska, Example, AK00; last listed 2026-09-22)",
+            "source_row": {"state_dst": "AK00", "last": "Alaska", "filing_date": "11/2/2026"},
+        },
+        {
+            "reason": "surname matches a sitting member (Alabama, Other, AL01) but the given "
+            "names differ; a human decides this one",
+            "source_row": {"state_dst": "AL01", "last": "Alabama", "filing_date": "5/1/2025"},
+        },
+    ]
+    counts = render.set_aside_counts(rows, HOLDERS, {gone["id"]: "2026-09-22"})
+    assert counts == {"waits": 1, "at_seat": 1, "shut": 1}
+    section = plain(
+        render.state_of_record(META, RUN, HOLDERS, FILINGS, OFFICES, counts, "https://x/rows")
+    )
+    assert "<dt>1</dt><dd>index rows set aside for the maintainer to decide by hand" in section
+    assert "1 more is not attributed, because the register cannot show the officeholder" in section

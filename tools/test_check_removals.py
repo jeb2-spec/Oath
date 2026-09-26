@@ -228,3 +228,42 @@ def test_an_unreadable_ref_fails_rather_than_passes(tmp_path, monkeypatch):
 
 def test_the_repository_keeps_every_published_row():
     assert gate.main([str(ROOT)]) == 0
+
+
+# ---- each guard has a failing input (the Council's third reading of S.1b, Seat C, N-5) -----
+
+
+def test_a_correction_that_names_no_fact_is_honoured_for_nothing():
+    unnamed = {k: v for k, v in RIGHT.items() if k != "field"}
+    corrected, fails = gate.corrections([unnamed], PRIMARY)
+    assert corrected == set() and "the fact it is about" in fails[0]
+
+
+def test_a_correction_that_lacks_what_makes_it_one_fails_by_itself(tmp_path, monkeypatch, capsys):
+    """Whether or not it moved anything: a row of the changes that cannot stand fails."""
+    tools = tmp_path / "tools"
+    tools.mkdir()
+    (tools / "check-aggregator-sole.py").write_bytes(
+        (ROOT / "tools" / "check-aggregator-sole.py").read_bytes()
+    )
+    root = repo_with(
+        tmp_path,
+        {"SOURCES.md": (ROOT / "SOURCES.md").read_text("utf-8"), FILINGS: lines(filing())},
+    )
+    monkeypatch.setenv("OATH_PUBLISHED_REF", "published")
+    (root / CHANGES).write_text(lines(dict(RIGHT, kind="opinion", now=RIGHT["was"])), "utf-8")
+    assert gate.main([str(root)]) == 1
+    assert "a correction without a kind" in capsys.readouterr().out
+
+
+def test_without_the_registry_no_correction_is_honoured(tmp_path, monkeypatch, capsys):
+    """No SOURCES.md, or no reader for it, and nothing is trusted: the gate honours no
+    correction rather than every one."""
+    root = repo_with(tmp_path, {FILINGS: lines(filing())})
+    monkeypatch.setenv("OATH_PUBLISHED_REF", "published")
+    assert gate.primary_hosts(root) == set()
+    (root / FILINGS).write_text(lines(filing(officeholder_id=RIGHT["now"])), "utf-8")
+    (root / CHANGES).write_text(lines(RIGHT), "utf-8")
+    assert gate.main([str(root)]) == 1
+    out = capsys.readouterr().out
+    assert "on a host SOURCES.md registers as primary" in out and "x000001" in out
