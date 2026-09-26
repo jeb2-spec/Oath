@@ -22,8 +22,8 @@ src/
 │   └── lda/
 ├── signals/             # one per Signal, pure functions, written twice
 │   ├── run.py                   # the runner: definitions to rows, rows to the ledger
-│   ├── stock-act-late-ptr.py    # writes the Findings
-│   └── stock-act-late-ptr.ts    # the reference, held to the same answers
+│   ├── stock-act-ptr-after-deadline.py    # writes the Findings
+│   └── stock-act-ptr-after-deadline.ts    # the reference, held to the same answers
 ├── shared/              # schemas types (generated), validation helpers
 └── surfaces/            # readers of the store (page renderers, CSV export)
 ```

@@ -54,7 +54,7 @@ The first batch of adjudications goes to the [Council](COUNCIL.md) before it mer
 In order:
 
 - **Adjudications.** The held rows, above. Each one closes a gap the build publishes as a number.
-- **The first Signal against real filings.** `stock-act-late-ptr`, per [NEXT.md](NEXT.md) Phase 3 movement two. It needs the document extraction (I.1b) first, which is the hardest open piece of engineering here.
+- **What the first Signal cannot yet reach.** `stock-act-ptr-after-deadline` landed on 2026-09-26 ([docs/signals/stock-act-ptr-after-deadline.md](docs/signals/stock-act-ptr-after-deadline.md)). Its limits are the next work: the signed date on each e-filed report, set beside the Clerk's index date; the Committee's instructions on government securities, read at the source; and the earlier indexes and service dates that would let it evaluate a returning Member's transactions from before this Congress (NEXT.md).
 - **The Senate adapter.** SOURCES.md F.2. No bulk download, an agreement gate, and a report-identifier scheme nobody has recorded yet; the first session past the gate records the scheme before anything else.
 - **Watching the sources.** When a source moves or changes shape, the *A primary source changed* issue template is the way to say so.
 

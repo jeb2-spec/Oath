@@ -72,19 +72,25 @@ TRANSACTIONS REPORTED (grouped by report, as filed)
 
 SIGNALS FIRED (grouped by signal, not by severity)
   Signal name (version)                     STANDARD ref · its page
-    What it evaluated here, and what it did not, with the reasons
-    Report filed <date> · its rows, as filed · the Clerk's copy
+    What a Finding is not: no determination by the Committee, no fee,
+    nothing about intent; then what it evaluated here, and what it did
+    not, with the reasons
+    Report the Clerk's index dates <date> · its rows, as filed · the Clerk's copy
       Description text
-      The rows after the deadline: dates, deadline, which limit set it, days
-      Corrected: the row it supersedes, and why (only on a correction)
+      The rows after the deadline: dates, deadline, which limit set it,
+        days; a weekend or holiday deadline and the business day after it
+      Corrected because the source changed, or the register erred: the row
+        it supersedes, and the reason with its source (only on a correction)
       Reproduce: `python tools/rebuild.py <finding-id>`
   ...
 
 SIGNALS THAT DID NOT FIRE (defined signals, no finding)
-  Signal name (version) · which silence it is: every evaluated row on
-  time; rows not evaluated, and why; reports captured and not read;
-  or nothing attributed to evaluate. A Finding withdrawn by correction
-  is said here as a withdrawal, never drawn as a Finding.
+  Signal name (version) · which silence it is: rows it evaluated, for
+  none of which the Clerk's index dates the report after the deadline;
+  rows not evaluated, and why; reports captured and not read; or
+  nothing attributed to evaluate. Each says too that it is not a
+  determination by anyone. A Finding withdrawn by correction is said
+  here as a withdrawal, never drawn as a Finding.
 
 ─────────────────────────────────────────────────────────────
 BUILD: <digest>  ANCHOR: <state>  CITE THIS BUILD: <cmd>

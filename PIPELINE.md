@@ -8,15 +8,15 @@ This is the operational document for Oath. The Charter names what we will not do
 
 ## The walk
 
-A person reads on Reddit that their Senator bought defense-contractor stock two weeks before a committee vote. Somebody in the thread says *citation needed.* Nobody has one. The thread devolves into the usual shape. The person closes the browser and doesn't think about it for three days.
+A person reads on Reddit that their Representative bought defense-contractor stock two weeks before a committee vote. Somebody in the thread says *citation needed.* Nobody has one. The thread devolves into the usual shape. The person closes the browser and doesn't think about it for three days.
 
-Then they see Oath in a footer link somewhere, click, search the Senator's name. There is a Finding on the page: *Periodic Transaction Report filed forty-three days after the transaction date. The STOCK Act (2 U.S.C. § 30104) requires filing within thirty days of notification or forty-five days of the transaction, whichever is earlier.* Under it: the filing's PDF URL at senate.gov. Under that: a command a person can run to prove the record has not been quietly rewritten.
+Then they see Oath in a footer link somewhere, click, search the Representative's name. There is a Finding on the page: *The Clerk's index dates this report 2025-04-10, which is later than the deadline the rule sets for 1 of the 2 transactions on it that this Signal evaluated, by 8 days. The deadline is the earlier of 30 days after the notification date the report prints and 45 days after the transaction date (5 U.S.C. § 13105(l)).* Above it, before the Finding: what a Finding is not, which is a determination by the House Committee on Ethics. Under it: the report's PDF on the House Clerk's site. Under that: a command a person can run to prove the record has not been quietly rewritten.
 
-They click the PDF. It opens on senate.gov. The form is there. The transaction date is there. The filing date is there. The math is right.
+They click the PDF. It opens on the Clerk's site. The form is there. The transaction date is there. The notification date is there. The index gives the date the report was filed. The math is right.
 
 They copy the verify command. They paste it into a terminal. It prints *OK*, a build digest, and a Bitcoin block number. A friend who knows a little more tells them what that last bit means: the digest of every row on that page was written into a Bitcoin block on a date the register cannot rewrite, witnessed by a network the register's authors have no reach into.
 
-The person now knows three things they did not know three days ago. The Senator's filing was late by three days. The register that said so did not invent the number. The register did not quietly change the number after publishing it. None of the three required them to trust anyone.
+The person now knows three things they did not know three days ago. The Clerk's own index dates the report eight days after the deadline the statute sets, and whether that was late, and what follows, is the Committee's to say. The register that said so did not invent the number. The register did not quietly change the number after publishing it. None of the three required them to trust anyone.
 
 The Reddit thread is still where it was. The person adds the link to the Oath Finding and closes the tab.
 
@@ -133,7 +133,7 @@ The seven stages are the plumbing. The **register register** is the way the regi
 
 The discipline has four parts.
 
-**Structure and precision, not vocabulary.** A Finding is rendered from a template. The template is a fill-in-the-blank pattern: `{Officeholder.legal_name}'s {Filing.form_type} was filed {N} days after the {Transaction.transaction_date} named on the report. {Standard.short_form} requires filing within {threshold} days of {trigger}, whichever is earlier.` The template's blanks are drawn from the schema-typed rows. The template's fixed words are approved once by Council review and then reused. Every rendered Finding has the same shape; no rendered Finding is a bespoke sentence.
+**Structure and precision, not vocabulary.** A Finding is rendered from a template. The template is a fill-in-the-blank pattern. The first Signal's is: `The Clerk's index dates this report {Filing.filed_at}, which is later than the deadline the rule sets for {n} of the {m} transactions on it that this Signal evaluated, by {days}. The deadline is the earlier of 30 days after the notification date the report prints and 45 days after the transaction date ({Standard.citation}).` It names the report, not the person; the page around it names the person. The template's blanks are drawn from the schema-typed rows. The template's fixed words are approved once by Council review and then reused. Every rendered Finding has the same shape; no rendered Finding is a bespoke sentence.
 
 **No verdict language.** The rendered sentence names conditions, cites Standards, and stops. It does not use *guilty, corrupt, unethical, criminal, crook, disgrace, dishonest, sleazy, dirty, tainted, wrongdoing, malfeasance,* or *misconduct.* This is the verdict-language blacklist enforced by Invariant §1. Adding a word takes one approver; removing a word takes two.
 

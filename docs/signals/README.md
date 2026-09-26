@@ -2,7 +2,7 @@
 
 A **Signal** is a named, versioned, defined condition observable in the record. This directory holds one Markdown file per Signal, plus this README describing the template and the review requirements.
 
-The first Signal is [`stock-act-late-ptr`](stock-act-late-ptr.md), version 1: a Periodic Transaction Report the Clerk's index dates after the STOCK Act's deadline for a transaction on it.
+The first Signal is [`stock-act-ptr-after-deadline`](stock-act-ptr-after-deadline.md), version 1: a Periodic Transaction Report the Clerk's index dates after the STOCK Act's deadline for a transaction on it.
 
 ## Template
 
@@ -74,6 +74,7 @@ A Signal has two implementations that share no code. `src/signals/<slug>.py` is 
 
 - **v1** is the first published version of a Signal.
 - A published Signal row never changes. Any change to its definition, the wording included, is a new version (METHODOLOGY.md §3.3); `tools/check-signal-versions.py` compares every row against the published ones and refuses a change in place.
+- The code is frozen with the words. A Signal's row carries, as `implementation`, the SHA-256 of its definition file, both implementations and its known-answer cases, because the code is part of the criteria (METHODOLOGY.md §3.2): a change to any of them changes the row, and the gate refuses it the same way. An earlier version runs again at the commit that sealed it, and its row lets a reader confirm the code there is the code it was.
 - The Signal file for the old version is renamed `<slug>.v<n>.md` and remains readable. The new version lives at `<slug>.md`.
 - Findings produced against the old version carry the old version's ID, stay in the ledger, and stay readable; a new version adds rows and removes none.
 - The new version's `supersedes` frontmatter names the old ID.
@@ -82,23 +83,24 @@ A Signal has two implementations that share no code. `src/signals/<slug>.py` is 
 
 A Finding in `data/findings.ndjson` on `main` is published, and it is never rewritten or removed (CHARTER Vow V; INVARIANTS §12 and §14). When a later build would produce it differently, or not at all, because the Clerk corrected a date or the register misread one, `src/signals/run.py` stops and names it, and a person writes the correction:
 
-1. A new row with the old row's id and `:c<n>` appended, the next free `n`. It carries what the Signal now produces from the record, with `notes` saying what changed and citing the primary source that shows it. Where the Signal no longer fires on the report, the row's `evidence` says so, with no row after the deadline, and its `description`, in the Signal's own words, says what the record now shows.
+1. A new row with the old row's id and `:c<n>` appended, the next free `n`. It carries what the Signal now produces from the record, with `correction` saying which kind of change it is, `source` when the record changed and `register` when the register erred in reading it, and `notes` saying what changed and citing the primary source that shows it. Where the Signal no longer fires on the report, the row's `evidence` says so, with no row after the deadline, and its `description`, in the Signal's own words, says what the record now shows.
 2. The old row's `superseded_by` set to the new row's id. That one field is the only change a published row may take.
 3. The run, the seal and the gates, then a pull request. `tools/check-supersessions.py` refuses a published row that changed any other way or went missing, and a chain that does not end in exactly one current row.
 
-The runner writes steps 1 and 2 exactly, so nobody edits the sealed ledger by hand. The person checks the record at the source and supplies the reason, which must carry the source's URL; everything else in the row is derived:
+The runner writes steps 1 and 2 exactly, so nobody edits the sealed ledger by hand. The person checks the record at the source and supplies the kind and the reason, which must carry the URL of a source SOURCES.md registers as primary; everything else in the row is derived:
 
-    python src/signals/run.py --at <built_at> --correct <finding-id> --because "<what changed, and the URL that shows it>"
+    python src/signals/run.py --at <built_at> \
+        --correct <finding-id> --kind source --because "<what changed, and the URL that shows it>"
     python tools/seal.py --build <id> --built-at <built_at> --derive-state
 
-The runner refuses a reason with no URL, a correction the record does not call for, and a Finding the ledger does not hold. The page shows a corrected Finding with the row it supersedes and the reason, and a withdrawn one as a withdrawal under the Signals that did not fire, never as a Finding.
+Repeat `--correct`, `--kind` and `--because` together, once for each Finding, when one change to the record moves several: the runner writes every correction first and then runs, so Findings that change together are corrected together. The runner refuses a reason with no URL or none on a primary source, a correction without its kind, a correction the record does not call for, and a Finding the ledger does not hold. The page shows a corrected Finding with the row it supersedes and the reason, and a withdrawn one as a withdrawal under the Signals that did not fire, never as a Finding.
 
-A correction that arises from the register's own error also enters the family's corrections record in [errata](https://github.com/jeb2-spec/errata) (METHODOLOGY.md §8).
+A correction of kind `register`, the register's own error, also enters the family's corrections record in [errata](https://github.com/jeb2-spec/errata) (METHODOLOGY.md §8).
 
 ## Naming conventions
 
-- **Slugs** are lowercase, hyphen-separated, and describe the condition, not the outcome. Good: `stock-act-late-ptr`. Bad: `congressperson-broke-the-law`.
-- **Names** are noun phrases describing the condition. Good: *"Periodic Transaction Report filed after the STOCK Act deadline"*. Bad: *"Insider trading violation"*.
+- **Slugs** are lowercase, hyphen-separated, and describe the condition in the record's own terms, not the outcome and not a word that belongs to someone else's determination. Good: `stock-act-ptr-after-deadline`. Bad: `congressperson-broke-the-law`. The first Signal was drafted as `stock-act-late-ptr` and renamed at the Council's reading, before anything was published: whether a report was late is the Committee on Ethics' to decide, and a slug becomes part of every Finding's permanent id.
+- **Names** are noun phrases describing the condition. Good: *"Periodic Transaction Report dated after the STOCK Act deadline"*. Bad: *"Insider trading violation"*.
 - No party names, ideology labels, or event names in slugs or descriptions.
 
 ## What a Signal is not
