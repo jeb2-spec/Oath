@@ -1370,7 +1370,9 @@ def finding_changes(finding: dict, changes: dict[str, list[dict]] | None) -> str
 
 def finding_mark(changes: dict[str, list[dict]], filing_id: str) -> str:
     """A report's mark on the Signal page, carrying its own guard, from the latest reads only:
-    a row lifted alone must not read as a story (Seats A and F)."""
+    a row lifted alone must not read as a story (Seats A and F). Each read is dated (Seat G), a
+    decision that answers it is said after it (Seats B, F and G), and a report moved here by
+    correction says so (Seat E)."""
     history = changes.get(filing_id, [])
     state = latest_state(history)
     marks = []
@@ -1379,35 +1381,30 @@ def finding_mark(changes: dict[str, list[dict]], filing_id: str) -> str:
     if "replaced" in state:
         marks.append(f"the Clerk's copy read {when(state['replaced'])} was a different file")
     reads = [c for k, c in state.items() if k.startswith("read otherwise:")]
+    settled = None
     if reads:
         c = max(reads, key=known_at)
         settled = state.get(f"settled:{c['field']}")
-        marks.append(
-            f"the index read {when(c)} gives one of its facts otherwise"
-            + (f", and {decided_words(settled)}" if settled else "")
-        )
-    moved = next(
-        (
-            m
-            for m in reversed(history)
-            if m["change"] == "corrected"
-            and m.get("field") == "officeholder_id"
-            and m["now"] != m["was"]
-        ),
-        None,
-    )
+        marks.append(f"the index read {when(c)} gives one of its facts otherwise")
+    out = ""
     if marks:
-        return (
+        out = (
             " ("
             + "; ".join(marks)
-            + "; the Clerk gives no reason)"
-            + (
-                f" (attributed here by the maintainer's correction of {when(moved)})"
-                if moved
-                else ""
-            )
+            + "; the Clerk gives no reason"
+            + (f"; {decided_words(settled)}" if settled else "")
+            + ")"
         )
-    return f" (attributed here by the maintainer's correction of {when(moved)})" if moved else ""
+    moves = [
+        m
+        for m in history
+        if m["change"] == "corrected"
+        and m.get("field") == "officeholder_id"
+        and m["now"] != m["was"]
+    ]
+    if moves:
+        out += f" (attributed here by the maintainer's correction of {when(moves[-1])})"
+    return out
 
 
 def finding_block(
@@ -2928,7 +2925,8 @@ def state_of_record(
         f"because the register does not guess; {at_seat_total:,} of them sit at an "
         "officeholder's own seat under their surname"
         + (
-            f"; {shut:,} more are not attributed, because the register cannot show the "
+            f"; {shut:,} more {plural(shut, 'is', 'are')} not attributed, because the register "
+            "cannot show the "
             "officeholder in office on the date the index gives them "
             f'(<a href="{SUBJECTS_1}">SUBJECTS.md §1</a>)'
             if shut

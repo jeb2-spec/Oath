@@ -1550,7 +1550,8 @@ def test_a_value_that_stands_is_shown_with_the_read_it_answers_and_a_later_read_
     assert "The Clerk's index read 2026-10-05 gives the date filed as 2025-03-17" in fired
     assert "the maintainer recorded on 2026-10-06 that the published value stands" in fired
     assert (
-        "and the maintainer recorded on 2026-10-06 that the published value stands" in signal_page
+        "(the index read 2026-10-05 gives one of its facts otherwise; the Clerk gives no reason; "
+        "the maintainer recorded on 2026-10-06 that the published value stands)" in signal_page
     )
     assert "keeps it until the maintainer decides" not in page, "decided, and said so"
     page, signal_page = pages([*history, read("2025-03-16", "2026-10-12T09:17:01Z")])
