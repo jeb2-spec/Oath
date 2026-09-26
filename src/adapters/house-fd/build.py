@@ -44,6 +44,7 @@ import collections
 import hashlib
 import importlib.util
 import json
+import re
 import sys
 import unicodedata
 import xml.etree.ElementTree as ET
@@ -64,9 +65,25 @@ ADJUDICATIONS = Path("src/adapters/house-fd/adjudications.ndjson")
 DOCS = Path("data/cache/house-fd/docs")
 DOCS_MANIFEST = DOCS / "captures.json"
 
-# The 119th Congress convened on this date under the Twentieth Amendment. It is the
-# term start of the seat, which is not the same as the day a given member was sworn.
-CONGRESS_START = {119: "2025-01-03"}
+
+def term_start(congress: int) -> str:
+    """The day the seats' terms of a Congress begin: the term start of an office, which is
+    not the day a given member was sworn. Under the Twentieth Amendment, section 1, the
+    terms of Representatives end at noon on 3 January and their successors' terms then
+    begin, so from the 74th Congress (1935) the nth Congress's terms begin on 3 January of
+    1787 + 2n: the 119th on 2025-01-03, the 120th on 2027-01-03. A Congress may convene on
+    another day; its terms do not move."""
+    if congress < 74:
+        raise SystemExit(f"the {congress}th Congress predates the Twentieth Amendment's terms")
+    return f"{1787 + 2 * congress}-01-03"
+
+
+def congress_of(year: int) -> int:
+    """The Congress whose terms run through a filing year: the 119th for 2025 and 2026. A
+    year's first two days belong to the Congress before; an index is a year's, and the
+    register takes the Congress that holds all but those two days."""
+    return (year - 1787) // 2
+
 
 # The index carries a one-letter code whose meanings no Clerk page defines; see
 # SOURCES.md F.1. Only P is mapped, and only because the Clerk itself files those
@@ -336,13 +353,19 @@ def canonical(obj: dict) -> str:
     return json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=False) + "\n"
 
 
-def capture_key(index_capture: dict, roster_capture: dict, docs_hash: str | None = None) -> str:
+def capture_key(
+    index_capture: dict, roster_capture: dict | None, docs_hash: str | None = None
+) -> str:
     """Twelve hex characters naming these captures. Same bytes in, same key out.
 
     The document manifest joins the key when it exists, so a week that captured new
-    documents is a changed record even when the index and roster did not move.
+    documents is a changed record even when the index and roster did not move. A closed
+    year's rows owe nothing to the roster or the documents, so its key names the index
+    alone, and a roster that moves on does not rebuild a year it cannot change.
     """
-    joined = f"{index_capture['sha256']}\n{roster_capture['sha256']}"
+    joined = index_capture["sha256"]
+    if roster_capture is not None:
+        joined += f"\n{roster_capture['sha256']}"
     if docs_hash:
         joined += f"\n{docs_hash}"
     return hashlib.sha256(joined.encode()).hexdigest()[:12]
@@ -390,6 +413,180 @@ def load_adjudications(path: Path) -> tuple[dict[str, dict], str | None]:
     return decisions, hashlib.sha256(raw).hexdigest()
 
 
+# ---- the published register, an input to every build --------------------------------------
+#
+# A row the register has published is a fact it recorded from a primary source, and it
+# stays (CHARTER Vow V; INVARIANTS §14). So a build reads the published rows first and
+# weighs them against what it derives from the captures:
+#
+#   - where the build re-derives a published row, the derived row stands, and
+#     tools/check-removals.py holds it to every fact the published row carries;
+#   - a published row the build does not re-derive is carried exactly as published;
+#   - where the build read the source and the source no longer lists the row, that is a
+#     new fact, written as its own row in data/changes.ndjson with the capture that shows
+#     it ("not listed", and "listed again" should the source list it once more); where the
+#     build did not read the source, nothing was observed and nothing is written;
+#   - a published attribution stands: the join may attribute a new row, never move a
+#     published one, and a build that would move one refuses.
+#
+# So a Member who leaves office keeps the rows the register published, and a page; a
+# filing the Clerk's index stops listing stays, with the change shown beside it; and a
+# filing year whose Congress has ended is carried as published, never re-derived from the
+# next Congress's roster, whose swearing-in dates would put every transaction before them.
+
+PUBLISHED = {
+    "offices": Path("data/offices.ndjson"),
+    "officeholders": Path("data/officeholders.ndjson"),
+    "filings": Path("data/filings.ndjson"),
+    "transactions": Path("data/transactions.ndjson"),
+    "changes": Path("data/changes.ndjson"),
+}
+NOT_LISTED, LISTED_AGAIN = "not listed", "listed again"
+YEAR_IN_URL = re.compile(rf"^{re.escape(CLERK)}/(?:ptr-pdfs|financial-pdfs)/(\d{{4}})/\w+\.pdf$")
+
+
+def ordinal(n: int) -> str:
+    suffix = "th" if 11 <= n % 100 <= 13 else {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th")
+    return f"{n}{suffix}"
+
+
+def read_published() -> dict[str, list[dict]]:
+    """The rows the register holds before this build, by file; empty where there are none."""
+    return {
+        name: (
+            [json.loads(line) for line in path.read_text("utf-8").splitlines() if line.strip()]
+            if path.is_file()
+            else []
+        )
+        for name, path in PUBLISHED.items()
+    }
+
+
+def index_year(filing: dict) -> int:
+    """The index a filing row came from, as the Clerk's own URL for its document names it
+    (`doc_url`; SOURCES.md F.1). A build refuses a row whose URL does not."""
+    found = YEAR_IN_URL.match(filing["source"]["url"])
+    if found is None:
+        raise SystemExit(
+            f"refusing to build: {filing['id']} has a source URL that does not name the "
+            "Clerk's index year, so this build cannot tell which year's row it is"
+        )
+    return int(found.group(1))
+
+
+def doc_of(row_id: str) -> str:
+    """The DocID at the end of a filing id, or of a transaction's filing id."""
+    return row_id.rsplit(":", 1)[1]
+
+
+def latest_changes(changes: list[dict]) -> dict[str, dict]:
+    """Each row's latest recorded change, by the time of the capture that showed it."""
+    latest: dict[str, dict] = {}
+    for change in sorted(changes, key=lambda c: (c["capture"]["retrieved_at"], c["id"])):
+        latest[change["row_id"]] = change
+    return latest
+
+
+def change_row(row_id: str, rows: str, change: str, capture: dict) -> dict:
+    """A change the source made to a published row, with the capture that shows it."""
+    return {
+        "id": f"ch:{change.replace(' ', '-')}:{row_id}:{capture['retrieved_at']}",
+        "row_id": row_id,
+        "rows": rows,
+        "change": change,
+        "capture": {
+            "url": capture["url"],
+            "retrieved_at": capture["retrieved_at"],
+            "content_hash": capture["content_hash"],
+        },
+    }
+
+
+def carry_forward(
+    published: dict[str, list[dict]],
+    built: dict[str, list[dict]],
+    year: int,
+    observed: dict,
+) -> tuple[dict[str, list[dict]], list[dict], dict[str, int]]:
+    """The rows to write, the change rows this build adds, and what it carried, counted.
+
+    `built` is what this build derived from its captures, by file. `observed` is what it
+    read, as source blocks ({url, retrieved_at, content_hash}): "roster", when it read a
+    roster of the filing year's Congress, else None; "index", and "index_doc_ids", every
+    DocID the index lists; "documents", every document it read, by DocID. Filings and
+    transactions of other years are untouched.
+    """
+    latest = latest_changes(published["changes"])
+    changes: list[dict] = []
+
+    def record(row_id: str, rows: str, listed: bool, capture: dict) -> None:
+        was = latest.get(row_id, {}).get("change")
+        if not listed and was != NOT_LISTED:
+            changes.append(change_row(row_id, rows, NOT_LISTED, capture))
+        elif listed and was == NOT_LISTED:
+            changes.append(change_row(row_id, rows, LISTED_AGAIN, capture))
+
+    out: dict[str, list[dict]] = {}
+    carried = {"offices": 0, "officeholders": 0, "filings": 0, "transactions": 0}
+
+    for name in ("offices", "officeholders"):
+        made = {row["id"] for row in built[name]}
+        kept = [row for row in published[name] if row["id"] not in made]
+        out[name] = built[name] + kept
+        carried[name] = len(kept)
+        if name == "officeholders" and observed["roster"] is not None:
+            for row in kept:
+                record(row["id"], name, False, observed["roster"])
+            for row in built[name]:
+                record(row["id"], name, True, observed["roster"])
+
+    others = [row for row in published["filings"] if index_year(row) != year]
+    mine = {row["id"]: row for row in published["filings"] if index_year(row) == year}
+    filings = []
+    for row in built["filings"]:
+        was = mine.get(row["id"])
+        if was is None:
+            filings.append(row)
+            continue
+        if (was["officeholder_id"], was["office_id"]) != (row["officeholder_id"], row["office_id"]):
+            raise SystemExit(
+                f"refusing to build: {row['id']} is published as {was['officeholder_id']}'s "
+                f"({was['office_id']}), and this build's join attributes it to "
+                f"{row['officeholder_id']} ({row['office_id']}). The join never moves a "
+                "published attribution; a person does, with the evidence, as a correction."
+            )
+        read_before = was.get("extraction_confidence") or was["source"].get("content_hash")
+        if read_before and doc_of(row["id"]) not in observed["documents"]:
+            # This build did not read the document behind a row an earlier build read. The
+            # published row stands, with the transactions read from it.
+            filings.append(was)
+        else:
+            filings.append(row)
+    made = {row["id"] for row in built["filings"]}
+    kept = [row for filing_id, row in mine.items() if filing_id not in made]
+    carried["filings"] = len(kept)
+    filings += kept
+    for row in filings:
+        listed = doc_of(row["id"]) in observed["index_doc_ids"]
+        record(row["id"], "filings", listed, observed["index"])
+    out["filings"] = filings + others
+
+    this_year = {row["id"] for row in filings}
+    made = {row["id"] for row in built["transactions"]}
+    kept = [row for row in published["transactions"] if row["id"] not in made]
+    for row in kept:
+        if row["filing_id"] not in this_year:
+            continue
+        carried["transactions"] += 1
+        document = observed["documents"].get(doc_of(row["filing_id"]))
+        if document is not None:
+            record(row["id"], "transactions", False, document)
+    for row in built["transactions"]:
+        record(row["id"], "transactions", True, observed["documents"][doc_of(row["filing_id"])])
+    out["transactions"] = built["transactions"] + kept
+    return out, changes, carried
+
+
 def index_people(people: list[dict]) -> dict[str, list[dict]]:
     """Give each roster person their comparable tokens and index them by surname word."""
     by_surname: dict[str, list[dict]] = collections.defaultdict(list)
@@ -432,10 +629,29 @@ def wanted_from_rows(rows: list[dict], people: list[dict]) -> list[dict]:
 
 
 def wanted_documents(year: int) -> list[dict]:
-    """`wanted_from_rows` over the captures on disk. What `documents.py` asks."""
+    """`wanted_from_rows` over the captures on disk. What `documents.py` asks. None for a
+    closed year, whose rows are carried as published and whose documents are not read."""
+    if closed_year(year, roster_congress(CACHE / "MemberData.xml")):
+        return []
     _, people = load_roster(CACHE / "MemberData.xml")
     rows = load_index(CACHE / f"{year}FD.xml")
     return wanted_from_rows(rows, people)
+
+
+def roster_congress(path: Path) -> int:
+    """The Congress the Clerk's roster lists, as its own title-info says."""
+    return int(text_of(ET.parse(path).getroot().find("title-info"), "congress-num"))
+
+
+def closed_year(year: int, congress: int) -> bool:
+    """Whether a filing year's Congress has ended, by the roster this build reads. A roster
+    of an earlier Congress than the year's refuses the build: the year's roster is not out."""
+    if congress < congress_of(year):
+        raise SystemExit(
+            f"refusing to build: the roster this build read lists the {ordinal(congress)} "
+            f"Congress, and filing year {year} falls in the {ordinal(congress_of(year))}"
+        )
+    return congress > congress_of(year)
 
 
 def build(year: int, dry_run: bool = False) -> int:
@@ -445,6 +661,24 @@ def build(year: int, dry_run: bool = False) -> int:
     rows = load_index(CACHE / f"{year}FD.xml")
     adjudications, adjudications_hash = load_adjudications(ADJUDICATIONS)
     documents, docs_hash = load_docs_manifest()
+    published = read_published()
+    published_ids = {row["id"] for row in published["filings"] if index_year(row) == year}
+    listed_doc_ids = {row["doc_id"] for row in rows}
+
+    # A filing year is built against the roster of its own Congress. Once the roster lists
+    # a later one, the year is closed: its rows are carried as published, and no new row of
+    # it is attributed, because the later roster's seats and swearing-in dates are not the
+    # year's. Nothing of the roster or the documents shapes a closed year's rows.
+    congress = roster_congress(CACHE / "MemberData.xml")
+    closed = closed_year(year, congress)
+    closed_reason = (
+        f"filing year {year} is of the {ordinal(congress_of(year))} Congress, and the roster "
+        f"this build read lists the {ordinal(congress)}; the register holds the "
+        f"{ordinal(congress_of(year))} Congress's roster only as the rows it published, so it "
+        "attributes no new row of that year"
+    )
+    if closed:
+        seats, people, documents, docs_hash = [], [], {}, None
 
     by_surname = index_people(people)
 
@@ -456,11 +690,9 @@ def build(year: int, dry_run: bool = False) -> int:
 
     offices, office_of_seat = [], {}
     for seat in seats:
-        term_start = CONGRESS_START.get(seat["congress"])
-        if term_start is None:
-            raise SystemExit(f"no recorded start date for the {seat['congress']}th Congress")
+        start = term_start(seat["congress"])
         office = {
-            "id": f"of:us:house-{seat['seat'].lower()}:{term_start[:4]}",
+            "id": f"of:us:house-{seat['seat'].lower()}:{start[:4]}",
             "jurisdiction": "us:federal",
             "branch": "legislative",
             "chamber": "house",
@@ -468,7 +700,7 @@ def build(year: int, dry_run: bool = False) -> int:
             "district": seat["seat"][2:],
             "seat": seat["seat"],
             "title": seat["title"],
-            "term_start": term_start,
+            "term_start": start,
             "term_end": None,
         }
         offices.append(office)
@@ -510,6 +742,22 @@ def build(year: int, dry_run: bool = False) -> int:
     index_rows = len(rows)
     rows, duplicated = collapse_duplicates(rows, rejected, index_capture)
     for row in rows:
+        filing_id = f"fl:house-clerk:{row['filing_type'] or 'none'}:{row['doc_id']}"
+        if closed:
+            if filing_id not in published_ids:
+                rejected.append(
+                    {
+                        "adapter": "house-fd",
+                        "reason": closed_reason,
+                        "source_row": row,
+                        "source": {
+                            "url": index_capture["url"],
+                            "retrieved_at": index_capture["retrieved_at"],
+                            "content_hash": index_capture["sha256"],
+                        },
+                    }
+                )
+            continue
         person, reason = match(row, people, by_surname)
         confidence = None  # an index row; the document itself has not been read
         notes = None
@@ -555,12 +803,16 @@ def build(year: int, dry_run: bool = False) -> int:
         decided = adjudications.get(row["doc_id"]) if person is None else None
         if decided is not None:
             person = person_of_id.get(decided["officeholder_id"])
+            if person is None and filing_id in published_ids:
+                continue  # published on that decision; its officeholder's rows are carried
             if person is None:
                 raise SystemExit(
                     f"adjudication for DocID {row['doc_id']} names "
                     f"{decided['officeholder_id']}, which is not in the roster"
                 )
             confidence, adjudicated = "manual", adjudicated + 1
+        if (person is None or filed_at is None) and filing_id in published_ids:
+            continue  # published with its attribution, which stands; carry_forward keeps it
         if person is None or filed_at is None:
             rejected.append(
                 {
@@ -611,6 +863,7 @@ def build(year: int, dry_run: bool = False) -> int:
     transactions: list[dict] = []
     documents_read = documents_refused = documents_unreadable = documents_discrepant = 0
     documents_header_only = 0
+    read_documents: dict[str, dict] = {}
     if documents:
         kept = []
         for filing in filings:
@@ -621,6 +874,11 @@ def build(year: int, dry_run: bool = False) -> int:
                 kept.append(filing)
                 continue
             text, pages = ptr.read(pdf)
+            read_documents[doc_id] = {
+                "url": capture["url"],
+                "retrieved_at": capture["retrieved_at"],
+                "content_hash": capture["sha256"],
+            }
             person = person_of_id[filing["officeholder_id"]]
             status, reason = ptr.verify(
                 text,
@@ -634,6 +892,12 @@ def build(year: int, dry_run: bool = False) -> int:
                 filing["source"]["content_hash"] = capture["sha256"]
                 kept.append(filing)
                 continue
+            if status == "contradiction" and filing["id"] in published_ids:
+                raise SystemExit(
+                    f"refusing to build: the document behind the published filing {filing['id']} "
+                    f"now refuses its attribution ({reason}). The register does not drop a "
+                    "published row; a person decides, with the evidence, as a correction."
+                )
             if status == "contradiction":
                 documents_refused += 1
                 rejected.append(
@@ -687,14 +951,40 @@ def build(year: int, dry_run: bool = False) -> int:
                 )
             kept.append(filing)
         filings = kept
-    transactions.sort(key=lambda t: (t["officeholder_id"], t["filing_id"], t["id"]))
 
+    # What this build read and attributed, before anything published is carried.
+    attributed = len({f["officeholder_id"] for f in filings})
+    quiet = len(people) - attributed
+    accepted = len(filings)
+    written = len(transactions)
+
+    observed = {
+        "roster": None if closed else roster_source,
+        "index": {
+            "url": index_capture["url"],
+            "retrieved_at": index_capture["retrieved_at"],
+            "content_hash": index_capture["sha256"],
+        },
+        "index_doc_ids": listed_doc_ids,
+        "documents": read_documents,
+    }
+    built = {
+        "offices": offices,
+        "officeholders": officeholders,
+        "filings": filings,
+        "transactions": transactions,
+    }
+    rows_out, new_changes, carried = carry_forward(published, built, year, observed)
+    offices, officeholders = rows_out["offices"], rows_out["officeholders"]
+    filings, transactions = rows_out["filings"], rows_out["transactions"]
+    new_changes.sort(key=lambda c: c["id"])
+    changes = published["changes"] + new_changes
+    changed = dict(collections.Counter(c["change"] for c in new_changes))
+
+    transactions.sort(key=lambda t: (t["officeholder_id"], t["filing_id"], t["id"]))
     filings.sort(key=lambda f: (f["officeholder_id"], f["filed_at"], f["id"]))
     officeholders.sort(key=lambda h: h["id"])
     offices.sort(key=lambda o: o["id"])
-
-    attributed = len({f["officeholder_id"] for f in filings})
-    quiet = len(people) - attributed
     reasons = dict(collections.Counter(r["reason"].split(" (")[0] for r in rejected))
     print(
         f"roster        {len(seats)} seats, {len(people)} filled, {len(seats) - len(people)} vacant"
@@ -708,7 +998,9 @@ def build(year: int, dry_run: bool = False) -> int:
             else ""
         )
     )
-    print(f"accepted      {len(filings)} filings against {attributed} officeholders")
+    if closed:
+        print(f"closed        {closed_reason}")
+    print(f"accepted      {accepted} filings against {attributed} officeholders")
     if adjudicated:
         print(f"              {adjudicated} of them by a person's adjudication, citing evidence")
     if attributed_by_document:
@@ -726,8 +1018,16 @@ def build(year: int, dry_run: bool = False) -> int:
             f"discrepancy noted on the row), {documents_unreadable} captured but unreadable "
             f"(scanned), {documents_header_only} header read and hashed, contents not yet "
             f"read, {documents_refused} refused as contradicting; "
-            f"{len(transactions)} transactions"
+            f"{written} transactions"
         )
+    if any(carried.values()):
+        print(
+            f"carried       as published: {carried['officeholders']} officeholders, "
+            f"{carried['offices']} offices, {carried['filings']} filings and "
+            f"{carried['transactions']} transactions this build did not re-derive"
+        )
+    for change, count in sorted(changed.items()):
+        print(f"changes       {count} published rows the source now shows as {change}")
 
     if dry_run:
         print("\ndry run: nothing written")
@@ -737,10 +1037,12 @@ def build(year: int, dry_run: bool = False) -> int:
     write(Path("data/officeholders.ndjson"), officeholders)
     write(Path("data/filings.ndjson"), filings)
     write(Path("data/transactions.ndjson"), transactions)
+    if changes:
+        write(PUBLISHED["changes"], changes)
     # Named for the captures the rows came from, never for the day the build ran: the
     # same bytes rebuild the same file, so an unchanged source is an unchanged tree and
     # the seal holds. Rejections from earlier captures live in git history.
-    key = capture_key(index_capture, roster_capture, docs_hash)
+    key = capture_key(index_capture, None if closed else roster_capture, docs_hash)
     rejected_dir = Path("data/rejected/house-fd")
     rejected_dir.mkdir(parents=True, exist_ok=True)
     for old in rejected_dir.glob(f"{year}-*.ndjson"):
@@ -773,15 +1075,19 @@ def build(year: int, dry_run: bool = False) -> int:
             "unreadable": documents_unreadable,
             "header_only": documents_header_only,
             "refused": documents_refused,
-            "transactions": len(transactions),
+            "transactions": written,
         },
+        "congress": {"filing_year": congress_of(year), "roster": congress, "closed": closed},
+        "carried": carried,
+        "changes": changed,
         "counts": {
             "seats": len(seats),
             "filled": len(people),
             "vacant": len(seats) - len(people),
             "index_rows": index_rows,
             "index_rows_duplicated": len(duplicated),
-            "accepted": len(filings),
+            "accepted": accepted,
+            "reports": sum(1 for f in built["filings"] if f["form_type"] == "House-PTR"),
             "adjudicated": adjudicated,
             "attributed_by_document": attributed_by_document,
             "officeholders_with_a_filing": attributed,
@@ -800,7 +1106,7 @@ def build(year: int, dry_run: bool = False) -> int:
     write(runs_dir / f"house-fd-{year}-{key}.ndjson", [run])
     print(
         "\nwrote data/offices.ndjson, data/officeholders.ndjson, data/filings.ndjson, "
-        "data/transactions.ndjson"
+        "data/transactions.ndjson" + (", data/changes.ndjson" if changes else "")
     )
     print(f"wrote data/rejected/house-fd/{year}-{key}.ndjson")
     print(f"wrote data/adapter-runs/house-fd-{year}-{key}.ndjson")
@@ -829,9 +1135,12 @@ def main(argv: list[str] | None = None) -> int:
         sys.stdout.reconfigure(encoding="utf-8")
     if args.capture_key:
         _, docs_hash = load_docs_manifest()
+        closed = closed_year(args.year, roster_congress(CACHE / "MemberData.xml"))
         print(
             capture_key(
-                read_capture(f"{args.year}FD.zip"), read_capture("MemberData.xml"), docs_hash
+                read_capture(f"{args.year}FD.zip"),
+                None if closed else read_capture("MemberData.xml"),
+                None if closed else docs_hash,
             )
         )
         return 0

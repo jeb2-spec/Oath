@@ -264,3 +264,222 @@ def test_what_a_build_will_want_comes_from_the_two_captures_alone():
         "financial-pdfs/2025/2.pdf"
     )
     assert {w["seat"] for w in wanted} == {"GA12", "LA04"}
+
+
+# ---- the published register is an input to every build (NEXT.md S.1b) --------------------
+#
+# These run the whole build, in a temporary directory, from small captures written here.
+# The people in them are placeholders at seats no state has (XX01), visibly not persons,
+# as fixtures/README.md requires; the cases are what happens to the register's own rows.
+
+import hashlib  # noqa: E402
+import json  # noqa: E402
+
+import pytest  # noqa: E402
+
+ADA = {"bioguide": "X000001", "last": "Example", "first": "Ada", "seat": "XX01"}
+BEA = {"bioguide": "X000002", "last": "Placeholder", "first": "Bea", "seat": "XX02"}
+CAL = {"bioguide": "X000003", "last": "Sample", "first": "Cal", "seat": "XX03"}
+
+
+def roster_xml(congress: int, members: list[dict], sworn: str, seats=("XX01", "XX02", "XX03")):
+    held = {m["seat"]: m for m in members}
+    out = [f"<MemberData><title-info><congress-num>{congress}</congress-num></title-info><members>"]
+    for seat in seats:
+        m = held.get(seat)
+        info = (
+            f"<member-info><bioguideID>{m['bioguide']}</bioguideID>"
+            f"<lastname>{m['last']}</lastname><firstname>{m['first']}</firstname>"
+            f"<middlename/><official-name>{m['first']} {m['last']}</official-name>"
+            f"<namelist>{m['last']}, {m['first']}</namelist><party>I</party>"
+            f'<district>1st</district><sworn-date date="{sworn}"/></member-info>'
+            if m
+            else "<member-info><bioguideID/></member-info>"
+        )
+        out.append(f"<member><statedistrict>{seat}</statedistrict>{info}</member>")
+    return "".join(out) + "</members></MemberData>"
+
+
+def index_xml(rows: list[tuple[dict, str]], year: int = 2025) -> str:
+    out = ["<FinancialDisclosure>"]
+    for m, doc_id in rows:
+        out.append(
+            f"<Member><Last>{m['last']}</Last><First>{m['first']}</First><Suffix/>"
+            f"<FilingType>O</FilingType><StateDst>{m['seat']}</StateDst><Year>{year}</Year>"
+            f"<FilingDate>5/15/{year + 1}</FilingDate><DocID>{doc_id}</DocID></Member>"
+        )
+    return "".join(out) + "</FinancialDisclosure>"
+
+
+def captures(root: Path, roster: str, index: str, roster_at: str, index_at: str, year=2025):
+    cache = root / "data" / "cache" / "house-fd"
+    cache.mkdir(parents=True, exist_ok=True)
+    manifest = {}
+    for name, text, at, url in (
+        ("MemberData.xml", roster, roster_at, "https://clerk.house.gov/xml/lists/MemberData.xml"),
+        (
+            f"{year}FD.xml",
+            index,
+            index_at,
+            f"https://disclosures-clerk.house.gov/public_disc/financial-pdfs/{year}FD.zip",
+        ),
+    ):
+        (cache / name).write_text(text, encoding="utf-8")
+        key = "MemberData.xml" if name == "MemberData.xml" else f"{year}FD.zip"
+        manifest[key] = {
+            "url": url,
+            "retrieved_at": at,
+            "sha256": hashlib.sha256(text.encode()).hexdigest(),
+        }
+    (cache / "capture.json").write_text(json.dumps(manifest), encoding="utf-8")
+
+
+def rows_of(root: Path, name: str) -> dict[str, str]:
+    path = root / "data" / f"{name}.ndjson"
+    if not path.is_file():
+        return {}
+    return {json.loads(line)["id"]: line for line in path.read_text("utf-8").splitlines()}
+
+
+def run_record(root: Path) -> dict:
+    (path,) = (root / "data" / "adapter-runs").glob("house-fd-2025-*.ndjson")
+    return json.loads(path.read_text("utf-8"))
+
+
+@pytest.fixture
+def register(tmp_path, monkeypatch):
+    """A first build: two members, one filing each, in the 119th Congress."""
+    monkeypatch.chdir(tmp_path)
+    captures(
+        tmp_path,
+        roster_xml(119, [ADA, BEA], "20250103"),
+        index_xml([(ADA, "30000001"), (BEA, "30000002")]),
+        "2026-01-05T00:00:00Z",
+        "2026-01-05T00:00:01Z",
+    )
+    assert build.build(2025) == 0
+    return tmp_path
+
+
+def test_a_member_the_roster_no_longer_lists_keeps_every_published_row(register):
+    before = {name: rows_of(register, name) for name in ("officeholders", "filings", "offices")}
+    bea, bea_filing = "oh:us:house:x000002", "fl:house-clerk:O:30000002"
+    captures(
+        register,
+        roster_xml(119, [ADA], "20250103"),
+        index_xml([(ADA, "30000001"), (BEA, "30000002")]),
+        "2026-02-02T00:00:00Z",
+        "2026-02-02T00:00:01Z",
+    )
+    assert build.build(2025) == 0
+    after = {name: rows_of(register, name) for name in ("officeholders", "filings", "offices")}
+    assert after["officeholders"][bea] == before["officeholders"][bea], "carried as published"
+    assert after["filings"][bea_filing] == before["filings"][bea_filing], "its attribution stands"
+    assert set(after["offices"]) == set(before["offices"])
+    (change,) = [json.loads(line) for line in rows_of(register, "changes").values()]
+    assert (change["row_id"], change["rows"], change["change"]) == (
+        bea,
+        "officeholders",
+        "not listed",
+    )
+    assert change["capture"]["retrieved_at"] == "2026-02-02T00:00:00Z"
+    (rejected,) = (register / "data" / "rejected" / "house-fd").glob("2025-*.ndjson")
+    assert "30000002" not in rejected.read_text("utf-8"), "a carried filing is not set aside too"
+    record = run_record(register)
+    assert record["carried"]["officeholders"] == 1 and record["carried"]["filings"] == 1
+    assert record["changes"] == {"not listed": 1}
+
+    # The roster lists her again: the change is recorded, and the first one stays.
+    captures(
+        register,
+        roster_xml(119, [ADA, BEA], "20250103"),
+        index_xml([(ADA, "30000001"), (BEA, "30000002")]),
+        "2026-03-02T00:00:00Z",
+        "2026-03-02T00:00:01Z",
+    )
+    assert build.build(2025) == 0
+    changes = [json.loads(line) for line in rows_of(register, "changes").values()]
+    assert [c["change"] for c in changes] == ["not listed", "listed again"]
+    assert run_record(register)["carried"]["officeholders"] == 0
+
+
+def test_a_filing_the_index_stops_listing_stays_and_the_change_is_shown(register):
+    before = rows_of(register, "filings")
+    captures(
+        register,
+        roster_xml(119, [ADA, BEA], "20250103"),
+        index_xml([(ADA, "30000001")]),
+        "2026-01-05T00:00:00Z",
+        "2026-02-09T00:00:00Z",
+    )
+    assert build.build(2025) == 0
+    assert (
+        rows_of(register, "filings")["fl:house-clerk:O:30000002"]
+        == before["fl:house-clerk:O:30000002"]
+    )
+    (change,) = [json.loads(line) for line in rows_of(register, "changes").values()]
+    assert (change["rows"], change["change"]) == ("filings", "not listed")
+    assert change["capture"]["url"].endswith("2025FD.zip")
+
+
+def test_a_closed_year_is_carried_and_never_rebuilt_from_the_next_roster(register):
+    """The 120th Congress's roster must not re-derive the 119th's rows: its office ids and
+    swearing-in dates would put every 2025 transaction before the swearing-in."""
+    before = {name: rows_of(register, name) for name in ("officeholders", "filings", "offices")}
+    captures(
+        register,
+        roster_xml(120, [ADA, CAL], "20270103"),
+        index_xml([(ADA, "30000001"), (BEA, "30000002"), (CAL, "30000003")]),
+        "2027-01-11T00:00:00Z",
+        "2027-01-11T00:00:01Z",
+    )
+    assert build.build(2025) == 0
+    after = {name: rows_of(register, name) for name in ("officeholders", "filings", "offices")}
+    assert after == before, "every row of the closed year, byte for byte"
+    assert not rows_of(register, "changes"), "the year's roster was not read; nothing observed"
+    (rejected,) = (register / "data" / "rejected" / "house-fd").glob("2025-*.ndjson")
+    set_aside = [json.loads(line) for line in rejected.read_text("utf-8").splitlines()]
+    assert [r["source_row"]["doc_id"] for r in set_aside] == ["30000003"]
+    assert "is of the 119th Congress" in set_aside[0]["reason"]
+    assert "lists the 120th" in set_aside[0]["reason"]
+    record = run_record(register)
+    assert record["congress"] == {"filing_year": 119, "roster": 120, "closed": True}
+    manifest = json.loads(
+        (register / "data" / "cache" / "house-fd" / "capture.json").read_text("utf-8")
+    )
+    assert record["capture_key"] == build.capture_key(manifest["2025FD.zip"], None, None), (
+        "a closed year's key names the index alone, so the roster moving on rebuilds nothing"
+    )
+
+
+def test_the_join_never_moves_a_published_attribution(register):
+    """Another member bearing the same name would draw a published filing to themselves."""
+    twin = dict(ADA, bioguide="X000009", seat="XX03")
+    captures(
+        register,
+        roster_xml(119, [BEA, twin], "20250103"),
+        index_xml([(ADA, "30000001"), (BEA, "30000002")]),
+        "2026-04-06T00:00:00Z",
+        "2026-04-06T00:00:01Z",
+    )
+    with pytest.raises(SystemExit, match="never moves a published attribution"):
+        build.build(2025)
+
+
+def test_a_roster_of_an_earlier_congress_than_the_year_refuses():
+    with pytest.raises(SystemExit, match="falls in the 120th"):
+        build.closed_year(2027, 119)
+    assert build.closed_year(2025, 120) and not build.closed_year(2026, 119)
+
+
+def test_the_terms_of_a_congress_follow_the_twentieth_amendment():
+    assert build.term_start(119) == "2025-01-03" and build.term_start(120) == "2027-01-03"
+    assert [build.congress_of(y) for y in (2025, 2026, 2027)] == [119, 119, 120]
+    assert [build.ordinal(n) for n in (119, 120, 121, 122, 123, 111)] == [
+        "119th",
+        "120th",
+        "121st",
+        "122nd",
+        "123rd",
+        "111th",
+    ]
