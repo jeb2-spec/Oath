@@ -5,6 +5,11 @@
 # yet warns loudly instead of passing quietly. The Python floor is 3.11, the
 # reference runtime in pyproject.toml, so the job runs on the floor and not on
 # whatever is newest.
+#
+# Three gates compare this tree with the published record, main as it stands:
+# a published Finding never changes or disappears (Invariants 12 and 14), and a
+# published Signal version never changes (Invariant 11). They read origin/main,
+# so the job fetches it first; a gate that cannot read it fails rather than pass.
 
 name: verify
 
@@ -22,6 +27,9 @@ jobs:
     steps:
       - name: Check out
         uses: actions/checkout@v4
+
+      - name: The published record, main as it stands, for the gates that compare against it
+        run: git fetch --no-tags --depth=1 origin main:refs/remotes/origin/main
 
       - name: Python 3.11, the reference runtime
         uses: actions/setup-python@v5
@@ -48,19 +56,31 @@ jobs:
       - name: validate-schemas (Invariants 2, 3, 4, 6)
         run: python tools/validate-schemas.py
 
+      - name: rebuild, every Signal file regenerates from the definitions and the rows (Rubric gate 4)
+        run: python tools/rebuild.py
+
+      - name: check-signal-versions, no silent redefinition (Invariant 11)
+        run: python tools/check-signal-versions.py
+
+      - name: check-supersessions, a published Finding stays and a correction chains (Invariants 12, 14)
+        run: python tools/check-supersessions.py
+
+      - name: check-aggregator-sole, every Finding rests on a primary source (Invariant 5)
+        run: python tools/check-aggregator-sole.py
+
       - name: render the register as static pages (ECOSYSTEM section 1.3)
         run: python src/surfaces/render.py
 
-      - name: lint-frame-presence, the frame on every officeholder page (Invariant 7)
+      - name: lint-frame-presence, the frame on every page that names an officeholder (Invariant 7)
         run: python tools/lint-frame-presence.py
 
-      - name: lint-no-ranking, no ranking on any surface (Invariant 13)
+      - name: lint-no-ranking, no ranking on the index or any Signal page (Invariant 13)
         run: python tools/lint-no-ranking.py
 
       - name: check-mark, the seal is struck and legible (ECOSYSTEM section 2.4)
         run: python tools/check-mark.py
 
-      - name: lint-verdict-language (Invariant 1)
+      - name: lint-verdict-language, the rendered pages included (Invariant 1)
         run: python tools/lint-verdict-language.py
 
       - name: scan-secrets, nothing of a secret or of one person's life lands in git (Invariant 10)
@@ -88,18 +108,20 @@ jobs:
           retention-days: 14
           if-no-files-found: error
 
-      - name: Node 20, the reference runtime for adapters and Signals
+      - name: Node 24, the runtime for the Signals' reference implementation
+        # Vitest 5 needs Node 22.12 or later, and Node 20 left support in April 2026.
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "24"
           cache: npm
 
       - name: npm ci
         run: npm ci
 
-      - name: Biome and Vitest
+      - name: Biome, TypeScript, and Vitest (the reference implementation agrees with every Finding)
         run: |
           npm run lint
+          npm run typecheck
           npm test
 
       - name: oath-doctor, the session-start read-back, on a clean clone (Phase 1 ship gate)

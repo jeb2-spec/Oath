@@ -7,8 +7,10 @@
 # repository itself went public on 2026-09-26. Every push to main publishes.
 #
 # Every page published here is one self-contained file rendered from the sealed
-# rows by src/surfaces/render.py, gated by lint-frame-presence, lint-no-ranking
-# and check-mark before it is uploaded.
+# rows by src/surfaces/render.py, gated by lint-frame-presence, lint-no-ranking,
+# check-mark and lint-verdict-language before it is uploaded. Since the first
+# Signal the site carries Findings, so the verdict lint reads the rendered pages
+# themselves here too, not only the sources they are made from.
 
 name: pages
 
@@ -53,6 +55,7 @@ jobs:
           python tools/lint-frame-presence.py
           python tools/lint-no-ranking.py
           python tools/check-mark.py
+          python tools/lint-verdict-language.py
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
