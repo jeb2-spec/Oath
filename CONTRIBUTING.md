@@ -68,7 +68,7 @@ Branch protection is also free only for public repositories on a personal accoun
 
 Two paths, both documented in [BYLAWS.md §6](BYLAWS.md):
 
-- **Fact correction** (wrong person, wrong filing, wrong amount): open a PR that adds a supersession row citing the primary source that reveals the correction. Both rows stay in the register.
+- **Fact correction** (wrong person, wrong filing, wrong date, wrong amount): open a PR that adds a correction citing the primary source that reveals it. For a row of the register itself (an officeholder, a filing, a transaction) that is `tools/correct.py`, which writes a `corrected` row to `data/changes.ndjson` naming the fact, what it was and what it is, keeps the evidence's bytes, and moves the fact; for a Finding it is `src/signals/run.py --correct`, which adds a row that supersedes it. Both stay in the register, beside what they correct.
 - **Demonstrated change** (a later primary-source filing shows the subject's conduct has changed such that the Finding's condition no longer applies): open a PR that adds a supersession row citing the primary source that shows the change. Both rows stay.
 
 Off-the-record requests are not honored. Every change is a row in the register a reader can see. The *Correct a row* issue template is the front door.
