@@ -268,7 +268,7 @@ def test_a_scanned_document_is_captured_not_read_and_the_page_says_which():
     assert "partly read" in page
     assert "1 of 3 documents read and hashed" in page
     assert "1 fetched and hashed, not read: scanned paper, or a form" in page
-    assert "1 not yet fetched" in page
+    assert "1 not fetched" in page and "not yet fetched" not in page
     assert "the register read each document" not in page
     section = render.state_of_record(
         META, RUN, HOLDERS, [read, scanned, pending], OFFICES, 1, "https://x/rows"

@@ -1916,7 +1916,7 @@ def checks_section(
                     "register does not yet read"
                 )
             if pending:
-                parts.append(f"{pending} not yet fetched")
+                parts.append(f"{pending} not fetched")
             documents = "; ".join(parts) + ". Each link below opens the Clerk's own copy."
         else:
             documents = (

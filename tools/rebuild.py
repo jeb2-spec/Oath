@@ -65,6 +65,13 @@ def one(root: Path, run, finding_id: str) -> int:
     again = next((f for f in findings if f["id"] == base), None)
     if again is None:
         print(f"FAIL  the rows {finding_id} names no longer produce it")
+        if sealed.get("superseded_by"):
+            print(
+                f"      It is superseded by {sealed['superseded_by']}: a correction moved the rows "
+                "it was produced from, so it regenerates from the rows as they stood at the "
+                "commit that sealed it (git log -- data/findings.ndjson), not from today's; "
+                "the row that supersedes it regenerates from today's."
+            )
         return 1
     regenerated = {**again, **{k: sealed[k] for k in run.PROVENANCE}}
     if base != finding_id:
