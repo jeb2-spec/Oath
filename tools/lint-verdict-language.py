@@ -6,8 +6,11 @@ blacklist (v0) is the one printed there, matched as whole words in any inflectio
 (corrupt, corruption, corrupted; criminal, criminally; and so on), case-insensitive.
 
 What is scanned: the Markdown at the repository root (doctrine, prospectus,
-guides), .github/, docs/ (Signal definitions and rendered pages included), src/,
-fixtures/, templates/, and every data/*.ndjson row. Two places are not scanned, and
+guides), .github/, docs/ (Signal definitions included), src/, fixtures/, templates/,
+every data/*.ndjson row, and the rendered pages under docs/build/ when a render has
+written them. Those pages are build output and are not tracked, so they are read from
+the disk rather than from git; CI renders before it runs this gate, so every page a
+reader could be shown, every rendered Finding among them, is read. Two places are not scanned, and
 the reason is stated here so the exclusion is loud: .claude/ (the working memory,
 not a surface), and docs/related-work/ (records of what neighbouring projects say
 in their own names and words; they name no officeholder and are appendix, not
@@ -66,6 +69,12 @@ FRAME = re.compile(r"not evidence of wrongdoing", re.IGNORECASE)
 ALLOWLIST = "verdict-lint.allowlist"
 SCANNED_PREFIXES = (".github/", "docs/", "src/", "fixtures/", "templates/")
 EXCLUDED_PREFIXES = (".claude/", "docs/related-work/", "node_modules/")
+SITE = "docs/build"
+
+
+def is_frame_word(line: str, word: str) -> bool:
+    """The frame's own word, inside the frame sentence: the one hit always allowed."""
+    return bool(FRAME.search(line)) and word.lower() == "wrongdoing"
 
 
 def scanned_files(root: Path) -> list[Path]:
@@ -92,7 +101,9 @@ def scanned_files(root: Path) -> list[Path]:
         data_row = rel.startswith("data/") and rel.endswith(".ndjson")
         if root_md or in_scope or data_row:
             keep.append(root / rel)
-    return keep
+    site = root / SITE
+    rendered = sorted(site.rglob("*.html")) if site.is_dir() else []
+    return sorted(set(keep) | set(rendered))
 
 
 def load_allowlist(root: Path) -> list[tuple[str, str, str, int]]:
@@ -128,7 +139,7 @@ def lint(root: Path) -> tuple[list[str], int, int]:
         for lineno, line in enumerate(text.splitlines(), 1):
             for match in PATTERN.finditer(line):
                 word = match.group(0)
-                if FRAME.search(line) and word.lower() == "wrongdoing":
+                if is_frame_word(line, word):
                     continue
                 hit_allowed = False
                 for i, (e_path, context, _reason, _n) in enumerate(entries):

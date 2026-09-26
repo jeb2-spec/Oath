@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
-"""Every rendered officeholder page opens with the frame. INVARIANTS.md §7.
+"""Every rendered page that names an officeholder opens with the frame. INVARIANTS.md §7.
 
-Reads every page under `docs/build/officeholders/` and requires the sentence
-*Presence in the register is not evidence of wrongdoing* to appear, verbatim after
-case and punctuation are folded away, inside the page's first `<header>` element,
-which is the header region ECOSYSTEM.md §1.3 puts it in. A page with the frame
-anywhere else, or nowhere, fails. Standard library.
+Reads every page under `docs/build/officeholders/`, the index, which lists every seat,
+and every page under `docs/build/signals/`, which lists the officeholders a Signal's
+Findings are attributed to, and requires the sentence *Presence in the register is not
+evidence of wrongdoing* to appear, verbatim after case and punctuation are folded away,
+inside the page's first `<header>` element, which is the header region ECOSYSTEM.md
+§1.3 puts it in. A page with the frame anywhere else, or nowhere, fails. A page that
+lists names is where a reader is likeliest to take presence for proof, so a Signal's
+page is held to the rule its Findings' pages are. Standard library.
 
 This gate shares no code with the renderer. The sentence is written here on its
 own so that a renderer which drifts from it is caught rather than followed.
@@ -44,14 +47,37 @@ def check_page(text: str) -> str | None:
     return "the frame is missing"
 
 
+# The pages that name an officeholder, by kind, and where each kind lives in the site.
+KINDS = (
+    ("index", "index.html"),
+    ("officeholder", "officeholders/*.html"),
+    ("signal", "signals/**/*.html"),
+)
+
+
+def pages(site: Path) -> list[tuple[str, Path]]:
+    if not site.is_dir():
+        return []
+    return [(kind, path) for kind, pattern in KINDS for path in sorted(site.glob(pattern))]
+
+
 def check(site: Path) -> tuple[list[str], int]:
-    pages = sorted((site / "officeholders").glob("*.html")) if site.is_dir() else []
+    found = pages(site)
     failures = []
-    for path in pages:
+    for _, path in found:
         reason = check_page(path.read_text(encoding="utf-8"))
         if reason:
             failures.append(f"{path.relative_to(site)}: {reason}")
-    return failures, len(pages)
+    return failures, len(found)
+
+
+def tally(site: Path) -> str:
+    """How many pages of each kind were read, in words."""
+    counts: dict[str, int] = {}
+    for kind, _ in pages(site):
+        counts[kind] = counts.get(kind, 0) + 1
+    parts = [f"{n} {kind} page{'' if n == 1 else 's'}" for kind, n in counts.items()]
+    return ", ".join(parts[:-1]) + (" and " if len(parts) > 1 else "") + parts[-1]
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -66,13 +92,13 @@ def main(argv: list[str] | None = None) -> int:
     for line in failures:
         print(f"FAIL  {line}")
     if failures:
-        print(f"\n{len(failures)} of {checked} officeholder pages do not carry the frame.")
+        print(f"\n{len(failures)} of {checked} pages that name an officeholder lack the frame.")
         return 1
     if checked == 0:
         print(f"OK    0 pages under {args.site}; nothing rendered, so nothing is unframed.")
         print("      Render first: python src/surfaces/render.py")
         return 0
-    print(f"OK    {checked} officeholder pages carry the frame in their header.")
+    print(f"OK    {tally(site)} carry the frame in their header.")
     return 0
 
 

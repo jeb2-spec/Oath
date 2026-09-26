@@ -68,11 +68,11 @@ Every candidate row is validated against a JSON Schema. Invalid rows are rejecte
 
 Defined Signals read the typed rows and produce Findings.
 
-**What happens.** Each Signal defined in [`docs/signals/`](docs/signals/) has a definition file (name, version, description, cited Standard, inputs, criteria, `not_saying`, worked example) and a pure reference implementation in [`src/signals/`](src/signals/). The reference implementation is called on the current register and emits Finding rows. It reads what its definition names and nothing else. It writes no side effects. It touches no network.
+**What happens.** Each Signal defined in [`docs/signals/`](docs/signals/) has a definition file (name, version, description, cited Standard, inputs, criteria, `not_saying`, worked example) and two pure implementations in [`src/signals/`](src/signals/) that share no code: the one that writes the register's Findings, in the language of the adapter and the seal, and a reference implementation in a second language that must agree with it on every known-answer case and every row. The runner, [`src/signals/run.py`](src/signals/run.py), calls the first on the current register and adds its Finding rows to the ledger. Each implementation reads what its definition names and nothing else. It writes no side effects. It touches no network.
 
 **What must be true.** Every Finding cites a Signal (with version), an Officeholder, and one or more producing Filings. Every Signal traces to a Standard in [STANDARDS.md](STANDARDS.md). Every Finding is regenerable byte-identically from its named inputs by any machine running the reference implementation. These are Invariants §2 and §3 and Rubric gate 4.
 
-**Where it lands.** `data/findings.ndjson`, one row per Finding.
+**Where it lands.** `data/findings.ndjson`, one row per Finding, append-only: a published Finding is never rewritten or dropped, and the runner refuses a run that would do either. Beside it, `data/signals.ndjson`, each Signal as a row, and `data/signal-runs/<slug>-v<n>.ndjson`, what each Signal evaluated in this build, report by report, fired or not, so a quiet page can say which silence it is. All three are sealed.
 
 **How it can fail.** A Signal fires against a case that fits the letter but not the spirit of the Standard (bug; a version bump adjusts the criterion; the pre-existing Findings stay in the record with `superseded_by` per Vow V). A Signal does not fire against a case the Standard clearly covers (bug; version bump; missing coverage documented as a Correction). Both cases route through the Council per [COUNCIL.md](COUNCIL.md) at the version bump.
 
@@ -82,8 +82,8 @@ The typed rows and the produced Findings become a written record a reader can re
 
 **What happens.** The build reads the canonical NDJSON and produces:
 
-- **Per-officeholder pages** (`officeholders/<id>.html`), showing filings in chronological order, Findings grouped by Signal name, sources cited, verifier command visible at the foot. The frame *presence in the register is not evidence of wrongdoing* appears in the header of every one. This is Invariant §7.
-- **Per-signal pages** (`signals/<slug>/<version>.html`), showing the definition, the cited Standard, the criterion, and every Finding this Signal has produced in the current build.
+- **Per-officeholder pages** (`officeholders/<id>.html`), showing filings in chronological order, Findings grouped by Signal name, sources cited, verifier command visible at the foot. The frame *presence in the register is not evidence of wrongdoing* appears in the header of every one, and of every other page that names an officeholder: the index and each Signal's page. This is Invariant §7.
+- **Per-signal pages** (`signals/<slug>/v<version>.html`), showing the definition, the cited Standard, the criterion, what the Signal does not say, what it evaluated in the current build, and every report on which it fired, listed under the officeholder in seat order and linked to the Finding on that officeholder's page.
 - **Doctrine pages** (Charter, Rubric, Invariants, Bylaws, Council, Methodology, Standards, Sources, Limitations, Spec, Ecosystem, Anchors) served as static HTML.
 - **The build's Oath mark**, struck as guilloche from the build's SHA-256 digest per [ECOSYSTEM.md §2](ECOSYSTEM.md).
 - **Per-officeholder seals**, each parameterised by the officeholder's identifier and the build digest. Change the officeholder's record, the seal changes.
@@ -208,10 +208,13 @@ An adapter is *pure with respect to the register*: it does not read from the can
 Every Signal lives at:
 
 - `docs/signals/<slug>.md`. the definition, in the template documented at [docs/signals/README.md](docs/signals/README.md).
-- `src/signals/<slug>.ts`. the reference implementation. A pure function of typed inputs to Finding rows. No network. No file I/O.
-- `fixtures/<slug>/`. one or more fixture pairs (inputs, expected outputs) that are the Signal's tests.
+- `src/signals/<slug>.py`. the implementation that writes the register's Findings: a pure function of the rows the definition names to Finding rows, standard-library Python, the language of the adapter and the seal, so one writer serialises every sealed row. No network. No file I/O. No clock.
+- `src/signals/<slug>.ts`. the reference implementation, sharing no code with the first. Vitest holds it to the same known-answer cases and to every Finding and outcome in the register, byte for byte, so neither can drift without CI going red.
+- `fixtures/<slug>/`. the known-answer cases, each worked by hand before either implementation existed, and the Signal's tests.
 
-A Signal is versioned. A change to a Signal's criteria, inputs, or Standard produces a new version file at `docs/signals/<slug>.v<n>.md`; the current file is always the latest. Findings produced against the old version stay in the record with their old version id.
+[`src/signals/run.py`](src/signals/run.py) runs every current definition. It writes the Signal rows from the definition files, calls each implementation, and adds new Findings to the ledger with the build's own time (`fired_at`, never the clock) and the digest of the rows read (`build_hash`). With `--check` it regenerates everything and compares, which is how CI and `tools/rebuild.py` prove Rubric gate 4.
+
+A Signal is versioned. A change to a Signal's criteria, inputs, or Standard produces a new version file at `docs/signals/<slug>.v<n>.md`; the current file is always the latest. Findings produced against the old version stay in the record with their old version id. A published Finding is never rewritten: a correction is a new row, `<finding-id>:c<n>`, and the row it replaces gains `superseded_by` and nothing else ([docs/signals/README.md](docs/signals/README.md), Corrections).
 
 ### Verifier contract
 
@@ -251,7 +254,7 @@ Every gate lives at `tools/<name>.py` or `tools/<name>.mjs` and runs in CI. Ever
 | §16 evidence bundle per filing | `tools/check-evidence-bundle.py` |
 | §17 meta-invariant highlight | `tools/highlight-charter-change.py` |
 
-Every one is *(planned)* at the founding. They land in NEXT.md Phase 1.
+Every one is *(planned)* at the founding. They land in NEXT.md Phase 1. Which have landed is read back at every session start by `python scripts/oath-doctor.py`, which runs each gate that exists and names each that does not.
 
 ### The build output
 

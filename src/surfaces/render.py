@@ -39,6 +39,7 @@ import argparse
 import html
 import importlib.util
 import json
+import posixpath
 import re
 import sys
 import unicodedata
@@ -67,6 +68,26 @@ STOCK_ACT = "https://www.govinfo.gov/app/details/PLAW-112publ105"
 # register carries. Both read 2026-09-23; STANDARDS.md S.2 records them.
 ETHICS_FD = "https://ethics.house.gov/financial-disclosure"
 PTR_FORM = "https://ethics.house.gov/wp-content/uploads/2026/02/Final-CY-2025-PTR-Form-1.pdf"
+# The Committee's memorandum on the reports' due dates, and the codified deadline. STANDARDS.md
+# S.2 records both, and records that neither was read at its source by the session that cited
+# them; a reading at the source is owed before the first Signal publishes.
+PTR_DUE_MEMO = (
+    "https://ethics.house.gov/wp-content/uploads/2023/01/FINAL-PTR-Due-Date-Pink-Sheet.pdf"
+)
+USC_13105 = (
+    "https://uscode.house.gov/view.xhtml?req=granuleid:USC-prelim-title5-section13105"
+    "&num=0&edition=prelim"
+)
+# What each Standard a Signal cites links to, in the order a reader walks them.
+STANDARD_LINKS = {
+    "S.2": (
+        ("5 U.S.C. § 13105(l)", USC_13105),
+        ("STOCK Act of 2012, Pub. L. 112-105", STOCK_ACT),
+        ("the Committee on Ethics", ETHICS_FD),
+        ("its memorandum on due dates", PTR_DUE_MEMO),
+        ("STANDARDS.md S.2", STANDARDS_S2),
+    ),
+}
 ASSET_LEGEND = "https://fd.house.gov/reference/asset-type-codes.aspx"
 LIMITATIONS_9 = REPO + "LIMITATIONS.md#9-private-citizens-are-out-of-scope"
 
@@ -457,14 +478,14 @@ def page(title: str, body: str) -> str:
     )
 
 
-def footer(meta: dict, home: bool) -> str:
+def footer(meta: dict, home: bool, to_root: str = "../") -> str:
     anchor = meta.get("anchor", {}).get("state", "none")
     anchor_line = (
         "Anchor: none yet; the build has not been timestamped by an outside service."
         if anchor == "none"
         else f"Anchor: {esc(anchor)}."
     )
-    back = "" if home else '<p><a href="../index.html">Every seat in the register</a></p>\n'
+    back = "" if home else f'<p><a href="{to_root}index.html">Every seat in the register</a></p>\n'
     return (
         "<footer>\n"
         f"{back}"
@@ -503,13 +524,346 @@ REQUIRES = (
     "</dl>\n</section>"
 )
 
-SIGNALS = (
-    "<section>\n<h2>Signals that fired</h2>\n"
-    '<p class="quiet">None. No signal is defined in this build, so none has fired for anyone.</p>\n'
-    "</section>\n<section>\n<h2>Signals that did not fire</h2>\n"
-    '<p class="quiet">None to list. When signals exist, every one that did not fire is named here '
-    "with its version, so silence is shown rather than assumed.</p>\n</section>"
+# ---- signals ---------------------------------------------------------------------------
+
+# Why a row was not evaluated, in the words a page uses; the Signal's own reason is the key.
+NOT_EVALUATED_WORDS = {
+    "dated before the swearing-in": "dated before the swearing-in the roster records",
+    "marked Amended": "marked Amended by the filer",
+    "marked Deleted": "marked Deleted by the filer",
+    "no filing status printed": "with no filing status printed",
+    "transaction dated after the report": "whose transaction is dated after the report",
+    "transaction date not read": "whose transaction date could not be read",
+    "no swearing-in date recorded": "for which the roster records no swearing-in date",
+    "report date not read": "on a report whose date could not be read",
+}
+SET_BY_WORDS = {"notification": "30 days after notice", "transaction": "45 days after the trade"}
+NOT_A_DETERMINATION = (
+    "A Finding describes a report against the rule it cites. It is not a determination by the "
+    "House Committee on Ethics, which decides whether a report was late and what follows, and "
+    "the register sees none of its decisions."
 )
+MD_INLINE = re.compile(r"\[([^\]]+)\]\(([^)\s]+)\)|`([^`]+)`")
+CORRECTION = re.compile(r":c\d+$")
+
+
+def records_a_firing(row: dict) -> bool:
+    """A ledger row that records a firing. A correction recording that a Signal no longer
+    fires on a report carries evidence with no row after the deadline (docs/signals/README.md)."""
+    return bool((row.get("evidence") or {}).get("after", 1))
+
+
+def fired_now(findings: list[dict], signal_id: str | None = None) -> list[dict]:
+    """The Findings a page shows as fired: the current row of each chain, where that row
+    records a firing. A superseded row stays in the ledger and is reached from its correction."""
+    return [
+        f
+        for f in findings
+        if f.get("superseded_by") is None
+        and records_a_firing(f)
+        and (signal_id is None or f["signal_id"] == signal_id)
+    ]
+
+
+def withdrawn_now(findings: list[dict], signal_id: str) -> list[dict]:
+    """Current rows that record a Signal no longer fires on a report: a published Finding,
+    withdrawn by correction. Shown as a withdrawal, never as a Finding."""
+    return [
+        f
+        for f in findings
+        if f.get("superseded_by") is None
+        and not records_a_firing(f)
+        and f["signal_id"] == signal_id
+    ]
+
+
+def supersedes(row: dict, findings: list[dict]) -> dict | None:
+    """The row this one corrects, when it is a correction."""
+    return next((f for f in findings if f.get("superseded_by") == row["id"]), None)
+
+
+def correction_line(row: dict, findings: list[dict]) -> str:
+    """What a correction says about the row it replaces, in the correction's own words."""
+    prior = supersedes(row, findings)
+    if not CORRECTION.search(row["id"]) or prior is None:
+        return ""
+    reason = f" {esc(row['notes'])}" if row.get("notes") else ""
+    return (
+        f'<p class="quiet">Corrected: this row supersedes <code>{esc(prior["id"])}</code>, first '
+        f"produced from the record as retrieved {esc(prior.get('fired_at', ''))}, which stays in "
+        f"the ledger, <code>data/findings.ndjson</code>.{reason}</p>\n"
+    )
+
+
+def withdrawal_line(row: dict, findings: list[dict], filings_by_id: dict[str, dict]) -> str:
+    report = filings_by_id.get(row["producing_filings"][0], {})
+    filed = (row.get("evidence") or {}).get("filed_at") or report.get("filed_at", "")
+    prior = supersedes(row, findings)
+    first = CORRECTION.sub("", row["id"])
+    reason = f" {esc(row['notes'])}" if row.get("notes") else ""
+    return (
+        f'<p class="quiet">On the report filed {esc(filed)}, this signal produced the Finding '
+        f"<code>{esc(first)}</code>"
+        + (f", first produced {esc(prior.get('fired_at', ''))}" if prior else "")
+        + f"; the correction <code>{esc(row['id'])}</code> records that it no longer fires "
+        f"there.{reason} Every row of the chain stays in the ledger, "
+        "<code>data/findings.ndjson</code>.</p>\n"
+    )
+
+
+def signal_page_path(signal: dict) -> str:
+    """Where a Signal's page lives in the site, per ECOSYSTEM.md §1.2."""
+    return f"signals/{signal['slug']}/v{signal['version']}.html"
+
+
+def md_href(href: str, base: str) -> str:
+    """A link in a definition file, as a reader of the site can follow it: repository paths
+    resolve against the file's own folder and open on GitHub."""
+    if href.startswith(("http://", "https://", "#")):
+        return href
+    path, _, fragment = href.partition("#")
+    resolved = posixpath.normpath(posixpath.join(base, path))
+    return REPO + resolved + (f"#{fragment}" if fragment else "")
+
+
+def md_inline(text: str, base: str) -> str:
+    out, pos = [], 0
+    for m in MD_INLINE.finditer(text):
+        out.append(esc(text[pos : m.start()]))
+        if m.group(1) is not None:
+            label = re.sub(r"`([^`]+)`", r"<code>\1</code>", esc(m.group(1)))
+            out.append(f'<a href="{esc(md_href(m.group(2), base))}">{label}</a>')
+        else:
+            out.append(f"<code>{esc(m.group(3))}</code>")
+        pos = m.end()
+    out.append(esc(text[pos:]))
+    return "".join(out)
+
+
+def md_blocks(text: str, base: str = "docs/signals/") -> str:
+    """The definition's own words as HTML: paragraphs, links, code, and indented code blocks.
+    Nothing else of Markdown is read, because a definition needs nothing else."""
+    blocks = []
+    for block in re.split(r"\n\s*\n", text.strip()):
+        lines = block.split("\n")
+        if all(line.startswith("    ") or not line.strip() for line in lines):
+            code = "\n".join(line[4:] for line in lines)
+            blocks.append(f"<pre><code>{esc(code)}</code></pre>")
+        else:
+            blocks.append(f"<p>{md_inline(' '.join(line.strip() for line in lines), base)}</p>")
+    return "\n".join(blocks)
+
+
+def standard_links(signal: dict) -> str:
+    links = STANDARD_LINKS.get(signal["standard"]["id"], ())
+    return "; ".join(f'<a href="{esc(url)}">{esc(label)}</a>' for label, url in links)
+
+
+def reason_clause(counts: dict[str, int]) -> str:
+    """Rows not evaluated, by reason, in the page's words."""
+    parts = [
+        f"{n:,} {NOT_EVALUATED_WORDS.get(reason, reason)}"
+        for reason, n in sorted(counts.items(), key=lambda item: (-item[1], item[0]))
+    ]
+    return "; ".join(parts)
+
+
+def which_quiet(outcomes: list[dict]) -> str:
+    """What one Signal did with one officeholder's reports, fired or not: the silence named."""
+    if not outcomes:
+        return (
+            "No transaction report is attributed to this officeholder in the register, so there "
+            "was nothing to evaluate. That is a fact about the register's matching, not a "
+            "statement that no report was due."
+        )
+    evaluated = [o for o in outcomes if o["state"] == "evaluated"]
+    unread = [o for o in outcomes if o["state"] == "not read"]
+    rows = sum(o["evaluated"] for o in outcomes)
+    fired = [o for o in outcomes if o["finding_id"]]
+    skipped: dict[str, int] = {}
+    for o in outcomes:
+        for reason, n in o["not_evaluated"].items():
+            skipped[reason] = skipped.get(reason, 0) + n
+    parts = []
+    if rows:
+        reports = sum(1 for o in evaluated if o["evaluated"])
+        if fired:
+            parts.append(
+                f"It evaluated {rows:,} {plural(rows, 'row', 'rows')} on {reports:,} "
+                f"{plural(reports, 'report', 'reports')} attributed to this officeholder and fired "
+                f"on {len(fired):,} of them, shown below; every evaluated row on the "
+                f"{plural(reports - len(fired), 'other', 'others')} was on or before its deadline."
+                if reports > len(fired)
+                else f"It evaluated {rows:,} {plural(rows, 'row', 'rows')} on {reports:,} "
+                f"{plural(reports, 'report', 'reports')} attributed to this officeholder and fired "
+                f"on {plural(len(fired), 'it', 'each of them')}, shown below."
+            )
+        else:
+            parts.append(
+                f"It evaluated {rows:,} {plural(rows, 'row', 'rows')} on {reports:,} "
+                f"{plural(reports, 'report', 'reports')} attributed to this officeholder, and "
+                f"every one was on or before its deadline."
+            )
+    elif evaluated or unread:
+        parts.append("It could evaluate no row on the reports attributed to this officeholder.")
+    if skipped:
+        n = sum(skipped.values())
+        parts.append(
+            f"{n:,} {plural(n, 'row was', 'rows were')} not evaluated: {reason_clause(skipped)}."
+        )
+    if unread:
+        n = len(unread)
+        parts.append(
+            f"{n:,} {plural(n, 'report is', 'reports are')} captured and not read: scanned "
+            "paper, which the Committee judges by its postmark, and the register does not see "
+            "the postmark."
+        )
+    return " ".join(parts)
+
+
+def finding_rows_table(finding: dict) -> str:
+    """The rows after the deadline, grouped where their dates agree, so a report of eighty
+    identical rows reads as one line with its count."""
+    groups: dict[tuple, int] = {}
+    for row in finding["evidence"]["rows"]:
+        key = (
+            row["transaction_date"],
+            row["notified_date"],
+            row["notification"],
+            row["deadline"],
+            row["set_by"],
+            row["weekend"],
+            row["notified_after_limit"],
+            row["days_after"],
+        )
+        groups[key] = groups.get(key, 0) + 1
+    body = []
+    for key, n in sorted(groups.items(), key=lambda item: (item[0][3], item[0][0])):
+        traded, notified, notification, deadline, set_by, weekend, late_notice, days = key
+        notice = esc(notified) if notified else "not printed"
+        if notification != "applied":
+            notice += f' <span class="note">not applied: {esc(notification)}</span>'
+        elif late_notice:
+            notice += '<span class="note">after the 45-day limit had passed</span>'
+        due = esc(deadline)
+        if weekend:
+            due += f'<span class="note">a {esc(weekend)}; it does not move</span>'
+        body.append(
+            "<tr>"
+            f'<td class="idx">{n:,}</td>'
+            f'<td class="idx">{esc(traded)}</td>'
+            f'<td class="idx">{notice}</td>'
+            f'<td class="idx">{due}</td>'
+            f"<td>{esc(SET_BY_WORDS.get(set_by, set_by))}</td>"
+            f'<td class="idx">{days:,}</td>'
+            "</tr>"
+        )
+    rows = finding["evidence"]["after"]
+    return (
+        "<table>\n"
+        f"<caption>The {rows:,} {plural(rows, 'row', 'rows')} of this report after the "
+        "deadline, grouped where the dates agree. The deadline is the earlier of 30 days after "
+        "the notification date the report prints and 45 days after the transaction date; it does "
+        "not move for a weekend. Days after count from the deadline to the date the Clerk's index "
+        "gives the "
+        f"report, {esc(finding['evidence']['filed_at'])}.</caption>\n"
+        "<thead><tr><th>Rows</th><th>Transaction</th><th>Notified</th><th>Deadline</th>"
+        "<th>Set by</th><th>Days after</th></tr></thead>\n"
+        f"<tbody>\n{''.join(body)}\n</tbody>\n</table>"
+    )
+
+
+def finding_block(finding: dict, report: dict | None, findings: list[dict] | None = None) -> str:
+    doc_id = finding["producing_filings"][0].rsplit(":", 1)[1]
+    copy = (
+        f' · <a href="{esc(report["source"]["url"])}">the Clerk\'s copy</a>'
+        if report and report.get("source", {}).get("url")
+        else ""
+    )
+    return (
+        f'<article class="finding" id="finding-{esc(doc_id)}">\n'
+        f"<h4>Report filed {esc(finding['evidence']['filed_at'])} · "
+        f'<a href="#report-{esc(doc_id)}">its rows, as filed</a>{copy}</h4>\n'
+        f"<p>{esc(finding['description'])}</p>\n"
+        f"{correction_line(finding, findings or [])}"
+        f"{finding_rows_table(finding)}\n"
+        f'<p class="quiet">Finding <code>{esc(finding["id"])}</code>, first produced from the '
+        f"record as retrieved {esc(finding['fired_at'])}, from rows whose digest is "
+        f"<code>{esc(finding['build_hash'][:12])}</code>. Regenerate it from the rows it names: "
+        f"<code>python tools/rebuild.py {esc(finding['id'])}</code></p>\n"
+        "</article>"
+    )
+
+
+def signals_section(
+    signals: list[dict],
+    findings: list[dict],
+    outcomes: dict[str, list[dict]],
+    filings_by_id: dict[str, dict],
+    to_root: str = "../",
+) -> str:
+    """Signals that fired and Signals that did not, for one officeholder, grouped by Signal
+    and never by severity (ECOSYSTEM.md §1.3; METHODOLOGY.md §10). Every defined Signal is
+    named on every page, so silence is shown rather than assumed, and says which it is."""
+    fired, quiet = [], []
+    for signal in signals:
+        mine = sorted(
+            fired_now(findings, signal["id"]),
+            key=lambda f: (f["evidence"]["filed_at"], f["id"]),
+        )
+        withdrawn = "".join(
+            withdrawal_line(f, findings, filings_by_id)
+            for f in sorted(withdrawn_now(findings, signal["id"]), key=lambda f: f["id"])
+        )
+        head = (
+            f'<h3 id="signal-{esc(signal["slug"])}">{esc(signal["name"])}, version '
+            f"{signal['version']}</h3>\n"
+            f'<p class="quiet">{standard_links(signal)}. '
+            f'<a href="{to_root}{signal_page_path(signal)}">What it reads, how, and what it does '
+            f"not say</a>. {esc(which_quiet(outcomes.get(signal['id'], [])))}</p>\n"
+        )
+        if mine:
+            blocks = "\n".join(
+                finding_block(f, filings_by_id.get(f["producing_filings"][0]), findings)
+                for f in mine
+            )
+            fired.append(head + withdrawn + blocks)
+        else:
+            quiet.append(head + withdrawn)
+    fired_html = (
+        f'<p class="quiet">{esc(NOT_A_DETERMINATION)}</p>\n' + "\n".join(fired)
+        if fired
+        else '<p class="quiet">None, on the Signals defined in this build.</p>'
+    )
+    quiet_html = (
+        "\n".join(quiet)
+        if quiet
+        else '<p class="quiet">None: every Signal defined in this build fired, above.</p>'
+    )
+    if not signals:
+        fired_html = '<p class="quiet">None. No signal is defined in this build.</p>'
+        quiet_html = '<p class="quiet">None to list.</p>'
+    return (
+        f'<section id="signals">\n<h2>Signals that fired</h2>\n{fired_html}\n</section>\n'
+        f"<section>\n<h2>Signals that did not fire</h2>\n{quiet_html}\n</section>"
+    )
+
+
+def signal_check_line(signals: list[dict], findings: list[dict]) -> str:
+    """The checklist's line for Signals on one officeholder's page."""
+    if not signals:
+        return "<b>none defined</b> · so none can fire, for anyone."
+    parts = []
+    for signal in signals:
+        n = len(fired_now(findings, signal["id"]))
+        state = (
+            f"fired on {n:,} {plural(n, 'report', 'reports')}, below"
+            if n
+            else "did not fire; below, which silence it is"
+        )
+        parts.append(f"{esc(signal['name'])}, version {signal['version']}: {state}")
+    n = len(signals)
+    return f"<b>{n} defined</b> · " + "; ".join(parts) + "."
 
 
 class Raw(str):
@@ -584,8 +938,16 @@ def how_to_read(person: bool) -> str:
         ),
         (
             "A signal",
-            "A condition written down in advance, citing the rule it comes from. None is defined "
-            "in this build, so none can fire.",
+            "A condition written down in advance, citing the rule it comes from, with a page that "
+            "says what it reads, how it counts, and what it does not say. A change to one is a new "
+            "version; the old one stays readable.",
+        ),
+        (
+            "A finding",
+            "One report on which a signal fired: the report, the rows, their dates and the "
+            "arithmetic, and the command that regenerates it from the rows it names. It describes "
+            "the report against the rule; it is not a determination by the House Committee on "
+            "Ethics, which decides whether a report was late.",
         ),
         (
             "The seal",
@@ -692,7 +1054,7 @@ def documents_read(filings: list[dict]) -> tuple[int, int]:
     return read, scanned
 
 
-def checks_section(holder: dict, filings: list[dict], held_here) -> str:
+def checks_section(holder: dict, filings: list[dict], held_here, signal_line: str = "") -> str:
     """What the register can and cannot check here. Identical in shape for everyone."""
     roster_read = holder.get("source", {}).get("retrieved_at", "")[:10]
     n = len(filings)
@@ -750,7 +1112,7 @@ def checks_section(holder: dict, filings: list[dict], held_here) -> str:
         f"{esc(roster_read)}.</dd>\n"
         f"<dt>Filings index</dt><dd>{index_line}</dd>\n"
         f"<dt>Documents</dt><dd>{documents}</dd>\n"
-        "<dt>Signals</dt><dd><b>none defined</b> · so none can fire, for anyone.</dd>\n"
+        f"<dt>Signals</dt><dd>{signal_line or signal_check_line([], [])}</dd>\n"
         "</dl>\n</section>"
     )
 
@@ -997,7 +1359,11 @@ def render_officeholder(
     held_here=0,
     transactions: list[dict] | None = None,
     held_reports: int = 0,
+    signals: list[dict] | None = None,
+    findings: list[dict] | None = None,
+    outcomes: dict[str, list[dict]] | None = None,
 ) -> str:
+    signals, findings, outcomes = signals or [], findings or [], outcomes or {}
     office = holder["offices"][0] if holder.get("offices") else {}
     seal = striker.strike(holder["id"], meta.get("digest", ""), ticks=0, bars=0)
     roster_read = holder.get("source", {}).get("retrieved_at", "")[:10]
@@ -1022,9 +1388,11 @@ def render_officeholder(
         + "\n</div>\n</header>"
     )
     body = (
-        f'{head}\n<main id="main">\n{REQUIRES}\n{checks_section(holder, filings, held_here)}\n'
+        f'{head}\n<main id="main">\n{REQUIRES}\n'
+        f"{checks_section(holder, filings, held_here, signal_check_line(signals, findings))}\n"
         f"{filings_section(filings, held_here)}\n"
-        f"{transactions_section(filings, transactions or [], held_reports)}\n{SIGNALS}\n"
+        f"{transactions_section(filings, transactions or [], held_reports)}\n"
+        f"{signals_section(signals, findings, outcomes, {f['id']: f for f in filings})}\n"
         f"{how_to_read(True)}\n"
         "</main>\n"
         f"{footer(meta, home=False)}"
@@ -1152,9 +1520,31 @@ def state_of_record(
     at_seat_total: int,
     rejected_url: str,
     transactions: list[dict] | None = None,
+    signal_runs: list[tuple[dict, dict]] | None = None,
 ) -> str:
     """Numbers about the register and the chamber as a whole. None is about a person."""
     transactions = transactions or []
+    signal_lines = ""
+    for signal, summary in signal_runs or []:
+        by_state = summary.get("reports_by_state", {})
+        read_reports = by_state.get("evaluated", 0)
+        skipped = sum(summary.get("rows_not_evaluated", {}).values())
+        fired = summary["reports_with_a_finding"]
+        signal_lines += (
+            f"<dt>{fired:,}</dt><dd>of the {read_reports:,} transaction reports read, on which the "
+            f'signal <a href="{signal_page_path(signal)}">{esc(signal["name"])}</a>, version '
+            f"{signal['version']}, fired: {summary['rows_after']:,} of the "
+            f"{summary['rows_evaluated']:,} rows it evaluated are dated by the Clerk's index after "
+            f"the deadline the rule sets, on reports attributed to "
+            f"{summary['officeholders_with_a_finding']:,} officeholders. {skipped:,} rows were not "
+            f"evaluated, each with a reason, and {by_state.get('not read', 0):,} reports were not "
+            "read. A count about the register; no page ranks anyone by it"
+            f"{bar(fired, read_reports)}</dd>\n"
+        )
+    if not signal_runs:
+        signal_lines = (
+            "<dt>0</dt><dd>signals defined, so 0 fired; silence is a legitimate result</dd>\n"
+        )
     marked = sum(marked_counts(transactions).values())
     marked_note = f" ({marked} of them marked Amended or Deleted by the filer)" if marked else ""
     counts = run.get("counts", {})
@@ -1224,11 +1614,138 @@ def state_of_record(
         f'not by what was filed. <a href="{rejected_url}">The '
         "rows, with reasons</a>; every row there is a line of the Clerk's index the register did "
         "not attribute, and presence in that file is not evidence of anything about anyone.</dd>\n"
-        "<dt>0</dt><dd>signals defined, so 0 fired; silence is a legitimate result</dd>\n"
+        f"{signal_lines}"
         "</dl>\n"
         f'<p class="quiet">{fresh}The seal fixes exactly this reading.</p>\n'
         f"{chart}</section>"
     )
+
+
+def signals_lede(signal_runs: list[tuple[dict, dict]]) -> str:
+    if not signal_runs:
+        return (
+            '<p class="lede">This build holds no signals: no condition has been written against '
+            "the record yet, so no page reports one. A page with no signal fired is the expected "
+            "page. Quiet means no written condition is present in the record.</p>\n"
+        )
+    names = "; ".join(
+        f'<a href="{signal_page_path(s)}">{esc(s["name"])}</a>, version {s["version"]}'
+        for s, _ in signal_runs
+    )
+    n = len(signal_runs)
+    return (
+        f'<p class="lede">This build holds {n} {plural(n, "signal", "signals")}, written down in '
+        f"advance and citing the rule {plural(n, 'it comes', 'they come')} from: {names}. "
+        "Where one fires, the officeholder's page shows the report, the dates and the arithmetic, "
+        "and what the signal does not say. A page where it did not fire says which silence it is: "
+        "every "
+        "row on time, rows not evaluated and why, or nothing to evaluate.</p>\n"
+    )
+
+
+def render_signal_page(
+    signal: dict,
+    summary: dict,
+    findings: list[dict],
+    holders: list[dict],
+    meta: dict,
+) -> str:
+    """A signal's page (ECOSYSTEM.md §1.2; PIPELINE.md Stage 5): its definition in its own words,
+    what it did in this build, and every report on which it fired, in seat order."""
+    by_state = summary.get("reports_by_state", {})
+    read_reports = by_state.get("evaluated", 0)
+    fired = summary["reports_with_a_finding"]
+    skipped = summary.get("rows_not_evaluated", {})
+    holder_of = {h["id"]: h for h in holders}
+    current = fired_now(findings, signal["id"])
+    withdrawn = len(withdrawn_now(findings, signal["id"]))
+    by_holder: dict[str, list[dict]] = {}
+    for f in current:
+        by_holder.setdefault(f["officeholder_id"], []).append(f)
+    rows = []
+    for oid in sorted(by_holder, key=lambda i: (holder_of[i]["offices"][0]["seat"], i)):
+        holder = holder_of[oid]
+        seat = holder["offices"][0]["seat"]
+        page_url = f"../../officeholders/{esc(slug(oid))}.html"
+        reports = ", ".join(
+            f'<a href="{page_url}#finding-{esc(f["producing_filings"][0].rsplit(":", 1)[1])}">'
+            f"{esc(f['evidence']['filed_at'])}</a>"
+            for f in sorted(by_holder[oid], key=lambda f: (f["evidence"]["filed_at"], f["id"]))
+        )
+        rows.append(
+            f'<tr data-id="{esc(oid)}" data-seat="{esc(seat)}">'
+            f'<td class="idx">{esc(seat)}</td>'
+            f'<td><a href="{page_url}#signal-{esc(signal["slug"])}">'
+            f"{esc(holder['legal_name'])}</a></td>"
+            f"<td>{reports}</td></tr>"
+        )
+    table = (
+        '<table id="fired" data-order="seat" data-lists="officeholders">\n'
+        "<caption>Every report on which this signal fired in this build, under the officeholder "
+        "the register attributes it to, in seat order, which is an order of offices and not of "
+        "persons. "
+        "An officeholder with more than one such report is listed once, with each report's date. "
+        "Nothing here is a ranking and no number stands beside a name; each report is on its "
+        "officeholder's page with its dates, its arithmetic, and what the signal does not say."
+        "</caption>\n"
+        "<thead><tr><th>Seat</th><th>Name, as the Clerk lists it</th>"
+        "<th>Reports it fired on, by the date the Clerk's index gives them</th></tr></thead>\n"
+        f"<tbody>\n{''.join(rows)}\n</tbody>\n</table>"
+        if rows
+        else '<p class="quiet">It fired on no report in this build.</p>'
+    )
+    skipped_n = sum(skipped.values())
+    head = (
+        '<header class="frame">\n'
+        f'<p class="frame">{esc(FRAME)}</p>\n'
+        '<div class="masthead">\n<div>\n'
+        '<p class="kicker">Oath · a signal</p>\n'
+        f"<h1>{esc(signal['name'])}</h1>\n"
+        f'<p class="office">Version {signal["version"]} · <code>{esc(signal["id"])}</code> · '
+        f"{standard_links(signal)}</p>\n"
+        "</div>\n</div>\n</header>"
+    )
+    record = (
+        '<section class="record">\n<h2>What it did in this build</h2>\n<dl>\n'
+        f"<dt>{read_reports:,}</dt><dd>transaction reports read and evaluated; "
+        f"{read_reports - fired:,} of them had every evaluated row on or before its deadline, and "
+        f"it fired on {fired:,}{bar(fired, read_reports)}</dd>\n"
+        f"<dt>{summary['rows_evaluated']:,}</dt><dd>rows evaluated, {summary['rows_after']:,} "
+        "of them dated by the Clerk's index after the deadline</dd>\n"
+        f"<dt>{skipped_n:,}</dt><dd>rows not evaluated: "
+        f"{esc(reason_clause(skipped)) or 'none'}</dd>\n"
+        f"<dt>{by_state.get('not read', 0):,}</dt><dd>reports captured and not read: scanned "
+        "paper, which the Committee judges by its postmark, and the register does not see the "
+        "postmark</dd>\n"
+        f"<dt>{summary['officeholders_with_a_finding']:,}</dt><dd>officeholders the reports it "
+        "fired on are attributed to. A count about the register; no page ranks anyone by it</dd>\n"
+        + (
+            f"<dt>{withdrawn:,}</dt><dd>Findings it once produced and a correction withdrew; each "
+            "stays in the ledger with its reason, and on its officeholder's page</dd>\n"
+            if withdrawn
+            else ""
+        )
+        + "</dl>\n</section>"
+    )
+    body = (
+        f'{head}\n<main id="main">\n'
+        f"<section>\n<h2>What it describes</h2>\n{md_blocks(signal['description'])}\n"
+        f'<p class="quiet">{esc(NOT_A_DETERMINATION)}</p>\n</section>\n'
+        f"<section>\n<h2>How it counts</h2>\n{md_blocks(signal['criteria'])}\n</section>\n"
+        f"<section>\n<h2>What it does not say</h2>\n{md_blocks(signal['not_saying'])}\n</section>\n"
+        f"{record}\n"
+        f"<section>\n<h2>Where it fired</h2>\n{table}\n</section>\n"
+        f"<section>\n<h2>Worked example</h2>\n{md_blocks(signal['worked_example']['expected'])}\n"
+        "</section>\n"
+        "<section>\n<h2>Check it yourself</h2>\n"
+        '<p class="quiet">Every Finding regenerates from the rows it names, and every file the '
+        "signal writes regenerates from the rows and this definition:</p>\n"
+        "<pre><code>python tools/rebuild.py &lt;finding-id&gt;\n"
+        "python tools/rebuild.py\n"
+        "python tools/verify.py</code></pre>\n</section>\n"
+        f"</main>\n{footer(meta, home=False, to_root='../../')}"
+    )
+    return page(signal["name"], body)
 
 
 def render_index(
@@ -1241,6 +1758,7 @@ def render_index(
     at_seat: dict[str, dict[str, int]] | None = None,
     rejected_url: str = REPO + "data/rejected/house-fd/",
     transactions: list[dict] | None = None,
+    signal_runs: list[tuple[dict, dict]] | None = None,
 ) -> str:
     at_seat = at_seat or {}
     holder_by_seat = {h["offices"][0]["seat"]: h for h in holders}
@@ -1293,9 +1811,7 @@ def render_index(
         "Clerk's 2025 filing index the register could match to the name on the Clerk's roster, "
         "linked to the Clerk's own copy. The register draws no conclusion about anyone. It shows "
         "what the index lists, when, and where to read it yourself.</p>\n"
-        '<p class="lede">This build holds no signals: no condition has been written against the '
-        "record yet, so no page reports one. A page with no signal fired is the expected page. "
-        "Quiet means no written condition is present in the record.</p>\n"
+        f"{signals_lede(signal_runs or [])}"
         f'<blockquote class="oath"><p>{esc(OATH)}</p><footer>{OATH_CITE} Every member took it. '
         "The register sets the record beside it.</footer></blockquote>\n"
         "</div>\n"
@@ -1324,7 +1840,15 @@ def render_index(
         "<tbody>\n" + "\n".join(rows) + "\n</tbody>\n</table>\n</section>"
     )
     record = state_of_record(
-        meta, run, holders, filings, offices, held_total(at_seat), rejected_url, transactions
+        meta,
+        run,
+        holders,
+        filings,
+        offices,
+        held_total(at_seat),
+        rejected_url,
+        transactions,
+        signal_runs,
     )
     body = (
         f'{head}\n<main id="main">\n{door}\n{tile_map(offices)}\n{record}\n{table}\n'
@@ -1334,6 +1858,33 @@ def render_index(
 
 
 # ---- main ---------------------------------------------------------------------------------
+
+
+def load_signals(
+    root: Path,
+) -> tuple[list[dict], list[dict], list[tuple[dict, dict]], dict[str, dict[str, list[dict]]]]:
+    """The current version of each signal, the Findings ledger, each signal's run summary, and
+    its report outcomes by officeholder, all from the sealed store."""
+    rows = read_ndjson(root / "data" / "signals.ndjson")
+    latest: dict[str, dict] = {}
+    for row in rows:
+        if row["version"] >= latest.get(row["slug"], {}).get("version", 0):
+            latest[row["slug"]] = row
+    signals = sorted(latest.values(), key=lambda s: s["id"])
+    findings = read_ndjson(root / "data" / "findings.ndjson")
+    signal_runs, outcomes_by = [], {}
+    for signal in signals:
+        record = read_ndjson(
+            root / "data" / "signal-runs" / f"{signal['slug']}-v{signal['version']}.ndjson"
+        )
+        if not record:
+            continue
+        signal_runs.append((signal, record[0]))
+        by_oh: dict[str, list[dict]] = {}
+        for outcome in record[1:]:
+            by_oh.setdefault(outcome["officeholder_id"], []).append(outcome)
+        outcomes_by[signal["id"]] = by_oh
+    return signals, findings, signal_runs, outcomes_by
 
 
 def pick_run(root: Path) -> tuple[dict, list[Path]]:
@@ -1395,6 +1946,10 @@ def main(argv: list[str] | None = None) -> int:
     by_holder: dict[str, list[dict]] = {}
     for f in filings:
         by_holder.setdefault(f["officeholder_id"], []).append(f)
+    signals, findings, signal_runs, outcomes_by = load_signals(root)
+    findings_by: dict[str, list[dict]] = {}
+    for f in findings:
+        findings_by.setdefault(f["officeholder_id"], []).append(f)
 
     (out / "officeholders").mkdir(parents=True, exist_ok=True)
     for h in holders:
@@ -1409,17 +1964,37 @@ def main(argv: list[str] | None = None) -> int:
                 at_seat.get(seat, {}),
                 tx_by_holder.get(h["id"], []),
                 held_reports.get(seat, 0),
+                signals,
+                findings_by.get(h["id"], []),
+                {sid: by_oh.get(h["id"], []) for sid, by_oh in outcomes_by.items()},
             ),
             encoding="utf-8",
             newline="\n",
         )
     (out / "index.html").write_text(
         render_index(
-            holders, offices, filings, run, meta, striker, at_seat, rejected_url, transactions
+            holders,
+            offices,
+            filings,
+            run,
+            meta,
+            striker,
+            at_seat,
+            rejected_url,
+            transactions,
+            signal_runs,
         ),
         encoding="utf-8",
         newline="\n",
     )
+    for signal, summary in signal_runs:
+        target = out / signal_page_path(signal)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(
+            render_signal_page(signal, summary, findings, holders, meta),
+            encoding="utf-8",
+            newline="\n",
+        )
     digest = meta.get("digest", "")
     (out / "mark.svg").write_text(
         striker.strike(digest, digest, with_wordmark=True), encoding="utf-8", newline="\n"
@@ -1427,7 +2002,10 @@ def main(argv: list[str] | None = None) -> int:
 
     quiet = sum(1 for h in holders if not by_holder.get(h["id"]))
     shown = out.relative_to(root).as_posix() if out.is_relative_to(root) else str(out)
-    print(f"rendered {len(holders)} pages, the index, and mark.svg to {shown}")
+    print(
+        f"rendered {len(holders)} pages, the index, {len(signal_runs)} signal "
+        f"{plural(len(signal_runs), 'page', 'pages')} and mark.svg to {shown}"
+    )
     print(f"{quiet} pages have no matched row; each says so, with the count set aside at its seat")
     print("Now run: python tools/lint-frame-presence.py && python tools/lint-no-ranking.py")
     return 0

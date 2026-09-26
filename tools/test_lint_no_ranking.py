@@ -80,3 +80,65 @@ def test_missing_table_fails():
 def test_nothing_rendered_is_not_a_failure(tmp_path: Path, capsys):
     assert lint.main([str(tmp_path)]) == 0
     assert "nothing rendered" in capsys.readouterr().out
+
+
+def listing(attributes: str, rows: list[tuple[str, str, str]]) -> str:
+    """A Signal page's table: (row key attribute, seat, last cell)."""
+    body = "".join(
+        f'<tr {key}><td>{seat}</td><td><a href="../../officeholders/{seat}.html">N</a></td>'
+        f"<td>{last}</td></tr>"
+        for key, seat, last in rows
+    )
+    return (
+        f"<html><body><table {attributes}><thead><tr><th>Seat</th><th>Name</th><th>Reports</th>"
+        f"</tr></thead><tbody>{body}</tbody></table></body></html>"
+    )
+
+
+def test_a_signal_page_in_seat_order_with_dates_passes():
+    page = listing(
+        'id="fired" data-order="seat" data-lists="officeholders"',
+        [('data-seat="AK00"', "AK00", "2025-03-01"), ('data-seat="AL01"', "AL01", "2025-04-02")],
+    )
+    assert lint.check_summary(page) == []
+
+
+def test_a_table_that_links_to_officeholders_is_checked_undeclared():
+    """A list of persons is one whatever its author called it."""
+    page = listing('id="fired"', [("", "AL01", "2025-03-01"), ("", "AK00", "2025-04-02")])
+    assert "the fired table declares no data-order" in lint.check_summary(page)
+
+
+def test_a_signal_page_ordered_by_its_findings_fails():
+    page = listing(
+        'id="fired" data-order="findings" data-lists="officeholders"',
+        [('data-findings="3"', "AL01", "2025-03-01"), ('data-findings="1"', "AK00", "2025-04-02")],
+    )
+    assert any("does not permit" in f for f in lint.check_summary(page))
+
+
+def test_a_count_beside_a_name_on_a_signal_page_fails():
+    page = listing(
+        'id="fired" data-order="seat" data-lists="officeholders"',
+        [('data-seat="AK00"', "AK00", "4"), ('data-seat="AL01"', "AL01", "1")],
+    )
+    failures = lint.check_summary(page)
+    assert "row 1 carries a bare number (4) beside a person" in failures
+
+
+def test_a_summary_page_that_lists_no_one_passes():
+    page = "<html><body><table><tr><td>1,292</td><td>rows</td></tr></table></body></html>"
+    assert lint.check_summary(page) == []
+
+
+def test_the_walk_reads_every_signal_page_and_names_the_failing_one(tmp_path: Path, capsys):
+    (tmp_path / "signals" / "a-signal").mkdir(parents=True)
+    (tmp_path / "index.html").write_text(index("seat", [("AK00", "A")]), encoding="utf-8")
+    ranked = listing(
+        'id="fired" data-order="seat" data-lists="officeholders"',
+        [('data-seat="AL01"', "AL01", "2025-03-01"), ('data-seat="AK00"', "AK00", "2025-04-02")],
+    )
+    (tmp_path / "signals" / "a-signal" / "v1.html").write_text(ranked, encoding="utf-8")
+    assert lint.main([str(tmp_path), "--site", "."]) == 1
+    out = capsys.readouterr().out
+    assert "signals/a-signal/v1.html: rows are not in the declared seat order" in out

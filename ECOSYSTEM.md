@@ -15,7 +15,7 @@ A simple, static, symbolic surface at `oath.<domain>` (domain choice deferred). 
 ### 1.1 Principles
 
 - **Static, prerendered, edge-cached.** No user accounts, no comment forms, no interactive analytics beyond a privacy-respecting counter, no client-side JavaScript that changes what the page says.
-- **The frame appears on every officeholder page.** Presence in the register is not evidence of wrongdoing. Enforced by INVARIANTS.md §7.
+- **The frame appears on every officeholder page.** Presence in the register is not evidence of wrongdoing. Enforced by INVARIANTS.md §7, whose gate reads every page that names an officeholder: each officeholder's page, the index, and each Signal's page.
 - **The cite-the-build line appears on every page.** Every page prints the digest of the build it was generated from, and a `verify this` link.
 - **No cross-officeholder ranking.** Enforced by INVARIANTS.md §13. The index sorts by office and jurisdiction, or alphabetically, never by signal count.
 - **Renders in light and dark themes.** No brand-loud color. The document typography from the errata project (rule-weight hierarchy, hung mono indices, small-caps section labels) carries here.
@@ -71,15 +71,20 @@ TRANSACTIONS REPORTED (grouped by report, as filed)
   ...
 
 SIGNALS FIRED (grouped by signal, not by severity)
-  Signal name (version)                     STANDARD ref
-    Finding date · Producing filings
-    Description text
-    Why: standard citation and criterion
-    Reproduce: `tools/rebuild <finding-id>`
+  Signal name (version)                     STANDARD ref · its page
+    What it evaluated here, and what it did not, with the reasons
+    Report filed <date> · its rows, as filed · the Clerk's copy
+      Description text
+      The rows after the deadline: dates, deadline, which limit set it, days
+      Corrected: the row it supersedes, and why (only on a correction)
+      Reproduce: `python tools/rebuild.py <finding-id>`
   ...
 
 SIGNALS THAT DID NOT FIRE (defined signals, no finding)
-  Signal name (version) · reason: no criterion met
+  Signal name (version) · which silence it is: every evaluated row on
+  time; rows not evaluated, and why; reports captured and not read;
+  or nothing attributed to evaluate. A Finding withdrawn by correction
+  is said here as a withdrawal, never drawn as a Finding.
 
 ─────────────────────────────────────────────────────────────
 BUILD: <digest>  ANCHOR: <state>  CITE THIS BUILD: <cmd>
@@ -208,7 +213,7 @@ Cross-linkage is by human hyperlink, not by build coupling. Each sibling remains
 ## 6. What ecosystem work happens when
 
 - **Phase 3.** The per-officeholder page template and the mark generator land as part of the first live per-officeholder page. Static site scaffold minimal (single page rendered by hand or by a small script).
-- **Phase 4.** The `/signals` index and the per-signal pages land as part of the second Signal.
+- **Phase 4.** The `/signals` index lands as part of the second Signal. The per-signal page landed early, with the first Signal on 2026-09-26, because a Finding whose method is not one link away is a Finding a reader has to take on trust.
 - **Phase 5.** Full static site build, edge deployment, domain, download endpoint, ANCHORS.md ledger public.
 - **Phase 6.** SPEC.md finalised; first external fork encouraged (a state-level Oath, or a subject-population Oath).
 
