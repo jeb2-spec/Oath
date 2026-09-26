@@ -3,7 +3,8 @@
  *
  * RUBRIC.md gate 4: given the Signal's version and the filings a Finding names, the reference
  * implementation regenerates the Finding byte-identically. Here that is tested twice: against
- * the hand-worked cases in fixtures/stock-act-late-ptr/cases.json, and against every Finding
+ * the hand-worked cases in fixtures/stock-act-ptr-after-deadline/cases.json, and against every
+ * Finding
  * and every report outcome the Python implementation sealed into data/, compared as canonical
  * JSON (keys sorted, no spaces) after setting aside the two fields only a build can give a
  * Finding, fired_at and build_hash. A chain of corrections is followed to its current row, as
@@ -18,11 +19,12 @@ import {
   evaluate,
   evaluateReport,
   type Filing,
+  FRAME,
   type Holder,
   readDate,
   SIGNAL_ID,
   type Transaction,
-} from "./stock-act-late-ptr";
+} from "./stock-act-ptr-after-deadline";
 
 const root = new URL("../../", import.meta.url);
 const text = (path: string) => readFileSync(new URL(path, root), "utf8");
@@ -44,17 +46,16 @@ function canonical(value: unknown): string {
   return JSON.stringify(value);
 }
 
+interface CaseRow extends Record<string, unknown> {
+  id: string;
+  expect: Record<string, unknown>;
+}
+
 interface Case {
   name: string;
   officeholder: { id: string; sworn_at: string | null };
   report: { id: string; filed_at: string | null; read: boolean };
-  rows: {
-    id: string;
-    transaction_date: string;
-    notified_date: string | null;
-    filing_status: string | null;
-    expect: Record<string, unknown>;
-  }[];
+  rows?: CaseRow[];
   expect: {
     fires: boolean;
     state?: string;
@@ -65,7 +66,9 @@ interface Case {
   };
 }
 
-const cases: Case[] = JSON.parse(text("fixtures/stock-act-late-ptr/cases.json")).cases;
+const fixture = JSON.parse(text("fixtures/stock-act-ptr-after-deadline/cases.json"));
+const cases: Case[] = fixture.cases;
+const defaults: Record<string, unknown> = fixture.row_defaults;
 
 function rowsOf(c: Case): { holders: Holder[]; filings: Filing[]; transactions: Transaction[] } {
   return {
@@ -79,13 +82,10 @@ function rowsOf(c: Case): { holders: Holder[]; filings: Filing[]; transactions: 
         extraction_confidence: c.report.read ? "structured" : null,
       },
     ],
-    transactions: c.rows.map((r) => ({
-      id: r.id,
-      filing_id: c.report.id,
-      transaction_date: r.transaction_date,
-      notified_date: r.notified_date,
-      filing_status: r.filing_status,
-    })),
+    transactions: (c.rows ?? []).map((r) => {
+      const { expect: _expect, ...row } = r;
+      return { ...defaults, ...row, filing_id: c.report.id } as unknown as Transaction;
+    }),
   };
 }
 
@@ -93,7 +93,7 @@ group("the known-answer cases", () => {
   test.each(cases.map((c) => [c.name, c] as const))("%s", (_name, c) => {
     const { holders, filings, transactions } = rowsOf(c);
     const result = evaluateReport(filings[0], transactions, readDate(holders[0].sworn_at));
-    for (const row of c.rows) expect(result.results[row.id]).toEqual(row.expect);
+    for (const row of c.rows ?? []) expect(result.results[row.id]).toEqual(row.expect);
 
     const { findings, outcomes } = evaluate(holders, filings, transactions);
     expect(findings.length > 0).toBe(c.expect.fires);
@@ -103,6 +103,7 @@ group("the known-answer cases", () => {
     if (c.expect.fires) {
       expect(findings[0].producing_rows.map((r) => r.id)).toEqual(c.expect.after);
       if (c.expect.description) expect(findings[0].description).toBe(c.expect.description);
+      expect(findings[0].frame).toBe(FRAME);
     }
   });
 
@@ -157,7 +158,9 @@ function disagreements(
       continue;
     }
     const drop =
-      row.id === id ? ["fired_at", "build_hash"] : ["fired_at", "build_hash", "id", "notes"];
+      row.id === id
+        ? ["fired_at", "build_hash"]
+        : ["fired_at", "build_hash", "id", "notes", "correction"];
     if (canonical(omit(found, drop)) !== canonical(omit(row, drop))) out.push(`${id}: differs`);
   }
   return out;
@@ -208,7 +211,9 @@ group("the register", () => {
   });
 
   test("every report outcome the run recorded, the reference regenerates byte-identically", () => {
-    const [summary, ...recorded] = ndjson("data/signal-runs/stock-act-late-ptr-v1.ndjson");
+    const [summary, ...recorded] = ndjson(
+      "data/signal-runs/stock-act-ptr-after-deadline-v1.ndjson",
+    );
     expect(outcomes.map(canonical)).toEqual(recorded.map(canonical));
     expect(summary.reports_with_a_finding).toBe(findings.length);
     expect(summary.reports).toBe(outcomes.length);

@@ -676,6 +676,7 @@ def build(year: int, dry_run: bool = False) -> int:
                         "owner": tx["owner"],
                         "asset": tx["asset"],
                         "asset_normalized": tx["ticker"],
+                        "asset_code": tx.get("asset_code"),
                         "action": tx["action"],
                         "transaction_date": tx["transaction_date"],
                         "notified_date": tx["notified_date"],

@@ -69,6 +69,18 @@
         "fixture": { "type": "string", "description": "Path to the fixture data used in the example." },
         "expected": { "type": "string", "description": "Description of the expected Finding(s), or the expected null result." }
       }
+    },
+    "implementation": {
+      "type": "object",
+      "required": ["definition", "python", "fixture"],
+      "additionalProperties": false,
+      "description": "SHA-256 of each file that makes this version what it is: the whole definition file, the implementation that writes its Findings, its reference implementation where one exists, and its known-answer cases. Written by src/signals/run.py, never typed. The code is part of the criteria (METHODOLOGY.md §3.2), so a published version's row, these hashes included, never changes; a change to any of these files is a new version (INVARIANTS.md §11).",
+      "properties": {
+        "definition": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "python": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "reference": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "fixture": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      }
     }
   }
 }
