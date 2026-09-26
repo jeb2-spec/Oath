@@ -484,6 +484,9 @@ def build(year: int, dry_run: bool = False) -> int:
             "common_name": person["namelist"] or None,
             "party": person["party"] or None,
             "offices": [office],
+            # The roster's own sworn date, as data, for any Signal that asks whether a rule
+            # applied to this person on a date; the note below says the same in prose.
+            "sworn_at": sworn_iso(person),
             "biographical_ids": {
                 "bioguide_id": person["bioguide"],
                 "fec_id": None,

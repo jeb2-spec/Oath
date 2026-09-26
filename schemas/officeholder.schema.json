@@ -30,6 +30,11 @@
       "items": { "$ref": "office.schema.json" },
       "description": "The Offices this person has held. Ordered by term start, most recent first."
     },
+    "sworn_at": {
+      "type": ["string", "null"],
+      "format": "date",
+      "description": "The day the primary source records this person as sworn into the first Office listed, where it records one (for the House, the sworn-date in the Clerk's roster). Distinct from the Office's term_start, which is the seat's term. A Signal that asks whether a rule applied to a person on a date reads this, never the notes."
+    },
     "biographical_ids": {
       "type": "object",
       "additionalProperties": false,
