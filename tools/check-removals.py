@@ -7,45 +7,44 @@ stood before the push), and fails when:
 
   1. a published row is gone from the tree: an office, an officeholder, a filing, a
      holding, a transaction, or a change row;
-  2. a fact a published row carries changed in place. Facts only accrue: a value stays as
-     published; a null may be filled; a list may grow at its end; an object may gain keys.
-     One thing may move without a word: when the row was last read
-     (`source.retrieved_at`), because a refresh reads the source again;
-  3. a published change row (data/changes.ndjson), which records what a capture showed,
-     changed in any byte.
+  2. anything a published row carries changed in place. A row only gains: a null may be
+     filled, a list may grow at its end, an object may gain keys; nothing it carries moves,
+     the time it was read and the hash of the bytes it was read from included. The one
+     exception is a person's correction: a row of data/changes.ndjson whose change is
+     "corrected" names the row, the fact, the value it carried and the value it now
+     carries, and cites the evidence (tools/correct.py writes it); that move, and no other,
+     passes;
+  3. data/changes.ndjson is not the published file with rows added at its end, byte for
+     byte: a change row records what a capture showed, and never changes;
+  4. a capture the register keeps is gone or altered. Every file under data/captures/sha256/ is
+     named by the SHA-256 of its bytes and never changes, and every change row's capture is
+     kept there, so a change can be checked from the repository alone.
 
-It warns, and passes, where a published row's `notes` (the adapter's prose about the
-row) or its source's `content_hash` (the bytes it was read from) moved, because a reader
-should see it and neither is by itself a fact about a person. Findings and Signal
-definitions have their own gates (check-supersessions, check-signal-versions). It fails
-rather than passes when it cannot read the published ref. Standard library.
+Findings and Signal definitions have their own gates (check-supersessions,
+check-signal-versions). It fails rather than passes when it cannot read the published ref.
+Standard library.
 
-Where it stops short of §14's text, said plainly: §14 makes any edit in place a build
-failure, and this gate refuses every changed fact but lets the re-read time move, and
-warns rather than fails on notes and on the source's content hash. The reason is the
-adapter, which stamps a row it derives again with the time of this build's capture, so a
-gate that refused every byte would refuse every refresh. A row kept byte-stable while its
-facts hold would let the gate refuse every edit, as §14 says; that is on the course, a
-choice for the maintainer (NEXT.md), and until then this gate is §14's floor, not all of it.
-
-A published row stays even when a later capture no longer lists it: the adapter carries
-it as published and records the change as a row of its own (src/adapters/house-fd/build.py,
-`carry_forward`). So a Member who leaves office, a filing the Clerk's index stops listing,
-and a filing year whose Congress has ended all keep their rows, and this gate is what
-holds the adapter to that.
+A published row stays even when a later capture no longer lists it, or states one of its
+facts otherwise: the adapter carries it as published and records what the capture showed as
+a change row of its own (src/adapters/house-fd/build.py). So a Member who leaves office, a
+filing the Clerk's index stops listing, a filing the index dates otherwise, and a filing
+year whose Congress has ended all keep their rows, and this gate is what holds the adapter
+to that.
 
     python tools/check-removals.py
 
 Example of a failing input: an officeholder the roster no longer lists, dropped from
-data/officeholders.ndjson instead of carried, or a published filing's officeholder_id
-moved to another person by a later join.
+data/officeholders.ndjson instead of carried, or a published filing's officeholder_id moved
+to another person with no correction row naming the move.
 """
 
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -58,92 +57,143 @@ FILES = (
     "data/transactions.ndjson",
     "data/changes.ndjson",
 )
-IMMUTABLE = {"data/changes.ndjson"}
-MOVES = {("source", "retrieved_at")}
-WARNS = {("notes",), ("source", "content_hash")}
+APPENDED = "data/changes.ndjson"
+CAPTURES = "data/captures/sha256"
+KEPT = re.compile(r"^([0-9a-f]{64})(\.[A-Za-z0-9]+)?$")
 MISSING = object()
 
 
-def git(root: Path, *args: str) -> subprocess.CompletedProcess:
+def git(root: Path, *args: str, text: bool = True) -> subprocess.CompletedProcess:
     return subprocess.run(
-        ["git", "-C", str(root), *args], capture_output=True, text=True, encoding="utf-8"
+        ["git", "-C", str(root), *args],
+        capture_output=True,
+        text=text,
+        **({"encoding": "utf-8"} if text else {}),
     )
 
 
-def published(root: Path, ref: str, rel: str) -> list[dict] | None:
-    """The file as published at `ref`: its rows, [] when the ref has no such file, and None
-    when the ref itself cannot be read."""
-    if git(root, "rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}").returncode != 0:
-        return None
+def readable(root: Path, ref: str) -> bool:
+    return git(root, "rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}").returncode == 0
+
+
+def published_text(root: Path, ref: str, rel: str) -> str:
+    """The file's text as published at `ref`; empty when the ref has no such file."""
     shown = git(root, "show", f"{ref}:{rel}")
-    if shown.returncode != 0:
-        return []
-    return [json.loads(line) for line in shown.stdout.splitlines() if line.strip()]
+    return shown.stdout if shown.returncode == 0 else ""
 
 
-def read(path: Path) -> list[dict]:
-    if not path.is_file():
-        return []
-    return [json.loads(line) for line in path.read_text("utf-8").splitlines() if line.strip()]
+def rows_of(text: str) -> list[dict]:
+    return [json.loads(line) for line in text.splitlines() if line.strip()]
+
+
+def read(path: Path) -> str:
+    return path.read_text("utf-8") if path.is_file() else ""
 
 
 def shown(value) -> str:
     if value is MISSING:
         return "gone"
-    text = json.dumps(value, ensure_ascii=False, sort_keys=True)
-    return text if len(text) <= 60 else text[:57] + "..."
+    return json.dumps(value, ensure_ascii=False, sort_keys=True)
+
+
+def canon(value) -> str:
+    return json.dumps(value, ensure_ascii=False, sort_keys=True)
 
 
 def compare(old, new, path: tuple = ()):
-    """Yield (kind, path, old, new) for every way `new` fails to keep what `old` carried;
-    kind is "fail" or "warn"."""
-    if path in MOVES:
-        return
-    if path in WARNS:
-        if old is not None and old != new:
-            yield "warn", path, old, new
-        return
+    """Yield (path, old, new) for every way `new` fails to keep what `old` carried."""
     if old is None:
         return
     if isinstance(old, dict):
         if not isinstance(new, dict):
-            yield "fail", path, old, new
+            yield path, old, new
             return
         for key, value in old.items():
             if key not in new:
-                yield "fail", (*path, key), value, MISSING
+                yield (*path, key), value, MISSING
             else:
                 yield from compare(value, new[key], (*path, key))
         return
     if isinstance(old, list):
         if not isinstance(new, list) or len(new) < len(old):
-            yield "fail", path, old, new
+            yield path, old, new
             return
         for index, value in enumerate(old):
             yield from compare(value, new[index], (*path, index))
         return
     if old != new:
-        yield "fail", path, old, new
+        yield path, old, new
 
 
-def problems(rel: str, tree: list[dict], before: list[dict]) -> tuple[list[str], list[str]]:
-    """(failures, warnings) for one file, the tree against its published rows."""
-    fails, warns = [], []
+def corrections(changes: list[dict]) -> set[tuple[str, str, str, str]]:
+    """Each move a person's correction names: (row, fact, what it was, what it is)."""
+    return {
+        (c["row_id"], c["field"], canon(c.get("was")), canon(c.get("now")))
+        for c in changes
+        if c.get("change") == "corrected" and "field" in c
+    }
+
+
+def problems(rel: str, tree: list[dict], before: list[dict], corrected=frozenset()) -> list[str]:
+    """Every way one file's rows in the tree fail to keep the published ones."""
+    fails = []
     here = {row["id"]: row for row in tree}
     for old in before:
         new = here.get(old["id"])
         if new is None:
             fails.append(f"{rel}: {old['id']} is published, and gone from the tree")
             continue
-        if rel in IMMUTABLE:
-            if new != old:
-                fails.append(f"{rel}: {old['id']} records what a capture showed; it never changes")
-            continue
-        for kind, path, was, now in compare(old, new):
+        for path, was, now in compare(old, new):
             where = ".".join(str(p) for p in path) or "(the row)"
-            line = f"{rel}: {old['id']} {where}: {shown(was)} -> {shown(now)}"
-            (fails if kind == "fail" else warns).append(line)
-    return fails, warns
+            if now is not MISSING and (old["id"], where, canon(was), canon(now)) in corrected:
+                continue
+            fails.append(f"{rel}: {old['id']} {where}: {shown(was)} -> {shown(now)}")
+    return fails
+
+
+def appended(tree: str, published: str) -> list[str]:
+    """The changes file must be the published one with rows added at its end."""
+    if tree.startswith(published):
+        return []
+    at = next(
+        (
+            n
+            for n, (a, b) in enumerate(zip(tree.splitlines(), published.splitlines(), strict=False))
+            if a != b
+        ),
+        min(len(tree.splitlines()), len(published.splitlines())),
+    )
+    return [
+        f"{APPENDED}: the published rows are not kept byte for byte at its start (line {at + 1}); "
+        "a change row never changes, and new ones are added at the end"
+    ]
+
+
+def capture_problems(root: Path, ref: str, changes: list[dict]) -> list[str]:
+    """Kept captures stay, byte for byte, each named by its hash, and every change cites one."""
+    fails = []
+    folder = root / CAPTURES
+    here = {p.name: p for p in folder.iterdir() if p.is_file()} if folder.is_dir() else {}
+    listed = git(root, "ls-tree", "-r", "--name-only", ref, "--", CAPTURES).stdout.split()
+    for rel in listed:
+        name = rel.rsplit("/", 1)[-1]
+        body = git(root, "show", f"{ref}:{rel}", text=False).stdout
+        if name not in here:
+            fails.append(f"{rel}: a kept capture is published, and gone from the tree")
+        elif here[name].read_bytes() != body:
+            fails.append(f"{rel}: a kept capture changed; its bytes never change")
+    for name, path in sorted(here.items()):
+        named = KEPT.match(name)
+        if named is None or hashlib.sha256(path.read_bytes()).hexdigest() != named.group(1):
+            fails.append(f"{CAPTURES}/{name}: not named by the SHA-256 of its bytes")
+    hashes = {KEPT.match(n).group(1) for n in here if KEPT.match(n)}
+    for change in changes:
+        if change["capture"]["content_hash"] not in hashes:
+            fails.append(
+                f"{APPENDED}: {change['id']} cites a capture the register does not keep "
+                f"({change['capture']['content_hash'][:12]}) under {CAPTURES}/"
+            )
+    return fails
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -154,38 +204,41 @@ def main(argv: list[str] | None = None) -> int:
         sys.stdout.reconfigure(encoding="utf-8")
     root = Path(args.root).resolve()
     ref = os.environ.get("OATH_PUBLISHED_REF", "origin/main")
-    fails, warns, rows, held = [], [], 0, 0
+    if not readable(root, ref):
+        print(
+            f"FAIL  cannot read the published rows at {ref}; fetch it "
+            "(git fetch origin main) and run again. Nothing was checked."
+        )
+        return 1
+    changes = rows_of(read(root / APPENDED))
+    corrected = corrections(changes)
+    fails, rows, held = [], 0, 0
     for rel in FILES:
-        before = published(root, ref, rel)
-        if before is None:
-            print(
-                f"FAIL  cannot read the published rows at {ref}; fetch it "
-                "(git fetch origin main) and run again. Nothing was checked."
-            )
-            return 1
-        tree = read(root / rel)
+        before_text = published_text(root, ref, rel)
+        tree_text = read(root / rel)
+        before, tree = rows_of(before_text), rows_of(tree_text)
         rows += len(tree)
         held += len(before)
-        f, w = problems(rel, tree, before)
-        fails += f
-        warns += w
-    for line in warns:
-        print(f"WARN  {line}")
+        fails += problems(rel, tree, before, corrected)
+        if rel == APPENDED:
+            fails += appended(tree_text, before_text)
+    fails += capture_problems(root, ref, changes)
     if fails:
         print(f"FAIL  {len(fails)} published facts removed or changed against {ref}:")
         for line in fails:
             print(f"      {line}")
         print(
-            "      A published row stays and its facts only accrue (INVARIANTS.md §14). A "
-            "row a later capture no longer lists is carried as published, with the change "
-            "recorded as a row of its own; a fact the source now states otherwise is a "
-            "correction a person makes, with the evidence."
+            "      A published row stays, byte for byte, and only gains facts it lacked "
+            "(INVARIANTS.md §14). What a later capture shows otherwise is a change row of its "
+            "own, citing the capture, which the register keeps; a fact a person finds wrong "
+            "moves only by a correction row that names it (tools/correct.py), with the evidence."
         )
         return 1
+    moved = sum(1 for c in changes if c.get("change") == "corrected")
     print(
-        f"OK    {rows:,} rows in the register; {held:,} published at {ref}, every one present, "
-        "and every published fact still carried"
-        + (f"; {len(warns)} notes or source hashes moved, shown above." if warns else ".")
+        f"OK    {rows:,} rows in the register; {held:,} published at {ref}, every one present "
+        "and carrying every fact it was published with, or gaining only facts it lacked"
+        + (f"; {moved} moved by a person's correction, each named." if moved else ".")
     )
     return 0
 
