@@ -200,9 +200,10 @@ def test_the_office_line_carries_the_roster_title_and_sworn_date_not_a_term():
     page = html.unescape(render.render_officeholder(HOLDERS[1], FILINGS[2:], META, striker))
     assert (
         "United States Representative for AL01 in the 119th Congress (terms from noon, 3 January "
-        "2025, to noon, 3 January 2027) · sworn in 2026-09-01, per the Clerk's roster read "
-        "2026-09-22"
-    ) in page
+        "2025, to noon, 3 January 2027) · sworn in 2026-09-01, per "
+        '<a href="#how-to-read">the Clerk\'s roster</a> read 2026-09-22'
+    ) in page, "the first use of the Clerk's roster leads to what it is (Seat F)"
+    assert 'id="how-to-read"' in page
     assert "this Congress" not in page and "term 2025-01-03" not in page
     commissioner = render.render_officeholder(HOLDERS[2], [], META, striker)
     assert "Resident Commissioner for PR00 in the 119th Congress" in commissioner

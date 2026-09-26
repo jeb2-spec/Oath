@@ -1486,7 +1486,8 @@ def how_to_read(person: bool) -> str:
         f"<dt>{esc(k)}</dt><dd>{v if isinstance(v, Raw) else esc(v)}</dd>" for k, v in rows
     )
     return (
-        '<section class="how">\n<h2>How to read this page</h2>\n<dl class="terms">\n'
+        '<section class="how" id="how-to-read">\n<h2>How to read this page</h2>\n'
+        '<dl class="terms">\n'
         f"{body}\n</dl>\n</section>"
     )
 
@@ -2023,7 +2024,10 @@ def render_officeholder(
         f"{esc(congress_words(terms=True))}"
     )
     if sworn:
-        office_line += f" · sworn in {esc(sworn)}, per the Clerk's roster read {esc(roster_read)}"
+        office_line += (
+            f' · sworn in {esc(sworn)}, per <a href="#how-to-read">the Clerk\'s roster</a> read '
+            f"{esc(roster_read)}"
+        )
     if not off_roster and not ERA["closed"] and ERA["roster_read"] > roster_read:
         office_line += f"; listed on the roster read {esc(ERA['roster_read'])}, the latest read"
     lines = []
@@ -2692,7 +2696,7 @@ def render_index(
             f"{esc((off_roster[k['id']].get('before') or ERA['first_read'])[:10])}, and not on "
             f"the one read {esc(off_roster[k['id']]['capture']['retrieved_at'][:10])}: "
             f'<a href="officeholders/{esc(slug(k["id"]))}.html">{esc(k["legal_name"])}</a>; their '
-            "page stays, with everything the register published about them.</span>"
+            "page stays, with every row the register attributed to them.</span>"
             for k in kept_by_seat.get(seat, [])
         )
         sworn_late = h is not None and (h.get("sworn_at") or "") > ERA["began"]
@@ -2824,7 +2828,7 @@ def render_index(
             "the last roster the register built from that listed them and the first that did "
             "not. The change fell between the two: the roster does not say when or why a person "
             "leaves a seat, and the register does not know. The register keeps every row it "
-            "published about them, exactly as published, and their pages. The list holds only "
+            "attributed to them, exactly as published, and their pages. The list holds only "
             "Members the roster stopped listing after the register first read it, "
             f'{esc(ERA["first_read"])} (<a href="{SUBJECTS_1}">SUBJECTS.md §1</a>). The order '
             "says nothing about anyone, and neither does a name here.</caption>\n"
