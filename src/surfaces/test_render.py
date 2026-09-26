@@ -175,7 +175,7 @@ def test_every_citation_links():
 
 def test_the_office_line_carries_the_roster_title_and_sworn_date_not_a_term():
     page = render.render_officeholder(HOLDERS[1], FILINGS[2:], META, striker)
-    assert "sworn 2026-09-01, per the roster read 2026-09-22" in page
+    assert "sworn in for this Congress 2026-09-01, per the roster read 2026-09-22" in page
     assert "term 2025-01-03" not in page
     commissioner = render.render_officeholder(HOLDERS[2], [], META, striker)
     assert "Resident Commissioner · seat PR00" in commissioner
@@ -346,6 +346,7 @@ def transaction(filing_id: str, n: int, **over) -> dict:
         "owner": "unmarked",
         "asset": "Example Widgets Inc. Common Stock (EXW)",
         "asset_normalized": "EXW",
+        "asset_code": "ST",
         "action": "purchase",
         "transaction_date": "2025-02-10",
         "notified_date": "2025-02-12",
@@ -528,10 +529,10 @@ def test_the_glossary_links_the_legend_and_the_limitation_on_private_names():
 # Driven through the Signal itself and its definition file, so these pin what a reader is
 # shown for the rows the register would actually hold, not for hand-made Findings.
 
-signal_module = _load(ROOT / "src" / "signals" / "stock-act-late-ptr.py", "signal_late_ptr")
+signal_module = _load(ROOT / "src" / "signals" / "stock-act-ptr-after-deadline.py", "signal_ptr")
 signal_run = _load(ROOT / "src" / "signals" / "run.py", "signal_run")
 verdict = _load(ROOT / "tools" / "lint-verdict-language.py", "lint_verdict")
-SIGNAL = signal_run.parse_definition(ROOT / "docs" / "signals" / "stock-act-late-ptr.md")
+SIGNAL = signal_run.parse_definition(ROOT / "docs" / "signals" / "stock-act-ptr-after-deadline.md")
 AT = "2026-09-23T14:13:28Z"
 
 
@@ -557,16 +558,12 @@ def sworn(h: dict, day: str = "2025-01-03") -> dict:
 
 
 def verdict_words(page: str) -> list[str]:
-    return [
-        m.group(0)
-        for line in page.splitlines()
-        for m in verdict.PATTERN.finditer(line)
-        if not verdict.is_frame_word(line, m.group(0))
-    ]
+    return [word for line in page.splitlines() for word in verdict.hits(line)]
 
 
 def between(page: str, start: str, end: str) -> str:
-    return page[page.index(start) : page.index(end)]
+    at = page.index(start)
+    return page[at : page.index(end, at)]
 
 
 # One report: a row due 2025-02-11 by its notification (2025-01-12 + 30) and a row still
@@ -597,17 +594,17 @@ def test_a_finding_shows_its_report_its_arithmetic_and_what_it_is_not():
         {SIGNAL["id"]: by_holder[holder_["id"]]},
     )
     fired = between(page, "<h2>Signals that fired", "<h2>Signals that did not fire")
-    assert 'id="signal-stock-act-late-ptr"' in fired and 'id="finding-1"' in fired
+    assert 'id="signal-stock-act-ptr-after-deadline"' in fired and 'id="finding-1"' in fired
     assert render.esc(finding_["description"]) in fired
     assert render.esc(render.NOT_A_DETERMINATION) in fired
     assert f"python tools/rebuild.py {finding_['id']}" in fired
-    assert 'href="../signals/stock-act-late-ptr/v1.html"' in fired
+    assert 'href="../signals/stock-act-ptr-after-deadline/v1.html"' in fired
     assert '<td class="idx">2025-02-11</td>' in fired and "30 days after notice" in fired
     assert '<td class="idx">37</td>' in fired, "the days after, from the deadline to the index date"
     assert 'href="#report-1"' in fired, "the Finding links to its report's rows, as filed"
     assert "and fired on it, shown below" in fired
     quiet = page[page.index("<h2>Signals that did not fire") :]
-    assert "None: every Signal defined in this build fired, above." in quiet
+    assert "None: the one signal defined in this build fired, above." in quiet
     assert "fired on 1 report, below" in page
     assert frame.check_page(page) is None
     assert verdict_words(page) == []
@@ -616,8 +613,10 @@ def test_a_finding_shows_its_report_its_arithmetic_and_what_it_is_not():
 def test_a_quiet_signal_says_which_silence_it_is():
     on_time = [LATE[1]]
     cases = {
-        "every one was on or before its deadline": (sworn(HOLDERS[0]), True, on_time),
-        "1 row was not evaluated: 1 dated before the swearing-in the roster records.": (
+        "for none of them does the Clerk's index date the report later than the deadline the "
+        "rule sets from the dates the report prints": (sworn(HOLDERS[0]), True, on_time),
+        "1 row was not evaluated: 1 dated before 2025-03-05, the swearing-in for this Congress "
+        "the roster records, which does not say whether this officeholder served before it.": (
             sworn(HOLDERS[0], "2025-03-05"),
             True,
             [LATE[0]],
@@ -643,8 +642,10 @@ def test_a_quiet_signal_says_which_silence_it_is():
         fired = between(page, "<h2>Signals that fired", "<h2>Signals that did not fire")
         quiet = page[page.index("<h2>Signals that did not fire") :]
         assert "None, on the Signals defined in this build." in fired, expected
-        assert 'id="signal-stock-act-late-ptr"' in quiet and expected in quiet, expected
-        assert "did not fire; below, which silence it is" in page
+        assert 'id="signal-stock-act-ptr-after-deadline"' in quiet, expected
+        assert render.esc(expected) in quiet, expected
+        assert render.esc(render.QUIET_NOT_A_DETERMINATION) in quiet, "silence is no certificate"
+        assert "did not fire: " in page and "on or before its deadline" not in page
     nothing = render.render_officeholder(
         sworn(HOLDERS[1]), [], META, striker, 0, [], 0, [SIGNAL], [], {SIGNAL["id"]: []}
     )
@@ -693,6 +694,7 @@ def test_a_withdrawn_finding_is_said_as_a_withdrawal_never_as_a_finding():
         first,
         id=first["id"] + ":c1",
         evidence=dict(first["evidence"], after=0, rows=[]),
+        correction="source",
         notes=note,
     )
     ledger = [dict(first, superseded_by=withdrawal["id"]), withdrawal]
@@ -715,10 +717,13 @@ def test_a_withdrawn_finding_is_said_as_a_withdrawal_never_as_a_finding():
     assert "None, on the Signals defined in this build." in fired
     assert 'class="finding"' not in page, "a withdrawal is never drawn as a Finding"
     assert (
-        f"the correction <code>{withdrawal['id']}</code> records that it no longer fires" in quiet
+        f"the correction <code>{withdrawal['id']}</code>, written because the source changed, "
+        "records that it does not fire there" in quiet
     )
     assert render.esc(note) in quiet and f"<code>{first['id']}</code>" in quiet
-    assert "did not fire; below, which silence it is" in page
+    one = "did not fire: for the one row it evaluated, the Clerk's index does not date the report"
+    assert one in page
+    assert "no longer" not in page.split("<h2>Signals that did not fire")[1].split("</section>")[0]
     summary = signal_run.run_record(SIGNAL["id"], "c" * 64, outcomes)[0]
     signal_page = render.render_signal_page(SIGNAL, summary, ledger, [holder_], META)
     assert "It fired on no report in this build." in signal_page
@@ -731,7 +736,13 @@ def test_a_corrected_finding_names_the_row_it_supersedes_and_is_drawn_once():
     found, _, by_holder = evaluated([holder_], [report], LATE)
     (first,) = found
     note = "The first reading printed the wrong notification date; corrected from the document."
-    correction = dict(first, id=first["id"] + ":c1", notes=note, fired_at="2026-10-01T00:00:00Z")
+    correction = dict(
+        first,
+        id=first["id"] + ":c1",
+        correction="register",
+        notes=note,
+        fired_at="2026-10-01T00:00:00Z",
+    )
     ledger = [dict(first, superseded_by=correction["id"]), correction]
     page = render.render_officeholder(
         holder_,
@@ -746,7 +757,10 @@ def test_a_corrected_finding_names_the_row_it_supersedes_and_is_drawn_once():
         {SIGNAL["id"]: by_holder[holder_["id"]]},
     )
     assert page.count('class="finding"') == 1, "the chain is drawn once, at its current row"
-    assert f"Corrected: this row supersedes <code>{first['id']}</code>" in page
+    assert (
+        f"Corrected because the register erred: this row supersedes <code>{first['id']}</code>"
+        in page
+    )
     assert render.esc(note) in page
     assert f"python tools/rebuild.py {correction['id']}" in page
 
@@ -770,7 +784,126 @@ def test_the_landing_names_the_signal_and_links_its_page():
     )
     assert ranking.check_index(page) == []
     assert frame.check_page(page) is None
-    assert 'href="signals/stock-act-late-ptr/v1.html"' in page
+    assert 'href="signals/stock-act-ptr-after-deadline/v1.html"' in page
     assert "This build holds 1 signal" in page
     assert "signals defined, so 0 fired" not in page
     assert verdict_words(page) == []
+
+
+def test_the_signal_page_counts_what_it_evaluated_and_who_it_cannot_reach():
+    holder_ = sworn(HOLDERS[0])
+    reports = [
+        read_report(holder_["id"], "2025-03-20", 1),
+        read_report(holder_["id"], "2025-04-01", 2),
+    ]
+    before = transaction(
+        "fl:house-clerk:P:2", 1, transaction_date="2024-11-01", notified_date="2024-11-01"
+    )
+    before["filing_status"] = "New"
+    paper = read_report("oh:us:house:a000003", "2025-05-01", 3, read=False)
+    found, outcomes, _ = evaluated([holder_, sworn(HOLDERS[2])], reports + [paper], LATE + [before])
+    summary = signal_run.run_record(SIGNAL["id"], "c" * 64, outcomes)[0]
+    rejected = [
+        {
+            "reason": "surname matches a sitting member (Example, Ann, CA12) but ...",
+            "source_row": {"filing_type": "P"},
+        },
+        {"reason": "no sitting member has this name; ...", "source_row": {"filing_type": "P"}},
+        {"reason": "no sitting member has this name; ...", "source_row": {"filing_type": "O"}},
+    ]
+    reach = render.coverage(outcomes, rejected)
+    assert reach == {
+        "paper_only": 1,
+        "some_paper": 0,
+        "before_swearing_in": 1,
+        "set_aside_held": 1,
+        "set_aside_other": 1,
+    }
+    page = render.render_signal_page(
+        SIGNAL, summary, found, [holder_, HOLDERS[2]], META, outcomes, reach
+    )
+    record = between(page, '<section class="record">', "</section>")
+    assert (
+        "on 1 it evaluated at least one row, and it fired on 1 of those; on 1 it evaluated no row"
+        in record
+    )
+    assert "<dt>1</dt><dd>officeholders whose transaction reports are all scanned paper" in record
+    assert "which it does not see: 1 under a sitting member's surname" in record
+    assert "on or before its deadline" not in page
+    assert ranking.check_summary(page) == [] and frame.check_page(page) is None
+    landing = render.state_of_record(
+        META,
+        RUN,
+        HOLDERS,
+        FILINGS,
+        OFFICES,
+        1,
+        "https://x",
+        LATE,
+        [(SIGNAL, summary)],
+        {SIGNAL["id"]: reach},
+    )
+    assert (
+        render.esc(render.coverage_sentence(reach)) in landing
+        or render.coverage_sentence(reach) in landing
+    )
+    assert "Example" not in landing
+
+
+def test_held_reports_at_the_seat_are_named_in_the_silence():
+    text = render.which_quiet([], held_reports=12)
+    assert text.endswith(
+        "12 transaction reports at this seat under this surname are set aside, not attributed "
+        "to this officeholder and not evaluated."
+    )
+    assert render.which_silence([], 12) == (
+        "no transaction report is attributed; those at this seat are set aside"
+    )
+
+
+def test_an_earlier_versions_finding_stays_on_the_page_as_published():
+    holder_ = sworn(HOLDERS[0])
+    report = read_report(holder_["id"], "2025-03-20", 1)
+    found, _, by_holder = evaluated([holder_], [report], LATE)
+    v2 = dict(SIGNAL, id=SIGNAL["id"].replace(":v1", ":v2"), version=2)
+    page = render.render_officeholder(
+        holder_, [report], META, striker, 0, LATE, 0, [v2], found, {v2["id"]: []}, [SIGNAL, v2]
+    )
+    assert "Version 1, which version 2 replaced" in page
+    assert page.count('class="finding"') == 1, "the version 1 Finding is still drawn"
+    assert f"python tools/rebuild.py {found[0]['id']}" in page
+
+
+def test_a_ledger_that_names_someone_the_rows_no_longer_hold_is_refused():
+    finding_ = {"officeholder_id": "oh:us:house:gone", "superseded_by": None}
+    assert render.unpaged_officeholders([finding_], HOLDERS) == ["oh:us:house:gone"]
+    assert render.unpaged_officeholders([dict(finding_, superseded_by="x")], HOLDERS) == []
+
+
+def test_the_footer_says_the_anchor_the_proof_holds(tmp_path):
+    """The anchor is never sealed, so the pages read it from the proof, through the anchor
+    tool's own reader: a build with no manifest says none, one with a manifest and no proof
+    says the stamp is owed, and a confirmed proof names its block."""
+    (tmp_path / "tools").mkdir()
+    (tmp_path / "tools" / "anchor.py").write_bytes((ROOT / "tools" / "anchor.py").read_bytes())
+    assert render.anchor_of(tmp_path, "0005-house-2025") == {"state": "none", "block": None}
+    folder = tmp_path / "data" / "anchors"
+    folder.mkdir(parents=True)
+    manifest = b"0" * 64 + b"  data/example.ndjson\n"
+    (folder / "0005-house-2025.manifest").write_bytes(manifest)
+    (folder / "0005-house-2025.json").write_text(
+        '{"build": "0005-house-2025", "built_at": "2026-09-23T14:13:28Z", "digest": "x"}\n'
+    )
+    owed = render.anchor_of(tmp_path, "0005-house-2025")
+    assert owed == {"state": "owed", "block": None}
+    words = {
+        state: render.anchor_words({"anchor": {"state": state, "block": block}})
+        for state, block in (("none", None), ("owed", None), ("pending", None), ("confirmed", 1))
+    }
+    assert "none yet" in words["none"]
+    assert "the stamp is owed" in words["owed"] and "ANCHORS.md" in words["owed"]
+    assert "awaiting a Bitcoin block" in words["pending"]
+    assert "Bitcoin block 1," in words["confirmed"]
+    confirmed = render.anchor_words({"anchor": {"state": "confirmed", "block": 915000}})
+    assert "Bitcoin block 915,000, by OpenTimestamps" in confirmed
+    assert "Anchor: none yet" in render.footer(META, home=True)

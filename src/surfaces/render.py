@@ -478,13 +478,47 @@ def page(title: str, body: str) -> str:
     )
 
 
+def load_anchor(root: Path):
+    spec = importlib.util.spec_from_file_location("anchor", root / "tools" / "anchor.py")
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
+
+
+def anchor_of(root: Path, build: str) -> dict:
+    """This build's anchor as its proof says it, read by tools/anchor.py's own reader. The
+    state is never sealed, because a proof is completed after the seal (NEXT.md S.4)."""
+    for b in load_anchor(root).builds(root):
+        if b["build"] == build:
+            return {"state": b["state"], "block": b["block"]}
+    return {"state": "none", "block": None}
+
+
+def anchor_words(meta: dict) -> str:
+    anchor = meta.get("anchor", {})
+    state, block = anchor.get("state", "none"), anchor.get("block")
+    ledger = f'<a href="{REPO}ANCHORS.md">ANCHORS.md</a>'
+    if state == "confirmed":
+        return (
+            f"Anchor: the digest is in Bitcoin block {block:,}, by OpenTimestamps; the proof "
+            f"is beside the build's manifest, and {ledger} lists every build's."
+        )
+    if state == "pending":
+        return (
+            "Anchor: stamped with OpenTimestamps; the calendars hold the digest, awaiting a "
+            f"Bitcoin block ({ledger})."
+        )
+    if state == "owed":
+        return (
+            "Anchor: the stamp is owed; the manifest is written and the OpenTimestamps "
+            f"calendars have not yet taken it ({ledger})."
+        )
+    return "Anchor: none yet; the build has not been timestamped by an outside service."
+
+
 def footer(meta: dict, home: bool, to_root: str = "../") -> str:
-    anchor = meta.get("anchor", {}).get("state", "none")
-    anchor_line = (
-        "Anchor: none yet; the build has not been timestamped by an outside service."
-        if anchor == "none"
-        else f"Anchor: {esc(anchor)}."
-    )
+    anchor_line = anchor_words(meta)
     back = "" if home else f'<p><a href="{to_root}index.html">Every seat in the register</a></p>\n'
     return (
         "<footer>\n"
@@ -518,7 +552,9 @@ REQUIRES = (
     f'Pub. L. 112-105</a>. <a href="{STANDARDS_S2}">STANDARDS.md S.2</a>. The House Committee '
     "on Ethics states it as the earlier of 30 days from being made aware of the transaction "
     f'or 45 days from the transaction (<a href="{ETHICS_FD}">Financial Disclosure</a>). '
-    "The Act does not "
+    "The Committee's instructions keep some assets off these reports, among them widely held "
+    "investment funds, real property and the Thrift Savings Plan, though a filer may list them "
+    f'(<a href="{PTR_FORM}">its form and instructions</a>). The Act does not '
     "prohibit the transactions it requires reported; a report listed below is a filing made "
     "under that requirement, as the Clerk records it.</dd>\n"
     "</dl>\n</section>"
@@ -528,7 +564,10 @@ REQUIRES = (
 
 # Why a row was not evaluated, in the words a page uses; the Signal's own reason is the key.
 NOT_EVALUATED_WORDS = {
-    "dated before the swearing-in": "dated before the swearing-in the roster records",
+    "dated before this Congress's swearing-in": (
+        "dated before the swearing-in for this Congress the roster records, which is not the "
+        "start of anyone's service"
+    ),
     "marked Amended": "marked Amended by the filer",
     "marked Deleted": "marked Deleted by the filer",
     "no filing status printed": "with no filing status printed",
@@ -536,20 +575,33 @@ NOT_EVALUATED_WORDS = {
     "transaction date not read": "whose transaction date could not be read",
     "no swearing-in date recorded": "for which the roster records no swearing-in date",
     "report date not read": "on a report whose date could not be read",
+    "no asset code printed": "whose asset carries no code",
+    "coded as a stock, named as an ETF": (
+        "coded as a stock but named as an ETF, a widely held fund the Committee's instructions "
+        "keep off these reports"
+    ),
+    "$1,000 or less": "of $1,000 or less, which the rule does not reach",
+    "deadline before 2025": "whose deadline falls before 2025, under instructions not read here",
 }
+ASSET_CODED = re.compile(r"^asset coded (\w+)$")
 SET_BY_WORDS = {"notification": "30 days after notice", "transaction": "45 days after the trade"}
+CORRECTION_KIND = {"source": "the source changed", "register": "the register erred"}
 NOT_A_DETERMINATION = (
     "A Finding describes a report against the rule it cites. It is not a determination by the "
     "House Committee on Ethics, which decides whether a report was late and what follows, and "
     "the register sees none of its decisions."
+)
+QUIET_NOT_A_DETERMINATION = (
+    "A signal that did not fire is not a determination either: whether a report was on time is "
+    "for the House Committee on Ethics, and the register sees none of its decisions."
 )
 MD_INLINE = re.compile(r"\[([^\]]+)\]\(([^)\s]+)\)|`([^`]+)`")
 CORRECTION = re.compile(r":c\d+$")
 
 
 def records_a_firing(row: dict) -> bool:
-    """A ledger row that records a firing. A correction recording that a Signal no longer
-    fires on a report carries evidence with no row after the deadline (docs/signals/README.md)."""
+    """A ledger row that records a firing. A correction recording that a Signal does not fire
+    on a report carries evidence with no row after the deadline (docs/signals/README.md)."""
     return bool((row.get("evidence") or {}).get("after", 1))
 
 
@@ -566,8 +618,8 @@ def fired_now(findings: list[dict], signal_id: str | None = None) -> list[dict]:
 
 
 def withdrawn_now(findings: list[dict], signal_id: str) -> list[dict]:
-    """Current rows that record a Signal no longer fires on a report: a published Finding,
-    withdrawn by correction. Shown as a withdrawal, never as a Finding."""
+    """Current rows that record a Signal does not fire on a report it once fired on: a
+    published Finding, withdrawn by correction. Shown as a withdrawal, never as a Finding."""
     return [
         f
         for f in findings
@@ -582,16 +634,23 @@ def supersedes(row: dict, findings: list[dict]) -> dict | None:
     return next((f for f in findings if f.get("superseded_by") == row["id"]), None)
 
 
+def correction_why(row: dict) -> str:
+    kind = CORRECTION_KIND.get(row.get("correction") or "")
+    return f"because {kind}" if kind else "by correction"
+
+
 def correction_line(row: dict, findings: list[dict]) -> str:
-    """What a correction says about the row it replaces, in the correction's own words."""
+    """What a correction says about the row it replaces: its kind, and the reason in the
+    correction's own words."""
     prior = supersedes(row, findings)
     if not CORRECTION.search(row["id"]) or prior is None:
         return ""
     reason = f" {esc(row['notes'])}" if row.get("notes") else ""
     return (
-        f'<p class="quiet">Corrected: this row supersedes <code>{esc(prior["id"])}</code>, first '
-        f"produced from the record as retrieved {esc(prior.get('fired_at', ''))}, which stays in "
-        f"the ledger, <code>data/findings.ndjson</code>.{reason}</p>\n"
+        f'<p class="quiet">Corrected {correction_why(row)}: this row supersedes '
+        f"<code>{esc(prior['id'])}</code>, first produced from the record as retrieved "
+        f"{esc(prior.get('fired_at', ''))}, which stays in the ledger, "
+        f"<code>data/findings.ndjson</code>.{reason}</p>\n"
     )
 
 
@@ -602,11 +661,12 @@ def withdrawal_line(row: dict, findings: list[dict], filings_by_id: dict[str, di
     first = CORRECTION.sub("", row["id"])
     reason = f" {esc(row['notes'])}" if row.get("notes") else ""
     return (
-        f'<p class="quiet">On the report filed {esc(filed)}, this signal produced the Finding '
-        f"<code>{esc(first)}</code>"
+        f'<p class="quiet">On the report the Clerk\'s index dates {esc(filed)}, this signal '
+        f"produced the Finding <code>{esc(first)}</code>"
         + (f", first produced {esc(prior.get('fired_at', ''))}" if prior else "")
-        + f"; the correction <code>{esc(row['id'])}</code> records that it no longer fires "
-        f"there.{reason} Every row of the chain stays in the ledger, "
+        + f"; the correction <code>{esc(row['id'])}</code>, written {correction_why(row)}, "
+        "records that it does not fire there on the register's rows as they now stand."
+        f"{reason} Every row of the chain stays in the ledger, "
         "<code>data/findings.ndjson</code>.</p>\n"
     )
 
@@ -654,27 +714,55 @@ def md_blocks(text: str, base: str = "docs/signals/") -> str:
     return "\n".join(blocks)
 
 
+def first_paragraph(text: str) -> str:
+    return re.split(r"\n\s*\n", text.strip())[0]
+
+
 def standard_links(signal: dict) -> str:
     links = STANDARD_LINKS.get(signal["standard"]["id"], ())
     return "; ".join(f'<a href="{esc(url)}">{esc(label)}</a>' for label, url in links)
 
 
-def reason_clause(counts: dict[str, int]) -> str:
-    """Rows not evaluated, by reason, in the page's words."""
-    parts = [
-        f"{n:,} {NOT_EVALUATED_WORDS.get(reason, reason)}"
-        for reason, n in sorted(counts.items(), key=lambda item: (-item[1], item[0]))
-    ]
+def reason_clause(counts: dict[str, int], sworn: str | None = None) -> str:
+    """Rows not evaluated, by reason, in the page's words; the asset codes a Signal does not
+    evaluate are gathered into one clause, each with its count."""
+    coded = {m.group(1): n for reason, n in counts.items() if (m := ASSET_CODED.match(reason))}
+    rest = {reason: n for reason, n in counts.items() if not ASSET_CODED.match(reason)}
+    parts = []
+    for reason, n in sorted(rest.items(), key=lambda item: (-item[1], item[0])):
+        words = NOT_EVALUATED_WORDS.get(reason, reason)
+        if reason == "dated before this Congress's swearing-in" and sworn:
+            words = (
+                f"dated before {sworn}, the swearing-in for this Congress the roster records, "
+                "which does not say whether this officeholder served before it"
+            )
+        parts.append(f"{n:,} {words}")
+    if coded:
+        total = sum(coded.values())
+        listed = ", ".join(
+            f"{code} {n:,}" for code, n in sorted(coded.items(), key=lambda i: (-i[1], i[0]))
+        )
+        parts.append(
+            f"{total:,} whose asset the report codes as a kind this signal does not evaluate "
+            f"({listed}, in the Clerk's asset codes)"
+        )
     return "; ".join(parts)
 
 
-def which_quiet(outcomes: list[dict]) -> str:
+def which_quiet(outcomes: list[dict], held_reports: int = 0, sworn: str | None = None) -> str:
     """What one Signal did with one officeholder's reports, fired or not: the silence named."""
+    held = (
+        f"{held_reports:,} {plural(held_reports, 'transaction report', 'transaction reports')} "
+        f"at this seat under this surname {plural(held_reports, 'is', 'are')} set aside, not "
+        "attributed to this officeholder and not evaluated."
+        if held_reports
+        else ""
+    )
     if not outcomes:
         return (
             "No transaction report is attributed to this officeholder in the register, so there "
             "was nothing to evaluate. That is a fact about the register's matching, not a "
-            "statement that no report was due."
+            "statement that no report was due." + (f" {held}" if held else "")
         )
     evaluated = [o for o in outcomes if o["state"] == "evaluated"]
     unread = [o for o in outcomes if o["state"] == "not read"]
@@ -684,32 +772,37 @@ def which_quiet(outcomes: list[dict]) -> str:
     for o in outcomes:
         for reason, n in o["not_evaluated"].items():
             skipped[reason] = skipped.get(reason, 0) + n
+    none_after = (
+        "does the Clerk's index date the report later than the deadline the rule sets from the "
+        "dates the report prints"
+    )
     parts = []
     if rows:
         reports = sum(1 for o in evaluated if o["evaluated"])
-        if fired:
+        opening = (
+            f"It evaluated {rows:,} {plural(rows, 'row', 'rows')} on {reports:,} "
+            f"{plural(reports, 'report', 'reports')} attributed to this officeholder"
+        )
+        if fired and reports > len(fired):
+            others = reports - len(fired)
             parts.append(
-                f"It evaluated {rows:,} {plural(rows, 'row', 'rows')} on {reports:,} "
-                f"{plural(reports, 'report', 'reports')} attributed to this officeholder and fired "
-                f"on {len(fired):,} of them, shown below; every evaluated row on the "
-                f"{plural(reports - len(fired), 'other', 'others')} was on or before its deadline."
-                if reports > len(fired)
-                else f"It evaluated {rows:,} {plural(rows, 'row', 'rows')} on {reports:,} "
-                f"{plural(reports, 'report', 'reports')} attributed to this officeholder and fired "
-                f"on {plural(len(fired), 'it', 'each of them')}, shown below."
+                f"{opening} and fired on {len(fired):,} of them, shown below; on the "
+                f"{others:,} {plural(others, 'other', 'others')}, for none of the rows it "
+                f"evaluated {none_after}."
+            )
+        elif fired:
+            parts.append(
+                f"{opening} and fired on {plural(len(fired), 'it', 'each of them')}, shown below."
             )
         else:
-            parts.append(
-                f"It evaluated {rows:,} {plural(rows, 'row', 'rows')} on {reports:,} "
-                f"{plural(reports, 'report', 'reports')} attributed to this officeholder, and "
-                f"every one was on or before its deadline."
-            )
+            parts.append(f"{opening}; for none of them {none_after}.")
     elif evaluated or unread:
         parts.append("It could evaluate no row on the reports attributed to this officeholder.")
     if skipped:
         n = sum(skipped.values())
         parts.append(
-            f"{n:,} {plural(n, 'row was', 'rows were')} not evaluated: {reason_clause(skipped)}."
+            f"{n:,} {plural(n, 'row was', 'rows were')} not evaluated: "
+            f"{reason_clause(skipped, sworn)}."
         )
     if unread:
         n = len(unread)
@@ -718,7 +811,35 @@ def which_quiet(outcomes: list[dict]) -> str:
             "paper, which the Committee judges by its postmark, and the register does not see "
             "the postmark."
         )
+    if held:
+        parts.append(held)
     return " ".join(parts)
+
+
+def which_silence(outcomes: list[dict], held_reports: int = 0) -> str:
+    """The checklist's few words for a Signal that did not fire: which silence it is."""
+    rows = sum(o["evaluated"] for o in outcomes)
+    if rows == 1:
+        return (
+            "for the one row it evaluated, the Clerk's index does not date the report after the "
+            "deadline"
+        )
+    if rows:
+        return (
+            f"for none of the {rows:,} rows it evaluated does the Clerk's index date the report "
+            "after the deadline"
+        )
+    if outcomes and all(o["state"] == "not read" for o in outcomes):
+        return "the reports attributed are scanned paper, which it does not read"
+    if outcomes:
+        return "it could evaluate no row, for the reasons below"
+    if held_reports:
+        return "no transaction report is attributed; those at this seat are set aside"
+    return "no transaction report is attributed"
+
+
+def falls_on_words(falls_on: str) -> str:
+    return f"a {falls_on}" if falls_on in ("Saturday", "Sunday") else f"{falls_on}, a holiday"
 
 
 def finding_rows_table(finding: dict) -> str:
@@ -732,22 +853,34 @@ def finding_rows_table(finding: dict) -> str:
             row["notification"],
             row["deadline"],
             row["set_by"],
-            row["weekend"],
+            row["deadline_falls_on"],
+            row["first_business_day_after"],
             row["notified_after_limit"],
+            row["days_after_notice"],
             row["days_after"],
         )
         groups[key] = groups.get(key, 0) + 1
     body = []
     for key, n in sorted(groups.items(), key=lambda item: (item[0][3], item[0][0])):
-        traded, notified, notification, deadline, set_by, weekend, late_notice, days = key
+        traded, notified, notification, deadline, set_by, falls_on, next_day, late, gap, days = key
         notice = esc(notified) if notified else "not printed"
         if notification != "applied":
             notice += f' <span class="note">not applied: {esc(notification)}</span>'
-        elif late_notice:
-            notice += '<span class="note">after the 45-day limit had passed</span>'
+        elif late:
+            after_notice = "the same day" if gap == 0 else f"{gap:,} {plural(gap, 'day', 'days')}"
+            notice += (
+                '<span class="note">after the 45-day limit had passed; the report is dated '
+                f"{after_notice} after it</span>"
+                if gap
+                else '<span class="note">after the 45-day limit had passed; the report is '
+                "dated the same day</span>"
+            )
         due = esc(deadline)
-        if weekend:
-            due += f'<span class="note">a {esc(weekend)}; it does not move</span>'
+        if falls_on:
+            due += (
+                f'<span class="note">{esc(falls_on_words(falls_on))}; the first business day '
+                f"after it is {esc(next_day)}</span>"
+            )
         body.append(
             "<tr>"
             f'<td class="idx">{n:,}</td>'
@@ -764,9 +897,8 @@ def finding_rows_table(finding: dict) -> str:
         f"<caption>The {rows:,} {plural(rows, 'row', 'rows')} of this report after the "
         "deadline, grouped where the dates agree. The deadline is the earlier of 30 days after "
         "the notification date the report prints and 45 days after the transaction date; it does "
-        "not move for a weekend. Days after count from the deadline to the date the Clerk's index "
-        "gives the "
-        f"report, {esc(finding['evidence']['filed_at'])}.</caption>\n"
+        "not move for a weekend or a holiday. Days after count from the deadline to the date the "
+        f"Clerk's index gives the report, {esc(finding['evidence']['filed_at'])}.</caption>\n"
         "<thead><tr><th>Rows</th><th>Transaction</th><th>Notified</th><th>Deadline</th>"
         "<th>Set by</th><th>Days after</th></tr></thead>\n"
         f"<tbody>\n{''.join(body)}\n</tbody>\n</table>"
@@ -782,7 +914,7 @@ def finding_block(finding: dict, report: dict | None, findings: list[dict] | Non
     )
     return (
         f'<article class="finding" id="finding-{esc(doc_id)}">\n'
-        f"<h4>Report filed {esc(finding['evidence']['filed_at'])} · "
+        f"<h4>Report the Clerk's index dates {esc(finding['evidence']['filed_at'])} · "
         f'<a href="#report-{esc(doc_id)}">its rows, as filed</a>{copy}</h4>\n'
         f"<p>{esc(finding['description'])}</p>\n"
         f"{correction_line(finding, findings or [])}"
@@ -795,50 +927,95 @@ def finding_block(finding: dict, report: dict | None, findings: list[dict] | Non
     )
 
 
+def older_versions(signal: dict, all_signals: list[dict], findings: list[dict]) -> list[dict]:
+    """Earlier versions of this Signal whose Findings on this page are still current rows."""
+    return [
+        s
+        for s in sorted(all_signals, key=lambda s: s["version"])
+        if s["slug"] == signal["slug"]
+        and s["version"] < signal["version"]
+        and (fired_now(findings, s["id"]) or withdrawn_now(findings, s["id"]))
+    ]
+
+
 def signals_section(
     signals: list[dict],
     findings: list[dict],
     outcomes: dict[str, list[dict]],
     filings_by_id: dict[str, dict],
     to_root: str = "../",
+    held_reports: int = 0,
+    sworn: str | None = None,
+    all_signals: list[dict] | None = None,
 ) -> str:
     """Signals that fired and Signals that did not, for one officeholder, grouped by Signal
     and never by severity (ECOSYSTEM.md §1.3; METHODOLOGY.md §10). Every defined Signal is
-    named on every page, so silence is shown rather than assumed, and says which it is."""
+    named on every page, so silence is shown rather than assumed, and says which it is. A
+    Finding an earlier version produced stays on the page, under that version, as published."""
     fired, quiet = [], []
-    for signal in signals:
+
+    def blocks_for(signal_id: str) -> tuple[str, str]:
         mine = sorted(
-            fired_now(findings, signal["id"]),
-            key=lambda f: (f["evidence"]["filed_at"], f["id"]),
+            fired_now(findings, signal_id), key=lambda f: (f["evidence"]["filed_at"], f["id"])
         )
         withdrawn = "".join(
             withdrawal_line(f, findings, filings_by_id)
-            for f in sorted(withdrawn_now(findings, signal["id"]), key=lambda f: f["id"])
+            for f in sorted(withdrawn_now(findings, signal_id), key=lambda f: f["id"])
         )
+        found = "\n".join(
+            finding_block(f, filings_by_id.get(f["producing_filings"][0]), findings) for f in mine
+        )
+        return withdrawn, found
+
+    for signal in signals:
+        withdrawn, found = blocks_for(signal["id"])
         head = (
             f'<h3 id="signal-{esc(signal["slug"])}">{esc(signal["name"])}, version '
             f"{signal['version']}</h3>\n"
             f'<p class="quiet">{standard_links(signal)}. '
             f'<a href="{to_root}{signal_page_path(signal)}">What it reads, how, and what it does '
-            f"not say</a>. {esc(which_quiet(outcomes.get(signal['id'], [])))}</p>\n"
+            "not say</a>. "
+            f"{esc(which_quiet(outcomes.get(signal['id'], []), held_reports, sworn))}</p>\n"
         )
-        if mine:
-            blocks = "\n".join(
-                finding_block(f, filings_by_id.get(f["producing_filings"][0]), findings)
-                for f in mine
+        earlier = ""
+        for old in older_versions(signal, all_signals or [], findings):
+            old_withdrawn, old_found = blocks_for(old["id"])
+            earlier += (
+                f'<h4 class="version">Version {old["version"]}, which version '
+                f"{signal['version']} replaced</h4>\n"
+                f'<p class="quiet">What version {old["version"]} produced on this officeholder\'s '
+                "reports stays as published; version "
+                f"{signal['version']}'s reading of the same reports is the one above.</p>\n"
+                f"{old_withdrawn}{old_found}\n"
             )
-            fired.append(head + withdrawn + blocks)
+        if found:
+            said = md_inline(first_paragraph(signal.get("not_saying", "")), "docs/signals/")
+            fired.append(
+                head
+                + (f'<p class="quiet">{said}</p>\n' if said else "")
+                + withdrawn
+                + found
+                + earlier
+            )
         else:
-            quiet.append(head + withdrawn)
+            quiet.append(
+                head
+                + f'<p class="quiet">{esc(QUIET_NOT_A_DETERMINATION)}</p>\n'
+                + withdrawn
+                + earlier
+            )
     fired_html = (
         f'<p class="quiet">{esc(NOT_A_DETERMINATION)}</p>\n' + "\n".join(fired)
         if fired
         else '<p class="quiet">None, on the Signals defined in this build.</p>'
     )
+    n = len(signals)
     quiet_html = (
         "\n".join(quiet)
         if quiet
-        else '<p class="quiet">None: every Signal defined in this build fired, above.</p>'
+        else '<p class="quiet">None: '
+        + ("the one signal" if n == 1 else f"each of the {n:,} signals")
+        + " defined in this build fired, above.</p>"
     )
     if not signals:
         fired_html = '<p class="quiet">None. No signal is defined in this build.</p>'
@@ -849,8 +1026,13 @@ def signals_section(
     )
 
 
-def signal_check_line(signals: list[dict], findings: list[dict]) -> str:
-    """The checklist's line for Signals on one officeholder's page."""
+def signal_check_line(
+    signals: list[dict],
+    findings: list[dict],
+    outcomes: dict[str, list[dict]] | None = None,
+    held_reports: int = 0,
+) -> str:
+    """The checklist's line for Signals on one officeholder's page, naming which silence."""
     if not signals:
         return "<b>none defined</b> · so none can fire, for anyone."
     parts = []
@@ -859,7 +1041,8 @@ def signal_check_line(signals: list[dict], findings: list[dict]) -> str:
         state = (
             f"fired on {n:,} {plural(n, 'report', 'reports')}, below"
             if n
-            else "did not fire; below, which silence it is"
+            else "did not fire: "
+            + which_silence((outcomes or {}).get(signal["id"], []), held_reports)
         )
         parts.append(f"{esc(signal['name'])}, version {signal['version']}: {state}")
     n = len(signals)
@@ -1362,15 +1545,29 @@ def render_officeholder(
     signals: list[dict] | None = None,
     findings: list[dict] | None = None,
     outcomes: dict[str, list[dict]] | None = None,
+    all_signals: list[dict] | None = None,
 ) -> str:
     signals, findings, outcomes = signals or [], findings or [], outcomes or {}
     office = holder["offices"][0] if holder.get("offices") else {}
     seal = striker.strike(holder["id"], meta.get("digest", ""), ticks=0, bars=0)
     roster_read = holder.get("source", {}).get("retrieved_at", "")[:10]
-    sworn = sworn_date(holder)
+    sworn = holder.get("sworn_at") or sworn_date(holder)
     office_line = f"{esc(office.get('title', ''))} · seat {esc(office.get('seat', ''))}"
     if sworn:
-        office_line += f" · sworn {esc(sworn)}, per the roster read {esc(roster_read)}"
+        office_line += (
+            f" · sworn in for this Congress {esc(sworn)}, per the roster read {esc(roster_read)}"
+        )
+    check_line = signal_check_line(signals, findings, outcomes, held_reports)
+    section = signals_section(
+        signals,
+        findings,
+        outcomes,
+        {f["id"]: f for f in filings},
+        "../",
+        held_reports,
+        sworn,
+        all_signals or signals,
+    )
     head = (
         '<header class="frame">\n'
         f'<p class="frame">{esc(FRAME)}</p>\n'
@@ -1389,10 +1586,10 @@ def render_officeholder(
     )
     body = (
         f'{head}\n<main id="main">\n{REQUIRES}\n'
-        f"{checks_section(holder, filings, held_here, signal_check_line(signals, findings))}\n"
+        f"{checks_section(holder, filings, held_here, check_line)}\n"
         f"{filings_section(filings, held_here)}\n"
         f"{transactions_section(filings, transactions or [], held_reports)}\n"
-        f"{signals_section(signals, findings, outcomes, {f['id']: f for f in filings})}\n"
+        f"{section}\n"
         f"{how_to_read(True)}\n"
         "</main>\n"
         f"{footer(meta, home=False)}"
@@ -1521,6 +1718,7 @@ def state_of_record(
     rejected_url: str,
     transactions: list[dict] | None = None,
     signal_runs: list[tuple[dict, dict]] | None = None,
+    reach: dict[str, dict[str, int]] | None = None,
 ) -> str:
     """Numbers about the register and the chamber as a whole. None is about a person."""
     transactions = transactions or []
@@ -1533,12 +1731,18 @@ def state_of_record(
         signal_lines += (
             f"<dt>{fired:,}</dt><dd>of the {read_reports:,} transaction reports read, on which the "
             f'signal <a href="{signal_page_path(signal)}">{esc(signal["name"])}</a>, version '
-            f"{signal['version']}, fired: {summary['rows_after']:,} of the "
-            f"{summary['rows_evaluated']:,} rows it evaluated are dated by the Clerk's index after "
-            f"the deadline the rule sets, on reports attributed to "
+            f"{signal['version']}, fired: for {summary['rows_after']:,} of the "
+            f"{summary['rows_evaluated']:,} rows it evaluated, the Clerk's index dates the report "
+            f"after the deadline the rule sets, on reports attributed to "
             f"{summary['officeholders_with_a_finding']:,} officeholders. {skipped:,} rows were not "
             f"evaluated, each with a reason, and {by_state.get('not read', 0):,} reports were not "
-            "read. A count about the register; no page ranks anyone by it"
+            "read. "
+            + (
+                f"{coverage_sentence(reach[signal['id']])} "
+                if reach and signal["id"] in reach
+                else ""
+            )
+            + "A count about the register; no page ranks anyone by it"
             f"{bar(fired, read_reports)}</dd>\n"
         )
     if not signal_runs:
@@ -1637,9 +1841,48 @@ def signals_lede(signal_runs: list[tuple[dict, dict]]) -> str:
         f'<p class="lede">This build holds {n} {plural(n, "signal", "signals")}, written down in '
         f"advance and citing the rule {plural(n, 'it comes', 'they come')} from: {names}. "
         "Where one fires, the officeholder's page shows the report, the dates and the arithmetic, "
-        "and what the signal does not say. A page where it did not fire says which silence it is: "
-        "every "
-        "row on time, rows not evaluated and why, or nothing to evaluate.</p>\n"
+        "and what the signal does not say. A page where it did not fire says which silence it "
+        "is: rows evaluated and none of them dated after the deadline, rows not evaluated and "
+        "why, reports captured and not read, or nothing to evaluate. None of it is a "
+        "determination, which is the Committee on Ethics' to make.</p>\n"
+    )
+
+
+def coverage(outcomes: list[dict], rejected: list[dict]) -> dict[str, int]:
+    """Who a signal's run cannot reach, in counts, never in names: officeholders whose reports
+    are all captured and not read, those with some, those with rows dated before this
+    Congress's swearing-in, and the transaction reports the index sets aside."""
+    states: dict[str, set[str]] = {}
+    before: set[str] = set()
+    for o in outcomes:
+        states.setdefault(o["officeholder_id"], set()).add(o["state"])
+        if o["not_evaluated"].get("dated before this Congress's swearing-in"):
+            before.add(o["officeholder_id"])
+    ptr = [r for r in rejected if r.get("source_row", {}).get("filing_type") == "P"]
+    held = sum(1 for r in ptr if r.get("reason", "").startswith("surname matches a sitting member"))
+    return {
+        "paper_only": sum(1 for s in states.values() if s == {"not read"}),
+        "some_paper": sum(1 for s in states.values() if "not read" in s and s != {"not read"}),
+        "before_swearing_in": len(before),
+        "set_aside_held": held,
+        "set_aside_other": len(ptr) - held,
+    }
+
+
+def coverage_sentence(c: dict[str, int]) -> str:
+    """Who cannot appear among those on which a signal fired, and why, in counts."""
+    paper, some, before = c["paper_only"], c["some_paper"], c["before_swearing_in"]
+    held, other = c["set_aside_held"], c["set_aside_other"]
+    aside = held + other
+    return (
+        f"It cannot reach {paper:,} {plural(paper, 'officeholder', 'officeholders')} whose "
+        "transaction reports are all scanned paper, which it does not read, or some of the "
+        f"reports of {some:,} more; it does not evaluate the rows dated before this Congress's "
+        f"swearing-in on the reports of {before:,} "
+        f"{plural(before, 'officeholder', 'officeholders')}; and it does not see the "
+        f"{aside:,} {plural(aside, 'transaction report', 'transaction reports')} the index sets "
+        f"aside, {held:,} under a sitting member's surname, for a person to decide, and "
+        f"{other:,} under names no sitting member bears."
     )
 
 
@@ -1649,12 +1892,18 @@ def render_signal_page(
     findings: list[dict],
     holders: list[dict],
     meta: dict,
+    outcomes: list[dict] | None = None,
+    reach: dict[str, int] | None = None,
 ) -> str:
     """A signal's page (ECOSYSTEM.md §1.2; PIPELINE.md Stage 5): its definition in its own words,
-    what it did in this build, and every report on which it fired, in seat order."""
+    what it did in this build, who it cannot reach, and every report on which it fired, in
+    seat order."""
+    outcomes = outcomes or []
     by_state = summary.get("reports_by_state", {})
     read_reports = by_state.get("evaluated", 0)
     fired = summary["reports_with_a_finding"]
+    with_rows = sum(1 for o in outcomes if o["state"] == "evaluated" and o["evaluated"])
+    no_rows = sum(1 for o in outcomes if o["state"] == "evaluated" and not o["evaluated"])
     skipped = summary.get("rows_not_evaluated", {})
     holder_of = {h["id"]: h for h in holders}
     current = fired_now(findings, signal["id"])
@@ -1686,8 +1935,9 @@ def render_signal_page(
         "persons. "
         "An officeholder with more than one such report is listed once, with each report's date. "
         "Nothing here is a ranking and no number stands beside a name; each report is on its "
-        "officeholder's page with its dates, its arithmetic, and what the signal does not say."
-        "</caption>\n"
+        "officeholder's page with its dates, its arithmetic, and what the signal does not say. "
+        "Who cannot appear here, and why, is counted above: an officeholder whose transaction "
+        "reports are all scanned paper cannot, whatever the reports show.</caption>\n"
         "<thead><tr><th>Seat</th><th>Name, as the Clerk lists it</th>"
         "<th>Reports it fired on, by the date the Clerk's index gives them</th></tr></thead>\n"
         f"<tbody>\n{''.join(rows)}\n</tbody>\n</table>"
@@ -1705,18 +1955,35 @@ def render_signal_page(
         f"{standard_links(signal)}</p>\n"
         "</div>\n</div>\n</header>"
     )
+    c = reach or {}
+    reach_rows = (
+        f"<dt>{c['paper_only']:,}</dt><dd>officeholders whose transaction reports are all "
+        "scanned paper, which it does not read, so they cannot appear below whatever the reports "
+        f"show; {c['some_paper']:,} more have some</dd>\n"
+        f"<dt>{c['before_swearing_in']:,}</dt><dd>officeholders with rows dated before this "
+        "Congress's swearing-in, which it does not evaluate: the roster records that date, not "
+        "the start of anyone's service, and the register holds no earlier index</dd>\n"
+        f"<dt>{c['set_aside_held'] + c['set_aside_other']:,}</dt><dd>transaction reports the "
+        "index sets aside, not attributed to a sitting member, which it does not see: "
+        f"{c['set_aside_held']:,} under a sitting member's surname, for a person to decide, and "
+        f"{c['set_aside_other']:,} under names no sitting member bears</dd>\n"
+        if reach
+        else ""
+    )
     record = (
         '<section class="record">\n<h2>What it did in this build</h2>\n<dl>\n'
-        f"<dt>{read_reports:,}</dt><dd>transaction reports read and evaluated; "
-        f"{read_reports - fired:,} of them had every evaluated row on or before its deadline, and "
-        f"it fired on {fired:,}{bar(fired, read_reports)}</dd>\n"
-        f"<dt>{summary['rows_evaluated']:,}</dt><dd>rows evaluated, {summary['rows_after']:,} "
-        "of them dated by the Clerk's index after the deadline</dd>\n"
+        f"<dt>{read_reports:,}</dt><dd>transaction reports read: on {with_rows:,} it evaluated at "
+        f"least one row, and it fired on {fired:,} of those; on {no_rows:,} it evaluated no row, "
+        f"for the reasons below{bar(fired, read_reports)}</dd>\n"
+        f"<dt>{summary['rows_evaluated']:,}</dt><dd>rows evaluated; for "
+        f"{summary['rows_after']:,} of them the Clerk's index dates the report after the "
+        "deadline</dd>\n"
         f"<dt>{skipped_n:,}</dt><dd>rows not evaluated: "
         f"{esc(reason_clause(skipped)) or 'none'}</dd>\n"
         f"<dt>{by_state.get('not read', 0):,}</dt><dd>reports captured and not read: scanned "
         "paper, which the Committee judges by its postmark, and the register does not see the "
         "postmark</dd>\n"
+        f"{reach_rows}"
         f"<dt>{summary['officeholders_with_a_finding']:,}</dt><dd>officeholders the reports it "
         "fired on are attributed to. A count about the register; no page ranks anyone by it</dd>\n"
         + (
@@ -1730,7 +1997,8 @@ def render_signal_page(
     body = (
         f'{head}\n<main id="main">\n'
         f"<section>\n<h2>What it describes</h2>\n{md_blocks(signal['description'])}\n"
-        f'<p class="quiet">{esc(NOT_A_DETERMINATION)}</p>\n</section>\n'
+        f'<p class="quiet">{esc(NOT_A_DETERMINATION)}</p>\n'
+        f'<p class="quiet">{esc(QUIET_NOT_A_DETERMINATION)}</p>\n</section>\n'
         f"<section>\n<h2>How it counts</h2>\n{md_blocks(signal['criteria'])}\n</section>\n"
         f"<section>\n<h2>What it does not say</h2>\n{md_blocks(signal['not_saying'])}\n</section>\n"
         f"{record}\n"
@@ -1759,6 +2027,7 @@ def render_index(
     rejected_url: str = REPO + "data/rejected/house-fd/",
     transactions: list[dict] | None = None,
     signal_runs: list[tuple[dict, dict]] | None = None,
+    reach: dict[str, dict[str, int]] | None = None,
 ) -> str:
     at_seat = at_seat or {}
     holder_by_seat = {h["offices"][0]["seat"]: h for h in holders}
@@ -1849,6 +2118,7 @@ def render_index(
         rejected_url,
         transactions,
         signal_runs,
+        reach,
     )
     body = (
         f'{head}\n<main id="main">\n{door}\n{tile_map(offices)}\n{record}\n{table}\n'
@@ -1885,6 +2155,13 @@ def load_signals(
             by_oh.setdefault(outcome["officeholder_id"], []).append(outcome)
         outcomes_by[signal["id"]] = by_oh
     return signals, findings, signal_runs, outcomes_by
+
+
+def unpaged_officeholders(findings: list[dict], holders: list[dict]) -> list[str]:
+    """Officeholders the ledger's current rows name and the rows no longer hold. A published
+    Finding stays on a page, so a render that would leave one without a page refuses."""
+    named = {f["officeholder_id"] for f in findings if f.get("superseded_by") is None}
+    return sorted(named - {h["id"] for h in holders})
 
 
 def pick_run(root: Path) -> tuple[dict, list[Path]]:
@@ -1926,6 +2203,8 @@ def main(argv: list[str] | None = None) -> int:
     striker = load_striker(root)
 
     meta = json.loads((root / "data" / "meta.json").read_text(encoding="utf-8"))
+    # The pages' view of the build: the sealed meta, with the anchor as the proof now says it.
+    meta = {**meta, "anchor": {**meta.get("anchor", {}), **anchor_of(root, meta["build"])}}
     holders = read_ndjson(root / "data" / "officeholders.ndjson")
     filings = read_ndjson(root / "data" / "filings.ndjson")
     offices = read_ndjson(root / "data" / "offices.ndjson")
@@ -1947,9 +2226,23 @@ def main(argv: list[str] | None = None) -> int:
     for f in filings:
         by_holder.setdefault(f["officeholder_id"], []).append(f)
     signals, findings, signal_runs, outcomes_by = load_signals(root)
+    all_signals = read_ndjson(root / "data" / "signals.ndjson")
     findings_by: dict[str, list[dict]] = {}
     for f in findings:
         findings_by.setdefault(f["officeholder_id"], []).append(f)
+    unpaged = unpaged_officeholders(findings, holders)
+    if unpaged:
+        raise SystemExit(
+            "refusing to render: the ledger's current Findings name "
+            f"{len(unpaged)} officeholders the rows no longer hold ({', '.join(unpaged)}); a "
+            "published Finding stays on a page, so the register must keep their rows (NEXT.md)"
+        )
+    reach = {
+        signal["id"]: coverage(
+            [o for os in outcomes_by.get(signal["id"], {}).values() for o in os], rejected
+        )
+        for signal, _ in signal_runs
+    }
 
     (out / "officeholders").mkdir(parents=True, exist_ok=True)
     for h in holders:
@@ -1967,6 +2260,7 @@ def main(argv: list[str] | None = None) -> int:
                 signals,
                 findings_by.get(h["id"], []),
                 {sid: by_oh.get(h["id"], []) for sid, by_oh in outcomes_by.items()},
+                all_signals,
             ),
             encoding="utf-8",
             newline="\n",
@@ -1983,6 +2277,7 @@ def main(argv: list[str] | None = None) -> int:
             rejected_url,
             transactions,
             signal_runs,
+            reach,
         ),
         encoding="utf-8",
         newline="\n",
@@ -1990,8 +2285,11 @@ def main(argv: list[str] | None = None) -> int:
     for signal, summary in signal_runs:
         target = out / signal_page_path(signal)
         target.parent.mkdir(parents=True, exist_ok=True)
+        outcomes_all = [o for os in outcomes_by.get(signal["id"], {}).values() for o in os]
         target.write_text(
-            render_signal_page(signal, summary, findings, holders, meta),
+            render_signal_page(
+                signal, summary, findings, holders, meta, outcomes_all, reach[signal["id"]]
+            ),
             encoding="utf-8",
             newline="\n",
         )
@@ -1999,6 +2297,15 @@ def main(argv: list[str] | None = None) -> int:
     (out / "mark.svg").write_text(
         striker.strike(digest, digest, with_wordmark=True), encoding="utf-8", newline="\n"
     )
+    written = {out / "officeholders" / f"{slug(h['id'])}.html" for h in holders}
+    written |= {out / signal_page_path(signal) for signal, _ in signal_runs}
+    for folder in ("officeholders", "signals"):
+        for stale in sorted((out / folder).rglob("*.html")) if (out / folder).is_dir() else []:
+            if stale not in written:
+                stale.unlink()
+        for empty in sorted((out / folder).rglob("*"), reverse=True):
+            if empty.is_dir() and not any(empty.iterdir()):
+                empty.rmdir()
 
     quiet = sum(1 for h in holders if not by_holder.get(h["id"]))
     shown = out.relative_to(root).as_posix() if out.is_relative_to(root) else str(out)
