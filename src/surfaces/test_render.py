@@ -907,3 +907,69 @@ def test_the_footer_says_the_anchor_the_proof_holds(tmp_path):
     confirmed = render.anchor_words({"anchor": {"state": "confirmed", "block": 915000}})
     assert "Bitcoin block 915,000, by OpenTimestamps" in confirmed
     assert "Anchor: none yet" in render.footer(META, home=True)
+
+
+def test_an_officeholder_the_roster_no_longer_lists_keeps_a_page_and_no_seat():
+    """NEXT.md S.1b. The register keeps every row it published about a Member who left, and
+    their page, and says so; the index never shows them at a seat the roster says they do not
+    hold, and lists them, in seat order and with no count beside a name, below the seats."""
+    gone = HOLDERS[0]
+    change = {
+        "id": f"ch:not-listed:{gone['id']}:2027-01-11T09:17:00Z",
+        "row_id": gone["id"],
+        "rows": "officeholders",
+        "change": "not listed",
+        "capture": {
+            "url": "https://clerk.house.gov/xml/lists/MemberData.xml",
+            "retrieved_at": "2027-01-11T09:17:00Z",
+            "content_hash": "0" * 64,
+        },
+    }
+    filing_gone = dict(
+        change,
+        id="ch:not-listed:x:2027-01-12T00:00:00Z",
+        row_id=FILINGS[1]["id"],
+        rows="filings",
+        capture=dict(change["capture"], retrieved_at="2027-01-12T00:00:00Z"),
+    )
+    changes = {gone["id"]: change, FILINGS[1]["id"]: filing_gone}
+    page = render.render_index(HOLDERS, OFFICES, FILINGS, RUN, META, striker, changes=changes)
+    seats, kept = page.split("<h2>No longer on the Clerk's roster</h2>")
+    assert (
+        f'href="officeholders/{render.slug(gone["id"])}.html"'
+        not in seats.split("<h2>Every seat in the register</h2>")[1]
+    ), "not shown at a seat the roster says they do not hold"
+    assert render.slug(gone["id"]) in kept and '<td class="idx">2027-01-11</td>' in kept
+    assert "does not say why a person no longer does" in kept
+    assert ranking.check_index(page) == []
+    assert frame.check_page(page) is None
+    own = render.render_officeholder(gone, FILINGS[:2], META, striker, changes=changes)
+    assert "The Clerk's roster read 2027-01-11 does not list this officeholder" in own
+    assert "the roster read 2026-09-22 is the last that listed them" in own
+    assert "not in the index read 2027-01-12; kept as published" in own
+    assert frame.check_page(own) is None
+    other = render.render_officeholder(HOLDERS[1], FILINGS[2:], META, striker, changes=changes)
+    assert "does not list this officeholder" not in other
+
+
+def test_the_state_of_the_record_counts_what_was_carried_and_says_why():
+    run = dict(RUN, carried={"officeholders": 1, "offices": 0, "filings": 20, "transactions": 649})
+    section = render.state_of_record(META, run, HOLDERS, FILINGS, OFFICES, 1, "https://x/rows")
+    assert "officeholders the Clerk's roster no longer lists, and 20 filings and 649" in section
+    assert "a change is shown beside it, never by removal" in section
+    closed = dict(run, congress={"filing_year": 119, "roster": 120, "closed": True}, year=2025)
+    section = render.state_of_record(META, closed, HOLDERS, FILINGS, OFFICES, 1, "https://x/rows")
+    assert "officeholders of filing year 2025, whose Congress has ended" in section
+
+
+def test_a_closed_year_counts_the_rows_it_holds_not_the_builds_zeros():
+    closed = dict(
+        RUN,
+        counts=dict.fromkeys(("seats", "filled", "vacant", "accepted"), 0),
+        congress={"filing_year": 119, "roster": 120, "closed": True},
+        carried={"officeholders": len(HOLDERS), "offices": len(OFFICES), "filings": 3},
+    )
+    section = render.state_of_record(META, closed, HOLDERS, FILINGS, OFFICES, 0, "https://x/r")
+    assert "<dt>0</dt><dd>seats in the House" not in section
+    assert f"<dt>{len(OFFICES)}</dt><dd>seats in the House" in section
+    assert f"<dt>{len(FILINGS)}</dt><dd>index rows attributed" in section

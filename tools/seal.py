@@ -183,6 +183,8 @@ def derive_state(root: Path, meta: dict) -> str:
     runs = current_runs(root)
     holders = read_rows(root / "data" / "officeholders.ndjson")
     filings = read_rows(root / "data" / "filings.ndjson")
+    transactions = len(read_rows(root / "data" / "transactions.ndjson"))
+    offices = len(read_rows(root / "data" / "offices.ndjson"))
     findings = read_rows(root / "data" / "findings.ndjson")
     signals = {row["id"]: row for row in read_rows(root / "data" / "signals.ndjson")}
     reports = sum(1 for f in filings if f.get("form_type") == "House-PTR")
@@ -238,7 +240,7 @@ def derive_state(root: Path, meta: dict) -> str:
                 "than once, identically; the register keeps one row for each."
             )
         sentence += (
-            f" Of the {reports:,} transaction reports attributed, "
+            f" Of the {counts.get('reports', reports):,} transaction reports attributed, "
             f"{documents.get('read', 0):,} were read from the Clerk's documents and "
             f"{documents.get('transactions', 0):,} transactions "
             "written, each checked against the seat and Filing ID printed in its report; "
@@ -262,6 +264,11 @@ def derive_state(root: Path, meta: dict) -> str:
             f"read, and no holdings are. {counts.get('quiet', 0):,} sitting members have no filing "
             "attributed."
         )
+        congress = run.get("congress", {})
+        if congress.get("closed"):
+            sentence = closed_sentence(run, len(holders), len(filings), transactions, offices)
+        elif any(run.get("carried", {}).get(k) for k in ("officeholders", "filings")):
+            sentence += " " + carried_sentence(run, len(holders), len(filings), transactions)
         sentences.append(sentence)
     latest: dict[str, dict] = {}
     for row in signals.values():
@@ -318,6 +325,52 @@ def derive_state(root: Path, meta: dict) -> str:
         "register is not evidence of wrongdoing."
     )
     return " ".join(sentences)
+
+
+def carried_sentence(run: dict, holders: int, filings: int, transactions: int) -> str:
+    """What the build kept exactly as published because it did not derive it again, and the
+    totals the register holds with it (NEXT.md S.1b)."""
+    carried = run.get("carried", {})
+    gone = carried.get("officeholders", 0)
+    who = (
+        f"the rows of {plural(gone, 'officeholder', 'officeholders')} the roster no longer "
+        "lists, and "
+        if gone
+        else ""
+    )
+    return (
+        f"The register also keeps, exactly as published, {who}"
+        f"{plural(carried.get('filings', 0), 'filing', 'filings')} and "
+        f"{plural(carried.get('transactions', 0), 'transaction', 'transactions')} this build did "
+        f"not derive again, so it holds {holders:,} officeholders, "
+        f"{plural(filings, 'filing', 'filings')} and "
+        f"{plural(transactions, 'transaction', 'transactions')} in all; each change a later "
+        "capture showed is a row of its own, and nothing published was removed."
+    )
+
+
+def closed_sentence(run: dict, holders: int, filings: int, transactions: int, offices: int) -> str:
+    """A filing year whose Congress has ended: its rows kept as published, none derived again."""
+    congress = run.get("congress", {})
+    counts = run.get("counts", {})
+    reasons = run.get("rejected_by_reason", {})
+    index = next((s for s in run.get("sources", []) if s["name"].endswith("FD.zip")), {})
+    not_attributed = ", ".join(
+        f"{n:,} because {reason}"
+        for reason, n in sorted(reasons.items(), key=lambda item: (-item[1], item[0]))
+    )
+    return (
+        f"Filing year {run.get('year')}, of the {ordinal(congress.get('filing_year', 0))} "
+        f"Congress, is closed: the roster the register reads lists the "
+        f"{ordinal(congress.get('roster', 0))}, so this build derives no row of that year again "
+        f"and attributes no new one. It keeps, exactly as published, "
+        f"{plural(offices, 'office', 'offices')}, {holders:,} officeholders, "
+        f"{plural(filings, 'filing', 'filings')} and "
+        f"{plural(transactions, 'transaction', 'transactions')}; "
+        f"{counts.get('rejected', 0):,} rows of the Clerk's {run.get('year')} index, retrieved "
+        f"{index.get('retrieved_at', '')[:10]}, are not attributed, each with a reason"
+        + (f": {not_attributed}." if not_attributed else ".")
+    )
 
 
 def ledger_sentence(findings: list[dict]) -> str:

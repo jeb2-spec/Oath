@@ -349,6 +349,26 @@ def read_ndjson(path: Path) -> list[dict]:
         return [json.loads(line) for line in handle if line.strip()]
 
 
+def load_changes(root: Path) -> dict[str, dict]:
+    """Each published row's latest recorded change, by row id: what a later capture of the
+    source showed about a row the register had already published (data/changes.ndjson)."""
+    latest: dict[str, dict] = {}
+    rows = read_ndjson(root / "data" / "changes.ndjson")
+    for change in sorted(rows, key=lambda c: (c["capture"]["retrieved_at"], c["id"])):
+        latest[change["row_id"]] = change
+    return latest
+
+
+def not_listed(changes: dict[str, dict], rows: str) -> dict[str, str]:
+    """The rows of one file the source last showed as not listed, with that capture's date.
+    Such a row stays, exactly as published; the page says so beside it."""
+    return {
+        row_id: change["capture"]["retrieved_at"][:10]
+        for row_id, change in changes.items()
+        if change["rows"] == rows and change["change"] == "not listed"
+    }
+
+
 def esc(text: object) -> str:
     return html.escape(str(text) if text is not None else "", quote=True)
 
@@ -1301,7 +1321,7 @@ def checks_section(holder: dict, filings: list[dict], held_here, signal_line: st
     )
 
 
-def filings_section(filings: list[dict], held_here) -> str:
+def filings_section(filings: list[dict], held_here, gone: dict[str, str] | None = None) -> str:
     heading = "<h2>What the Clerk's index lists for this officeholder</h2>\n"
     if not filings:
         return (
@@ -1318,7 +1338,14 @@ def filings_section(filings: list[dict], held_here) -> str:
             "<tr>"
             f'<td class="idx">{esc(f["filed_at"])}</td>'
             f'<td class="code">{esc(f.get("source_form_code") or "")}</td>'
-            f'<td><a href="{esc(f["source"]["url"])}">Open the Clerk\'s copy</a></td>'
+            f'<td><a href="{esc(f["source"]["url"])}">Open the Clerk\'s copy</a>'
+            + (
+                f'<span class="note">not in the index read {esc(gone[f["id"]])}; kept as '
+                "published</span>"
+                if f["id"] in (gone or {})
+                else ""
+            )
+            + "</td>"
             f'<td class="idx">{esc(f["source"]["retrieved_at"][:10])}</td>'
             f'<td class="code">{how_attributed(f)}</td>'
             "</tr>"
@@ -1425,7 +1452,10 @@ def marked_clause(rows: list[dict]) -> str:
 
 
 def transactions_section(
-    filings: list[dict], transactions: list[dict], held_reports: int = 0
+    filings: list[dict],
+    transactions: list[dict],
+    held_reports: int = 0,
+    gone: dict[str, str] | None = None,
 ) -> str:
     """What the reports the register read list, as filed, grouped by report.
 
@@ -1516,7 +1546,14 @@ def transactions_section(
             f'<td class="idx">{esc(t["notified_date"])}</td>'
             f"<td>{type_cell(t)}</td>"
             f"<td>{esc(OWNER_WORDS.get(t['owner'], t['owner']))}</td>"
-            f"<td>{asset_cell(t)}</td>"
+            f"<td>{asset_cell(t)}"
+            + (
+                f'<span class="note">not in the report as read {esc(gone[t["id"]])}; kept as '
+                "published</span>"
+                if t["id"] in (gone or {})
+                else ""
+            )
+            + "</td>"
             f'<td class="amt">{esc(amount_text(t))}</td>'
             "</tr>"
             for t in rows
@@ -1547,8 +1584,10 @@ def render_officeholder(
     findings: list[dict] | None = None,
     outcomes: dict[str, list[dict]] | None = None,
     all_signals: list[dict] | None = None,
+    changes: dict[str, dict] | None = None,
 ) -> str:
     signals, findings, outcomes = signals or [], findings or [], outcomes or {}
+    changes = changes or {}
     office = holder["offices"][0] if holder.get("offices") else {}
     seal = striker.strike(holder["id"], meta.get("digest", ""), ticks=0, bars=0)
     roster_read = holder.get("source", {}).get("retrieved_at", "")[:10]
@@ -1558,7 +1597,16 @@ def render_officeholder(
         office_line += (
             f" · sworn in for this Congress {esc(sworn)}, per the roster read {esc(roster_read)}"
         )
+    off_roster = not_listed(changes, "officeholders").get(holder["id"])
+    off_line = (
+        f'<p class="office">The Clerk\'s roster read {esc(off_roster)} does not list this '
+        "officeholder. The register keeps every row it published about them, exactly as "
+        f"published; the roster read {esc(roster_read)} is the last that listed them.</p>\n"
+        if off_roster
+        else ""
+    )
     check_line = signal_check_line(signals, findings, outcomes, held_reports)
+    gone_rows = not_listed(changes, "transactions")
     section = signals_section(
         signals,
         findings,
@@ -1576,6 +1624,7 @@ def render_officeholder(
         '<p class="kicker">Oath · the register</p>\n'
         f"<h1>{esc(holder['legal_name'])}</h1>\n"
         f'<p class="office">{office_line}</p>\n'
+        f"{off_line}"
         "</div>\n"
         + seal_figure(
             seal,
@@ -1588,8 +1637,8 @@ def render_officeholder(
     body = (
         f'{head}\n<main id="main">\n{REQUIRES}\n'
         f"{checks_section(holder, filings, held_here, check_line)}\n"
-        f"{filings_section(filings, held_here)}\n"
-        f"{transactions_section(filings, transactions or [], held_reports)}\n"
+        f"{filings_section(filings, held_here, not_listed(changes, 'filings'))}\n"
+        f"{transactions_section(filings, transactions or [], held_reports, gone_rows)}\n"
         f"{section}\n"
         f"{how_to_read(True)}\n"
         "</main>\n"
@@ -1752,7 +1801,26 @@ def state_of_record(
         )
     marked = sum(marked_counts(transactions).values())
     marked_note = f" ({marked} of them marked Amended or Deleted by the filer)" if marked else ""
-    counts = run.get("counts", {})
+    carried = run.get("carried", {})
+    carried_line = ""
+    if any(carried.get(k) for k in ("officeholders", "filings", "transactions")):
+        congress = run.get("congress", {})
+        what = (
+            f"officeholders of filing year {run.get('year', '')}, whose Congress has ended, and "
+            if congress.get("closed")
+            else "officeholders the Clerk's roster no longer lists, and "
+        )
+        carried_line = (
+            f"<dt>{carried.get('officeholders', 0)}</dt><dd>{what}"
+            f"{carried.get('filings', 0)} filings and {carried.get('transactions', 0)} "
+            "transactions this build did not derive again, each kept exactly as the register "
+            "published it: a published row stays, and a change is shown beside it, never by "
+            f'removal (<a href="{REPO}data/changes.ndjson">the changes, each with the capture '
+            "that shows it</a>)</dd>\n"
+        )
+    # A closed year's build derived nothing from the roster, so its counts are the rows the
+    # register holds for that year, not the build's (which are none by construction).
+    counts = {} if run.get("congress", {}).get("closed") else run.get("counts", {})
     seats = counts.get("seats", len(offices))
     filled = counts.get("filled", len(holders))
     voting = sum(1 for o in offices if o.get("title") == REPRESENTATIVE)
@@ -1819,6 +1887,7 @@ def state_of_record(
         f'not by what was filed. <a href="{rejected_url}">The '
         "rows, with reasons</a>; every row there is a line of the Clerk's index the register did "
         "not attribute, and presence in that file is not evidence of anything about anyone.</dd>\n"
+        f"{carried_line}"
         f"{signal_lines}"
         "</dl>\n"
         f'<p class="quiet">{fresh}The seal fixes exactly this reading.</p>\n'
@@ -2029,9 +2098,13 @@ def render_index(
     transactions: list[dict] | None = None,
     signal_runs: list[tuple[dict, dict]] | None = None,
     reach: dict[str, dict[str, int]] | None = None,
+    changes: dict[str, dict] | None = None,
 ) -> str:
     at_seat = at_seat or {}
-    holder_by_seat = {h["offices"][0]["seat"]: h for h in holders}
+    # A seat shows who the roster lists. Whom it no longer lists is kept, with every row the
+    # register published, and listed below the seats, never at a seat they do not hold.
+    off_roster = not_listed(changes or {}, "officeholders")
+    holder_by_seat = {h["offices"][0]["seat"]: h for h in holders if h["id"] not in off_roster}
     office_by_seat = {o["seat"]: o for o in offices}
     seats = sorted(office_by_seat)
     counts = seats_by_state(offices)
@@ -2109,6 +2182,32 @@ def render_index(
         "<thead><tr><th>Seat</th><th>Name, as the Clerk lists it</th><th>Office</th></tr></thead>\n"
         "<tbody>\n" + "\n".join(rows) + "\n</tbody>\n</table>\n</section>"
     )
+    kept = sorted(
+        (h for h in holders if h["id"] in off_roster),
+        key=lambda h: (h["offices"][0]["seat"], h["id"]),
+    )
+    if kept:
+        kept_rows = "\n".join(
+            f'<tr data-id="{esc(h["id"])}" data-seat="{esc(h["offices"][0]["seat"])}">'
+            f'<td class="idx">{esc(h["offices"][0]["seat"])}</td>'
+            f'<td><a href="officeholders/{esc(slug(h["id"]))}.html">{esc(h["legal_name"])}</a></td>'
+            f'<td class="idx">{esc(off_roster[h["id"]])}</td>'
+            "</tr>"
+            for h in kept
+        )
+        table += (
+            "\n<section>\n<h2>No longer on the Clerk's roster</h2>\n"
+            '<table id="not-listed" data-order="seat">\n'
+            "<caption>Officeholders the register published whom the Clerk's roster, as last read, "
+            "does not list, in seat order, each with the date of the first roster read that did "
+            "not. The register keeps every row it published about them, exactly as published, "
+            "and their pages. The order says nothing about anyone, and neither does a name here: "
+            "the roster lists who holds a seat, and does not say why a person no longer does."
+            "</caption>\n"
+            "<thead><tr><th>Seat</th><th>Name, as the Clerk listed it</th>"
+            "<th>Not on the roster read</th></tr></thead>\n"
+            f"<tbody>\n{kept_rows}\n</tbody>\n</table>\n</section>"
+        )
     record = state_of_record(
         meta,
         run,
@@ -2228,6 +2327,7 @@ def main(argv: list[str] | None = None) -> int:
         by_holder.setdefault(f["officeholder_id"], []).append(f)
     signals, findings, signal_runs, outcomes_by = load_signals(root)
     all_signals = read_ndjson(root / "data" / "signals.ndjson")
+    changes = load_changes(root)
     findings_by: dict[str, list[dict]] = {}
     for f in findings:
         findings_by.setdefault(f["officeholder_id"], []).append(f)
@@ -2262,6 +2362,7 @@ def main(argv: list[str] | None = None) -> int:
                 findings_by.get(h["id"], []),
                 {sid: by_oh.get(h["id"], []) for sid, by_oh in outcomes_by.items()},
                 all_signals,
+                changes,
             ),
             encoding="utf-8",
             newline="\n",
@@ -2279,6 +2380,7 @@ def main(argv: list[str] | None = None) -> int:
             transactions,
             signal_runs,
             reach,
+            changes,
         ),
         encoding="utf-8",
         newline="\n",

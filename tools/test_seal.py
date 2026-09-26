@@ -176,3 +176,70 @@ def test_the_seal_points_at_the_anchor_and_never_seals_its_state():
     assert pointer["manifest"] == "data/anchors/0006-house-2025.manifest"
     assert pointer["ledger"] == "ANCHORS.md"
     assert "state" not in pointer and "block" not in pointer
+
+
+def copy_register(tmp_path: Path) -> Path:
+    import shutil
+
+    shutil.copytree(
+        ROOT / "data", tmp_path / "data", ignore=shutil.ignore_patterns("cache", "anchors")
+    )
+    return tmp_path
+
+
+def the_run(root: Path) -> tuple[Path, dict]:
+    import json
+
+    (path,) = (root / "data" / "adapter-runs").glob("house-fd-2025-*.ndjson")
+    return path, json.loads(path.read_text("utf-8"))
+
+
+def test_rows_kept_for_a_member_who_left_are_counted_in_the_sealed_sentence(tmp_path):
+    """NEXT.md S.1b. A build that carries a departed Member's rows seals a sentence that says
+    so and carries the register's totals, or the seal refuses it."""
+    import json
+
+    seal = load()
+    verify = seal.load_verify(HERE)
+    root = copy_register(tmp_path)
+    holders = root / "data" / "officeholders.ndjson"
+    kept = json.loads(holders.read_text("utf-8").splitlines()[0])
+    kept["id"] = "oh:us:example:example"
+    holders.write_text(holders.read_text("utf-8") + json.dumps(kept) + "\n", encoding="utf-8")
+    path, run = the_run(root)
+    run["carried"] = {"officeholders": 1, "offices": 0, "filings": 0, "transactions": 0}
+    path.write_text(json.dumps(run) + "\n", encoding="utf-8")
+    meta = json.loads((ROOT / "data" / "meta.json").read_text("utf-8"))
+    meta["rows"] = verify.row_counts(root)
+    text = seal.derive_state(root, meta)
+    assert seal.state_text_lacks({**meta, "state": text}, run) == ""
+    assert "the rows of 1 officeholder the roster no longer lists" in text
+    assert f"so it holds {meta['rows']['data/officeholders.ndjson']:,} officeholders" in text
+    assert "nothing published was removed" in text
+
+
+def test_a_closed_year_seals_a_sentence_that_says_it_is_closed(tmp_path):
+    import json
+
+    seal = load()
+    verify = seal.load_verify(HERE)
+    root = copy_register(tmp_path)
+    path, run = the_run(root)
+    reason = (
+        "filing year 2025 is of the 119th Congress, and the roster this build read lists the 120th"
+    )
+    run["congress"] = {"filing_year": 119, "roster": 120, "closed": True}
+    run["counts"] = dict.fromkeys(("seats", "filled", "vacant", "accepted", "quiet"), 0)
+    run["counts"]["rejected"] = 2
+    run["documents"] = {"read": 0, "transactions": 0}
+    run["rejected_by_reason"] = {reason: 2}
+    path.write_text(json.dumps(run) + "\n", encoding="utf-8")
+    meta = json.loads((ROOT / "data" / "meta.json").read_text("utf-8"))
+    meta["rows"] = verify.row_counts(root)
+    text = seal.derive_state(root, meta)
+    assert seal.state_text_lacks({**meta, "state": text}, run) == ""
+    assert text.startswith(
+        "Filing year 2025, of the 119th Congress, is closed: the roster the register reads "
+        "lists the 120th"
+    )
+    assert "0 seats" not in text and f"2 because {reason}" in text
