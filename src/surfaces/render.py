@@ -52,6 +52,7 @@ REPO = "https://github.com/jeb2-spec/Oath/blob/main/"
 CHARTER = REPO + "CHARTER.md"
 SOURCES_F1 = REPO + "SOURCES.md"
 SUBJECTS_3 = REPO + "SUBJECTS.md#3-what-is-excluded-and-why"
+SUBJECTS_1 = REPO + "SUBJECTS.md#1-the-rule"
 STANDARDS_C1 = REPO + "STANDARDS.md#c1-oath-of-office"
 STANDARDS_S1 = REPO + "STANDARDS.md#s1-ethics-in-government-act-of-1978"
 STANDARDS_S2 = REPO + "STANDARDS.md#s2-stop-trading-on-congressional-knowledge-stock-act-of-2012"
@@ -349,24 +350,115 @@ def read_ndjson(path: Path) -> list[dict]:
         return [json.loads(line) for line in handle if line.strip()]
 
 
-def load_changes(root: Path) -> dict[str, dict]:
-    """Each published row's latest recorded change, by row id: what a later capture of the
-    source showed about a row the register had already published (data/changes.ndjson)."""
-    latest: dict[str, dict] = {}
+# The Congress the pages speak of, with its terms, and the reads they rest on. main() sets it
+# from the rows before anything renders, so no sentence leans on "this Congress" or on a
+# roster whose date it does not give (the Council's reading of S.1b, Seats F and G).
+ERA: dict = {
+    "congress": 119,
+    "began": "2025-01-03",
+    "ends": "2027-01-03",
+    "closed": False,
+    "next": None,
+    "roster_read": "",
+    "last_roster_read": "",
+    "first_read": "",
+    "year": 2025,
+}
+# The captures the register keeps, by SHA-256, as paths in the repository.
+KEPT: dict[str, str] = {}
+
+
+def ordinal(n: int) -> str:
+    suffix = "th" if 11 <= n % 100 <= 13 else {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th")
+    return f"{n}{suffix}"
+
+
+def era_of(run: dict, holders: list[dict]) -> dict:
+    """The Congress of the register's rows and the reads behind them, from the rows and the
+    adapter's run record; nothing typed."""
+    congress = run.get("congress", {})
+    starts = sorted({o["term_start"] for h in holders for o in h.get("offices", [])[:1]})
+    n = congress.get("filing_year") or ((int(starts[0][:4]) - 1787) // 2 if starts else 119)
+    roster = next((s for s in run.get("sources", []) if s["name"] == "MemberData.xml"), {})
+    last = congress.get("last_roster_read") or roster.get("retrieved_at") or ""
+    reads = [h.get("source", {}).get("retrieved_at", "") for h in holders]
+    return {
+        "congress": n,
+        "began": f"{1787 + 2 * n}-01-03",
+        "ends": f"{1789 + 2 * n}-01-03",
+        "closed": bool(congress.get("closed")),
+        "next": congress.get("roster"),
+        "roster_read": (roster.get("retrieved_at") or last)[:10],
+        "last_roster_read": last[:10],
+        "first_read": min((r for r in reads if r), default="")[:10],
+        "year": run.get("year", 2025),
+    }
+
+
+def congress_words(terms: bool = False) -> str:
+    """ "the 119th Congress", with its terms when a reader needs the dates."""
+    words = f"the {ordinal(ERA['congress'])} Congress"
+    if terms:
+        words += f" (terms from noon, {long_date(ERA['began'])}, to noon, {long_date(ERA['ends'])})"
+    return words
+
+
+def long_date(iso: str) -> str:
+    months = [
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June",
+        "July",
+        "August",
+        "September",
+        "October",
+        "November",
+        "December",
+    ]
+    return f"{int(iso[8:10])} {months[int(iso[5:7]) - 1]} {iso[:4]}" if len(iso) >= 10 else iso
+
+
+def load_changes(root: Path) -> dict[str, list[dict]]:
+    """Every recorded change, by row id, oldest first: what a later capture of a source showed
+    about a row the register had already published, and what a person corrected
+    (data/changes.ndjson)."""
+    out: dict[str, list[dict]] = {}
     rows = read_ndjson(root / "data" / "changes.ndjson")
     for change in sorted(rows, key=lambda c: (c["capture"]["retrieved_at"], c["id"])):
-        latest[change["row_id"]] = change
-    return latest
+        out.setdefault(change["row_id"], []).append(change)
+    return out
 
 
-def not_listed(changes: dict[str, dict], rows: str) -> dict[str, str]:
-    """The rows of one file the source last showed as not listed, with that capture's date.
+def listing(history: list[dict]) -> list[dict]:
+    return [c for c in history if c["change"] in ("not listed", "listed again")]
+
+
+def not_listed(changes: dict[str, list[dict]], rows: str) -> dict[str, dict]:
+    """The rows of one file whose latest listing change is "not listed", with that change.
     Such a row stays, exactly as published; the page says so beside it."""
-    return {
-        row_id: change["capture"]["retrieved_at"][:10]
-        for row_id, change in changes.items()
-        if change["rows"] == rows and change["change"] == "not listed"
-    }
+    out = {}
+    for row_id, history in changes.items():
+        seen = listing(history)
+        if seen and seen[-1]["rows"] == rows and seen[-1]["change"] == "not listed":
+            out[row_id] = seen[-1]
+    return out
+
+
+def capture_link(change: dict, words: str = "the capture that shows it") -> str:
+    """A link to the capture a change cites: the copy the register keeps, where it keeps one,
+    else the source's own URL."""
+    sha = change["capture"]["content_hash"]
+    href = REPO + KEPT[sha] if sha in KEPT else change["capture"]["url"]
+    return f'<a href="{esc(href)}">{esc(words)}</a>'
+
+
+def when(change: dict) -> str:
+    """The read a change was recorded from, and the build that first sealed it."""
+    built = f", recorded in build {esc(change['build'])}" if change.get("build") else ""
+    return f"{esc(change['capture']['retrieved_at'][:10])}{built}"
 
 
 def esc(text: object) -> str:
@@ -412,55 +504,86 @@ def held_kind(reason: str) -> str:
     return "other"
 
 
-def held_at_seat(rejected: list[dict], holders: list[dict]) -> dict[str, dict[str, int]]:
-    """Rows set aside under a member's surname, by the member's seat and by why they wait.
+def seats_held(holder: dict) -> set[str]:
+    return {o["seat"] for o in holder.get("offices", []) if o.get("seat")}
 
-    A fact about the index, not a score. A row counts at a seat when its state-district
-    is that holder's seat and its surname carries every word of that holder's surname,
-    whatever reason the adapter gave, so the count is zero only when no such row exists.
-    A held row whose reason names the member but whose state-district is another seat
+
+def holders_by_seat(holders: list[dict]) -> dict[str, list[dict]]:
+    """Every officeholder the register holds at each seat. More than one when the roster no
+    longer lists a Member whose rows the register keeps and lists another at the seat."""
+    at: dict[str, list[dict]] = {}
+    for holder in holders:
+        for seat in seats_held(holder):
+            at.setdefault(seat, []).append(holder)
+    return at
+
+
+def carries_surname(holder: dict, surname: str) -> bool:
+    mine = surname_tokens(holder)
+    return bool(mine) and mine <= folded_words(surname)
+
+
+def held_by_holder(rejected: list[dict], holders: list[dict]) -> dict[str, dict[str, int]]:
+    """Rows set aside under an officeholder's surname, by officeholder and by why they wait.
+
+    A fact about the index, not a score. A row counts for a holder when its state-district
+    is a seat the holder holds in the register and its surname carries every word of that
+    holder's surname, whatever reason the adapter gave, so the count is zero only when no
+    such row exists. Two holders of one seat each count only the rows under their own
+    surname. A held row whose reason names a member at a seat other than the row's own
     counts under "elsewhere" for that member, without naming the other seat.
     """
-    tokens_of_seat = {}
-    for holder in holders:
-        for office in holder.get("offices", []):
-            tokens_of_seat[office.get("seat", "")] = surname_tokens(holder)
+    at = holders_by_seat(holders)
     counts: dict[str, dict[str, int]] = {}
+
+    def add(holder_id: str, kind: str) -> None:
+        mine = counts.setdefault(holder_id, {})
+        mine[kind] = mine.get(kind, 0) + 1
+
     for row in rejected:
         source = row.get("source_row", {})
         seat = source.get("state_dst", "").strip()
         reason = row.get("reason", "")
-        words = folded_words(source.get("last") or "")
-        if seat in tokens_of_seat and tokens_of_seat[seat] and tokens_of_seat[seat] <= words:
-            kind = held_kind(reason)
-            counts.setdefault(seat, {})[kind] = counts.get(seat, {}).get(kind, 0) + 1
+        mine = [h for h in at.get(seat, []) if carries_surname(h, source.get("last") or "")]
+        for holder in mine:
+            add(holder["id"], held_kind(reason))
+        if mine:
             continue
         named = HELD_REASON.search(reason)
         if named and named.group(2) != seat:
-            member_seat = named.group(2)
-            counts.setdefault(member_seat, {})["elsewhere"] = (
-                counts.get(member_seat, {}).get("elsewhere", 0) + 1
-            )
+            for holder in at.get(named.group(2), []):
+                if carries_surname(holder, named.group(1)):
+                    add(holder["id"], "elsewhere")
     return counts
 
 
-def held_reports_at_seat(rejected: list[dict], holders: list[dict]) -> dict[str, int]:
-    """Set-aside rows coded P at a holder's seat under the holder's surname, by seat: the
-    transaction reports the page must say are set aside and not read."""
-    tokens_of_seat = {}
-    for holder in holders:
-        for office in holder.get("offices", []):
-            tokens_of_seat[office.get("seat", "")] = surname_tokens(holder)
+def held_reports_by_holder(rejected: list[dict], holders: list[dict]) -> dict[str, int]:
+    """Set-aside rows coded P at a holder's seat under the holder's surname, by officeholder:
+    the transaction reports the page must say are set aside and not read."""
+    at = holders_by_seat(holders)
     counts: dict[str, int] = {}
     for row in rejected:
         source = row.get("source_row", {})
-        seat = source.get("state_dst", "").strip()
-        if source.get("filing_type") != "P" or seat not in tokens_of_seat:
+        if source.get("filing_type") != "P":
             continue
-        words = folded_words(source.get("last") or "")
-        if tokens_of_seat[seat] and tokens_of_seat[seat] <= words:
-            counts[seat] = counts.get(seat, 0) + 1
+        for holder in at.get(source.get("state_dst", "").strip(), []):
+            if carries_surname(holder, source.get("last") or ""):
+                counts[holder["id"]] = counts.get(holder["id"], 0) + 1
     return counts
+
+
+def held_rows_at_own_seat(rejected: list[dict], holders: list[dict]) -> int:
+    """Set-aside rows at a holder's own seat under that holder's surname, each counted once
+    however many holders of the seat it could concern."""
+    at = holders_by_seat(holders)
+    return sum(
+        1
+        for row in rejected
+        if any(
+            carries_surname(h, row.get("source_row", {}).get("last") or "")
+            for h in at.get(row.get("source_row", {}).get("state_dst", "").strip(), [])
+        )
+    )
 
 
 def held_total(at_seat: dict) -> int:
@@ -547,8 +670,9 @@ def footer(meta: dict, home: bool, to_root: str = "../") -> str:
         f"<p>Build <code>{esc(build_label(meta))}</code>, sealed "
         f"<code>{esc(meta.get('built_at'))}</code>. {anchor_line}</p>\n"
         "<p>Cite the build, not the page. Verify it: <code>python tools/verify.py</code>. "
-        "The digest proves these pages are unchanged since sealing; it does not prove the "
-        "Clerk's index is right.</p>\n"
+        "The digest proves the rows these pages are rendered from are unchanged since sealing; "
+        "it does not prove the Clerk's index is right. All dates the register read something "
+        "are UTC; the dates the Clerk gives are the Clerk's.</p>\n"
         "</footer>"
     )
 
@@ -586,7 +710,7 @@ REQUIRES = (
 # Why a row was not evaluated, in the words a page uses; the Signal's own reason is the key.
 NOT_EVALUATED_WORDS = {
     "dated before this Congress's swearing-in": (
-        "dated before the swearing-in for this Congress the roster records, which is not the "
+        "dated before the swearing-in the roster records for the Congress, which is not the "
         "start of anyone's service"
     ),
     "marked Amended": "marked Amended by the filer",
@@ -751,11 +875,13 @@ def reason_clause(counts: dict[str, int], sworn: str | None = None) -> str:
     rest = {reason: n for reason, n in counts.items() if not ASSET_CODED.match(reason)}
     parts = []
     for reason, n in sorted(rest.items(), key=lambda item: (-item[1], item[0])):
-        words = NOT_EVALUATED_WORDS.get(reason, reason)
+        words = NOT_EVALUATED_WORDS.get(reason, reason).replace(
+            "for the Congress", f"for {congress_words()}"
+        )
         if reason == "dated before this Congress's swearing-in" and sworn:
             words = (
-                f"dated before {sworn}, the swearing-in for this Congress the roster records, "
-                "which does not say whether this officeholder served before it"
+                f"dated before {sworn}, the swearing-in the roster records for "
+                f"{congress_words()}, which does not say whether this officeholder served before it"
             )
         parts.append(f"{n:,} {words}")
     if coded:
@@ -926,7 +1052,47 @@ def finding_rows_table(finding: dict) -> str:
     )
 
 
-def finding_block(finding: dict, report: dict | None, findings: list[dict] | None = None) -> str:
+def finding_changes(finding: dict, changes: dict[str, list[dict]] | None) -> str:
+    """What a later capture showed about the report a Finding was produced from, beside the
+    Finding: the Finding stands as produced until a person's correction supersedes it."""
+    history = (changes or {}).get(finding["producing_filings"][0], [])
+    last = {c["change"] if c["change"] != "listed again" else "not listed": c for c in history}
+    lines = []
+    listed = last.get("not listed")
+    if listed and listed["change"] == "not listed":
+        lines.append(
+            f"The Clerk's index read {when(listed)} no longer lists this report, and does not "
+            "say why"
+        )
+    moved = [c for c in history if c["change"] == "read otherwise" and c["now"] != c["was"]]
+    for c in moved[-1:]:
+        lines.append(
+            f"The Clerk's index read {when(c)} gives "
+            f"{FIELD_WORDS.get(c['field'], c['field'])} as {esc(c['now'])}, where the register "
+            f"published {esc(c['was'])}"
+        )
+    if last.get("replaced"):
+        lines.append(
+            f"Since the read of {when(last['replaced'])} the Clerk serves other bytes for this "
+            "report, which read otherwise"
+        )
+    if not lines:
+        return ""
+    return (
+        '<p class="quiet">'
+        + "; ".join(lines)
+        + ". This Finding stands as produced from the record as the register published it, "
+        "until a person's correction, citing the evidence, supersedes it (BYLAWS.md §5 and §6)."
+        "</p>\n"
+    )
+
+
+def finding_block(
+    finding: dict,
+    report: dict | None,
+    findings: list[dict] | None = None,
+    changes: dict[str, list[dict]] | None = None,
+) -> str:
     doc_id = finding["producing_filings"][0].rsplit(":", 1)[1]
     copy = (
         f' · <a href="{esc(report["source"]["url"])}">the Clerk\'s copy</a>'
@@ -938,6 +1104,7 @@ def finding_block(finding: dict, report: dict | None, findings: list[dict] | Non
         f"<h4>Report the Clerk's index dates {esc(finding['evidence']['filed_at'])} · "
         f'<a href="#report-{esc(doc_id)}">its rows, as filed</a>{copy}</h4>\n'
         f"<p>{esc(finding['description'])}</p>\n"
+        f"{finding_changes(finding, changes)}"
         f"{correction_line(finding, findings or [])}"
         f"{finding_rows_table(finding)}\n"
         f'<p class="quiet">Finding <code>{esc(finding["id"])}</code>, first produced from the '
@@ -968,6 +1135,7 @@ def signals_section(
     held_reports: int = 0,
     sworn: str | None = None,
     all_signals: list[dict] | None = None,
+    changes: dict[str, list[dict]] | None = None,
 ) -> str:
     """Signals that fired and Signals that did not, for one officeholder, grouped by Signal
     and never by severity (ECOSYSTEM.md §1.3; METHODOLOGY.md §10). Every defined Signal is
@@ -984,7 +1152,8 @@ def signals_section(
             for f in sorted(withdrawn_now(findings, signal_id), key=lambda f: f["id"])
         )
         found = "\n".join(
-            finding_block(f, filings_by_id.get(f["producing_filings"][0]), findings) for f in mine
+            finding_block(f, filings_by_id.get(f["producing_filings"][0]), findings, changes)
+            for f in mine
         )
         return withdrawn, found
 
@@ -1060,7 +1229,7 @@ def signal_check_line(
     for signal in signals:
         n = len(fired_now(findings, signal["id"]))
         state = (
-            f"fired on {n:,} {plural(n, 'report', 'reports')}, below"
+            f'fired on {n:,} {plural(n, "report", "reports")}, <a href="#signals">below</a>'
             if n
             else "did not fire: "
             + which_silence((outcomes or {}).get(signal["id"], []), held_reports)
@@ -1080,7 +1249,36 @@ def how_to_read(person: bool) -> str:
             "The oath",
             "The words every member speaks on taking the seat, printed as the statute gives them "
             "and linked to it. It is the standard the register sets the record beside.",
-        )
+        ),
+        (
+            "The Clerk",
+            "The Clerk of the U.S. House of Representatives, the House officer who publishes "
+            "Members' financial disclosures and the list of Members by seat.",
+        ),
+        (
+            "The roster",
+            "That list, as the Clerk publishes it, read on the date shown. It lists who holds each "
+            "seat when it is read; it does not say when or why a person no longer does.",
+        ),
+        (
+            "A Congress",
+            f"The House's numbered two-year term: the {ordinal(ERA['congress'])} is the term from "
+            f"noon on {long_date(ERA['began'])} to noon on {long_date(ERA['ends'])} (U.S. Const. "
+            "amend. XX, section 1).",
+        ),
+        (
+            "Dates",
+            "A date on which the register read something is a UTC date. A date the Clerk gives, "
+            "for a filing or a transaction, is the Clerk's or the filer's own.",
+        ),
+        (
+            "A note beside a row",
+            "What a later reading of the source showed about a row the register had published "
+            "(no longer listed, listed again, stated otherwise, or served in other bytes), or a "
+            "person's correction citing the evidence, with the date and a link to the capture "
+            "that shows it, which the register keeps. The row itself stays as published. The "
+            "source does not say why a row changed, and the register does not guess.",
+        ),
     ]
     if person:
         rows += [
@@ -1100,7 +1298,12 @@ def how_to_read(person: bool) -> str:
                 "The document",
                 "The Clerk's own copy. The register links to it and does not host it.",
             ),
-            ("Fetched", "The day the register last read the Clerk's index."),
+            (
+                "Fetched",
+                "The day the register read the Clerk's index for this row as it published it. A "
+                "row kept from an earlier build keeps that day; a later reading that showed the "
+                "row otherwise is noted beside it.",
+            ),
             (
                 "A row of a report",
                 Raw(
@@ -1129,8 +1332,9 @@ def how_to_read(person: bool) -> str:
         rows += [
             (
                 "The roll",
-                "Every seat of the House in seat order, with the name the Clerk's roster lists. "
-                "Seat order is an order of offices, not of people.",
+                f"Every seat of the House in {congress_words()}, in seat order, with the name "
+                "the Clerk's roster lists on the date the table gives. Seat order is an order of "
+                "offices, not of people.",
             )
         ]
     rows += [
@@ -1186,8 +1390,7 @@ HELD_CLAUSES = {
     "no_filing_id": "whose {docs} {carry} no Filing ID line (scanned paper, or a form that "
     "prints none) and cannot confirm the filer",
     "status": "whose {docs} {print} a filer status other than Member",
-    "before_sworn": "dated by the index before the swearing-in the roster records for this "
-    "Congress",
+    "before_sworn": "dated by the index before the swearing-in the roster records for the Congress",
     "not_captured": "whose {docs} the register has not yet captured",
     "other": "whose {docs} {print} another seat or another Filing ID, or were set aside for "
     "another recorded reason",
@@ -1272,8 +1475,9 @@ def checks_section(holder: dict, filings: list[dict], held_here, signal_line: st
             else ""
         )
         index_line = (
-            f"<b>in the register</b> · {n} {plural(n, 'row', 'rows')} of the Clerk's 2025 index "
-            f"attributed to this officeholder{route}.{aside_sentence(held_here)}"
+            f"<b>in the register</b> · {n} {plural(n, 'row', 'rows')} of the Clerk's "
+            f"{ERA['year']} index attributed to this officeholder{route}."
+            f"{aside_sentence(held_here)}"
         )
         read, scanned = documents_read(filings)
         pending = n - read - scanned
@@ -1311,7 +1515,11 @@ def checks_section(holder: dict, filings: list[dict], held_here, signal_line: st
         )
         documents = "<b>not yet</b> · the register has not read any document for this record."
     return (
-        '<section class="checks">\n<h2>What the register can check here</h2>\n<dl class="terms">\n'
+        '<section class="checks">\n<h2>What the register can check here</h2>\n'
+        '<p class="quiet">The register reads what was filed and when. It does not read how this '
+        "officeholder voted or what they decided, or what those decisions did, in the United "
+        "States or beyond it; a quiet page says nothing about any of that.</p>\n"
+        '<dl class="terms">\n'
         f"<dt>Identity</dt><dd><b>in the register</b> · from the Clerk's roster, read "
         f"{esc(roster_read)}.</dd>\n"
         f"<dt>Filings index</dt><dd>{index_line}</dd>\n"
@@ -1321,17 +1529,74 @@ def checks_section(holder: dict, filings: list[dict], held_here, signal_line: st
     )
 
 
-def filings_section(filings: list[dict], held_here, gone: dict[str, str] | None = None) -> str:
+FIELD_WORDS = {
+    "filed_at": "the date filed",
+    "source_form_code": "the code",
+    "form_type": "the form",
+    "officeholder_id": "the officeholder",
+    "office_id": "the office",
+    "source.content_hash": "the document's bytes",
+    "legal_name": "the name",
+    "common_name": "the name as listed",
+    "sworn_at": "the swearing-in date",
+}
+
+
+def change_notes(history: list[dict]) -> str:
+    """Every recorded change to one row, in the register's own voice, beside the row: what
+    the source showed and when, that it does not say why, and the capture, which the
+    register keeps. The row itself stays as published."""
+    notes = []
+    for c in history:
+        field = FIELD_WORDS.get(c.get("field", ""), c.get("field", ""))
+        if c["change"] == "not listed":
+            what = (
+                f"No longer in the Clerk's index read {when(c)}, which does not say why; the "
+                "register keeps its row as published, and the link opens the Clerk's copy while "
+                "the Clerk serves it"
+            )
+        elif c["change"] == "listed again":
+            what = f"Listed again in the Clerk's index read {when(c)}"
+        elif c["change"] == "read otherwise":
+            what = (
+                f"The Clerk's index read {when(c)} gives {field} as {esc(c['now'])}; the register "
+                f"published {esc(c['was'])}, and keeps it until a person decides, citing the "
+                "evidence"
+            )
+        elif c["change"] == "replaced":
+            what = (
+                f"Since the read of {when(c)} the Clerk serves other bytes for this document, "
+                "which read otherwise; the rows below are from the copy the register first read"
+            )
+        elif c["now"] == c["was"]:
+            what = (
+                f"A person recorded on {when(c)} that {field} stands as published: "
+                f"{esc(c.get('because', ''))}"
+            )
+        else:
+            what = (
+                f"Corrected by a person on {when(c)}: {field} was {esc(c['was'])}. "
+                f"{esc(c.get('because', ''))}"
+            )
+        notes.append(f'<span class="note">{what.rstrip(".")}. ({capture_link(c)})</span>')
+    return "".join(notes)
+
+
+def filings_section(
+    filings: list[dict], held_here, changes: dict[str, list[dict]] | None = None
+) -> str:
     heading = "<h2>What the Clerk's index lists for this officeholder</h2>\n"
+    year = ERA["year"]
     if not filings:
         return (
             f"<section>\n{heading}"
-            '<p class="quiet">The register has not yet matched any row of the Clerk\'s 2025 index '
-            "to this name. This is a gap in the register's name-matching, not a statement about "
-            f"what was filed.{aside_sentence(held_here)} "
+            f'<p class="quiet">The register has not yet matched any row of the Clerk\'s {year} '
+            "index to this name. This is a gap in the register's name-matching, not a statement "
+            f"about what was filed.{aside_sentence(held_here)} "
             f'<a href="{CLERK_SITE}">Search the Clerk\'s disclosure site directly.</a></p>\n'
             "</section>"
         )
+    changes = changes or {}
     rows = []
     for f in sorted(filings, key=lambda f: (f["filed_at"], f["id"])):
         rows.append(
@@ -1339,21 +1604,17 @@ def filings_section(filings: list[dict], held_here, gone: dict[str, str] | None 
             f'<td class="idx">{esc(f["filed_at"])}</td>'
             f'<td class="code">{esc(f.get("source_form_code") or "")}</td>'
             f'<td><a href="{esc(f["source"]["url"])}">Open the Clerk\'s copy</a>'
-            + (
-                f'<span class="note">not in the index read {esc(gone[f["id"]])}; kept as '
-                "published</span>"
-                if f["id"] in (gone or {})
-                else ""
-            )
+            + change_notes(changes.get(f["id"], []))
             + "</td>"
             f'<td class="idx">{esc(f["source"]["retrieved_at"][:10])}</td>'
             f'<td class="code">{how_attributed(f)}</td>'
             "</tr>"
         )
     n = len(rows)
+    changed = sum(1 for f in filings if changes.get(f["id"]))
     return (
         f"<section>\n{heading}<table>\n"
-        f"<caption>{n} {plural(n, 'row', 'rows')} of the Clerk's 2025 index attributed to this "
+        f"<caption>{n} {plural(n, 'row', 'rows')} of the Clerk's {year} index attributed to this "
         'officeholder, oldest first. "How" says what attributed the row: the name on the form '
         "matching the roster; the Clerk's document printing Status Member at this seat with this "
         "Filing ID; or a person's cited decision. "
@@ -1361,7 +1622,13 @@ def filings_section(filings: list[dict], held_here, gone: dict[str, str] | None 
         "define it; the register does not interpret it. Open the document to see what it is. "
         "Rows coded P are served from the Clerk's transaction-report path, which is the one code "
         f'the register files as a transaction report (<a href="{SOURCES_F1}">SOURCES.md F.1</a>).'
-        "</caption>\n"
+        + (
+            f" A later reading of the Clerk's index shows {changed} of them otherwise; each note "
+            "says what, when, and links the capture that shows it."
+            if changed
+            else ""
+        )
+        + "</caption>\n"
         "<thead><tr><th>Date filed</th><th>The Clerk's code</th>"
         "<th>The document</th><th>Fetched</th><th>How</th></tr></thead>\n<tbody>\n"
         + "\n".join(rows)
@@ -1455,7 +1722,7 @@ def transactions_section(
     filings: list[dict],
     transactions: list[dict],
     held_reports: int = 0,
-    gone: dict[str, str] | None = None,
+    changes: dict[str, list[dict]] | None = None,
 ) -> str:
     """What the reports the register read list, as filed, grouped by report.
 
@@ -1502,8 +1769,8 @@ def transactions_section(
     if not reports:
         return (
             f'<section id="transactions">\n<h2>Transactions reported</h2>\n{lead}'
-            '<p class="quiet">No transaction report in the Clerk\'s 2025 index is attributed to '
-            f"this officeholder.</p>\n{held}</section>"
+            f'<p class="quiet">No transaction report in the Clerk\'s {ERA["year"]} index is '
+            f"attributed to this officeholder.</p>\n{held}</section>"
         )
     read = [f for f in reports if f.get("extraction_confidence") == "structured"]
     unread = [f for f in reports if f.get("extraction_confidence") != "structured"]
@@ -1538,6 +1805,9 @@ def transactions_section(
             f"{plural(n, 'row', 'rows')}{marked_clause(rows)} · "
             f'<a href="{esc(f["source"]["url"])}">Open the Clerk\'s copy</a></h3>\n'
         )
+        replaced = [c for c in (changes or {}).get(f["id"], []) if c["change"] == "replaced"]
+        if replaced:
+            parts.append(f'<p class="quiet">{change_notes(replaced[-1:])}</p>\n')
         if not rows:
             continue
         body = "\n".join(
@@ -1546,14 +1816,7 @@ def transactions_section(
             f'<td class="idx">{esc(t["notified_date"])}</td>'
             f"<td>{type_cell(t)}</td>"
             f"<td>{esc(OWNER_WORDS.get(t['owner'], t['owner']))}</td>"
-            f"<td>{asset_cell(t)}"
-            + (
-                f'<span class="note">not in the report as read {esc(gone[t["id"]])}; kept as '
-                "published</span>"
-                if t["id"] in (gone or {})
-                else ""
-            )
-            + "</td>"
+            f"<td>{asset_cell(t)}</td>"
             f'<td class="amt">{esc(amount_text(t))}</td>'
             "</tr>"
             for t in rows
@@ -1584,7 +1847,8 @@ def render_officeholder(
     findings: list[dict] | None = None,
     outcomes: dict[str, list[dict]] | None = None,
     all_signals: list[dict] | None = None,
-    changes: dict[str, dict] | None = None,
+    changes: dict[str, list[dict]] | None = None,
+    rejected_url: str = REPO + "data/rejected/house-fd/",
 ) -> str:
     signals, findings, outcomes = signals or [], findings or [], outcomes or {}
     changes = changes or {}
@@ -1592,21 +1856,59 @@ def render_officeholder(
     seal = striker.strike(holder["id"], meta.get("digest", ""), ticks=0, bars=0)
     roster_read = holder.get("source", {}).get("retrieved_at", "")[:10]
     sworn = holder.get("sworn_at") or sworn_date(holder)
-    office_line = f"{esc(office.get('title', ''))} · seat {esc(office.get('seat', ''))}"
-    if sworn:
-        office_line += (
-            f" · sworn in for this Congress {esc(sworn)}, per the roster read {esc(roster_read)}"
-        )
     off_roster = not_listed(changes, "officeholders").get(holder["id"])
-    off_line = (
-        f'<p class="office">The Clerk\'s roster read {esc(off_roster)} does not list this '
-        "officeholder. The register keeps every row it published about them, exactly as "
-        f"published; the roster read {esc(roster_read)} is the last that listed them.</p>\n"
-        if off_roster
-        else ""
+    office_line = (
+        f"{esc(office.get('title', ''))} for {esc(office.get('seat', ''))} in "
+        f"{esc(congress_words(terms=True))}"
     )
+    if sworn:
+        office_line += f" · sworn in {esc(sworn)}, per the Clerk's roster read {esc(roster_read)}"
+    lines = []
+    if off_roster:
+        before = off_roster.get("before", "")[:10]
+        lines.append(
+            f"The Clerk's roster read {when(off_roster)} no longer lists this officeholder "
+            f"({capture_link(off_roster)})"
+            + (
+                f"; the last roster the register built from before it, read {esc(before)}, did"
+                if before
+                else ""
+            )
+            + ". The roster does not say when or why a person leaves a seat, and neither does "
+            "the register. Everything on this page is what the register published while the "
+            "roster listed them, unchanged: as for every officeholder, a published row stays "
+            f'(<a href="{CHARTER}">the Charter, Vow V</a>). No new filing enters the register '
+            f'for an officeholder after their term (<a href="{SUBJECTS_1}">SUBJECTS.md §1</a>): '
+            "a report they filed while the roster listed them and the Clerk's index lists later "
+            "is attributed here only by a person's cited decision, and rows under their name "
+            f'are among <a href="{rejected_url}">the rows set aside</a>, with the reason.'
+        )
+    else:
+        episodes = listing(changes.get(holder["id"], []))
+        for c in episodes:
+            lines.append(
+                f"The Clerk's roster read {when(c)} "
+                + (
+                    "did not list this officeholder"
+                    if c["change"] == "not listed"
+                    else "lists them again"
+                )
+                + f" ({capture_link(c)})."
+            )
+        if episodes:
+            lines.append("The roster does not say why, and neither does the register.")
+    if ERA["closed"]:
+        lines.append(
+            f"The {ordinal(ERA['congress'])} Congress's terms ended at noon on "
+            f"{long_date(ERA['ends'])} "
+            f"(U.S. Const. amend. XX, section 1). This page keeps what the register published "
+            "for it. No new filing enters the register for an officeholder after their term "
+            f'(<a href="{SUBJECTS_1}">SUBJECTS.md §1</a>); one filed before the Congress ended '
+            "and listed by the Clerk's index later is attributed here only by a person's cited "
+            "decision."
+        )
+    history = f'<p class="office">{" ".join(lines)}</p>\n' if lines else ""
     check_line = signal_check_line(signals, findings, outcomes, held_reports)
-    gone_rows = not_listed(changes, "transactions")
     section = signals_section(
         signals,
         findings,
@@ -1616,6 +1918,7 @@ def render_officeholder(
         held_reports,
         sworn,
         all_signals or signals,
+        changes,
     )
     head = (
         '<header class="frame">\n'
@@ -1624,7 +1927,7 @@ def render_officeholder(
         '<p class="kicker">Oath · the register</p>\n'
         f"<h1>{esc(holder['legal_name'])}</h1>\n"
         f'<p class="office">{office_line}</p>\n'
-        f"{off_line}"
+        f"{history}"
         "</div>\n"
         + seal_figure(
             seal,
@@ -1637,8 +1940,8 @@ def render_officeholder(
     body = (
         f'{head}\n<main id="main">\n{REQUIRES}\n'
         f"{checks_section(holder, filings, held_here, check_line)}\n"
-        f"{filings_section(filings, held_here, not_listed(changes, 'filings'))}\n"
-        f"{transactions_section(filings, transactions or [], held_reports, gone_rows)}\n"
+        f"{filings_section(filings, held_here, changes)}\n"
+        f"{transactions_section(filings, transactions or [], held_reports, changes)}\n"
         f"{section}\n"
         f"{how_to_read(True)}\n"
         "</main>\n"
@@ -1676,8 +1979,13 @@ def tile_map(offices: list[dict]) -> str:
             f'title="{esc(name)}, {n} {plural(n, "seat", "seats")}">'
             f"{esc(code)}<small>{n}</small></a>"
         )
+    heading = (
+        f"Find who represented you in the {ordinal(ERA['congress'])} Congress"
+        if ERA["closed"]
+        else "Find your representative"
+    )
     return (
-        '<section class="finder" id="find">\n<h2>Find your representative</h2>\n'
+        f'<section class="finder" id="find">\n<h2>{esc(heading)}</h2>\n'
         '<p class="quiet">Choose your state to go to its delegation. Each square is one state, '
         "placed roughly where it sits, and every square is the same size on purpose. The small "
         "number is how many House seats the state has, which is a fact about the office and not "
@@ -1769,8 +2077,11 @@ def state_of_record(
     transactions: list[dict] | None = None,
     signal_runs: list[tuple[dict, dict]] | None = None,
     reach: dict[str, dict[str, int]] | None = None,
+    changes: dict[str, list[dict]] | None = None,
+    seated: int | None = None,
 ) -> str:
-    """Numbers about the register and the chamber as a whole. None is about a person."""
+    """Numbers about the register and the chamber as a whole. None is about a person, and
+    none counts one person's rows, however few officeholders a line concerns."""
     transactions = transactions or []
     signal_lines = ""
     for signal, summary in signal_runs or []:
@@ -1801,35 +2112,37 @@ def state_of_record(
         )
     marked = sum(marked_counts(transactions).values())
     marked_note = f" ({marked} of them marked Amended or Deleted by the filer)" if marked else ""
-    carried = run.get("carried", {})
-    carried_line = ""
-    if any(carried.get(k) for k in ("officeholders", "filings", "transactions")):
-        congress = run.get("congress", {})
-        what = (
-            f"officeholders of filing year {run.get('year', '')}, whose Congress has ended, and "
-            if congress.get("closed")
-            else "officeholders the Clerk's roster no longer lists, and "
+    ERA.update(era_of(run, holders))
+    changes = changes or {}
+    recorded = sum(len(h) for h in changes.values())
+    gone = len(not_listed(changes, "officeholders"))
+    changes_line = ""
+    if gone:
+        changes_line += (
+            f"<dt>{gone:,}</dt><dd>{plural(gone, 'Member', 'Members')} of "
+            f"{esc(congress_words())} the Clerk's roster no longer lists; "
+            f"{plural(gone, 'their page stays', 'their pages stay')}, with everything the "
+            'register published, <a href="#not-listed">listed below the seats</a></dd>\n'
         )
-        carried_line = (
-            f"<dt>{carried.get('officeholders', 0)}</dt><dd>{what}"
-            f"{carried.get('filings', 0)} filings and {carried.get('transactions', 0)} "
-            "transactions this build did not derive again, each kept exactly as the register "
-            "published it: a published row stays, and a change is shown beside it, never by "
-            f'removal (<a href="{REPO}data/changes.ndjson">the changes, each with the capture '
-            "that shows it</a>)</dd>\n"
+    if recorded:
+        changes_line += (
+            f"<dt>{recorded:,}</dt><dd>{plural(recorded, 'change', 'changes')} a later "
+            "capture showed about rows the register had published, or a person made citing the "
+            "evidence, each recorded beside the row it concerns with the capture that shows it, "
+            "which the register keeps; every published row stays as published "
+            f'(<a href="{REPO}data/changes.ndjson">the changes, as data</a>)</dd>\n'
         )
-    # A closed year's build derived nothing from the roster, so its counts are the rows the
-    # register holds for that year, not the build's (which are none by construction).
-    counts = {} if run.get("congress", {}).get("closed") else run.get("counts", {})
-    seats = counts.get("seats", len(offices))
-    filled = counts.get("filled", len(holders))
+    # The seats are the offices the register holds; a seat is filled when the roster the
+    # register last read lists someone at it, so a Member it no longer lists fills none.
+    counts = run.get("counts", {})
+    seats = len(offices) if ERA["closed"] else counts.get("seats", len(offices))
+    filled = seated if seated is not None else counts.get("filled", len(holders))
     voting = sum(1 for o in offices if o.get("title") == REPRESENTATIVE)
     delegates = sum(1 for o in offices if o.get("title") == "Delegate")
     commissioners = sum(1 for o in offices if o.get("title") == "Resident Commissioner")
-    with_row = counts.get(
-        "officeholders_with_a_filing", len({f["officeholder_id"] for f in filings})
-    )
-    matched = counts.get("accepted", len(filings))
+    listed_ids = {h["id"] for h in holders} - set(not_listed(changes, "officeholders"))
+    with_row = len({f["officeholder_id"] for f in filings} & listed_ids)
+    matched = len(filings)
     read, scanned = documents_read(filings)
     by_header = sum(1 for f in filings if how_attributed(f) == "document")
     held = run.get("rejected_by_reason", {}).get("surname matches a sitting member", 0)
@@ -1839,11 +2152,20 @@ def state_of_record(
     roster_src = sources.get("MemberData.xml", {})
     fresh = ""
     if index_src:
+        roster_words = (
+            f"the {ordinal(ERA['congress'])} Congress's roster was last read "
+            f"{esc(ERA['last_roster_read'])}, and the Clerk's roster now lists the "
+            f"{ordinal(ERA['congress'] + 1)}"
+            if ERA["closed"]
+            else f"the roster was read {esc(roster_src.get('retrieved_at', '')[:10])}"
+        )
         fresh = (
             f'The register reads <a href="{CLERK_SITE}">the Clerk\'s disclosure site</a>. '
             f"Its {year} index was last modified {esc(index_src.get('last_modified', 'unknown'))} "
             f"and the register read it {esc(index_src.get('retrieved_at', '')[:10])}; "
-            f"the roster was read {esc(roster_src.get('retrieved_at', '')[:10])}. "
+            f"{roster_words}. It reads its sources every Monday at 09:17 UTC and publishes a new "
+            "build only when a source changed and the maintainer merges it, so a date here is "
+            "when a source was read, not when the build was published. "
         )
     svg, first, last, total = rhythm_chart(filings)
     nonvoting = ""
@@ -1867,27 +2189,29 @@ def state_of_record(
         "Every number here is about the register or the chamber as a whole. None is about a "
         "person, and nothing here is sorted by anything the register computes about one.</p>\n"
         "<dl>\n"
-        f"<dt>{seats}</dt><dd>seats in the House{nonvoting}; {filled} filled, {seats - filled} "
-        f"vacant{bar(filled, seats)}</dd>\n"
-        f"<dt>{with_row}</dt><dd>of {filled} officeholders have at least one row of the Clerk's "
-        f"{year} index attributed to them{bar(with_row, filled)}</dd>\n"
-        f"<dt>{matched}</dt><dd>index rows attributed, each linked to the Clerk's own document; "
-        f"{by_header} of them by the document's own header where the index wrote the name in "
-        "another form</dd>\n"
-        f"<dt>{read}</dt><dd>of {matched} documents read by the register so far, each checked "
-        f"against the seat and filing ID printed inside it{scanned_clause(scanned)}; the links "
-        f"open the Clerk's copies{bar(read, matched)}</dd>\n"
-        f"<dt>{len(transactions)}</dt><dd>rows the read reports list, as filed{marked_note}, each "
-        "on its officeholder's page grouped by report; no page sums the amounts, averages them, "
-        "or compares them with anyone else's</dd>\n"
-        f"<dt>{held}</dt><dd>index rows set aside for the maintainer to decide by hand, because "
-        f"the register does not guess; {at_seat_total} of them sit at a member's own seat under "
-        "the member's surname. Whether a page is quiet is decided by whether the name on the "
-        "form matched the roster, or the Clerk's document confirmed the filer at that seat, "
+        f"<dt>{seats:,}</dt><dd>seats in the House in {esc(congress_words())}{nonvoting}; "
+        f"{filled:,} filled and {seats - filled:,} vacant on the Clerk's roster read "
+        f"{esc(ERA['roster_read'])}{bar(filled, seats)}</dd>\n"
+        f"<dt>{with_row:,}</dt><dd>of those {filled:,} officeholders have at least one row of "
+        f"the Clerk's {year} index attributed to them{bar(with_row, filled)}</dd>\n"
+        f"<dt>{matched:,}</dt><dd>index rows the register holds, attributed and each linked to "
+        f"the Clerk's own document; {by_header:,} of them by the document's own header where "
+        "the index wrote the name in another form</dd>\n"
+        f"<dt>{read:,}</dt><dd>of those {matched:,} documents read by the register so far, each "
+        f"checked against the seat and filing ID printed inside it{scanned_clause(scanned)}; "
+        f"the links open the Clerk's copies{bar(read, matched)}</dd>\n"
+        f"<dt>{len(transactions):,}</dt><dd>rows the read reports list, as filed{marked_note}, "
+        "each on its officeholder's page grouped by report; no page sums the amounts, averages "
+        "them, or compares them with anyone else's</dd>\n"
+        f"<dt>{held:,}</dt><dd>index rows set aside for the maintainer to decide by hand, "
+        f"because the register does not guess; {at_seat_total:,} of them sit at a member's own "
+        "seat under the member's surname. Whether a page is quiet is decided by whether the "
+        "name on the form matched the roster, or the Clerk's document confirmed the filer at "
+        "that seat, "
         f'not by what was filed. <a href="{rejected_url}">The '
         "rows, with reasons</a>; every row there is a line of the Clerk's index the register did "
         "not attribute, and presence in that file is not evidence of anything about anyone.</dd>\n"
-        f"{carried_line}"
+        f"{changes_line}"
         f"{signal_lines}"
         "</dl>\n"
         f'<p class="quiet">{fresh}The seal fixes exactly this reading.</p>\n'
@@ -1918,10 +2242,14 @@ def signals_lede(signal_runs: list[tuple[dict, dict]]) -> str:
     )
 
 
-def coverage(outcomes: list[dict], rejected: list[dict]) -> dict[str, int]:
+def coverage(
+    outcomes: list[dict], rejected: list[dict], holders: list[dict] | None = None
+) -> dict[str, int]:
     """Who a signal's run cannot reach, in counts, never in names: officeholders whose reports
-    are all captured and not read, those with some, those with rows dated before this
-    Congress's swearing-in, and the transaction reports the index sets aside."""
+    are all captured and not read, those with some, those with rows dated before the
+    Congress's swearing-in, and the transaction reports the index sets aside, split by whether
+    the name on the row carries the surname of an officeholder the register holds, read from
+    the rows and not from the adapter's reasons, which a closed year may set otherwise."""
     states: dict[str, set[str]] = {}
     before: set[str] = set()
     for o in outcomes:
@@ -1929,7 +2257,16 @@ def coverage(outcomes: list[dict], rejected: list[dict]) -> dict[str, int]:
         if o["not_evaluated"].get("dated before this Congress's swearing-in"):
             before.add(o["officeholder_id"])
     ptr = [r for r in rejected if r.get("source_row", {}).get("filing_type") == "P"]
-    held = sum(1 for r in ptr if r.get("reason", "").startswith("surname matches a sitting member"))
+    if holders is None:
+        held = sum(
+            1 for r in ptr if r.get("reason", "").startswith("surname matches a sitting member")
+        )
+    else:
+        held = sum(
+            1
+            for r in ptr
+            if any(carries_surname(h, r["source_row"].get("last") or "") for h in holders)
+        )
     return {
         "paper_only": sum(1 for s in states.values() if s == {"not read"}),
         "some_paper": sum(1 for s in states.values() if "not read" in s and s != {"not read"}),
@@ -1947,12 +2284,12 @@ def coverage_sentence(c: dict[str, int]) -> str:
     return (
         f"It cannot reach {paper:,} {plural(paper, 'officeholder', 'officeholders')} whose "
         "transaction reports are all scanned paper, which it does not read, or some of the "
-        f"reports of {some:,} more; it does not evaluate the rows dated before this Congress's "
-        f"swearing-in on the reports of {before:,} "
+        f"reports of {some:,} more; it does not evaluate the rows dated before the swearing-in "
+        f"the roster records for {congress_words()} on the reports of {before:,} "
         f"{plural(before, 'officeholder', 'officeholders')}; and it does not see the "
         f"{aside:,} {plural(aside, 'transaction report', 'transaction reports')} the index sets "
-        f"aside, {held:,} under a sitting member's surname, for a person to decide, and "
-        f"{other:,} under names no sitting member bears."
+        f"aside, {held:,} under the surname of an officeholder the register holds, for a "
+        f"person to decide, and {other:,} under names no officeholder the register holds bears."
     )
 
 
@@ -1964,11 +2301,15 @@ def render_signal_page(
     meta: dict,
     outcomes: list[dict] | None = None,
     reach: dict[str, int] | None = None,
+    changes: dict[str, list[dict]] | None = None,
 ) -> str:
     """A signal's page (ECOSYSTEM.md §1.2; PIPELINE.md Stage 5): its definition in its own words,
     what it did in this build, who it cannot reach, and every report on which it fired, in
-    seat order."""
+    seat order. A Member the roster no longer lists stays in seat order, marked, and a report
+    a later capture shows otherwise is marked beside its date."""
     outcomes = outcomes or []
+    changes = changes or {}
+    off_roster = not_listed(changes, "officeholders")
     by_state = summary.get("reports_by_state", {})
     read_reports = by_state.get("evaluated", 0)
     fired = summary["reports_with_a_finding"]
@@ -1989,13 +2330,25 @@ def render_signal_page(
         reports = ", ".join(
             f'<a href="{page_url}#finding-{esc(f["producing_filings"][0].rsplit(":", 1)[1])}">'
             f"{esc(f['evidence']['filed_at'])}</a>"
+            + (
+                " (a later capture shows the report otherwise)"
+                if changes.get(f["producing_filings"][0])
+                else ""
+            )
             for f in sorted(by_holder[oid], key=lambda f: (f["evidence"]["filed_at"], f["id"]))
+        )
+        gone = off_roster.get(oid)
+        mark = (
+            '<span class="note">not on the Clerk\'s roster read '
+            f"{esc(gone['capture']['retrieved_at'][:10])}</span>"
+            if gone
+            else ""
         )
         rows.append(
             f'<tr data-id="{esc(oid)}" data-seat="{esc(seat)}">'
             f'<td class="idx">{esc(seat)}</td>'
             f'<td><a href="{page_url}#signal-{esc(signal["slug"])}">'
-            f"{esc(holder['legal_name'])}</a></td>"
+            f"{esc(holder['legal_name'])}</a>{mark}</td>"
             f"<td>{reports}</td></tr>"
         )
     table = (
@@ -2007,8 +2360,11 @@ def render_signal_page(
         "Nothing here is a ranking and no number stands beside a name; each report is on its "
         "officeholder's page with its dates, its arithmetic, and what the signal does not say. "
         "Who cannot appear here, and why, is counted above: an officeholder whose transaction "
-        "reports are all scanned paper cannot, whatever the reports show.</caption>\n"
-        "<thead><tr><th>Seat</th><th>Name, as the Clerk lists it</th>"
+        "reports are all scanned paper cannot, whatever the reports show. What the register "
+        "cannot read does not fall evenly across officeholders, so a count of Findings, or its "
+        "absence, says nothing about any group of them. A name marked is one the Clerk's roster "
+        "no longer lists; the roster does not say why.</caption>\n"
+        "<thead><tr><th>Seat</th><th>Name, as the Clerk's roster listed it</th>"
         "<th>Reports it fired on, by the date the Clerk's index gives them</th></tr></thead>\n"
         f"<tbody>\n{''.join(rows)}\n</tbody>\n</table>"
         if rows
@@ -2030,13 +2386,15 @@ def render_signal_page(
         f"<dt>{c['paper_only']:,}</dt><dd>officeholders whose transaction reports are all "
         "scanned paper, which it does not read, so they cannot appear below whatever the reports "
         f"show; {c['some_paper']:,} more have some</dd>\n"
-        f"<dt>{c['before_swearing_in']:,}</dt><dd>officeholders with rows dated before this "
-        "Congress's swearing-in, which it does not evaluate: the roster records that date, not "
-        "the start of anyone's service, and the register holds no earlier index</dd>\n"
+        f"<dt>{c['before_swearing_in']:,}</dt><dd>officeholders with rows dated before the "
+        f"swearing-in the roster records for {congress_words()}, which it does not evaluate: "
+        "the roster records that date, not the start of anyone's service, and the register "
+        "holds no earlier index</dd>\n"
         f"<dt>{c['set_aside_held'] + c['set_aside_other']:,}</dt><dd>transaction reports the "
-        "index sets aside, not attributed to a sitting member, which it does not see: "
-        f"{c['set_aside_held']:,} under a sitting member's surname, for a person to decide, and "
-        f"{c['set_aside_other']:,} under names no sitting member bears</dd>\n"
+        "index sets aside, not attributed to an officeholder, which it does not see: "
+        f"{c['set_aside_held']:,} under the surname of an officeholder the register holds, for "
+        f"a person to decide, and {c['set_aside_other']:,} under names no officeholder the "
+        "register holds bears</dd>\n"
         if reach
         else ""
     )
@@ -2093,18 +2451,23 @@ def render_index(
     run: dict,
     meta: dict,
     striker,
-    at_seat: dict[str, dict[str, int]] | None = None,
+    held_rows: int = 0,
     rejected_url: str = REPO + "data/rejected/house-fd/",
     transactions: list[dict] | None = None,
     signal_runs: list[tuple[dict, dict]] | None = None,
     reach: dict[str, dict[str, int]] | None = None,
-    changes: dict[str, dict] | None = None,
+    changes: dict[str, list[dict]] | None = None,
 ) -> str:
-    at_seat = at_seat or {}
+    ERA.update(era_of(run, holders))
     # A seat shows who the roster lists. Whom it no longer lists is kept, with every row the
-    # register published, and listed below the seats, never at a seat they do not hold.
+    # register published, listed below the seats and named at their seat as listed there
+    # until a date, with a link, never as holding it.
     off_roster = not_listed(changes or {}, "officeholders")
     holder_by_seat = {h["offices"][0]["seat"]: h for h in holders if h["id"] not in off_roster}
+    kept_by_seat: dict[str, list[dict]] = {}
+    for h in holders:
+        if h["id"] in off_roster:
+            kept_by_seat.setdefault(h["offices"][0]["seat"], []).append(h)
     office_by_seat = {o["seat"]: o for o in offices}
     seats = sorted(office_by_seat)
     counts = seats_by_state(offices)
@@ -2121,28 +2484,50 @@ def render_index(
             )
         h = holder_by_seat.get(seat)
         office = office_by_seat[seat]
+        kept = "".join(
+            '<span class="note">Listed here until the roster read '
+            f"{esc(off_roster[k['id']].get('before', '')[:10] or ERA['first_read'])}: "
+            f'<a href="officeholders/{esc(slug(k["id"]))}.html">{esc(k["legal_name"])}</a>; their '
+            "page stays, with everything the register published about them.</span>"
+            for k in kept_by_seat.get(seat, [])
+        )
         if h is None:
             rows.append(
                 f'<tr class="vacant" data-id="{esc(office["id"])}" data-seat="{esc(seat)}">'
-                f'<td class="idx">{esc(seat)}</td><td>Vacant</td>'
-                "<td>no officeholder in this build</td></tr>"
+                f'<td class="idx">{esc(seat)}</td>'
+                f"<td>Vacant on the Clerk's roster read {esc(ERA['roster_read'])}{kept}</td>"
+                f"<td>{esc(office.get('title', ''))}</td></tr>"
             )
             continue
         rows.append(
             f'<tr data-id="{esc(h["id"])}" data-seat="{esc(seat)}">'
             f'<td class="idx">{esc(seat)}</td>'
-            f'<td><a href="officeholders/{esc(slug(h["id"]))}.html">{esc(h["legal_name"])}</a></td>'
+            f'<td><a href="officeholders/{esc(slug(h["id"]))}.html">{esc(h["legal_name"])}</a>'
+            f"{kept}</td>"
             f"<td>{esc(office.get('title', ''))}</td>"
             "</tr>"
         )
     digest = meta.get("digest", "")
     mark = striker.strike(digest, digest, with_wordmark=True)
-    ordered = sorted(holders, key=lambda h: (h["offices"][0]["seat"], h["id"]))
+    ordered = sorted(
+        (h for h in holders if h["id"] not in off_roster),
+        key=lambda h: (h["offices"][0]["seat"], h["id"]),
+    )
     first = ordered[0] if ordered else None
     example = (
         f'<a href="officeholders/{esc(slug(first["id"]))}.html">{esc(first["legal_name"])}</a>'
         if first
         else "none yet"
+    )
+    ended = (
+        f'<p class="lede">The {ordinal(ERA["congress"])} Congress\'s terms ended at noon on '
+        f"{long_date(ERA['ends'])} (U.S. Const. amend. XX, section 1). This register holds that "
+        "Congress: every seat, with the Member the Clerk's roster listed when the register last "
+        f"read it for that Congress, {esc(ERA['last_roster_read'])}. Members of the "
+        f"{ordinal(ERA['congress'] + 1)} Congress are not in it yet; to find who represents you "
+        f'now, use <a href="{HOUSE_FINDER}">the House\'s own finder</a>.</p>\n'
+        if ERA["closed"]
+        else ""
     )
     head = (
         '<header class="frame">\n'
@@ -2150,10 +2535,12 @@ def render_index(
         '<div class="masthead">\n<div>\n'
         '<p class="kicker">A public register</p>\n'
         "<h1>Oath</h1>\n"
-        '<p class="lede">Every seat of the U.S. House is listed here, with each row of the '
-        "Clerk's 2025 filing index the register could match to the name on the Clerk's roster, "
-        "linked to the Clerk's own copy. The register draws no conclusion about anyone. It shows "
-        "what the index lists, when, and where to read it yourself.</p>\n"
+        f"{ended}"
+        f'<p class="lede">Every seat of the U.S. House in {esc(congress_words(terms=True))} '
+        f"is listed here, with each row of the Clerk's {ERA['year']} filing index the register "
+        "could match to the name on the Clerk's roster, linked to the Clerk's own copy. The "
+        "register draws no conclusion about anyone. It shows what the index lists, when, and "
+        "where to read it yourself.</p>\n"
         f"{signals_lede(signal_runs or [])}"
         f'<blockquote class="oath"><p>{esc(OATH)}</p><footer>{OATH_CITE} Every member took it. '
         "The register sets the record beside it.</footer></blockquote>\n"
@@ -2167,8 +2554,19 @@ def render_index(
     )
     door = (
         '<section class="door">\n'
-        '<div><p>Find your representative</p><p><a href="#find">Choose your state</a> on the map, '
-        "then the seat.</p></div>\n"
+        + (
+            f"<div><p>Find who represented you in the {ordinal(ERA['congress'])} Congress</p>"
+            if ERA["closed"]
+            else "<div><p>Find your representative</p>"
+        )
+        + '<p><a href="#find">Choose your state</a> on the map, then the seat.'
+        + (
+            ' Members no longer on the Clerk\'s roster are <a href="#not-listed">below the '
+            "seats</a>, with their pages."
+            if off_roster
+            else ""
+        )
+        + "</p></div>\n"
         f"<div><p>Read one page in full</p><p>{example}, first in seat order.</p></div>\n"
         f'<div><p>Understand the discipline</p><p><a href="{CHARTER}">The Charter</a>: five vows, '
         "short on purpose.</p></div>\n</section>"
@@ -2176,10 +2574,17 @@ def render_index(
     table = (
         "<section>\n<h2>Every seat in the register</h2>\n"
         '<table id="officeholders" data-order="seat">\n'
-        f"<caption>{len(seats)} seats in seat order, grouped by state, with the name the Clerk "
-        "lists. The order says nothing about anyone. Candidates who did not win are not in the "
+        f"<caption>{len(seats)} seats of {esc(congress_words())} in seat order, grouped by state, "
+        + (
+            "with the name the Clerk's roster listed when the register last read it for that "
+            f"Congress, {esc(ERA['last_roster_read'])}. "
+            if ERA["closed"]
+            else f"with the name the Clerk's roster read {esc(ERA['roster_read'])} lists. "
+        )
+        + "The order says nothing about anyone. Candidates who did not win are not in the "
         f'register (<a href="{SUBJECTS_3}">SUBJECTS.md §3</a>).</caption>\n'
-        "<thead><tr><th>Seat</th><th>Name, as the Clerk lists it</th><th>Office</th></tr></thead>\n"
+        "<thead><tr><th>Seat</th><th>Name, as the Clerk's roster listed it</th><th>Office</th>"
+        "</tr></thead>\n"
         "<tbody>\n" + "\n".join(rows) + "\n</tbody>\n</table>\n</section>"
     )
     kept = sorted(
@@ -2191,21 +2596,32 @@ def render_index(
             f'<tr data-id="{esc(h["id"])}" data-seat="{esc(h["offices"][0]["seat"])}">'
             f'<td class="idx">{esc(h["offices"][0]["seat"])}</td>'
             f'<td><a href="officeholders/{esc(slug(h["id"]))}.html">{esc(h["legal_name"])}</a></td>'
-            f'<td class="idx">{esc(off_roster[h["id"]])}</td>'
+            f'<td class="idx">{esc(off_roster[h["id"]].get("before", "")[:10])}</td>'
+            f'<td class="idx">{esc(off_roster[h["id"]]["capture"]["retrieved_at"][:10])}</td>'
             "</tr>"
             for h in kept
         )
+        title = (
+            f"Left the Clerk's roster during {congress_words()}"
+            if ERA["closed"]
+            else "No longer on the Clerk's roster"
+        )
         table += (
-            "\n<section>\n<h2>No longer on the Clerk's roster</h2>\n"
+            f"\n<section>\n<h2>{esc(title)}</h2>\n"
             '<table id="not-listed" data-order="seat">\n'
-            "<caption>Officeholders the register published whom the Clerk's roster, as last read, "
-            "does not list, in seat order, each with the date of the first roster read that did "
-            "not. The register keeps every row it published about them, exactly as published, "
-            "and their pages. The order says nothing about anyone, and neither does a name here: "
-            "the roster lists who holds a seat, and does not say why a person no longer does."
-            "</caption>\n"
-            "<thead><tr><th>Seat</th><th>Name, as the Clerk listed it</th>"
-            "<th>Not on the roster read</th></tr></thead>\n"
+            f"<caption>Officeholders of {esc(congress_words())} whose rows the register "
+            "published and whom a later roster it read does not list, in seat order, each with "
+            "the last roster the register built from that listed them and the first that did "
+            "not. The change fell between the two: the roster does not say when or why a person "
+            "leaves a seat, and the register does not know. The register keeps every row it "
+            "published about them, exactly as published, and their pages. The list holds only "
+            "Members who left after the register first read the roster, "
+            f"{esc(ERA['first_read'])}; a Member of {esc(congress_words())} who left before is "
+            f'not in the register (<a href="{SUBJECTS_3}">SUBJECTS.md</a>), and their filings are '
+            "among the rows set aside. The order says nothing about anyone, and neither does a "
+            "name here.</caption>\n"
+            "<thead><tr><th>Seat</th><th>Name, as the Clerk's roster listed it</th>"
+            "<th>Last listed, roster read</th><th>Not listed, roster read</th></tr></thead>\n"
             f"<tbody>\n{kept_rows}\n</tbody>\n</table>\n</section>"
         )
     record = state_of_record(
@@ -2214,11 +2630,13 @@ def render_index(
         holders,
         filings,
         offices,
-        held_total(at_seat),
+        held_rows,
         rejected_url,
         transactions,
         signal_runs,
         reach,
+        changes,
+        len(holder_by_seat),
     )
     body = (
         f'{head}\n<main id="main">\n{door}\n{tile_map(offices)}\n{record}\n{table}\n'
@@ -2315,8 +2733,15 @@ def main(argv: list[str] | None = None) -> int:
         tx_by_holder.setdefault(t["officeholder_id"], []).append(t)
     run, rejected_files = pick_run(root)
     rejected = read_ndjson(rejected_files[-1]) if rejected_files else []
-    at_seat = held_at_seat(rejected, holders)
-    held_reports = held_reports_at_seat(rejected, holders)
+    ERA.update(era_of(run, holders))
+    KEPT.clear()
+    folder = root / "data" / "captures" / "sha256"
+    if folder.is_dir():
+        KEPT.update(
+            {p.name.split(".")[0]: f"data/captures/sha256/{p.name}" for p in folder.iterdir()}
+        )
+    held_here = held_by_holder(rejected, holders)
+    held_reports = held_reports_by_holder(rejected, holders)
     rejected_url = (
         REPO + rejected_files[-1].relative_to(root).as_posix()
         if rejected_files
@@ -2340,14 +2765,15 @@ def main(argv: list[str] | None = None) -> int:
         )
     reach = {
         signal["id"]: coverage(
-            [o for os in outcomes_by.get(signal["id"], {}).values() for o in os], rejected
+            [o for os in outcomes_by.get(signal["id"], {}).values() for o in os],
+            rejected,
+            holders,
         )
         for signal, _ in signal_runs
     }
 
     (out / "officeholders").mkdir(parents=True, exist_ok=True)
     for h in holders:
-        seat = h["offices"][0]["seat"] if h.get("offices") else ""
         target = out / "officeholders" / f"{slug(h['id'])}.html"
         target.write_text(
             render_officeholder(
@@ -2355,14 +2781,15 @@ def main(argv: list[str] | None = None) -> int:
                 by_holder.get(h["id"], []),
                 meta,
                 striker,
-                at_seat.get(seat, {}),
+                held_here.get(h["id"], {}),
                 tx_by_holder.get(h["id"], []),
-                held_reports.get(seat, 0),
+                held_reports.get(h["id"], 0),
                 signals,
                 findings_by.get(h["id"], []),
                 {sid: by_oh.get(h["id"], []) for sid, by_oh in outcomes_by.items()},
                 all_signals,
                 changes,
+                rejected_url,
             ),
             encoding="utf-8",
             newline="\n",
@@ -2375,7 +2802,7 @@ def main(argv: list[str] | None = None) -> int:
             run,
             meta,
             striker,
-            at_seat,
+            held_rows_at_own_seat(rejected, holders),
             rejected_url,
             transactions,
             signal_runs,
@@ -2391,7 +2818,14 @@ def main(argv: list[str] | None = None) -> int:
         outcomes_all = [o for os in outcomes_by.get(signal["id"], {}).values() for o in os]
         target.write_text(
             render_signal_page(
-                signal, summary, findings, holders, meta, outcomes_all, reach[signal["id"]]
+                signal,
+                summary,
+                findings,
+                holders,
+                meta,
+                outcomes_all,
+                reach[signal["id"]],
+                changes,
             ),
             encoding="utf-8",
             newline="\n",
