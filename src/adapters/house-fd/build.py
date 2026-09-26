@@ -1131,6 +1131,11 @@ def build(year: int, dry_run: bool = False) -> int:
         if closed
         else {}
     )
+    set_aside_by_doc = {
+        r["source_row"]["doc_id"]: r
+        for r in set_aside_before.values()
+        if "filing_id" in r["source_row"]
+    }
     ptr = load_ptr() if documents else None
     new_filings, rejected, adjudicated_now, attributed_by_document_now = [], [], 0, 0
     index_rows = len(rows)
@@ -1207,7 +1212,9 @@ def build(year: int, dry_run: bool = False) -> int:
             )
             continue
         if closed and row["doc_id"] not in adjudications:
-            before = set_aside_before.get(canonical(row))
+            # A row the document refused carries its DocID, not the index row, so it is found
+            # by its DocID where the index row itself is not (Seat C, second reading).
+            before = set_aside_before.get(canonical(row)) or set_aside_by_doc.get(row["doc_id"])
             rejected.append(
                 before
                 if before is not None

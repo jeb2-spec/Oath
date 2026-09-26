@@ -1020,6 +1020,43 @@ def test_a_reading_that_finds_rows_after_every_published_one_adds_them(reports, 
         build.build(2025)
 
 
+def test_a_row_its_document_refused_keeps_its_reason_when_the_year_closes(reports):
+    """Seat C on the second reading: a row the document refused carries its DocID, not the
+    index row, so a closed year's build set it aside again with the closed reason and lost
+    why it had been refused."""
+    index = index_xml([(ADA, "20000001", "P", "3/1/2025"), (ADA, "20000002", "P", "3/2/2025")])
+    later(reports, [ADA], [], "2026-02-02T00:00:00Z", index=index)
+    sha = document(reports, "20000002", ADA, [TX], "2026-02-02T00:00:02Z")
+    body = (reports / "data/cache/house-fd/docs/20000002.pdf").read_text("utf-8")
+    wrong = body.replace("Filing ID #20000002", "Filing ID #29999999")
+    (reports / "data/cache/house-fd/docs/20000002.pdf").write_text(wrong, encoding="utf-8")
+    manifest = reports / "data/cache/house-fd/docs/captures.json"
+    captured = json.loads(manifest.read_text("utf-8"))
+    captured["20000002"]["sha256"] = hashlib.sha256(wrong.encode()).hexdigest()
+    manifest.write_text(json.dumps(captured), encoding="utf-8")
+    assert sha != captured["20000002"]["sha256"]
+    assert build.build(2025) == 0
+
+    def reasons():
+        (path,) = (reports / "data" / "rejected" / "house-fd").glob("2025-*.ndjson")
+        return {
+            json.loads(line)["source_row"]["doc_id"]: json.loads(line)["reason"]
+            for line in path.read_text("utf-8").splitlines()
+        }
+
+    refused = reasons()["20000002"]
+    assert refused.startswith("the document refused the attribution")
+    captures(
+        reports,
+        roster_xml(120, [ADA], "20270103"),
+        index,
+        "2027-01-11T00:00:00Z",
+        "2027-01-11T00:00:01Z",
+    )
+    assert build.build(2025) == 0
+    assert reasons()["20000002"] == refused, "the reason it was refused for, kept"
+
+
 def test_other_bytes_that_read_otherwise_are_a_replacement_shown_beside_the_rows(reports):
     before = {name: rows_of(reports, name) for name in ("filings", "transactions")}
     sha = document(reports, "20000001", ADA, [TX], "2026-02-02T00:00:00Z")
