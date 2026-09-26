@@ -28,7 +28,7 @@
       "type": "array",
       "minItems": 1,
       "items": { "$ref": "office.schema.json" },
-      "description": "The Offices this person has held. Ordered by term start, most recent first."
+      "description": "The Offices this person has held, in the order the register recorded them, the earliest first: a published list only grows at its end (INVARIANTS.md §14). Each Office's term_start and term_end are the seat's term, never the days this person held it; when this person was sworn is sworn_at, and a roster that stopped listing them is a change row in data/changes.ndjson."
     },
     "sworn_at": {
       "type": ["string", "null"],
@@ -48,6 +48,11 @@
     },
     "source": {
       "$ref": "#/$defs/Source"
+    },
+    "roster_entry_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "The SHA-256 of the bytes of the Clerk's roster that state this officeholder's seat and member-info, the facts the register reads, found without the XML parser, in the roster the row was read from. A later roster whose entry has the same hash said nothing new about them, so a fact read otherwise from it, or a reading that no longer lists them while the bytes still carry their entry, is the register's own reading, and the build refuses rather than record it as the source's (COUNCIL.md §5, mode 10). A row published before 2026-09-27 gains it from the first later entry that states the facts it carries."
     },
     "notes": {
       "type": ["string", "null"],

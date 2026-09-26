@@ -114,7 +114,7 @@
       "type": "object",
       "required": ["last", "first", "suffix", "filing_type", "state_dst", "year", "filing_date", "doc_id"],
       "additionalProperties": false,
-      "description": "The row of the Clerk's filing index the filing was read from, verbatim, under the adapter's names for the index's fields. Kept so a later index that states a fact otherwise can be told apart from a change in the register's own reading, and so a later reader sees what the index said. A row published before 2026-09-27 gains it the first time a later index lists it unchanged.",
+      "description": "The row of the Clerk's filing index the filing was read from, as the adapter's parser reads it, under the adapter's names for the index's fields, so a later reader sees what the index said. A row first read on or after 2026-09-27 carries the row it was read from. A row published before gains the row of the first later index that states the facts it carries (its date, its form code and its DocID); that row's other fields (the filer's name as written, the state-district) are the later index's, and may differ from the row it was first read from.",
       "properties": {
         "last": { "type": "string" },
         "first": { "type": "string" },
@@ -125,6 +125,11 @@
         "filing_date": { "type": "string" },
         "doc_id": { "type": "string" }
       }
+    },
+    "index_entry_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "The SHA-256 of the filing's own <Member> entry in the bytes of the Clerk's index it was read from, found without the XML parser. A later index whose entry for the DocID has the same hash said nothing new about the filing, so a fact read otherwise from it is the register's own reading, and the build refuses rather than record it as the source's (COUNCIL.md §5, mode 10). A row published before 2026-09-27 gains it from the first later entry that states the facts it carries."
     },
     "evidence_bundle": {
       "type": "object",

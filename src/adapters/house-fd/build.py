@@ -543,6 +543,49 @@ def doc_of(row_id: str) -> str:
     return row_id.rsplit(":", 1)[1]
 
 
+def sha256_of(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+
+# Each row's own entry in the source's bytes, found without the XML parser. A change in the
+# register's own reading must never be recorded as a change at the source (COUNCIL.md §5,
+# mode 10): an entry whose bytes are unchanged can say nothing new, and a row whose entry the
+# bytes still carry is listed, whatever the parser makes of it (the Council's second reading
+# of S.1b). The patterns are deliberately plain, so they change far less often than the
+# parser and can check it.
+INDEX_ENTRY = re.compile(rb"<Member>.*?</Member>", re.S)
+INDEX_ID = re.compile(rb"<DocID>\s*([^<\s]+)\s*</DocID>")
+ROSTER_ENTRY = re.compile(rb"<member>.*?</member>", re.S)
+ROSTER_SEAT = re.compile(rb"<statedistrict>.*?</statedistrict>", re.S)
+ROSTER_INFO = re.compile(rb"<member-info>.*?</member-info>", re.S)
+ROSTER_ID = re.compile(rb"<bioguideID>\s*([^<\s]+)\s*</bioguideID>")
+
+
+def index_entries(path: Path) -> dict[str, str]:
+    """Each DocID of the Clerk's index and the SHA-256 of its <Member> entry, as served."""
+    out: dict[str, str] = {}
+    for block in INDEX_ENTRY.finditer(path.read_bytes() if path.is_file() else b""):
+        found = INDEX_ID.search(block.group(0))
+        if found:
+            out.setdefault(found.group(1).decode("utf-8"), sha256_of(block.group(0)))
+    return out
+
+
+def roster_entries(path: Path) -> dict[str, str]:
+    """Each bioguide ID on the Clerk's roster and the SHA-256 of the bytes that state its seat
+    and its member-info, which hold every fact the register reads. The rest of the entry
+    (committee assignments among it) changes often and says nothing the register reads."""
+    out: dict[str, str] = {}
+    for block in ROSTER_ENTRY.finditer(path.read_bytes() if path.is_file() else b""):
+        info = ROSTER_INFO.search(block.group(0))
+        found = ROSTER_ID.search(info.group(0)) if info else None
+        if found:
+            seat = ROSTER_SEAT.search(block.group(0))
+            stated = (seat.group(0) if seat else b"") + info.group(0)
+            out.setdefault(found.group(1).decode("utf-8"), sha256_of(stated))
+    return out
+
+
 def keep_capture(path: Path, sha256: str) -> str:
     """Keep the bytes of a capture a change row cites, write-once, named by their SHA-256,
     and return where. A cache that no longer holds the bytes its record names refuses."""
@@ -566,8 +609,9 @@ def change_row(row_id: str, rows: str, change: str, capture: dict, **facts) -> d
     `before`, when the register last built from a capture of the same source: the change
     fell between the two reads, and the register does not know when."""
     field = f":{facts['field']}" if change == READ_OTHERWISE else ""
-    if not facts.get("before"):
-        facts.pop("before", None)
+    for optional in ("before", "before_content_hash", "entry_sha256"):
+        if not facts.get(optional):
+            facts.pop(optional, None)
     return {
         "id": f"ch:{change.replace(' ', '-')}:{row_id}{field}:{capture['retrieved_at']}",
         "row_id": row_id,
@@ -583,13 +627,30 @@ def change_row(row_id: str, rows: str, change: str, capture: dict, **facts) -> d
     }
 
 
+class Refusal(SystemExit):
+    """A build that would record the register's own reading as a change at the source."""
+
+
 class Observed:
     """The change rows this build adds. One per row, kind, field and capture, and only from a
     capture later than the latest one already recorded for that row and kind, so a capture
-    re-read, or read out of order, never writes a second change or reverses a later one."""
+    re-read, or read out of order, never writes a second change or reverses a later one.
 
-    def __init__(self, published_changes: list[dict], before: dict | None = None) -> None:
+    A change is the source's only when the source's bytes for the row changed. So a change is
+    refused, never recorded, when it would come from the very bytes the register last built
+    from, or from a row's own entry unchanged since the register last read it; and a row is
+    "not listed" only when the source's bytes no longer carry its entry, whatever the parser
+    makes of them. A person's recorded decision about a fact silences the refusal for that
+    fact; it never silences a change the source's own bytes show."""
+
+    def __init__(
+        self,
+        published_changes: list[dict],
+        before: dict | None = None,
+        before_hash: dict | None = None,
+    ) -> None:
         self.before = before or {}  # by source URL: when the register last built from it
+        self.before_hash = before_hash or {}  # by source URL: the bytes it last built from
         self.past: dict[tuple, list[dict]] = {}
         for change in sorted(
             published_changes, key=lambda c: (c["capture"]["retrieved_at"], c["id"])
@@ -613,26 +674,85 @@ class Observed:
         self.past.setdefault(self.thread(row), []).append(row)
         self.bytes[row["capture"]["content_hash"]] = path
 
-    def listed(self, row_id: str, rows: str, listed: bool, capture: dict, path: Path) -> None:
+    def same_bytes(self, capture: dict) -> bool:
+        """Whether the capture holds the very bytes the register last built from."""
+        return capture["content_hash"] == self.before_hash.get(capture["url"])
+
+    def facts(self, capture: dict, **more) -> dict:
+        return {
+            "before": self.before.get(capture["url"]),
+            "before_content_hash": self.before_hash.get(capture["url"]),
+            **more,
+        }
+
+    def listed(
+        self, row_id: str, rows: str, listed: bool, capture: dict, path: Path, carried: bool
+    ) -> None:
+        """`listed` is the parser's word; `carried`, whether the bytes hold the row's entry."""
+        if listed != carried:
+            raise Refusal(
+                f"refusing to build: the source's bytes {'carry' if carried else 'do not carry'} "
+                f"an entry for {row_id}, and this build's reading "
+                f"{'does not list' if not listed else 'lists'} it. The source did not change "
+                "that; the register's reading did, and a change to the register's code must "
+                "not be recorded as a change at the source. Revert it."
+            )
         last = self.last((row_id, "listed"))
         if last and capture["retrieved_at"] <= last["capture"]["retrieved_at"]:
             return
         if listed == (last is None or last["change"] == LISTED_AGAIN):
             return
+        if self.same_bytes(capture):
+            raise Refusal(
+                f"refusing to build: {row_id} would be recorded as "
+                f"{'listed again' if listed else 'not listed'} from the very bytes the register "
+                "last built from. The source did not change; the register's reading did."
+            )
         kind = LISTED_AGAIN if listed else NOT_LISTED
-        before = self.before.get(capture["url"])
-        self.add(change_row(row_id, rows, kind, capture, before=before), path)
+        self.add(change_row(row_id, rows, kind, capture, **self.facts(capture)), path)
 
-    def read(self, row_id: str, rows: str, field: str, was, now, capture: dict, path: Path):
+    def read(
+        self,
+        row_id: str,
+        rows: str,
+        field: str,
+        was,
+        now,
+        capture: dict,
+        path: Path,
+        entry: str | None = None,
+        row_entry: str | None = None,
+        decided: bool = False,
+    ) -> None:
+        """What the source states for one fact of a published row. `entry` is the SHA-256 of
+        the row's entry in these bytes; `row_entry`, of the entry the row was read from."""
         last = self.last((row_id, READ_OTHERWISE, field))
         if last and capture["retrieved_at"] <= last["capture"]["retrieved_at"]:
             return
-        if now == (last["now"] if last else was):
+        expected = last["now"] if last else was
+        if now == expected:
             return
-        before = self.before.get(capture["url"])
+        known = last.get("entry_sha256") if last else row_entry
+        if self.same_bytes(capture) or (entry is not None and entry == known):
+            if decided:
+                return
+            raise Refusal(
+                f"refusing to build: the source's entry {row_id} was last read from is "
+                f"unchanged, and this build reads its {field} as {now!r} where the register "
+                f"holds {expected!r}. The source did not change; the register's reading did, "
+                "and a change to the register's code must not rewrite what it published. "
+                "Revert it, or correct the row with tools/correct.py, citing the evidence."
+            )
         self.add(
             change_row(
-                row_id, rows, READ_OTHERWISE, capture, field=field, was=was, now=now, before=before
+                row_id,
+                rows,
+                READ_OTHERWISE,
+                capture,
+                field=field,
+                was=was,
+                now=now,
+                **self.facts(capture, entry_sha256=entry),
             ),
             path,
         )
@@ -805,10 +925,27 @@ def build(year: int, dry_run: bool = False) -> int:
     closed = closed_year(year, congress)
     ours = congress_of(year)
     began, ended = term_start(ours), term_start(ours + 1)
+    # The roster read that closed the year: recorded by the first build that read a later
+    # Congress's roster, its bytes kept, and carried after, so the year's record says which
+    # read closed it, never which roster the register happens to read now (the Council's
+    # second reading of S.1b).
+    closed_by = None
+    if closed:
+        closed_by = last_run.get("congress", {}).get("closed_by") or {
+            "url": roster_capture["url"],
+            "retrieved_at": roster_capture["retrieved_at"],
+            "sha256": roster_capture["sha256"],
+            "congress": congress,
+        }
+        if closed_by["sha256"] == roster_capture["sha256"]:
+            keep_capture(CACHE / "MemberData.xml", closed_by["sha256"])
     closed_reason = (
         f"filing year {year} is of the {ordinal(ours)} Congress, whose terms ended at noon on "
-        f"{ended}, and the roster this build read lists the {ordinal(congress)}; the register "
-        "attributes a new row of that year only by a person's decision, citing evidence"
+        f"{ended}, and the Clerk's roster read {closed_by['retrieved_at'][:10]} lists the "
+        f"{ordinal(closed_by['congress'])}; the register attributes a new row of that year only "
+        "by the maintainer's recorded decision, which cites the evidence"
+        if closed_by
+        else ""
     )
     if closed:
         seats, people, documents, docs_hash = [], [], {}, None
@@ -825,7 +962,11 @@ def build(year: int, dry_run: bool = False) -> int:
         "content_hash": index_capture["sha256"],
     }
     roster_bytes, index_bytes = CACHE / "MemberData.xml", CACHE / f"{year}FD.zip"
-    seen = Observed(published["changes"], last_read)
+    last_hash = {s["url"]: s["sha256"] for s in last_run.get("sources", [])}
+    seen = Observed(published["changes"], last_read, last_hash)
+    # Each row's own entry in the bytes this build reads, found without the parser.
+    roster_now = {} if closed else roster_entries(CACHE / "MemberData.xml")
+    index_now = index_entries(CACHE / f"{year}FD.xml")
     last_roster_read = (
         last_run.get("congress", {}).get("last_roster_read") or last_read.get(roster_capture["url"])
         if closed
@@ -884,6 +1025,7 @@ def build(year: int, dry_run: bool = False) -> int:
                 "ballotpedia_slug": None,
             },
             "source": roster_source,
+            "roster_entry_sha256": roster_now.get(person["bioguide"]),
             "notes": (
                 f"Sworn {date(int(sworn[:4]), int(sworn[4:6]), int(sworn[6:])).isoformat()}. "
                 if len(sworn) == 8
@@ -891,24 +1033,26 @@ def build(year: int, dry_run: bool = False) -> int:
             )
             + FRAME,
         }
+        if holder["roster_entry_sha256"] is None:
+            del holder["roster_entry_sha256"]
         holder_of_bioguide[person["bioguide"]] = holder["id"]
         person_of_id[holder["id"]] = person
         was = holders_by_id.get(holder["id"])
         if was is None:
             holders_by_id[holder["id"]] = holder
             continue
-        same_bytes = was["source"].get("content_hash") == roster_capture["sha256"]
+        # The row's entry in these bytes, against the one it was read from: an unchanged
+        # entry can say nothing new, and a row read before entries were kept is weighed
+        # against the bytes it was read from.
+        entry = roster_now.get(person["bioguide"])
+        row_entry = was.get("roster_entry_sha256") or (
+            entry if was["source"].get("content_hash") == roster_capture["sha256"] else None
+        )
+        reads_as_published = True
         for field in ROSTER_FACTS:
-            if was.get(field) is None or decided(published["changes"], holder["id"], field):
+            if was.get(field) is None:
                 continue
-            if same_bytes and holder[field] != was[field]:
-                raise SystemExit(
-                    f"refusing to build: the roster bytes {holder['id']} was read from now read "
-                    f"its {field} as {holder[field]!r}, where the register published "
-                    f"{was[field]!r}. The source did not change; the register's reading did, "
-                    "and a change to the register's code must not rewrite what it published. "
-                    "Revert it, or correct the row with tools/correct.py, citing the evidence."
-                )
+            reads_as_published &= holder[field] == was[field]
             seen.read(
                 holder["id"],
                 "officeholders",
@@ -917,7 +1061,14 @@ def build(year: int, dry_run: bool = False) -> int:
                 holder[field],
                 roster_source,
                 roster_bytes,
+                entry=entry,
+                row_entry=row_entry,
+                decided=decided(published["changes"], holder["id"], field),
             )
+        if not reads_as_published:
+            holder.pop(
+                "roster_entry_sha256", None
+            )  # gained only from an entry that reads as published
         terms = [o["id"] for o in was.get("offices", [])]
         grown = was
         if office["id"] not in terms:
@@ -935,7 +1086,15 @@ def build(year: int, dry_run: bool = False) -> int:
     }
     if not closed:
         for hid in sorted(of_this_congress):
-            seen.listed(hid, "officeholders", hid in person_of_id, roster_source, roster_bytes)
+            bioguide = holders_by_id[hid]["biographical_ids"]["bioguide_id"]
+            seen.listed(
+                hid,
+                "officeholders",
+                hid in person_of_id,
+                roster_source,
+                roster_bytes,
+                carried=bioguide in roster_now,
+            )
 
     # Whom a person's decision may name besides the roster's members: an officeholder of this
     # Congress the register holds and the roster no longer lists, at their own seat, for a
@@ -985,26 +1144,37 @@ def build(year: int, dry_run: bool = False) -> int:
                 "form_type": "House-PTR" if row["filing_type"] == PTR_CODE else "other",
                 "source_form_code": row["filing_type"] or None,
             }
-            same_row = was.get("index_row") == row if "index_row" in was else None
+            # The row's entry in these bytes, against the one it was read from. A row read
+            # before entries were kept is weighed against the index row it was read from, where
+            # it carries one; an unchanged entry can say nothing new.
+            entry = index_now.get(row["doc_id"])
+            row_entry = was.get("index_entry_sha256") or (
+                entry if "index_row" in was and was["index_row"] == row else None
+            )
+            reads_as_published = True
             for field in INDEX_FACTS:
-                if was.get(field) is None or decided(published["changes"], was["id"], field):
+                if was.get(field) is None:
                     continue
-                if same_row and facts[field] != was[field]:
-                    raise SystemExit(
-                        f"refusing to build: the Clerk's index row {was['id']} was read from "
-                        f"is unchanged, and this build reads its {field} as {facts[field]!r} "
-                        f"where the register published {was[field]!r}. The source did not "
-                        "change; the register's reading did, and a change to the register's "
-                        "code must not rewrite what it published. Revert it, or correct the "
-                        "row with tools/correct.py, citing the evidence."
-                    )
+                reads_as_published &= facts[field] == was[field]
                 seen.read(
-                    was["id"], "filings", field, was[field], facts[field], index_source, index_bytes
+                    was["id"],
+                    "filings",
+                    field,
+                    was[field],
+                    facts[field],
+                    index_source,
+                    index_bytes,
+                    entry=entry,
+                    row_entry=row_entry,
+                    decided=decided(published["changes"], was["id"], field),
                 )
-            if "index_row" not in was and all(
-                facts[f] == was[f] for f in INDEX_FACTS if was.get(f) is not None
-            ):
-                filings_by_id[was["id"]] = {**filings_by_id[was["id"]], "index_row": row}
+            if reads_as_published:
+                # What the index row and its entry were, for a row read before they were
+                # kept: gained only from an entry that states the facts the row carries.
+                gained = {"index_row": row, "index_entry_sha256": entry}
+                filings_by_id[was["id"]] = accrue(
+                    filings_by_id[was["id"]], {k: v for k, v in gained.items() if v}
+                )
             if (
                 not closed
                 and row["doc_id"] not in adjudications
@@ -1021,6 +1191,20 @@ def build(year: int, dry_run: bool = False) -> int:
                         "it stands, record that with tools/correct.py --stands, and the build "
                         "goes on."
                     )
+            continue
+        if row["year"] != str(year):
+            rejected.append(
+                {
+                    "adapter": "house-fd",
+                    "reason": (
+                        f"the Clerk's {year} index lists this row under year "
+                        f"{row['year'] or 'none'}; the register attributes a row of an index only "
+                        "where the row's year is the index's own"
+                    ),
+                    "source_row": row,
+                    "source": index_source,
+                }
+            )
             continue
         if closed and row["doc_id"] not in adjudications:
             before = set_aside_before.get(canonical(row))
@@ -1093,12 +1277,21 @@ def build(year: int, dry_run: bool = False) -> int:
                     f"{decision['officeholder_id']}, whom the register does not hold as an "
                     f"officeholder of the {ordinal(ours)} Congress"
                 )
-            if person.get("_until") and filed_at and filed_at > person["_until"]:
+            until = person.get("_until")
+            if until and filed_at and filed_at > until:
+                specifics = f"({decision['officeholder_id']}; dated {filed_at}; "
                 reason = (
-                    f"a person's decision names {decision['officeholder_id']}, and the index "
-                    f"dates the filing {filed_at}, after {person['_until']}, the last day the "
-                    "register can show them in office; SUBJECTS.md §1 enters no new filing for "
-                    "an officeholder after their term"
+                    "the maintainer's recorded decision names an officeholder for a filing the "
+                    f"index dates after the {ordinal(ours)} Congress's terms ended; the register "
+                    "attributes a row of this filing year only within that Congress's terms "
+                    + specifics
+                    + f"terms ended {until})"
+                    if until == ended
+                    else "the maintainer's recorded decision names an officeholder the roster "
+                    "stopped listing, for a filing the index dates after the last roster read "
+                    "that listed them; the register cannot show them in office after that read, "
+                    "and under SUBJECTS.md §1 it enters no new filing for an officeholder after "
+                    "their term " + specifics + f"last listed {until})"
                 )
                 person = None
             else:
@@ -1137,6 +1330,11 @@ def build(year: int, dry_run: bool = False) -> int:
                 "extraction_confidence": confidence,
                 "notes": notes,
                 "index_row": row,
+                **(
+                    {"index_entry_sha256": index_now[row["doc_id"]]}
+                    if row["doc_id"] in index_now
+                    else {}
+                ),
             }
         )
     for filing in published["filings"]:
@@ -1147,6 +1345,7 @@ def build(year: int, dry_run: bool = False) -> int:
                 doc_of(filing["id"]) in listed_doc_ids,
                 index_source,
                 index_bytes,
+                carried=doc_of(filing["id"]) in index_now,
             )
 
     # The document layer. A new filing's document is read, required to agree with the
@@ -1417,6 +1616,7 @@ def build(year: int, dry_run: bool = False) -> int:
             "roster": congress,
             "closed": closed,
             "last_roster_read": last_roster_read,
+            **({"closed_by": closed_by} if closed_by else {}),
         },
         "changes": dict(collections.Counter(c["change"] for c in changes)),
         "counts": counts,
@@ -1442,11 +1642,13 @@ def build(year: int, dry_run: bool = False) -> int:
 
 def reads_otherwise(published: list[dict], read: list[dict]) -> bool:
     """Whether a document's rows, as this build reads them, differ from those published from
-    it: another set of rows, or a fact a published row carries given another value. A fact a
-    published row lacked is not a difference; it accrues."""
-    if [t["id"] for t in published] != [t["id"] for t in read]:
+    it: a published row missing or out of its place, or a fact a published row carries given
+    another value. A fact a published row lacked is not a difference, and neither is a row
+    read after every published one: both accrue, as facts the register lacked, never as a
+    change at the source (the Council's second reading of S.1b)."""
+    if [t["id"] for t in read[: len(published)]] != [t["id"] for t in published]:
         return bool(published) or bool(read)
-    for was, now in zip(published, read, strict=True):
+    for was, now in zip(published, read, strict=False):
         for key, value in now.items():
             if was.get(key) is not None and was[key] != value:
                 return True

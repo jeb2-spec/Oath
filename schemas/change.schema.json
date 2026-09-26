@@ -59,6 +59,16 @@
       "format": "date-time",
       "description": "When the register last built from a capture of the same source before this one, UTC. The change fell between the two reads; the register does not know when, or why."
     },
+    "before_content_hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "The SHA-256 of the bytes of that earlier read. The register keeps them in data/captures/sha256/ only where a change row or a closed year cites them; where it does not, the page says so."
+    },
+    "entry_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "On read otherwise: the SHA-256 of the row's own entry in the capture, found without the XML parser. A change is recorded only where the row's entry changed; a later capture whose entry has this same hash says nothing new about the row."
+    },
     "capture": {
       "type": "object",
       "required": ["url", "retrieved_at", "content_hash"],

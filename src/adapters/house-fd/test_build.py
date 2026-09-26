@@ -534,6 +534,177 @@ def test_the_same_roster_read_otherwise_refuses(register, monkeypatch):
         build.build(2025)
 
 
+def later(register, members, rows, at, index=None):
+    """Captures of a later read: the roster of `members`, the index of `rows`."""
+    captures(
+        register,
+        roster_xml(119, members, "20250103"),
+        index if index is not None else index_xml(rows),
+        at,
+        at.replace(":00Z", ":01Z"),
+    )
+
+
+def test_a_parser_that_drops_what_the_bytes_still_carry_refuses(register, monkeypatch):
+    """The Council's second reading of S.1b (Seat C, R-1): the Clerk serves bytes that still
+    carry a Member and a filing, and a change in the register's own parsers drops them. That
+    is the register's reading, never the source's: the build refuses, and nothing is written."""
+    rows = [(ADA, "30000001"), (BEA, "30000002"), (CAL, "30000003")]
+    later(register, [ADA, BEA, CAL], rows, "2026-02-02T00:00:00Z")
+    real_roster, real_index = build.load_roster, build.load_index
+
+    def drops_bea(path):
+        seats, people = real_roster(path)
+        return seats, [p for p in people if p["bioguide"] != "X000002"]
+
+    monkeypatch.setattr(build, "load_roster", drops_bea)
+    with pytest.raises(SystemExit, match="carry an entry for oh:us:house:x000002"):
+        build.build(2025)
+    monkeypatch.setattr(build, "load_roster", real_roster)
+    monkeypatch.setattr(
+        build, "load_index", lambda path: [r for r in real_index(path) if r["doc_id"] != "30000002"]
+    )
+    with pytest.raises(SystemExit, match="carry an entry for fl:house-clerk:O:30000002"):
+        build.build(2025)
+    assert not changes_of(register)
+
+
+def test_a_fact_misread_from_an_unchanged_entry_refuses_and_a_changed_entry_is_recorded(
+    register, monkeypatch
+):
+    """Seat C, R-5: the roster's bytes change for another Member, and a change in the
+    register's reading gives this Member's name otherwise. Her own entry is unchanged, so the
+    source said nothing new about her, and the build refuses. Where her entry itself changes,
+    the change is recorded, naming the entry it was read from."""
+    rows = [(ADA, "30000001"), (BEA, "30000002")]
+    later(register, [ADA, BEA, CAL], rows, "2026-02-02T00:00:00Z")
+    real = build.load_roster
+
+    def misread(path):
+        seats, people = real(path)
+        return seats, [
+            dict(p, official_name="Beatrix Placeholder") if p["bioguide"] == "X000002" else p
+            for p in people
+        ]
+
+    monkeypatch.setattr(build, "load_roster", misread)
+    with pytest.raises(SystemExit, match="x000002 was last read from is unchanged"):
+        build.build(2025)
+    monkeypatch.setattr(build, "load_roster", real)
+    later(register, [ADA, dict(BEA, first="Beatrix"), CAL], rows, "2026-02-09T00:00:00Z")
+    assert build.build(2025) == 0
+    changes = changes_of(register)
+    assert {c["field"] for c in changes} == {"legal_name", "common_name"}
+    entry = build.roster_entries(register / "data" / "cache" / "house-fd" / "MemberData.xml")
+    assert {c["entry_sha256"] for c in changes} == {entry["X000002"]}
+    assert all(c["before_content_hash"] for c in changes), "the bytes last built from, named"
+
+
+def test_a_decided_fact_is_quiet_on_an_unchanged_entry_and_observed_when_it_changes(
+    register, monkeypatch
+):
+    """Seat C, R-11: the maintainer's recorded decision that a fact stands silences the
+    refusal on an unchanged entry; it never silences what the source's own bytes later show."""
+    stands = {
+        "id": "ch:corrected:oh:us:house:x000002:legal_name:2026-02-01T00:00:00Z",
+        "row_id": "oh:us:house:x000002",
+        "rows": "officeholders",
+        "change": "corrected",
+        "field": "legal_name",
+        "was": "Bea Placeholder",
+        "now": "Bea Placeholder",
+        "kind": "register",
+        "because": "The roster prints the name as published; the new reading is the register's.",
+        "decided_by": "the maintainer",
+        "decided_at": "2026-02-01T00:00:00Z",
+        "capture": {
+            "url": "https://clerk.house.gov/xml/lists/MemberData.xml",
+            "retrieved_at": "2026-02-01T00:00:00Z",
+            "content_hash": "0" * 64,
+        },
+        "frame": build.FRAME,
+    }
+    (register / "data" / "changes.ndjson").write_text(build.canonical(stands), encoding="utf-8")
+    rows = [(ADA, "30000001"), (BEA, "30000002")]
+    later(register, [ADA, BEA, CAL], rows, "2026-02-02T00:00:00Z")
+    real = build.load_roster
+
+    def misread(path):
+        seats, people = real(path)
+        return seats, [
+            dict(p, official_name="Beatrix Placeholder") if p["bioguide"] == "X000002" else p
+            for p in people
+        ]
+
+    monkeypatch.setattr(build, "load_roster", misread)
+    assert build.build(2025) == 0, "the decision stands: no refusal"
+    assert changes_of(register) == [stands], "and nothing recorded from an unchanged entry"
+    monkeypatch.setattr(build, "load_roster", real)
+    later(register, [ADA, dict(BEA, first="Beatrix"), CAL], rows, "2026-02-09T00:00:00Z")
+    assert build.build(2025) == 0
+    assert {c["field"] for c in changes_of(register)[1:]} == {"legal_name", "common_name"}
+
+
+def test_rows_name_the_entry_they_were_read_from_and_a_published_row_gains_it(register):
+    """Each new row names its entry in the source's bytes. A row published before entries
+    were kept gains it from the first later entry that states the facts it carries, and a row
+    that entry states otherwise does not."""
+    cache = register / "data" / "cache" / "house-fd"
+    holders = {k: json.loads(v) for k, v in rows_of(register, "officeholders").items()}
+    filings = {k: json.loads(v) for k, v in rows_of(register, "filings").items()}
+    assert (
+        holders["oh:us:house:x000001"]["roster_entry_sha256"]
+        == (build.roster_entries(cache / "MemberData.xml")["X000001"])
+    )
+    assert (
+        filings["fl:house-clerk:O:30000001"]["index_entry_sha256"]
+        == (build.index_entries(cache / "2025FD.xml")["30000001"])
+    )
+    for name, key in (("officeholders", "roster_entry_sha256"), ("filings", "index_entry_sha256")):
+        stripped = []
+        for line in rows_of(register, name).values():
+            row = json.loads(line)
+            row.pop(key)
+            row.pop("index_row", None)
+            stripped.append(build.canonical(row))
+        (register / "data" / f"{name}.ndjson").write_text("".join(stripped), encoding="utf-8")
+    later(
+        register,
+        [ADA, dict(BEA, party="D"), CAL],
+        [(ADA, "30000001"), (BEA, "30000002")],
+        "2026-02-02T00:00:00Z",
+    )
+    assert build.build(2025) == 0
+    holders = {k: json.loads(v) for k, v in rows_of(register, "officeholders").items()}
+    assert "roster_entry_sha256" in holders["oh:us:house:x000001"]
+    assert "roster_entry_sha256" not in holders["oh:us:house:x000002"], (
+        "an entry that states a fact otherwise is not the one the row was read from"
+    )
+    filings = {k: json.loads(v) for k, v in rows_of(register, "filings").items()}
+    assert all("index_entry_sha256" in f and "index_row" in f for f in filings.values())
+
+
+def test_a_row_the_index_lists_under_another_year_is_set_aside_with_the_reason(register):
+    """Seat C, C-10: a row of the 2025 index whose Year column says 2024 would take another
+    year's document URL, and a later build could not tell whose index it came from."""
+    index = index_xml([(ADA, "30000001"), (BEA, "30000002"), (CAL, "30000005")]).replace(
+        "<Year>2025</Year><FilingDate>5/15/2026</FilingDate><DocID>30000005",
+        "<Year>2024</Year><FilingDate>5/15/2026</FilingDate><DocID>30000005",
+    )
+    later(register, [ADA, BEA, CAL], [], "2026-02-02T00:00:00Z", index=index)
+    assert build.build(2025) == 0
+    assert "fl:house-clerk:O:30000005" not in rows_of(register, "filings")
+    (rejected,) = (register / "data" / "rejected" / "house-fd").glob("2025-*.ndjson")
+    reasons = {
+        json.loads(line)["source_row"]["doc_id"]: json.loads(line)["reason"]
+        for line in rejected.read_text("utf-8").splitlines()
+    }
+    assert reasons["30000005"] == (
+        "the Clerk's 2025 index lists this row under year 2024; the register attributes a row "
+        "of an index only where the row's year is the index's own"
+    )
+
+
 def test_a_rebuild_from_the_same_captures_writes_the_same_bytes(register):
     """The run record is the register's state, not this build's deltas, so a second build
     from the same captures seals the same digest (the Council's reading of S.1b)."""
@@ -597,9 +768,14 @@ def test_a_person_may_attribute_a_new_row_to_a_member_the_roster_no_longer_lists
         json.loads(line)["source_row"]["doc_id"]: json.loads(line)["reason"]
         for line in rejected.read_text("utf-8").splitlines()
     }
-    assert "SUBJECTS.md §1 enters no new filing" in reasons["30000010"]
-    assert (
-        "after 2026-01-05, the last day the register can show them in office" in reasons["30000010"]
+    assert reasons["30000010"].startswith(
+        "the maintainer's recorded decision names an officeholder the roster stopped listing, "
+        "for a filing the index dates after the last roster read that listed them; the register "
+        "cannot show them in office after that read, and under SUBJECTS.md §1 it enters no new "
+        "filing for an officeholder after their term ("
+    ), "grouped without the person: the id and the dates are in the parentheses"
+    assert reasons["30000010"].endswith(
+        "(oh:us:house:x000002; dated 2026-03-01; last listed 2026-01-05)"
     )
     row = json.loads(rows_of(register, "filings")["fl:house-clerk:O:30000009"])
     assert (row["officeholder_id"], row["office_id"]) == (
@@ -648,14 +824,27 @@ def test_a_closed_year_is_carried_and_never_rebuilt_from_the_next_roster(registe
         "a row set aside while the year was open keeps its own reason"
     )
     assert "is of the 119th Congress" in set_aside["30000003"]
-    assert "lists the 120th" in set_aside["30000003"]
+    assert "the Clerk's roster read 2027-01-11 lists the 120th" in set_aside["30000003"]
     record = run_record(register)
+    closing = json.loads(
+        (register / "data" / "cache" / "house-fd" / "capture.json").read_text("utf-8")
+    )["MemberData.xml"]
     assert record["congress"] == {
         "filing_year": 119,
         "roster": 120,
         "closed": True,
         "last_roster_read": "2026-06-01T00:00:00Z",
-    }, "the last roster of the year's own Congress the register read, carried"
+        "closed_by": {
+            "url": closing["url"],
+            "retrieved_at": "2027-01-11T00:00:00Z",
+            "sha256": closing["sha256"],
+            "congress": 120,
+        },
+    }, (
+        "the last roster of the year's own Congress the register read, carried, and the read "
+        "that closed it"
+    )
+    assert f"{closing['sha256']}.xml" in kept(register), "the roster that closed the year is kept"
     assert [s["name"] for s in record["sources"]] == ["2025FD.zip"]
     manifest = json.loads(
         (register / "data" / "cache" / "house-fd" / "capture.json").read_text("utf-8")
@@ -812,6 +1001,25 @@ def test_the_same_bytes_read_otherwise_refuse_because_the_reader_changed(reports
     assert not changes_of(reports)
 
 
+def test_a_reading_that_finds_rows_after_every_published_one_adds_them(reports, monkeypatch):
+    """Seat C, R-8: the same bytes, read by a reader that now finds a trade the first reading
+    missed, after every published row. The published rows stand as they were; the new one is
+    a fact the register lacked, added, and never a change at the source. A row found anywhere
+    but after them would move a published row, and refuses."""
+    before = rows_of(reports, "transactions")
+    third = dict(TX, asset="Third Holdings")
+    monkeypatch.setattr(StubReader, "rows", staticmethod(lambda tx: [*tx, third]))
+    assert build.build(2025) == 0
+    after = rows_of(reports, "transactions")
+    assert {k: after[k] for k in before} == before
+    assert list(after) == [*before, "tx:house-clerk:20000001:003"]
+    assert json.loads(after["tx:house-clerk:20000001:003"])["asset"] == "Third Holdings"
+    assert not changes_of(reports)
+    monkeypatch.setattr(StubReader, "rows", staticmethod(lambda tx: [tx[0], third, *tx[1:]]))
+    with pytest.raises(SystemExit, match="the register's reading did"):
+        build.build(2025)
+
+
 def test_other_bytes_that_read_otherwise_are_a_replacement_shown_beside_the_rows(reports):
     before = {name: rows_of(reports, name) for name in ("filings", "transactions")}
     sha = document(reports, "20000001", ADA, [TX], "2026-02-02T00:00:00Z")
@@ -864,3 +1072,105 @@ def test_a_document_first_read_later_adds_its_facts_and_rows(tmp_path, monkeypat
     }
     assert list(rows_of(tmp_path, "transactions")) == ["tx:house-clerk:20000001:001"]
     assert not changes_of(tmp_path), "facts it lacked, filled; nothing changed"
+
+
+# ---- the adapter's own output, sealed and validated as the refresh does it -----------------
+#
+# The Council's second reading of S.1b found that the seal refused the very departure and
+# closed year S.1b exists for, while every test passed: the seal's tests built run records
+# the adapter does not write. These run the adapter, then the seal with its state derived,
+# then the schema validator, on the same tree (Seats A, C, E, F and G).
+
+ROOT = HERE.parents[2]
+
+
+def tool(name: str):
+    spec = importlib.util.spec_from_file_location(
+        name.replace("-", "_"), ROOT / "tools" / f"{name}.py"
+    )
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
+
+
+def sealed(root: Path, build_id: str, built_at: str) -> str:
+    """Seal the tree as the refresh does and return its state; validate every row first."""
+    validator = tool("validate-schemas")
+    problems, rows, _ = validator.check_rows(root, validator.load_schemas(ROOT))
+    assert not problems and rows, problems[:5]
+    seal = tool("seal")
+    verify = seal.load_verify(ROOT / "tools")
+    for name in verify.DOCTRINE:
+        (root / name).write_text(f"{name}, as sealed for the test\n", encoding="utf-8")
+    meta = root / "data" / "meta.json"
+    if not meta.is_file():
+        meta.write_text("{}\n", encoding="utf-8")
+    digest = seal.seal(root, build_id, built_at, derive=True)
+    assert verify.compute_digest(root) == digest
+    return json.loads(meta.read_text("utf-8"))["state"]
+
+
+def test_a_departure_builds_seals_and_validates(register):
+    sealed(register, "0001-house-2025", "2026-01-05T00:00:01Z")
+    later(
+        register,
+        [ADA, CAL],
+        [(ADA, "30000001"), (BEA, "30000002"), (CAL, "30000003")],
+        "2026-02-02T00:00:00Z",
+    )
+    assert build.build(2025) == 0
+    state = sealed(register, "0002-house-2025", "2026-02-02T00:00:01Z")
+    assert state.startswith(
+        "The register holds 3 offices, 3 officeholders, 3 filings and 0 transactions."
+    ), "every officeholder the register holds, the one the roster stopped listing among them"
+    assert "2 of them filled and 1 vacant on the Clerk's roster read 2026-02-02" in state
+    assert "1 change is recorded" in state and "1 no longer listed by a later capture" in state
+    (change,) = changes_of(register)
+    assert change["build"] == "0002-house-2025", "stamped with the build that sealed it"
+    assert (
+        tool("check-removals").problems(
+            "data/officeholders.ndjson",
+            list(map(json.loads, rows_of(register, "officeholders").values())),
+            [],
+        )
+        == []
+    )
+
+
+def test_a_closed_year_after_a_departure_builds_seals_and_validates(register):
+    later(register, [ADA], [(ADA, "30000001"), (BEA, "30000002")], "2026-02-02T00:00:00Z")
+    assert build.build(2025) == 0
+    sealed(register, "0002-house-2025", "2026-02-02T00:00:01Z")
+    captures(
+        register,
+        roster_xml(120, [ADA, CAL], "20270103"),
+        index_xml([(ADA, "30000001"), (BEA, "30000002"), (CAL, "30000003")]),
+        "2027-01-11T00:00:00Z",
+        "2027-01-11T00:00:01Z",
+    )
+    assert build.build(2025) == 0
+    state = sealed(register, "0003-house-2025", "2027-01-11T00:00:01Z")
+    assert "The register has closed filing year 2025" in state
+    assert "the Clerk's roster read 2027-01-11 listed the 120th" in state
+    assert "each with the reason the register gave it when it set the row aside" in state
+    assert (
+        "Members of the 119th Congress, as its roster listed them when the register last " in state
+    )
+
+
+def test_a_refused_seal_stamps_nothing(register):
+    """Seats C and F: a seal that refuses leaves every change row as it was, so no row names
+    a build that was never sealed."""
+    later(register, [ADA], [(ADA, "30000001"), (BEA, "30000002")], "2026-02-02T00:00:00Z")
+    assert build.build(2025) == 0
+    before = (register / "data" / "changes.ndjson").read_text("utf-8")
+    seal = tool("seal")
+    for name in seal.load_verify(ROOT / "tools").DOCTRINE:
+        (register / name).write_text("sealed\n", encoding="utf-8")
+    (register / "data" / "meta.json").write_text(
+        '{"state": "a stale sentence"}\n', encoding="utf-8"
+    )
+    with pytest.raises(SystemExit, match="refusing to seal"):
+        seal.seal(register, "0002-house-2025", "2026-02-02T00:00:01Z")
+    assert (register / "data" / "changes.ndjson").read_text("utf-8") == before
