@@ -1,0 +1,151 @@
+# Anchor every sealed build with OpenTimestamps, and keep ANCHORS.md saying what the proofs
+# say. ANCHORS.md promised this; NEXT.md S.4 re-scoped it to every build from the first
+# anchored one on.
+#
+# The file stamped is the build's manifest, data/anchors/<build>.manifest, whose SHA-256 is
+# the build's digest, so the proof commits to the seal itself. Nothing under data/anchors/ is
+# sealed, and the anchor's state is never written into the sealed data/meta.json, so a proof
+# can be added and completed without moving the digest it is over.
+#
+# On every push to main that seals a build, and once a day: stamp the current build if it
+# has no proof, retry an owed stamp, complete every proof Bitcoin now holds, regenerate the
+# ledger, and open a pull request when any proof moved. The workflow token cannot push to a
+# protected main, and a proof that lands through review is a proof somebody looked at.
+# While an anchor pull request is open, a run records nothing new, so two proofs of one
+# build never race; tomorrow's run picks up after the merge. A run that cannot stamp or
+# upgrade fails and says so in an issue.
+
+name: anchor
+
+on:
+  push:
+    branches: [main]
+    paths: ["data/meta.json"]
+  schedule:
+    - cron: "41 6 * * *" # daily: retry owed stamps, complete pending proofs
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+defaults:
+  run:
+    shell: bash
+
+concurrency:
+  group: anchor
+  cancel-in-progress: false
+
+jobs:
+  anchor:
+    name: stamp, complete, and record
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Python 3.11, the reference runtime
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: An anchor pull request already open means today's proofs wait for its merge
+        id: open
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          OPEN="$(gh pr list --state open --json headRefName --jq '[.[] | select(.headRefName | startswith("anchor/"))] | length')"
+          echo "open=${OPEN}" >> "$GITHUB_OUTPUT"
+          if [ "$OPEN" != "0" ]; then
+            echo "An anchor pull request is open. Merge it; the next run completes what it holds."
+          fi
+
+      - name: The OpenTimestamps client, the reference tool a reader uses too
+        if: steps.open.outputs.open == '0'
+        run: python -m pip install "opentimestamps-client>=0.7,<0.8"
+
+      - name: The build verifies before anything is stamped
+        if: steps.open.outputs.open == '0'
+        run: python tools/verify.py
+
+      - name: Stamp the current build, or retry its owed stamp
+        if: steps.open.outputs.open == '0'
+        run: python tools/anchor.py --stamp
+
+      - name: Complete every proof Bitcoin now holds
+        if: steps.open.outputs.open == '0'
+        run: python tools/anchor.py --upgrade
+
+      - name: The ledger says what the proofs say
+        if: steps.open.outputs.open == '0'
+        run: python tools/anchor.py
+
+      - name: Open a pull request when a proof moved
+        if: steps.open.outputs.open == '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ -z "$(git status --porcelain -- data/anchors ANCHORS.md)" ]; then
+            echo "No proof moved. Nothing to record."
+            exit 0
+          fi
+          STATUS="$(python tools/anchor.py --status)"
+          BRANCH="anchor/$(date -u +%Y-%m-%d-%H%M)"
+          git config user.name "Oath operator"
+          git config user.email "operator@veraproject.xyz"
+          git checkout -b "$BRANCH"
+          git add data/anchors ANCHORS.md
+          {
+            echo "Anchor: the proofs as they stand"
+            echo
+            echo "Opened by the anchor workflow. Each proof commits to the manifest beside it,"
+            echo "whose SHA-256 is its build's digest; the table in ANCHORS.md is regenerated"
+            echo "from the proofs. Build, digest, state:"
+            echo
+            echo "$STATUS"
+          } > commit.msg
+          git commit -F commit.msg
+          git push -u origin "$BRANCH"
+          {
+            echo "## What changed"
+            echo
+            echo "The anchor workflow stamped a build, or completed a proof that Bitcoin now holds, and regenerated the table in ANCHORS.md from the proofs."
+            echo
+            echo '```'
+            echo "$STATUS"
+            echo '```'
+            echo
+            echo "Nothing sealed changed: data/anchors/ and ANCHORS.md sit outside the seal, so the digest each proof is over does not move. \`python tools/anchor.py\` passed in the run that opened this."
+            echo
+            echo "## Conflict of interest disclosure"
+            echo
+            echo "None. Opened by the anchor workflow; no person chose these bytes."
+            echo
+            echo "Presence in the register is not evidence of wrongdoing."
+          } > pr.md
+          gh pr create --base main --head "$BRANCH" --title "Anchor: the proofs as of $(date -u +%Y-%m-%d)" --body-file pr.md
+
+      - name: Say so where the maintainer will see it, when anything above failed
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TITLE="Anchor failed: a build's stamp or proof did not move as it should"
+          RUN_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          OPEN="$(gh issue list --state open --search "in:title \"${TITLE}\"" --json number --jq '.[0].number // empty')"
+          if [ -n "$OPEN" ]; then
+            gh issue comment "$OPEN" --body "It failed again: ${RUN_URL}"
+            exit 0
+          fi
+          {
+            echo "The anchor workflow failed: ${RUN_URL}"
+            echo
+            echo "If the failing step is **Stamp the current build**, the calendars could not be reached and the stamp is owed; ANCHORS.md says so, and tomorrow's run retries. If it is **The build verifies**, main does not verify against its own seal, which is a larger problem than the anchor. If it is **The ledger says what the proofs say**, a proof or the table was changed by hand; \`python tools/anchor.py\` names it."
+            echo
+            echo "Presence in the register is not evidence of wrongdoing."
+          } > issue.md
+          gh issue create --title "$TITLE" --body-file issue.md
