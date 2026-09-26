@@ -309,7 +309,7 @@
     },
     {
       "name": "a report the register did not read",
-      "why": "A scanned paper report is captured and not read; the Committee judges paper by its postmark, which the register does not see. No row is evaluated and the report is counted as not read.",
+      "why": "A scanned paper report is captured and not read; its transaction dates are printed in the document, which the register does not read. No row is evaluated and the report is counted as not read.",
       "officeholder": { "id": "oh:us:example:example", "sworn_at": "2025-01-03" },
       "report": { "id": "fl:example:P:0020", "filed_at": "2025-06-01", "read": false },
       "rows": [

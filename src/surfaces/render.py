@@ -553,7 +553,7 @@ REQUIRES = (
     "on Ethics states it as the earlier of 30 days from being made aware of the transaction "
     f'or 45 days from the transaction (<a href="{ETHICS_FD}">Financial Disclosure</a>). '
     "The Committee's instructions keep some assets off these reports, among them widely held "
-    "investment funds, real property and the Thrift Savings Plan, though a filer may list them "
+    "investment funds, real property and the Thrift Savings Plan, though some reports list them "
     f'(<a href="{PTR_FORM}">its form and instructions</a>). The Act does not '
     "prohibit the transactions it requires reported; a report listed below is a filing made "
     "under that requirement, as the Clerk records it.</dd>\n"
@@ -808,8 +808,8 @@ def which_quiet(outcomes: list[dict], held_reports: int = 0, sworn: str | None =
         n = len(unread)
         parts.append(
             f"{n:,} {plural(n, 'report is', 'reports are')} captured and not read: scanned "
-            "paper, which the Committee judges by its postmark, and the register does not see "
-            "the postmark."
+            "paper, whose transaction dates are printed in the document, and the register reads "
+            "no scanned document."
         )
     if held:
         parts.append(held)
@@ -1981,8 +1981,8 @@ def render_signal_page(
         f"<dt>{skipped_n:,}</dt><dd>rows not evaluated: "
         f"{esc(reason_clause(skipped)) or 'none'}</dd>\n"
         f"<dt>{by_state.get('not read', 0):,}</dt><dd>reports captured and not read: scanned "
-        "paper, which the Committee judges by its postmark, and the register does not see the "
-        "postmark</dd>\n"
+        "paper, whose transaction dates are printed in the document, and the register reads no "
+        "scanned document</dd>\n"
         f"{reach_rows}"
         f"<dt>{summary['officeholders_with_a_finding']:,}</dt><dd>officeholders the reports it "
         "fired on are attributed to. A count about the register; no page ranks anyone by it</dd>\n"

@@ -51,9 +51,9 @@ THRESHOLD = 1000
 CITATION = "5 U.S.C. § 13105(l)"
 FRAME = "Presence in the register is not evidence of wrongdoing."
 
-# The asset codes, as the Clerk's legend gives them, for the kinds of asset the rule plainly
-# reaches: ST stocks, CS corporate bonds and notes, OP options, CT cryptocurrency. Every other
-# code, and a row with none, is counted and not evaluated.
+# The asset codes evaluated. The Clerk's legend defines them and the register has not read it
+# at its source; the rows the reports code so name stocks, corporate bonds and notes, options
+# and cryptocurrencies. Every other code, and a row with none, is counted and not evaluated.
 EVALUATED_CODES = ("CS", "CT", "OP", "ST")
 ETF = re.compile(r"\bETF\b")
 # The instructions the register has read for the deadline (the Committee's CY 2025 form,
