@@ -59,6 +59,7 @@ GATES = [
     ("§17 meta-invariant highlight", "tools/highlight-charter-change.py"),
     ("Council §5 mode 7 cross-references", "tools/check-crossrefs.py"),
     ("ECOSYSTEM §2.4 the mark is struck and legible", "tools/check-mark.py"),
+    ("RUBRIC gate 4 every Finding regenerates", "tools/rebuild.py"),
 ]
 
 
