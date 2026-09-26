@@ -211,11 +211,14 @@ def test_changes_are_counted_by_kind_and_never_by_anyone_s_rows(tmp_path):
     text = seal.derive_state(root, meta)
     assert seal.state_text_lacks({**meta, "state": text}, run) == ""
     assert (
-        "Every row the register has published stays as published, and changes only by a "
-        "person's correction, which is a row of its own; 3 changes are recorded beside the "
-        "rows they concern, each with the capture that shows it, which the register keeps: 1 no "
-        "longer listed by a later capture, 2 stated otherwise by a later capture."
+        "3 changes are recorded, each a row of its own with the copy of the source that shows "
+        "it, which the register keeps: 1 no longer listed by a later capture, 2 stated otherwise "
+        "by a later capture."
     ) in text
+    assert text.startswith(
+        "The register holds 441 offices, 439 officeholders, 1,197 filings and 7,346 "
+        "transactions. A row it has published stays, gaining only facts it lacked;"
+    ), "the register's totals, never one person's, and the rule it holds them by"
     assert "carried" not in text and "derive again" not in text
 
 
@@ -273,7 +276,12 @@ def test_a_closed_year_seals_a_sentence_that_says_the_register_closed_it(tmp_pat
         "filing year 2025 is of the 119th Congress, whose terms ended at noon on 2027-01-03, and "
         "the roster this build read lists the 120th"
     )
-    run["congress"] = {"filing_year": 119, "roster": 120, "closed": True}
+    run["congress"] = {
+        "filing_year": 119,
+        "roster": 120,
+        "closed": True,
+        "closed_by": {"retrieved_at": "2027-01-11T09:17:05Z", "congress": 120},
+    }
     run["counts"] = dict.fromkeys(("seats", "filled", "vacant", "filings", "quiet"), 0)
     run["counts"]["rejected"] = 2
     run["documents"] = {"read": 0, "transactions": 0}
@@ -283,11 +291,12 @@ def test_a_closed_year_seals_a_sentence_that_says_the_register_closed_it(tmp_pat
     meta["rows"] = verify.row_counts(root)
     text = seal.derive_state(root, meta)
     assert seal.state_text_lacks({**meta, "state": text}, run) == ""
-    assert text.startswith(
+    assert (
         "The register has closed filing year 2025 (the reports the Clerk's index lists under "
         "2025): they belong to the 119th Congress (terms from noon, 3 January 2025, to noon, 3 "
         "January 2027), whose terms ended under the Twentieth Amendment, section 1, and the "
-        "roster the register reads lists the 120th."
-    )
+        "Clerk's roster read 2027-01-11 listed the 120th."
+    ) in text, "dated by the read that closed the year, never by the roster read now"
+    assert "the roster the register reads" not in text and " now" not in text
     assert "gives the 119th Congress's offices the day their terms ended" in text
     assert "0 seats" not in text and f"2 because {reason}" in text
