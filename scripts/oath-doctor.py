@@ -13,7 +13,9 @@ NEXT.md Phase 1 T.6, modelled on the errata doctor. It answers, in order:
   3. Can the session recite the Charter? The five vows are printed from CHARTER.md
      as the read-back; fewer or more than five is red.
   4. Which invariant gates exist, and do they pass? Every gate INVARIANTS.md names
-     is listed as present or planned; every present gate is run.
+     is listed as present or planned; every present gate is run. The gates that read
+     the rendered pages read a render made for the purpose, in a temporary folder, as
+     CI renders before it lints: the site is never in git, so a fresh clone has none.
   5. Does the branch track main? Ahead and behind against origin/main, and whether
      the working tree is clean. With --fetch, origin is fetched first.
   6. Is the toolchain at the floor? Python 3.11+, Node 20+, Ruff and Pytest.
@@ -32,6 +34,7 @@ import os
 import re
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 ORDERED_MEMORY = ["where-we-are.md", "who-i-am-for-oath.md", "founding-of-oath.md"]
@@ -62,6 +65,9 @@ GATES = [
     ("RUBRIC gate 4 every Finding regenerates", "tools/rebuild.py"),
     ("NEXT S.4 ANCHORS.md says what the proofs say", "tools/anchor.py"),
 ]
+# The gates that read the rendered pages, and the renderer that makes them.
+SITE_READERS = {"tools/lint-frame-presence.py", "tools/lint-no-ranking.py"}
+RENDERER = "src/surfaces/render.py"
 
 
 class Report:
@@ -170,21 +176,48 @@ def check_charter(root: Path, rep: Report) -> None:
         rep.bad(f"CHARTER.md has {len(vows)} vows, not five")
 
 
+def render_site(root: Path, site: Path, rep: Report) -> bool:
+    """Render the register into `site` for the gates that read pages. False when there is
+    no renderer to run, or it fails, which is red: a register that does not render is not
+    whole."""
+    renderer = root / RENDERER
+    if not renderer.is_file():
+        return False
+    proc = subprocess.run(
+        [sys.executable, str(renderer), str(root), "--out", str(site)],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+    )
+    if proc.returncode != 0:
+        last = ((proc.stdout + proc.stderr).strip().splitlines() or [""])[-1]
+        rep.bad(f"the register does not render: {RENDERER} FAILS ({last[:70]})")
+        return False
+    return True
+
+
 def check_gates(root: Path, rep: Report) -> None:
     rep.section("Gates")
-    for label, tool in GATES:
-        path = root / tool
-        if not path.is_file():
-            rep.warning(f"{label}: {tool} planned, not landed")
-            continue
-        proc = subprocess.run(
-            [sys.executable, str(path), str(root)], capture_output=True, text=True, encoding="utf-8"
-        )
-        first = (proc.stdout.strip().splitlines() or [""])[0]
-        if proc.returncode == 0:
-            rep.ok(f"{label}: {tool} passes ({first[:70]})")
-        else:
-            rep.bad(f"{label}: {tool} FAILS ({first[:70]})")
+    with tempfile.TemporaryDirectory(prefix="oath-site-") as site:
+        rendered = render_site(root, Path(site), rep)
+        for label, tool in GATES:
+            run_gate(root, rep, label, tool, site if rendered else None)
+
+
+def run_gate(root: Path, rep: Report, label: str, tool: str, site: str | None) -> None:
+    path = root / tool
+    if not path.is_file():
+        rep.warning(f"{label}: {tool} planned, not landed")
+        return
+    args = [sys.executable, str(path), str(root)]
+    if tool in SITE_READERS and site:
+        args += ["--site", site]
+    proc = subprocess.run(args, capture_output=True, text=True, encoding="utf-8")
+    first = (proc.stdout.strip().splitlines() or [""])[0]
+    if proc.returncode == 0:
+        rep.ok(f"{label}: {tool} passes ({first[:70]})")
+    else:
+        rep.bad(f"{label}: {tool} FAILS ({first[:70]})")
 
 
 def check_branch(root: Path, rep: Report, fetch: bool) -> None:
