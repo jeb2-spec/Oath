@@ -24,6 +24,12 @@ dev = [
 extract = [
   "pypdf>=6,<7",
 ]
+# The anchor's one dependency, for stamping and completing proofs only (tools/anchor.py
+# --stamp and --upgrade): the OpenTimestamps reference client, the same tool a reader uses to
+# check a proof. Reading a proof, and the gate that holds ANCHORS.md to the proofs, need none.
+anchor = [
+  "opentimestamps-client>=0.7,<0.8",
+]
 
 [tool.ruff]
 target-version = "py311"

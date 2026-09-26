@@ -6,15 +6,19 @@ blacklist (v0) is the one printed there, matched as whole words in any inflectio
 (corrupt, corruption, corrupted; criminal, criminally; and so on), case-insensitive.
 
 What is scanned: the Markdown at the repository root (doctrine, prospectus,
-guides), .github/, docs/ (Signal definitions and rendered pages included), src/,
-fixtures/, templates/, and every data/*.ndjson row. Two places are not scanned, and
+guides), .github/, docs/ (Signal definitions included), src/, fixtures/, templates/,
+every data/*.ndjson row, and the rendered pages under docs/build/ when a render has
+written them. Those pages are build output and are not tracked, so they are read from
+the disk rather than from git; CI renders before it runs this gate, so every page a
+reader could be shown, every rendered Finding among them, is read. Two places are not scanned, and
 the reason is stated here so the exclusion is loud: .claude/ (the working memory,
 not a surface), and docs/related-work/ (records of what neighbouring projects say
 in their own names and words; they name no officeholder and are appendix, not
 surface). Everything that names or describes an officeholder is scanned.
 
 One phrase is always allowed: the register's own frame, "not evidence of
-wrongdoing", which is Vow II in its own words.
+wrongdoing", which is Vow II in its own words. Only the phrase is allowed: a blacklisted
+word elsewhere on the same line, or in the same NDJSON row, is still a hit.
 
 Every other hit fails unless verdict-lint.allowlist at the repository root allows
 it. An entry is one line, `path | context | reason`: the hit's file, a substring
@@ -66,6 +70,18 @@ FRAME = re.compile(r"not evidence of wrongdoing", re.IGNORECASE)
 ALLOWLIST = "verdict-lint.allowlist"
 SCANNED_PREFIXES = (".github/", "docs/", "src/", "fixtures/", "templates/")
 EXCLUDED_PREFIXES = (".claude/", "docs/related-work/", "node_modules/")
+SITE = "docs/build"
+
+
+def without_the_frame(line: str) -> str:
+    """The line with each occurrence of the frame phrase blanked, character for character, so
+    the phrase itself is always allowed and every other word on the line is still read."""
+    return FRAME.sub(lambda m: " " * len(m.group(0)), line)
+
+
+def hits(line: str) -> list[str]:
+    """The blacklisted words on one line, outside the frame phrase."""
+    return [m.group(0) for m in PATTERN.finditer(without_the_frame(line))]
 
 
 def scanned_files(root: Path) -> list[Path]:
@@ -92,7 +108,9 @@ def scanned_files(root: Path) -> list[Path]:
         data_row = rel.startswith("data/") and rel.endswith(".ndjson")
         if root_md or in_scope or data_row:
             keep.append(root / rel)
-    return keep
+    site = root / SITE
+    rendered = sorted(site.rglob("*.html")) if site.is_dir() else []
+    return sorted(set(keep) | set(rendered))
 
 
 def load_allowlist(root: Path) -> list[tuple[str, str, str, int]]:
@@ -126,10 +144,8 @@ def lint(root: Path) -> tuple[list[str], int, int]:
         except (FileNotFoundError, UnicodeDecodeError):
             continue  # binary, or tracked but not on disk mid-rename
         for lineno, line in enumerate(text.splitlines(), 1):
-            for match in PATTERN.finditer(line):
+            for match in PATTERN.finditer(without_the_frame(line)):
                 word = match.group(0)
-                if FRAME.search(line) and word.lower() == "wrongdoing":
-                    continue
                 hit_allowed = False
                 for i, (e_path, context, _reason, _n) in enumerate(entries):
                     if e_path == rel and context in line:

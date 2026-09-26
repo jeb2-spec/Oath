@@ -4,11 +4,15 @@
 #
 # The maintainer enabled Pages with GitHub Actions as its source and flipped the site
 # public on 2026-09-23, after the Council's first reading of the pages (PR #27). The
-# repository may stay private; the site is public. Every push to main publishes.
+# repository itself went public on 2026-09-26. Every push to main publishes.
 #
-# Every page published here is one self-contained file rendered from the sealed
-# rows by src/surfaces/render.py, gated by lint-frame-presence, lint-no-ranking
-# and check-mark before it is uploaded.
+# Nothing is published until the build verifies and nothing published before has been
+# rewritten or dropped (the Findings and the Signal versions, against main as it stood
+# before this push). Every page published here is one self-contained file rendered from
+# the sealed rows by src/surfaces/render.py, gated by lint-frame-presence, lint-no-ranking,
+# check-mark and lint-verdict-language before it is uploaded. Since the first
+# Signal the site carries Findings, so the verdict lint reads the rendered pages
+# themselves here too, not only the sources they are made from.
 
 name: pages
 
@@ -42,8 +46,27 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: The published record, main as it stood before this push
+        env:
+          BEFORE: ${{ github.event.before }}
+        run: |
+          if [ -n "$BEFORE" ] && [ "$BEFORE" != "0000000000000000000000000000000000000000" ]; then
+            git fetch --no-tags --depth=1 origin "$BEFORE"
+            echo "OATH_PUBLISHED_REF=$BEFORE" >> "$GITHUB_ENV"
+          else
+            git fetch --no-tags --depth=1 origin main:refs/remotes/origin/main
+          fi
+
       - name: The seal must verify before anything is published
         run: python tools/verify.py
+
+      - name: Nothing published before is rewritten or dropped (Invariants 11, 12, 14)
+        run: |
+          python tools/check-signal-versions.py
+          python tools/check-supersessions.py
+
+      - name: The anchor the footer states is the one the proofs hold
+        run: python tools/anchor.py
 
       - name: Render the register
         run: python src/surfaces/render.py
@@ -53,6 +76,7 @@ jobs:
           python tools/lint-frame-presence.py
           python tools/lint-no-ranking.py
           python tools/check-mark.py
+          python tools/lint-verdict-language.py
 
       - name: Configure Pages
         uses: actions/configure-pages@v5

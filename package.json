@@ -2,11 +2,11 @@
   "name": "oath",
   "version": "0.0.0",
   "private": true,
-  "description": "A public register reconciling what U.S. elected officials swore to uphold with what the record shows. TypeScript adapters and Signals; the Python tooling lives in pyproject.toml.",
+  "description": "A public register reconciling what U.S. elected officials swore to uphold with what the record shows. The data path (adapters, the Signals that write Findings, the seal) is standard-library Python in pyproject.toml; TypeScript holds the Signals' reference implementations.",
   "license": "MIT",
   "type": "module",
   "engines": {
-    "node": ">=20"
+    "node": ">=22.12"
   },
   "repository": {
     "type": "git",
@@ -15,10 +15,12 @@
   "scripts": {
     "lint": "biome check .",
     "format": "biome format --write .",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "@biomejs/biome": "^2",
+    "@types/node": "^24.19.0",
     "typescript": "^5",
     "vitest": "^5"
   }

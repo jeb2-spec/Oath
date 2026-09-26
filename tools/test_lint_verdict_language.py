@@ -9,6 +9,7 @@ data row. The repository itself must be green last.
 from __future__ import annotations
 
 import importlib.util
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -127,3 +128,43 @@ def test_the_repository_is_green(capsys):
     assert lint.main([str(ROOT)]) == 0
     out = capsys.readouterr().out
     assert out.startswith("OK") and "no verdict language" in out
+
+
+def test_rendered_pages_are_read_though_git_ignores_them(repo: Path):
+    """The pages a reader is shown are build output, untracked; the gate reads them anyway."""
+    write(repo, ".gitignore", "build/\n")
+    write(repo, "docs/build/officeholders/x.html", "<p>The report shows the member is dirty.</p>\n")
+    git = ["git", "-C", str(repo), "-c", "user.name=t", "-c", "user.email=t@example.invalid"]
+    subprocess.run([*git, "init", "-q"], check=True)
+    subprocess.run([*git, "add", "README.md", ".gitignore"], check=True)
+    tracked = subprocess.run([*git, "ls-files"], capture_output=True, text=True, check=True)
+    assert "docs/build" not in tracked.stdout
+    failures, scanned, _ = lint.lint(repo)
+    assert scanned == 2
+    assert failures == [
+        'docs/build/officeholders/x.html:1: "dirty" in: '
+        "<p>The report shows the member is dirty.</p>"
+    ]
+
+
+def test_a_rendered_page_is_read_once_without_git(repo: Path):
+    write(
+        repo,
+        "docs/build/index.html",
+        "<p>Presence in the register is not evidence of wrongdoing.</p>\n",
+    )
+    failures, scanned, _ = lint.lint(repo)
+    assert failures == [] and scanned == 2
+
+
+def test_the_frame_allows_only_itself(repo: Path):
+    """Seat C's case: one NDJSON row is one line, and it may carry the frame and a verdict."""
+    write(
+        repo,
+        "data/findings.ndjson",
+        '{"notes":"Presence in the register is not evidence of wrongdoing, but this report '
+        'shows wrongdoing."}\n',
+    )
+    failures, _, _ = lint.lint(repo)
+    assert len(failures) == 1 and '"wrongdoing"' in failures[0]
+    assert lint.hits("Presence in the register is not evidence of wrongdoing.") == []

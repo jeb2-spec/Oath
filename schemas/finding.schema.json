@@ -4,7 +4,7 @@
   "title": "Finding",
   "description": "A specific instance of a Signal firing against a specific Officeholder.",
   "type": "object",
-  "required": ["id", "signal_id", "officeholder_id", "producing_filings", "fired_at", "build_hash", "description"],
+  "required": ["id", "signal_id", "officeholder_id", "producing_filings", "fired_at", "build_hash", "description", "frame"],
   "additionalProperties": false,
   "properties": {
     "id": { "type": "string" },
@@ -34,10 +34,14 @@
         }
       }
     },
-    "fired_at": { "type": "string", "format": "date-time" },
+    "fired_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "The built_at of the build in which this Finding first appeared: the retrieval time of the latest source capture that build read, never the clock, so the same inputs produce the same row."
+    },
     "build_hash": {
       "type": "string",
-      "description": "SHA-256 of the register at the build that produced this Finding."
+      "description": "SHA-256, by the seal's own rule (tools/verify.py), over the rows the Signal read at the build that first produced this Finding. It is not the build's seal: a row cannot carry the digest of a seal that covers it."
     },
     "description": {
       "type": "string",
@@ -47,6 +51,21 @@
       "type": ["string", "null"],
       "description": "Finding ID that supersedes this one, when a later build corrects it."
     },
-    "notes": { "type": ["string", "null"] }
+    "frame": {
+      "const": "Presence in the register is not evidence of wrongdoing.",
+      "description": "The frame, on the row itself, so a Finding lifted whole from the ledger carries it wherever it goes (CHARTER Vow II; METHODOLOGY 4.4)."
+    },
+    "correction": {
+      "enum": ["source", "register"],
+      "description": "Present only on a row that corrects an earlier one: source when the record the Finding read has changed, register when the register erred in reading it. Written by the runner (src/signals/run.py --correct), never typed, and shown on the page beside the reason."
+    },
+    "notes": {
+      "type": ["string", "null"],
+      "description": "Null on a Finding as a Signal produces it. On a correction, the reason, as the person correcting wrote it, citing the source that shows it."
+    },
+    "evidence": {
+      "type": ["object", "null"],
+      "description": "What the record shows and what the Signal computed from it, in the Signal's own terms, so a reader holding only this row can check the Finding against the filing without running any code. Its shape is set by the Signal's definition; it carries no verdict."
+    }
   }
 }

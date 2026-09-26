@@ -8,15 +8,15 @@ This is the operational document for Oath. The Charter names what we will not do
 
 ## The walk
 
-A person reads on Reddit that their Senator bought defense-contractor stock two weeks before a committee vote. Somebody in the thread says *citation needed.* Nobody has one. The thread devolves into the usual shape. The person closes the browser and doesn't think about it for three days.
+A person reads on Reddit that their Representative bought defense-contractor stock two weeks before a committee vote. Somebody in the thread says *citation needed.* Nobody has one. The thread devolves into the usual shape. The person closes the browser and doesn't think about it for three days.
 
-Then they see Oath in a footer link somewhere, click, search the Senator's name. There is a Finding on the page: *Periodic Transaction Report filed forty-three days after the transaction date. The STOCK Act (2 U.S.C. § 30104) requires filing within thirty days of notification or forty-five days of the transaction, whichever is earlier.* Under it: the filing's PDF URL at senate.gov. Under that: a command a person can run to prove the record has not been quietly rewritten.
+Then they see Oath in a footer link somewhere, click, search the Representative's name. There is a Finding on the page: *The Clerk's index dates this report 2025-04-10, which is later than the deadline the rule sets for 1 of the 2 transactions on it that this Signal evaluated, by 8 days. The deadline is the earlier of 30 days after the notification date the report prints and 45 days after the transaction date (5 U.S.C. § 13105(l)).* Above it, before the Finding: what a Finding is not, which is a determination by the House Committee on Ethics. Under it: the report's PDF on the House Clerk's site. Under that: a command a person can run to prove the record has not been quietly rewritten.
 
-They click the PDF. It opens on senate.gov. The form is there. The transaction date is there. The filing date is there. The math is right.
+They click the PDF. It opens on the Clerk's site. The form is there. The transaction date is there. The notification date is there. The index gives the date the report was filed. The math is right.
 
 They copy the verify command. They paste it into a terminal. It prints *OK*, a build digest, and a Bitcoin block number. A friend who knows a little more tells them what that last bit means: the digest of every row on that page was written into a Bitcoin block on a date the register cannot rewrite, witnessed by a network the register's authors have no reach into.
 
-The person now knows three things they did not know three days ago. The Senator's filing was late by three days. The register that said so did not invent the number. The register did not quietly change the number after publishing it. None of the three required them to trust anyone.
+The person now knows three things they did not know three days ago. The Clerk's own index dates the report eight days after the deadline the statute sets, and whether that was late, and what follows, is the Committee's to say. The register that said so did not invent the number. The register did not quietly change the number after publishing it. None of the three required them to trust anyone.
 
 The Reddit thread is still where it was. The person adds the link to the Oath Finding and closes the tab.
 
@@ -68,11 +68,11 @@ Every candidate row is validated against a JSON Schema. Invalid rows are rejecte
 
 Defined Signals read the typed rows and produce Findings.
 
-**What happens.** Each Signal defined in [`docs/signals/`](docs/signals/) has a definition file (name, version, description, cited Standard, inputs, criteria, `not_saying`, worked example) and a pure reference implementation in [`src/signals/`](src/signals/). The reference implementation is called on the current register and emits Finding rows. It reads what its definition names and nothing else. It writes no side effects. It touches no network.
+**What happens.** Each Signal defined in [`docs/signals/`](docs/signals/) has a definition file (name, version, description, cited Standard, inputs, criteria, `not_saying`, worked example) and two pure implementations in [`src/signals/`](src/signals/) that share no code: the one that writes the register's Findings, in the language of the adapter and the seal, and a reference implementation in a second language that must agree with it on every known-answer case and every row. The runner, [`src/signals/run.py`](src/signals/run.py), calls the first on the current register and adds its Finding rows to the ledger. Each implementation reads what its definition names and nothing else. It writes no side effects. It touches no network.
 
 **What must be true.** Every Finding cites a Signal (with version), an Officeholder, and one or more producing Filings. Every Signal traces to a Standard in [STANDARDS.md](STANDARDS.md). Every Finding is regenerable byte-identically from its named inputs by any machine running the reference implementation. These are Invariants §2 and §3 and Rubric gate 4.
 
-**Where it lands.** `data/findings.ndjson`, one row per Finding.
+**Where it lands.** `data/findings.ndjson`, one row per Finding, append-only: a published Finding is never rewritten or dropped, and the runner refuses a run that would do either. Beside it, `data/signals.ndjson`, each Signal as a row, and `data/signal-runs/<slug>-v<n>.ndjson`, what each Signal evaluated in this build, report by report, fired or not, so a quiet page can say which silence it is. All three are sealed.
 
 **How it can fail.** A Signal fires against a case that fits the letter but not the spirit of the Standard (bug; a version bump adjusts the criterion; the pre-existing Findings stay in the record with `superseded_by` per Vow V). A Signal does not fire against a case the Standard clearly covers (bug; version bump; missing coverage documented as a Correction). Both cases route through the Council per [COUNCIL.md](COUNCIL.md) at the version bump.
 
@@ -82,8 +82,8 @@ The typed rows and the produced Findings become a written record a reader can re
 
 **What happens.** The build reads the canonical NDJSON and produces:
 
-- **Per-officeholder pages** (`officeholders/<id>.html`), showing filings in chronological order, Findings grouped by Signal name, sources cited, verifier command visible at the foot. The frame *presence in the register is not evidence of wrongdoing* appears in the header of every one. This is Invariant §7.
-- **Per-signal pages** (`signals/<slug>/<version>.html`), showing the definition, the cited Standard, the criterion, and every Finding this Signal has produced in the current build.
+- **Per-officeholder pages** (`officeholders/<id>.html`), showing filings in chronological order, Findings grouped by Signal name, sources cited, verifier command visible at the foot. The frame *presence in the register is not evidence of wrongdoing* appears in the header of every one, and of every other page that names an officeholder: the index and each Signal's page. This is Invariant §7.
+- **Per-signal pages** (`signals/<slug>/v<version>.html`), showing the definition, the cited Standard, the criterion, what the Signal does not say, what it evaluated in the current build, and every report on which it fired, listed under the officeholder in seat order and linked to the Finding on that officeholder's page.
 - **Doctrine pages** (Charter, Rubric, Invariants, Bylaws, Council, Methodology, Standards, Sources, Limitations, Spec, Ecosystem, Anchors) served as static HTML.
 - **The build's Oath mark**, struck as guilloche from the build's SHA-256 digest per [ECOSYSTEM.md §2](ECOSYSTEM.md).
 - **Per-officeholder seals**, each parameterised by the officeholder's identifier and the build digest. Change the officeholder's record, the seal changes.
@@ -133,7 +133,7 @@ The seven stages are the plumbing. The **register register** is the way the regi
 
 The discipline has four parts.
 
-**Structure and precision, not vocabulary.** A Finding is rendered from a template. The template is a fill-in-the-blank pattern: `{Officeholder.legal_name}'s {Filing.form_type} was filed {N} days after the {Transaction.transaction_date} named on the report. {Standard.short_form} requires filing within {threshold} days of {trigger}, whichever is earlier.` The template's blanks are drawn from the schema-typed rows. The template's fixed words are approved once by Council review and then reused. Every rendered Finding has the same shape; no rendered Finding is a bespoke sentence.
+**Structure and precision, not vocabulary.** A Finding is rendered from a template. The template is a fill-in-the-blank pattern. The first Signal's is: `The Clerk's index dates this report {Filing.filed_at}, which is later than the deadline the rule sets for {n} of the {m} transactions on it that this Signal evaluated, by {days}. The deadline is the earlier of 30 days after the notification date the report prints and 45 days after the transaction date ({Standard.citation}).` It names the report, not the person; the page around it names the person. The template's blanks are drawn from the schema-typed rows. The template's fixed words are approved once by Council review and then reused. Every rendered Finding has the same shape; no rendered Finding is a bespoke sentence.
 
 **No verdict language.** The rendered sentence names conditions, cites Standards, and stops. It does not use *guilty, corrupt, unethical, criminal, crook, disgrace, dishonest, sleazy, dirty, tainted, wrongdoing, malfeasance,* or *misconduct.* This is the verdict-language blacklist enforced by Invariant §1. Adding a word takes one approver; removing a word takes two.
 
@@ -208,10 +208,13 @@ An adapter is *pure with respect to the register*: it does not read from the can
 Every Signal lives at:
 
 - `docs/signals/<slug>.md`. the definition, in the template documented at [docs/signals/README.md](docs/signals/README.md).
-- `src/signals/<slug>.ts`. the reference implementation. A pure function of typed inputs to Finding rows. No network. No file I/O.
-- `fixtures/<slug>/`. one or more fixture pairs (inputs, expected outputs) that are the Signal's tests.
+- `src/signals/<slug>.py`. the implementation that writes the register's Findings: a pure function of the rows the definition names to Finding rows, standard-library Python, the language of the adapter and the seal, so one writer serialises every sealed row. No network. No file I/O. No clock.
+- `src/signals/<slug>.ts`. the reference implementation, sharing no code with the first. Vitest holds it to the same known-answer cases and to every Finding and outcome in the register, byte for byte, so neither can drift without CI going red.
+- `fixtures/<slug>/`. the known-answer cases, each worked by hand before either implementation existed, and the Signal's tests.
 
-A Signal is versioned. A change to a Signal's criteria, inputs, or Standard produces a new version file at `docs/signals/<slug>.v<n>.md`; the current file is always the latest. Findings produced against the old version stay in the record with their old version id.
+[`src/signals/run.py`](src/signals/run.py) runs every current definition. It writes the Signal rows from the definition files, calls each implementation, and adds new Findings to the ledger with the build's own time (`fired_at`, never the clock) and the digest of the rows read (`build_hash`). With `--check` it regenerates everything and compares, which is how CI and `tools/rebuild.py` prove Rubric gate 4.
+
+A Signal is versioned. A change to a Signal's criteria, inputs, or Standard produces a new version file at `docs/signals/<slug>.v<n>.md`; the current file is always the latest. Findings produced against the old version stay in the record with their old version id. A published Finding is never rewritten: a correction is a new row, `<finding-id>:c<n>`, and the row it replaces gains `superseded_by` and nothing else ([docs/signals/README.md](docs/signals/README.md), Corrections).
 
 ### Verifier contract
 
@@ -251,7 +254,7 @@ Every gate lives at `tools/<name>.py` or `tools/<name>.mjs` and runs in CI. Ever
 | §16 evidence bundle per filing | `tools/check-evidence-bundle.py` |
 | §17 meta-invariant highlight | `tools/highlight-charter-change.py` |
 
-Every one is *(planned)* at the founding. They land in NEXT.md Phase 1.
+Every one is *(planned)* at the founding. They land in NEXT.md Phase 1. Which have landed is read back at every session start by `python scripts/oath-doctor.py`, which runs each gate that exists and names each that does not.
 
 ### The build output
 

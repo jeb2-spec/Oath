@@ -2,7 +2,7 @@
 
 Test inputs whose correct answer is known in advance. Nothing here is a person, and nothing here ever enters the register.
 
-At the founding, this directory contained only this README. Since Phase 1 it also holds the cross-reference gate's cases. The Signal's cases land in [NEXT.md](../NEXT.md) Phase 2 D.2.
+At the founding, this directory contained only this README. Since Phase 1 it also holds the cross-reference gate's cases, and since 2026-09-26 the first Signal's: [`stock-act-ptr-after-deadline/cases.json`](stock-act-ptr-after-deadline/cases.json), thirty-six cases, each a report, its rows and its officeholder's swearing-in as placeholders, with every row's expected result and the reason written beside it. Both implementations of the Signal are tested against the file, and neither wrote it. On its first run it caught its own author: two cases had forgotten the Signal's own swearing-in rule, and the implementation declined to evaluate them, correctly. Ten cases were added at the Council's reading, for the assets the rule does not reach, the $1,000 threshold, a deadline before 2025, and deadlines on a weekend or a federal holiday, observed days included; the file's `row_defaults` supply the asset and amount a case does not state, so each case shows only what it tests.
 
 ## Rules
 
@@ -11,13 +11,13 @@ At the founding, this directory contained only this README. Since Phase 1 it als
 - **Every fixture carries its expected answer.** A case without a written expectation is not a fixture; it is a sample.
 - **Fixtures are versioned.** A schema change that would invalidate a fixture requires an updated fixture in the same commit.
 
-## Planned layout
+## Layout
 
 ```
 fixtures/
-├── stock-act-late-ptr/
-│   ├── input.ndjson            transaction and filing rows, placeholder ids, no names
-│   └── expected.json           for each case: fires or does not, and why
+├── stock-act-ptr-after-deadline/
+│   └── cases.json              each case: placeholder rows, and for every row and the
+│                               report, the expected answer and why (landed 2026-09-26)
 ├── tools/
 │   ├── check-crossrefs/        landed in Phase 1: good/ and bad/ trees
 │   └── verify/

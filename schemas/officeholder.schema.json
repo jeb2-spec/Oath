@@ -30,6 +30,11 @@
       "items": { "$ref": "office.schema.json" },
       "description": "The Offices this person has held. Ordered by term start, most recent first."
     },
+    "sworn_at": {
+      "type": ["string", "null"],
+      "format": "date",
+      "description": "The day the primary source records this person as sworn into the first Office listed, where it records one. For the House, the sworn-date in the Clerk's roster, which is the swearing-in for the Congress the roster lists, not the start of the person's service: a returning Member carries the new Congress's date. Distinct from the Office's term_start, which is the seat's term. A Signal reads this, never the notes; it does not say whether the person held the office before that date."
+    },
     "biographical_ids": {
       "type": "object",
       "additionalProperties": false,

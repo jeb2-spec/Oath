@@ -10,6 +10,22 @@
 # Standing rules kept here: the adapter never guesses (rejected rows are part of
 # the build); the seal's built_at is the retrieval time recorded by fetch.py, never
 # the clock; the build id increments the sequence in data/meta.json.
+#
+# Since the first Signal (2026-09-26) the loop also runs every Signal over the new
+# rows, at the build's own time, and seals with a state text derived from the
+# build's figures, so no sentence has to be typed for a build nobody is watching.
+# The Signal runner never rewrites or drops a published Finding; when the Clerk's
+# record no longer supports one as published, the runner refuses, this job fails,
+# and the last step opens an issue saying so. The correction is a person's to write,
+# by supersession, with the evidence (docs/signals/README.md).
+#
+# The loop stamps the new build too, as soon as it is sealed, so its OpenTimestamps
+# proof is as early as the build: the pull request carries the manifest and the
+# pending proof, and anchor.yml completes the proof once Bitcoin holds it. A stamp the
+# calendars cannot take is owed, not a failure of the refresh; anchor.yml retries it.
+#
+# Every step runs in bash with pipefail, so a step that tees its log still fails
+# when the program before the pipe does.
 
 name: refresh
 
@@ -26,6 +42,11 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  issues: write
+
+defaults:
+  run:
+    shell: bash
 
 concurrency:
   group: refresh
@@ -43,13 +64,16 @@ jobs:
         with:
           ref: main
 
+      - name: The published record is the main this job checked out, for the gates that compare against it
+        run: git update-ref refs/remotes/origin/main HEAD
+
       - name: Python 3.11, the reference runtime
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      - name: Install the Python dev toolchain named in pyproject.toml
-        run: python -m pip install "ruff>=0.16,<0.17" "pytest>=8" "pypdf>=6,<7"
+      - name: Install the Python dev toolchain named in pyproject.toml, and the OpenTimestamps client
+        run: python -m pip install "ruff>=0.16,<0.17" "pytest>=8" "pypdf>=6,<7" "opentimestamps-client>=0.7,<0.8"
 
       - name: Fetch the roster and the filing index, recording each retrieval
         run: python src/adapters/house-fd/fetch.py --year "$YEAR" | tee fetch.log
@@ -79,11 +103,11 @@ jobs:
         if: steps.diff.outputs.changed == 'true'
         run: python src/adapters/house-fd/build.py --year "$YEAR" | tee build.log
 
-      - name: Seal the new build (id from the sequence, time from the retrieval)
+      - name: The build's id and time (id from the sequence, time from the retrieval)
         if: steps.diff.outputs.changed == 'true'
         run: |
-          python - <<'PY'
-          import json, os, subprocess
+          python - <<'PY' >> "$GITHUB_ENV"
+          import json, os
           year = os.environ["YEAR"]
           meta = json.load(open("data/meta.json", encoding="utf-8"))
           sequence = int(meta["build"].split("-")[0]) + 1
@@ -91,10 +115,23 @@ jobs:
           built_at = capture[f"{year}FD.zip"]["retrieved_at"]
           documents = json.load(open("data/cache/house-fd/docs/captures.json", encoding="utf-8"))
           built_at = max([built_at] + [d["retrieved_at"] for d in documents.values()])
-          build = f"{sequence:04d}-house-{year}"
-          subprocess.run(["python", "tools/seal.py", "--build", build, "--built-at", built_at, "."], check=True)
-          open("build.id", "w").write(build)
+          print(f"BUILD={sequence:04d}-house-{year}")
+          print(f"BUILT_AT={built_at}")
           PY
+
+      - name: Run every Signal over the new rows, at the build's own time
+        if: steps.diff.outputs.changed == 'true'
+        # New Findings are added with the build's time; a published one is never rewritten or
+        # dropped, and a run that would do either is refused, by name, and fails this job.
+        run: python src/signals/run.py --at "$BUILT_AT" | tee signals.log
+
+      - name: Seal the new build, its state text derived from its own figures
+        if: steps.diff.outputs.changed == 'true'
+        run: python tools/seal.py --build "$BUILD" --built-at "$BUILT_AT" --derive-state
+
+      - name: Stamp the new build (owed, not failed, when the calendars cannot take it)
+        if: steps.diff.outputs.changed == 'true'
+        run: python tools/anchor.py --stamp || [ $? -eq 3 ]
 
       - name: Every gate, exactly as verify.yml runs them
         if: steps.diff.outputs.changed == 'true'
@@ -105,6 +142,11 @@ jobs:
           python tools/verify.py
           python tools/tamper-test.py
           python tools/validate-schemas.py
+          python tools/rebuild.py
+          python tools/check-signal-versions.py
+          python tools/check-supersessions.py
+          python tools/check-aggregator-sole.py
+          python tools/anchor.py
           python src/surfaces/render.py
           python tools/lint-frame-presence.py
           python tools/lint-no-ranking.py
@@ -112,41 +154,60 @@ jobs:
           python tools/lint-verdict-language.py
           python tools/check-crossrefs.py
 
+      - name: Node 24, for the Signals' reference implementation
+        if: steps.diff.outputs.changed == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Biome, TypeScript, and Vitest (the reference implementation agrees with every Finding)
+        if: steps.diff.outputs.changed == 'true'
+        run: |
+          npm ci
+          npm run lint
+          npm run typecheck
+          npm test
+
       - name: Open the pull request
         if: steps.diff.outputs.changed == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          BUILD="$(cat build.id)"
           DATE="$(python -c "import json;print(json.load(open('data/cache/house-fd/capture.json'))['${YEAR}FD.zip']['retrieved_at'][:10])")"
           BRANCH="refresh/house-fd-${DATE}-${BUILD%%-*}"
           git config user.name "Oath operator"
           git config user.email "operator@veraproject.xyz"
           git checkout -b "$BRANCH"
-          git add data/
+          git add data/ ANCHORS.md
           {
             echo "Refresh: build ${BUILD} from the Clerk's record as retrieved ${DATE}"
             echo
-            echo "Opened by the scheduled refresh. The adapter re-read the roster, the ${YEAR} filing index and the transaction reports behind it, rebuilt the rows, and re-sealed. Every gate ran green in the workflow before this was pushed."
+            echo "Opened by the scheduled refresh. The adapter re-read the roster, the ${YEAR} filing index and the transaction reports behind it, rebuilt the rows, ran every Signal over them, and re-sealed. Every gate ran green in the workflow before this was pushed."
             echo
             cat build.log
+            echo
+            cat signals.log
           } > commit.msg
           git commit -F commit.msg
           git push -u origin "$BRANCH"
           {
             echo "## What changed"
             echo
-            echo "The scheduled refresh re-read the Clerk's roster, the ${YEAR} filing index and the transaction reports behind it, and found the record different from build \`$(git show main:data/meta.json | python -c 'import json,sys;print(json.load(sys.stdin)["build"])')\`. This is build \`${BUILD}\`, sealed at the retrieval time."
+            echo "The scheduled refresh re-read the Clerk's roster, the ${YEAR} filing index and the transaction reports behind it, and found the record different from build \`$(git show main:data/meta.json | python -c 'import json,sys;print(json.load(sys.stdin)["build"])')\`. This is build \`${BUILD}\`, sealed at the retrieval time, with every Signal run over the new rows. Every Finding already published is in it unchanged; any new one carries this build's time. Its anchor: $(python tools/anchor.py --status | grep "^${BUILD} " || echo "not stamped")."
+
             echo
             echo '```'
             cat fetch.log
             echo
             cat build.log
+            echo
+            cat signals.log
             echo '```'
             echo
             echo "## Gates"
             echo
-            echo "Ruff, pytest, verify, tamper-test, validate-schemas, render, lint-frame-presence, lint-no-ranking, check-mark, lint-verdict-language and check-crossrefs all passed in this workflow run before the push. A pull request opened by the workflow token does not trigger verify.yml; merging it runs verify.yml on main."
+            echo "Ruff, pytest, verify, tamper-test, validate-schemas, rebuild, check-signal-versions, check-supersessions, check-aggregator-sole, anchor, render, lint-frame-presence, lint-no-ranking, check-mark, lint-verdict-language, check-crossrefs, Biome, tsc and Vitest all passed in this workflow run before the push. A pull request opened by the workflow token does not trigger verify.yml; merging it runs verify.yml on main."
             echo
             echo "## Conflict of interest disclosure"
             echo
@@ -155,3 +216,30 @@ jobs:
             echo "Presence in the register is not evidence of wrongdoing."
           } > pr.md
           gh pr create --base main --head "$BRANCH" --title "Refresh: build ${BUILD} from the record as retrieved ${DATE}" --body-file pr.md
+
+      - name: Say so where the maintainer will see it, when anything above failed
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TITLE="Refresh failed: the scheduled re-read of the House record did not complete"
+          RUN_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          OPEN="$(gh issue list --state open --search "in:title \"${TITLE}\"" --json number --jq '.[0].number // empty')"
+          if [ -n "$OPEN" ]; then
+            gh issue comment "$OPEN" --body "It failed again: ${RUN_URL}"
+            exit 0
+          fi
+          {
+            echo "The scheduled refresh failed, and nothing was pushed: ${RUN_URL}"
+            echo
+            echo "If the failing step is **Run every Signal over the new rows**, the Clerk's record no longer supports a published Finding as it was published. The runner refused to rewrite or drop it and names it in the log. Facts stay: a person checks the record at the source and writes the correction by supersession, with the evidence, as docs/signals/README.md describes. Its kind is \`source\` when the record changed and \`register\` when the register misread it, and its reason cites a primary source by URL. When one change moves several Findings, give one \`--correct\`, \`--kind\` and \`--because\` for each, in one run:"
+            echo
+            echo '    python src/signals/run.py --at <built_at> --correct <finding-id> --kind source --because "<what changed, and the URL that shows it>"'
+            echo
+            echo "The next refresh then goes through."
+            echo
+            echo "Any other step is an ordinary failure to read, build or gate, and the log says which."
+            echo
+            echo "Presence in the register is not evidence of wrongdoing."
+          } > issue.md
+          gh issue create --title "$TITLE" --body-file issue.md

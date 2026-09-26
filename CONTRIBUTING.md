@@ -54,15 +54,15 @@ The first batch of adjudications goes to the [Council](COUNCIL.md) before it mer
 In order:
 
 - **Adjudications.** The held rows, above. Each one closes a gap the build publishes as a number.
-- **The first Signal against real filings.** `stock-act-late-ptr`, per [NEXT.md](NEXT.md) Phase 3 movement two. It needs the document extraction (I.1b) first, which is the hardest open piece of engineering here.
+- **What the first Signal cannot yet reach.** `stock-act-ptr-after-deadline` landed on 2026-09-26 ([docs/signals/stock-act-ptr-after-deadline.md](docs/signals/stock-act-ptr-after-deadline.md)). Its limits are the next work: the signed date on each e-filed report, set beside the Clerk's index date; the Committee's instructions on government securities, read at the source; and the earlier indexes and service dates that would let it evaluate a returning Member's transactions from before this Congress (NEXT.md).
 - **The Senate adapter.** SOURCES.md F.2. No bulk download, an agreement gate, and a report-identifier scheme nobody has recorded yet; the first session past the gate records the scheme before anything else.
 - **Watching the sources.** When a source moves or changes shape, the *A primary source changed* issue template is the way to say so.
 
-## When the repository is public
+## Now that the repository is public
 
-Everything lives on GitHub on purpose. The rendered register publishes with GitHub Pages ([`pages.yml`](.github/workflows/pages.yml)), which is inert while the repository is private and publishes on the first push after the flip, once Pages is enabled with its source set to GitHub Actions. Until then every CI run keeps the rendered site as a downloadable artifact for fourteen days.
+Everything lives on GitHub on purpose. The rendered register publishes with GitHub Pages ([`pages.yml`](.github/workflows/pages.yml)) at <https://jeb2-spec.github.io/Oath/> on every push to main, and every CI run also keeps the rendered site as a downloadable artifact for fourteen days. The site has been public since 2026-09-23 and the repository since 2026-09-26.
 
-Branch protection is also free only for public repositories on a personal account. On the day of the flip, require the `verify` workflow to pass before merge and require review from the code owners in [`.github/CODEOWNERS`](.github/CODEOWNERS), which makes the maintainer's approval of doctrine changes ([INVARIANTS.md §17](INVARIANTS.md)) mechanical rather than remembered.
+Branch protection is also free only for public repositories on a personal account. On the day of the flip, require the `verify` workflow (its check is named *the gates*) to pass before merge and require review from the code owners in [`.github/CODEOWNERS`](.github/CODEOWNERS), which makes the maintainer's approval of doctrine changes ([INVARIANTS.md §17](INVARIANTS.md)) mechanical rather than remembered. Two facts about GitHub shape how. The author of a pull request cannot approve it, and the assistant's pull requests are opened under the maintainer's own account, so a required code-owner review would stop every one of them that touches a code-owned path. And a pull request opened with the refresh workflow's token does not trigger CI, so a required check would wait forever on the weekly refresh, whose gates run inside the refresh job before it pushes. Keep the maintainer able to bypass the rule, or both stall.
 
 ## What to do if you find a problem in a published Finding
 

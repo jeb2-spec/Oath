@@ -94,3 +94,40 @@ def test_the_repository_is_not_red(capsys):
     assert doctor.main([str(ROOT)]) == 0
     out = capsys.readouterr().out
     assert "GREEN" in out and "Vow V." in out
+
+
+PAGE_LINT = """import argparse, sys
+from pathlib import Path
+p = argparse.ArgumentParser()
+p.add_argument("root")
+p.add_argument("--site", default="docs/build")
+a = p.parse_args()
+site = Path(a.root) / a.site
+print("OK read" if (site / "index.html").is_file() else "FAIL nothing to read")
+sys.exit(0 if (site / "index.html").is_file() else 1)
+"""
+
+
+def test_the_page_gates_read_a_render_made_for_them(tmp_path: Path):
+    """The site is never in git, so a fresh clone has none: the doctor renders the
+    register into a temporary folder and points the page gates at it, as CI renders
+    before it lints. Found when the page gates learnt to fail on nothing to read and
+    the doctor, run before any render, went red."""
+    write(
+        tmp_path,
+        "src/surfaces/render.py",
+        "import sys\nfrom pathlib import Path\n"
+        "out = Path(sys.argv[sys.argv.index('--out') + 1])\n"
+        "out.mkdir(parents=True, exist_ok=True)\n(out / 'index.html').write_text('x')\n",
+    )
+    write(tmp_path, "tools/lint-frame-presence.py", PAGE_LINT)
+    write(tmp_path, "tools/lint-no-ranking.py", PAGE_LINT)
+    rep = doctor.Report()
+    doctor.check_gates(tmp_path, rep)
+    assert rep.red == 0, rep.lines
+    assert not (tmp_path / "docs" / "build").exists(), "the render is not left in the tree"
+    write(tmp_path, "src/surfaces/render.py", "import sys\nprint('broken')\nsys.exit(1)\n")
+    rep = doctor.Report()
+    doctor.check_gates(tmp_path, rep)
+    assert any("does not render" in line for line in rep.lines)
+    assert rep.red == 3, "a register that does not render is red, and so are its page gates"

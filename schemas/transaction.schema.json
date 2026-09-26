@@ -24,6 +24,11 @@
     },
     "asset": { "type": "string" },
     "asset_normalized": { "type": ["string", "null"] },
+    "asset_code": {
+      "type": ["string", "null"],
+      "pattern": "^[A-Z]{2,3}$",
+      "description": "The asset type code the report prints in brackets after the asset, as the filer chose it and as the Clerk's legend defines it (https://fd.house.gov/reference/asset-type-codes.aspx); null where the report prints none. Carried as printed; the register cites the legend rather than restating it. A Signal reads this field, never the notes, which carry the same code in words."
+    },
     "action": {
       "type": "string",
       "enum": ["purchase", "sale", "sale-partial", "exchange", "gift-received", "gift-given", "other"]

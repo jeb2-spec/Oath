@@ -75,3 +75,104 @@ def test_a_run_record_without_its_set_aside_file_refuses_the_seal(tmp_path):
         assert "has no set-aside file" in str(exc)
     else:
         raise AssertionError("a record whose set-aside file is gone must refuse the seal")
+
+
+ROOT = HERE.parent
+
+
+def test_the_derived_state_carries_every_figure_the_seal_checks():
+    """The scheduled refresh seals with --derive-state; the sentence it writes must pass the
+    same check a hand-written one does, on the register as it stands."""
+    import json
+
+    seal = load()
+    verify = seal.load_verify(HERE)
+    meta = json.loads((ROOT / "data" / "meta.json").read_text("utf-8"))
+    meta["rows"] = verify.row_counts(ROOT)
+    text = seal.derive_state(ROOT, meta)
+    for run in seal.current_runs(ROOT):
+        assert seal.state_text_lacks({**meta, "state": text}, run) == ""
+    assert text == seal.derive_state(ROOT, meta), "the same tree gives the same sentence"
+    findings = meta["rows"].get("data/findings.ndjson", 0)
+    assert f"The ledger holds {findings:,} Finding" in text
+    assert text.endswith("Presence in this register is not evidence of wrongdoing.")
+
+
+def test_a_register_without_signals_says_so(tmp_path):
+    seal = load()
+    (tmp_path / "data").mkdir()
+    text = seal.derive_state(tmp_path, {"rows": {}})
+    assert "No Signal is defined, so no Finding exists." in text
+
+
+def test_the_ledger_sentence_counts_corrections_once_there_are_any():
+    seal = load()
+    fired = {"superseded_by": None, "evidence": {"after": 2}}
+    assert seal.ledger_sentence([fired, fired]) == "The ledger holds 2 Findings."
+    corrected = [dict(fired, superseded_by="fn:1:c1"), fired]
+    assert seal.ledger_sentence(corrected) == (
+        "The ledger holds 2 Findings, 1 of them superseded by a correction and kept."
+    )
+    withdrawn = [
+        dict(fired, superseded_by="fn:1:c1"),
+        {"superseded_by": None, "evidence": {"after": 0}},
+    ]
+    assert seal.ledger_sentence(withdrawn) == (
+        "The ledger holds 2 Findings, 1 of them superseded by a correction and kept, and 1 a "
+        "correction recording that the Signal no longer fires on a report."
+    )
+
+
+def test_the_congress_is_named_with_its_own_ordinal():
+    seal = load()
+    assert [seal.ordinal(n) for n in (119, 120, 121, 122, 123, 111, 112, 113)] == [
+        "119th",
+        "120th",
+        "121st",
+        "122nd",
+        "123rd",
+        "111th",
+        "112th",
+        "113th",
+    ]
+
+
+def test_held_rows_are_counted_by_why_they_wait():
+    seal = load()
+    held = "surname matches a sitting member (Example, Ann, CA12) but the given names differ"
+    rows = [
+        {"reason": held + "; a human decides this one", "source_row": {"state_dst": "TX01"}},
+        {"reason": held + "; a human decides this one", "source_row": {"state_dst": "TX02"}},
+        {"reason": held + "; the document carries no Filing ID line", "source_row": {}},
+        {"reason": "no sitting member has this name", "source_row": {}},
+    ]
+    assert seal.held_clause(rows) == (
+        "2 at a seat other than the member's, and 1 whose documents carry no Filing ID line"
+    )
+
+
+def test_who_a_signal_cannot_reach_is_counted_by_officeholder():
+    seal = load()
+
+    def o(who, state, before=0):
+        swore = {"dated before this Congress's swearing-in": before} if before else {}
+        return {"officeholder_id": who, "state": state, "not_evaluated": swore}
+
+    outcomes = [
+        o("a", "not read"),
+        o("a", "not read"),
+        o("b", "not read"),
+        o("b", "evaluated", before=2),
+        o("c", "evaluated"),
+    ]
+    assert seal.reach(outcomes) == {"paper_only": 1, "some_paper": 1, "before_swearing_in": 1}
+
+
+def test_the_seal_points_at_the_anchor_and_never_seals_its_state():
+    """A proof is completed after the seal, so the sealed meta names where the proof lives
+    and says nothing about whether Bitcoin holds it yet."""
+    pointer = load().anchor_pointer("0006-house-2025")
+    assert pointer["proof"] == "data/anchors/0006-house-2025.manifest.ots"
+    assert pointer["manifest"] == "data/anchors/0006-house-2025.manifest"
+    assert pointer["ledger"] == "ANCHORS.md"
+    assert "state" not in pointer and "block" not in pointer
