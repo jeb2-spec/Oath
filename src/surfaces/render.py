@@ -84,6 +84,7 @@ STANDARD_LINKS = {
         ("5 U.S.C. § 13105(l)", USC_13105),
         ("STOCK Act of 2012, Pub. L. 112-105", STOCK_ACT),
         ("the Committee on Ethics", ETHICS_FD),
+        ("its form and instructions for CY 2025", PTR_FORM),
         ("its memorandum on due dates", PTR_DUE_MEMO),
         ("STANDARDS.md S.2", STANDARDS_S2),
     ),
