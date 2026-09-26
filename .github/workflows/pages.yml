@@ -64,6 +64,7 @@ jobs:
         run: |
           python tools/check-signal-versions.py
           python tools/check-supersessions.py
+          python tools/check-removals.py
 
       - name: The anchor the footer states is the one the proofs hold
         run: python tools/anchor.py
