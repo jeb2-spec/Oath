@@ -76,32 +76,75 @@ def test_a_filled_fact_cannot_be_emptied_again():
 def test_every_published_fact_stays_the_time_read_the_notes_and_the_hash_among_them():
     """The adapter carries a published row byte for byte, so nothing it carries may move: a
     re-read time, the notes (which carry the filer's own words) and the hash of the bytes it
-    was read from are facts too (the Council's reading of S.1b)."""
+    was read from are facts too (the Council's reading of S.1b). Each is named as the one
+    fact that moved, so the test cannot pass on a gate that returns anything non-empty."""
     before = filing(source={"url": "u", "retrieved_at": "t1", "content_hash": "a"}, notes="n")
-    for now in (
-        filing(source={"url": "u", "retrieved_at": "t2", "content_hash": "a"}, notes="n"),
-        filing(source={"url": "u", "retrieved_at": "t1", "content_hash": "b"}, notes="n"),
-        filing(source={"url": "u", "retrieved_at": "t1", "content_hash": None}, notes="n"),
-        filing(source={"url": "u", "retrieved_at": "t1", "content_hash": "a"}, notes="m"),
+    for now, where in (
+        (
+            filing(source={"url": "u", "retrieved_at": "t2", "content_hash": "a"}, notes="n"),
+            "source.retrieved_at",
+        ),
+        (
+            filing(source={"url": "u", "retrieved_at": "t1", "content_hash": "b"}, notes="n"),
+            "source.content_hash",
+        ),
+        (
+            filing(source={"url": "u", "retrieved_at": "t1", "content_hash": None}, notes="n"),
+            "source.content_hash",
+        ),
+        (
+            filing(source={"url": "u", "retrieved_at": "t1", "content_hash": "a"}, notes="m"),
+            "notes",
+        ),
     ):
-        assert gate.problems(FILINGS, [now], [before]), now
+        fails = gate.problems(FILINGS, [now], [before])
+        assert isinstance(fails, list) and len(fails) == 1, fails
+        assert f"fl:house-clerk:P:1 {where}: " in fails[0], fails
+
+
+RIGHT = {
+    "id": "ch:corrected:fl:house-clerk:P:1:officeholder_id:2026-10-06T12:00:00Z",
+    "change": "corrected",
+    "row_id": "fl:house-clerk:P:1",
+    "field": "officeholder_id",
+    "was": "oh:us:house:x000001",
+    "now": "oh:us:house:x000002",
+    "kind": "register",
+    "because": "The document's header names the other Member.",
+    "decided_by": "the maintainer",
+    "decided_at": "2026-10-06T12:00:00Z",
+    "capture": {"url": "https://disclosures-clerk.house.gov/public_disc/ptr-pdfs/2025/1.pdf"},
+}
+PRIMARY = {"disclosures-clerk.house.gov"}
 
 
 def test_a_persons_correction_lets_exactly_its_move_through():
     moved = filing(officeholder_id="oh:us:house:x000002")
-    right = {
-        "change": "corrected",
-        "row_id": "fl:house-clerk:P:1",
-        "field": "officeholder_id",
-        "was": "oh:us:house:x000001",
-        "now": "oh:us:house:x000002",
-    }
-    corrected = gate.corrections([right])
-    assert gate.problems(FILINGS, [moved], [filing()], corrected) == []
-    for wrong in (dict(right, now="oh:us:house:x000003"), dict(right, field="office_id")):
-        assert gate.problems(FILINGS, [moved], [filing()], gate.corrections([wrong]))
+    corrected, fails = gate.corrections([RIGHT], PRIMARY)
+    assert fails == [] and gate.problems(FILINGS, [moved], [filing()], corrected) == []
+    for wrong in (dict(RIGHT, now="oh:us:house:x000003"), dict(RIGHT, field="office_id")):
+        assert gate.problems(FILINGS, [moved], [filing()], gate.corrections([wrong], PRIMARY)[0])
     elsewhere = filing(officeholder_id="oh:us:house:x000002", office_id="of:other")
     assert gate.problems(FILINGS, [elsewhere], [filing()], corrected), "one move, not two"
+
+
+def test_a_correction_without_what_makes_it_one_is_honoured_for_nothing():
+    """Seat C on the second reading (R-4): a hand-written correction citing a blog, with no
+    reason and no one who decided, moved a filing and the gate said OK. INVARIANTS.md §14: a
+    supersession without a primary-source citation fails."""
+    for lacking, says in (
+        ({"capture": {"url": "https://example.com/blog"}}, "primary"),
+        ({"capture": {"url": "http://disclosures-clerk.house.gov/x"}}, "primary"),
+        ({"because": " "}, "a reason"),
+        ({"decided_by": ""}, "who decided"),
+        ({"kind": "opinion"}, "a kind"),
+        ({"decided_at": None}, "when it was decided"),
+    ):
+        corrected, fails = gate.corrections([dict(RIGHT, **lacking)], PRIMARY)
+        assert corrected == set() and len(fails) == 1 and says in fails[0], (lacking, fails)
+    moved = filing(officeholder_id="oh:us:house:x000002")
+    blog = gate.corrections([dict(RIGHT, capture={"url": "https://example.com/blog"})], PRIMARY)
+    assert gate.problems(FILINGS, [moved], [filing()], blog[0]), "and the move it names fails"
 
 
 def test_the_changes_file_only_grows_at_its_end_byte_for_byte():

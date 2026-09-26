@@ -39,6 +39,7 @@ ROW = {
 }
 URL = "https://disclosures-clerk.house.gov/public_disc/financial-pdfs/2025FD.zip"
 EVIDENCE = b"the index, as the Clerk now serves it"
+RETRIEVED = "2026-10-05T09:17:33Z"
 
 
 @pytest.fixture
@@ -80,6 +81,8 @@ def run(root: Path, *extra: str) -> int:
             "the maintainer",
             "--decided-at",
             "2026-10-06T12:00:00Z",
+            "--evidence-retrieved-at",
+            RETRIEVED,
             *extra,
         ]
     )
@@ -102,6 +105,9 @@ def test_a_correction_moves_the_fact_keeps_what_it_was_and_passes_the_gate(regis
         "2025-02-25",
         "2025-02-26",
         "source",
+    )
+    assert change["capture"]["retrieved_at"] == RETRIEVED, (
+        "the evidence's own time, not the decision's"
     )
     kept = register / "data" / "captures" / "sha256" / f"{change['capture']['content_hash']}.zip"
     assert kept.read_bytes() == EVIDENCE, "the evidence's bytes are kept, named by their hash"
@@ -145,6 +151,7 @@ def test_a_correction_that_says_nothing_or_too_much_is_refused(register, capsys,
 def test_the_evidence_must_be_a_primary_source_and_kept(register, capsys):
     args = [str(register), "--row", "fl:house-clerk:P:1", "--field", "filed_at"]
     tail = ["--kind", "source", "--because", "why", "--decided-by", "the maintainer"]
+    tail += ["--evidence-retrieved-at", RETRIEVED]
     for url, evidence in (
         ("https://www.opensecrets.org/x", register / "evidence.zip"),
         ("http://disclosures-clerk.house.gov/x", register / "evidence.zip"),
@@ -180,6 +187,130 @@ def test_a_row_the_register_does_not_hold_is_refused(register, capsys):
             str(register / "evidence.zip"),
             "--decided-by",
             "the maintainer",
+            "--evidence-retrieved-at",
+            RETRIEVED,
         ]
     )
     assert code == 1 and "not in data/filings.ndjson" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("when", ["", "2026-10-05", "2026-10-05 09:17:33"])
+def test_the_evidence_says_when_its_bytes_were_retrieved(register, capsys, when):
+    """Seat G on the second reading: a correction dated its evidence by the day it was made,
+    so one capture could carry two retrieval times."""
+    args = [a for a in _args(register) if a != RETRIEVED]
+    args[args.index("--evidence-retrieved-at") + 1 : args.index("--evidence-retrieved-at") + 1] = [
+        when
+    ]
+    assert correct.main([*args, "--now", "2025-02-26"]) == 1
+    assert "when the evidence's bytes were retrieved" in capsys.readouterr().out
+
+
+def _args(root: Path) -> list[str]:
+    return [
+        str(root),
+        "--row",
+        "fl:house-clerk:P:1",
+        "--field",
+        "filed_at",
+        "--kind",
+        "source",
+        "--because",
+        "why",
+        "--evidence-url",
+        URL,
+        "--evidence-file",
+        str(root / "evidence.zip"),
+        "--decided-by",
+        "the maintainer",
+        "--evidence-retrieved-at",
+        RETRIEVED,
+    ]
+
+
+HOLDERS = [
+    {
+        "id": f"oh:us:house:x00000{n}",
+        "offices": [{"id": f"of:us:house-xx0{n}:2025", "term_start": "2025-01-03"}],
+    }
+    for n in (1, 2, 3)
+]
+HOLDERS[2]["offices"] = [{"id": "of:us:house-xx03:2023", "term_start": "2023-01-03"}]
+OFFICES = [
+    {"id": "of:us:house-xx01:2025", "term_start": "2025-01-03"},
+    {"id": "of:us:house-xx02:2025", "term_start": "2025-01-03"},
+    {"id": "of:us:house-xx03:2023", "term_start": "2023-01-03"},
+]
+FILING = dict(ROW, office_id="of:us:house-xx01:2025")
+TRADES = [
+    {
+        "id": f"tx:house-clerk:1:00{n}",
+        "filing_id": "fl:house-clerk:P:1",
+        "officeholder_id": "oh:us:house:x000001",
+    }
+    for n in (1, 2)
+]
+
+
+@pytest.fixture
+def attributed(register):
+    """The register with officeholders, offices and the filing's two transactions."""
+    for name, rows in (
+        ("officeholders", HOLDERS),
+        ("offices", OFFICES),
+        ("filings", [FILING]),
+        ("transactions", TRADES),
+    ):
+        text = "".join(correct.canonical(r) for r in rows)
+        (register / "data" / f"{name}.ndjson").write_text(text, encoding="utf-8")
+    for args in (
+        ["add", "-A"],
+        ["-c", "user.email=t@example.com", "-c", "user.name=t", "commit", "-q", "-m", "q"],
+    ):
+        subprocess.run(["git", "-C", str(register), *args], check=True, capture_output=True)
+    return register
+
+
+def rows(root: Path, name: str) -> dict[str, dict]:
+    text = (root / "data" / f"{name}.ndjson").read_text("utf-8")
+    return {json.loads(line)["id"]: json.loads(line) for line in text.splitlines()}
+
+
+def test_an_attribution_moves_whole_or_not_at_all(attributed):
+    """Seat C on the second reading (R-3): moving a filing's officeholder left its office and
+    its trades with the first officeholder, so one person's page showed the report and
+    another's the trades. The office and every trade now move with it, each a correction of
+    its own citing the same evidence, and the gate and the joins pass."""
+    args = [a if a != "filed_at" else "officeholder_id" for a in _args(attributed)]
+    assert correct.main([*args, "--now", "oh:us:house:x000002"]) == 0
+    filing = rows(attributed, "filings")["fl:house-clerk:P:1"]
+    assert (filing["officeholder_id"], filing["office_id"]) == (
+        "oh:us:house:x000002",
+        "of:us:house-xx02:2025",
+    )
+    assert {t["officeholder_id"] for t in rows(attributed, "transactions").values()} == {
+        "oh:us:house:x000002"
+    }
+    moved = {(c["row_id"], c["field"]) for c in changes(attributed)}
+    assert moved == {
+        ("fl:house-clerk:P:1", "officeholder_id"),
+        ("fl:house-clerk:P:1", "office_id"),
+        ("tx:house-clerk:1:001", "officeholder_id"),
+        ("tx:house-clerk:1:002", "officeholder_id"),
+    }
+    assert len({c["capture"]["content_hash"] for c in changes(attributed)}) == 1
+    assert gate.main([str(attributed)]) == 0
+    assert schemas.joins(attributed) == []
+
+
+def test_a_trade_never_moves_alone_and_no_office_no_move(attributed, capsys):
+    args = [a for a in _args(attributed)]
+    trade = [*args]
+    trade[trade.index("--row") + 1] = "tx:house-clerk:1:001"
+    trade[trade.index("--field") + 1] = "officeholder_id"
+    assert correct.main([*trade, "--now", "oh:us:house:x000002"]) == 1
+    assert "a transaction's officeholder is its filing's" in capsys.readouterr().out
+    elsewhere = [a if a != "filed_at" else "officeholder_id" for a in args]
+    assert correct.main([*elsewhere, "--now", "oh:us:house:x000003"]) == 1
+    assert "holds 0 offices of the Congress" in capsys.readouterr().out
+    assert not (attributed / "data" / "changes.ndjson").exists()

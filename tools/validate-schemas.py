@@ -18,6 +18,12 @@ Two jobs, one run.
      as METHODOLOGY.md §2.1 requires. Rows under data/rejected/ are not validated; they
      are the rejects.
 
+  3. The rows agree with one another: every filing names an officeholder the register holds
+     and an office that officeholder holds; every transaction names a filing the register
+     holds and that filing's officeholder; every change names a row of the file it says.
+     A correction that moved one of these facts and not the others would leave a trade on
+     one person's page and its report on another's (the Council's second reading of S.1b).
+
 Formats are assertions here, not annotations: INVARIANTS.md §4 requires a retrieval
 timestamp in ISO 8601 UTC, so date-time must carry a zero offset. Gate for
 INVARIANTS.md §2, §3, §4, and §6. Standard-library Python 3.11+.
@@ -269,7 +275,64 @@ def check_rows(root: Path, schemas: dict[str, dict]) -> tuple[list[str], int, in
                             f"{seen[rid]}; an id is a key"
                         )
                     seen.setdefault(rid, lineno)
-    return problems, rows, files
+    return problems + joins(root), rows, files
+
+
+def joins(root: Path) -> list[str]:
+    """Where the rows disagree with one another about who filed what, and at which office."""
+
+    def rows_of(name: str) -> list[dict]:
+        path = root / "data" / f"{name}.ndjson"
+        if not path.is_file():
+            return []
+        out = []
+        for line in path.read_text("utf-8").splitlines():
+            try:
+                out.append(json.loads(line))
+            except json.JSONDecodeError:
+                continue  # reported above
+        return [row for row in out if isinstance(row, dict)]
+
+    holders = {h.get("id"): h for h in rows_of("officeholders")}
+    filings = {f.get("id"): f for f in rows_of("filings")}
+    problems = []
+    for f in filings.values():
+        holder = holders.get(f.get("officeholder_id"))
+        if holder is None:
+            problems.append(
+                f"data/filings.ndjson: {f.get('id')} names {f.get('officeholder_id')}, "
+                "whom the register does not hold"
+            )
+        elif f.get("office_id") not in {o.get("id") for o in holder.get("offices", [])}:
+            problems.append(
+                f"data/filings.ndjson: {f.get('id')} is at {f.get('office_id')}, an "
+                f"office {f.get('officeholder_id')} does not hold"
+            )
+    for tx in rows_of("transactions"):
+        filing = filings.get(tx.get("filing_id"))
+        if filing is None:
+            problems.append(
+                f"data/transactions.ndjson: {tx.get('id')} names the filing "
+                f"{tx.get('filing_id')}, which the register does not hold"
+            )
+        elif tx.get("officeholder_id") != filing.get("officeholder_id"):
+            problems.append(
+                f"data/transactions.ndjson: {tx.get('id')} names "
+                f"{tx.get('officeholder_id')}, and its filing names "
+                f"{filing.get('officeholder_id')}"
+            )
+    ids = {
+        name: {row.get("id") for row in rows_of(name)}
+        for name in ("officeholders", "filings", "transactions")
+    }
+    for change in rows_of("changes"):
+        if change.get("row_id") not in ids.get(change.get("rows"), set()):
+            problems.append(
+                f"data/changes.ndjson: {change.get('id')} is about "
+                f"{change.get('row_id')}, which data/{change.get('rows')}.ndjson "
+                "does not hold"
+            )
+    return problems
 
 
 def main(argv: list[str] | None = None) -> int:

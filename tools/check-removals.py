@@ -10,15 +10,19 @@ stood before the push), and fails when:
   2. anything a published row carries changed in place. A row only gains: a null may be
      filled, a list may grow at its end, an object may gain keys; nothing it carries moves,
      the time it was read and the hash of the bytes it was read from included. The one
-     exception is a person's correction: a row of data/changes.ndjson whose change is
-     "corrected" names the row, the fact, the value it carried and the value it now
+     exception is the maintainer's correction: a row of data/changes.ndjson whose change
+     is "corrected" names the row, the fact, the value it carried and the value it now
      carries, and cites the evidence (tools/correct.py writes it); that move, and no other,
      passes;
   3. data/changes.ndjson is not the published file with rows added at its end, byte for
      byte: a change row records what a capture showed, and never changes;
   4. a capture the register keeps is gone or altered. Every file under data/captures/sha256/ is
      named by the SHA-256 of its bytes and never changes, and every change row's capture is
-     kept there, so a change can be checked from the repository alone.
+     kept there, so a change can be checked from the repository alone;
+  5. a correction does not say what makes it one: its kind (the source, or the register),
+     its reason, who decided and when, and evidence at an https URL on a host SOURCES.md
+     registers as primary. Such a row is honoured for nothing, and fails by itself, however
+     it was written (the Council's second reading of S.1b, Seat C).
 
 Findings and Signal definitions have their own gates (check-supersessions,
 check-signal-versions). It fails rather than passes when it cannot read the published ref.
@@ -42,12 +46,14 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.util
 import json
 import os
 import re
 import subprocess
 import sys
 from pathlib import Path
+from urllib.parse import urlsplit
 
 FILES = (
     "data/offices.ndjson",
@@ -125,13 +131,56 @@ def compare(old, new, path: tuple = ()):
         yield path, old, new
 
 
-def corrections(changes: list[dict]) -> set[tuple[str, str, str, str]]:
-    """Each move a person's correction names: (row, fact, what it was, what it is)."""
-    return {
-        (c["row_id"], c["field"], canon(c.get("was")), canon(c.get("now")))
-        for c in changes
-        if c.get("change") == "corrected" and "field" in c
-    }
+def primary_hosts(root: Path) -> set[str]:
+    """The hosts SOURCES.md registers as primary, read the way the §5 gate reads them; none
+    when the registry or its reader is missing, so no correction is honoured on trust."""
+    tool, sources = root / "tools" / "check-aggregator-sole.py", root / "SOURCES.md"
+    if not tool.is_file() or not sources.is_file():
+        return set()
+    spec = importlib.util.spec_from_file_location("aggregator_sole", tool)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module.registry(sources.read_text("utf-8"))[0]
+
+
+def lacking(change: dict, primary: set[str]) -> list[str]:
+    """What a correction lacks for the gate to honour it."""
+    missing = []
+    if change.get("kind") not in ("source", "register"):
+        missing.append("a kind (source or register)")
+    for key, words in (("because", "a reason"), ("decided_by", "who decided")):
+        if not str(change.get(key) or "").strip():
+            missing.append(f"{words} ({key})")
+    if not change.get("decided_at"):
+        missing.append("when it was decided (decided_at)")
+    url = (change.get("capture") or {}).get("url", "")
+    if urlsplit(url).scheme != "https" or (urlsplit(url).hostname or "").lower() not in primary:
+        missing.append("evidence at an https URL on a host SOURCES.md registers as primary")
+    if "field" not in change:
+        missing.append("the fact it is about (field)")
+    return missing
+
+
+def corrections(
+    changes: list[dict], primary: set[str] | None = None
+) -> tuple[set[tuple[str, str, str, str]], list[str]]:
+    """Each move a whole correction names, (row, fact, what it was, what it is), and a failure
+    for each correction that lacks what makes it one. `primary` is None only where the
+    caller has already checked the corrections it passes."""
+    moves, fails = set(), []
+    for c in changes:
+        if c.get("change") != "corrected":
+            continue
+        missing = [] if primary is None else lacking(c, primary)
+        if missing:
+            fails.append(
+                f"{APPENDED}: {c.get('id', '?')} is a correction without {', '.join(missing)}; "
+                "the gate honours it for nothing"
+            )
+            continue
+        moves.add((c["row_id"], c["field"], canon(c.get("was")), canon(c.get("now"))))
+    return moves, fails
 
 
 def problems(rel: str, tree: list[dict], before: list[dict], corrected=frozenset()) -> list[str]:
@@ -211,8 +260,9 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 1
     changes = rows_of(read(root / APPENDED))
-    corrected = corrections(changes)
-    fails, rows, held = [], 0, 0
+    needs = any(c.get("change") == "corrected" for c in changes)
+    corrected, fails = corrections(changes, primary_hosts(root) if needs else set())
+    rows, held = 0, 0
     for rel in FILES:
         before_text = published_text(root, ref, rel)
         tree_text = read(root / rel)
@@ -224,21 +274,30 @@ def main(argv: list[str] | None = None) -> int:
             fails += appended(tree_text, before_text)
     fails += capture_problems(root, ref, changes)
     if fails:
-        print(f"FAIL  {len(fails)} published facts removed or changed against {ref}:")
+        print(
+            f"FAIL  {len(fails)} against {ref}: a published fact removed or changed, a kept "
+            "capture gone, or a change row that cannot stand:"
+        )
         for line in fails:
             print(f"      {line}")
         print(
             "      A published row stays, byte for byte, and only gains facts it lacked "
             "(INVARIANTS.md §14). What a later capture shows otherwise is a change row of its "
-            "own, citing the capture, which the register keeps; a fact a person finds wrong "
-            "moves only by a correction row that names it (tools/correct.py), with the evidence."
+            "own, citing the capture, which the register keeps; a fact found wrong moves only "
+            "by the maintainer's correction row that names it (tools/correct.py), with the "
+            "evidence."
         )
         return 1
     moved = sum(1 for c in changes if c.get("change") == "corrected")
     print(
         f"OK    {rows:,} rows in the register; {held:,} published at {ref}, every one present "
         "and carrying every fact it was published with, or gaining only facts it lacked"
-        + (f"; {moved} moved by a person's correction, each named." if moved else ".")
+        + (
+            f"; {moved} {'correction' if moved == 1 else 'corrections'} by the maintainer, each "
+            "naming its fact, its reason and its primary-source evidence."
+            if moved
+            else "."
+        )
     )
     return 0
 
