@@ -2,7 +2,9 @@
 """The corrections trail is public, and no Finding leaves silently. INVARIANTS.md §12; Vow V.
 
 Compares `data/findings.ndjson` in the tree with the published ledger, the same file on
-`origin/main` (or the ref in OATH_PUBLISHED_REF), and fails when:
+`origin/main` (or the ref in OATH_PUBLISHED_REF; on a push to main CI sets it to main as it
+stood before the push, since main is by then the pushed commit and comparing it with itself
+would prove nothing), and fails when:
 
   1. a published Finding is missing from the tree;
   2. a published Finding changed in any field but one: `superseded_by` may go from null to

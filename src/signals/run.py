@@ -3,8 +3,10 @@
 
     python src/signals/run.py --at 2026-09-23T14:13:28Z   # write
     python src/signals/run.py --check                      # regenerate and compare; write nothing
-    python src/signals/run.py --at <built_at> --correct <finding-id> --because "<what changed,
-        and the URL of the primary source that shows it>"  # write one correction, then run
+    python src/signals/run.py --at <built_at> --correct <finding-id> --kind source|register \
+        --because "<what changed, and the URL of the primary source that shows it>"
+                                                           # write corrections, then run; repeat
+                                                           # the three flags for each Finding
 
 Reads the current definition of each Signal (`docs/signals/<slug>.md`), its
 implementation (`src/signals/<slug>.py`), and the rows in `data/`, and writes, each
@@ -24,12 +26,19 @@ Facts stay (CHARTER Vow V; INVARIANTS §12 and §14). A Finding already in the l
 never rewritten and never dropped. A run that would change one, or that no longer
 produces one, stops and names it, because that is a correction a person writes by
 supersession, with the evidence (docs/signals/README.md, Corrections). `--correct` writes
-that correction exactly: the chain's current row gains `superseded_by` and nothing else,
-and a new row `<id>:c<n>` carries what the Signal now produces, or, where it no longer
-fires, the Signal's own words for what the record now shows. The person supplies only the
-reason, which must cite a source by URL; the rest is derived, so a correction cannot say
-something the record does not. A Finding of an earlier version of a Signal is carried
-forward untouched; a version bump adds rows and removes none. Standard library.
+each correction exactly: the chain's current row gains `superseded_by` and nothing else,
+and a new row `<id>:c<n>` carries what the Signal now produces, or, where it does not fire
+on the rows as they now stand, the Signal's own words for what they show. The person
+supplies the kind (the source changed, or the register erred) and the reason, which must
+cite by URL a source SOURCES.md registers as primary; the rest is derived from the rows.
+Every correction a run needs is written before the ledger is compared, so two Findings that
+change together are corrected together. A Finding of an earlier version of a Signal is
+carried forward untouched; a version bump adds rows and removes none.
+
+Each Signal's row carries the SHA-256 of its definition file, both implementations and its
+known-answer cases, because the code is part of the criteria: a published row never
+changes, so a change to any of those files is a new version (INVARIANTS.md §11), and
+tools/check-signal-versions.py sees it. Standard library.
 """
 
 from __future__ import annotations
@@ -41,6 +50,7 @@ import json
 import re
 import sys
 from pathlib import Path
+from urllib.parse import urlsplit
 
 INPUTS = {
     "officeholder": "data/officeholders.ndjson",
@@ -71,7 +81,8 @@ FRONT_KEYS = (
 # Set once, by the build that first produced a Finding, and never again. A correction
 # row carries its own id and may carry a note; neither makes its content differ.
 PROVENANCE = ("fired_at", "build_hash")
-UNCOMPARED = PROVENANCE + ("id", "notes")
+UNCOMPARED = PROVENANCE + ("id", "notes", "correction")
+KINDS = {"source": "the source changed", "register": "the register erred"}
 CORRECTION = re.compile(r":c(\d+)$")
 FRONTMATTER = re.compile(r"\A---\n(.*?)\n---\n", re.S)
 CITED = re.compile(r"https?://\S+")
@@ -154,6 +165,35 @@ def parse_definition(path: Path) -> dict:
     return row
 
 
+def sha256_of(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def implementation(root: Path, row: dict) -> dict:
+    """The SHA-256 of every file that makes this version what it is."""
+    slug = row["slug"]
+    out = {
+        "definition": sha256_of(root / DEFINITIONS / f"{slug}.md"),
+        "python": sha256_of(root / "src" / "signals" / f"{slug}.py"),
+        "fixture": sha256_of(root / row["worked_example"]["fixture"]),
+    }
+    reference = root / "src" / "signals" / f"{slug}.ts"
+    if reference.is_file():
+        out["reference"] = sha256_of(reference)
+    return out
+
+
+def primary_hosts(root: Path) -> set[str]:
+    """The hosts SOURCES.md registers as primary, read the way the §5 gate reads them."""
+    path = root / "tools" / "check-aggregator-sole.py"
+    spec = importlib.util.spec_from_file_location("aggregator_sole", path)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    primary, _ = module.registry((root / "SOURCES.md").read_text("utf-8"))
+    return primary
+
+
 def current_definitions(root: Path) -> list[Path]:
     """`<slug>.md` for every Signal; an earlier version, `<slug>.v<n>.md`, is kept to be read."""
     folder = root / DEFINITIONS
@@ -199,10 +239,16 @@ def fires(row: dict) -> bool:
 
 
 def merge(
-    ledger: list[dict], computed: list[dict], signal_id: str, at: str, digest: str
+    ledger: list[dict],
+    computed: list[dict],
+    signal_id: str,
+    at: str,
+    digest: str,
+    reports: set[str] | None = None,
 ) -> list[dict]:
     """The ledger with this run's Findings added. Refuses, naming every case, rather than
-    rewrite a Finding in place or let one go silently."""
+    rewrite a Finding in place or let one go silently. `reports`, the report ids the rows now
+    hold, only sharpens the words of a refusal."""
     mine = [row for row in ledger if row["signal_id"] == signal_id]
     known = {row["id"] for row in mine}
     heads: dict[str, dict] = {}
@@ -226,19 +272,32 @@ def merge(
                 continue
             added.append({**found, "fired_at": at, "build_hash": digest})
         elif found is None:
-            if fires(head):
-                problems.append(
-                    f"{head['id']}: published, and this run no longer produces it; facts stay, "
-                    "so a person writes its correction by supersession, with the evidence"
+            if not fires(head):
+                continue
+            gone = reports is not None and head["producing_filings"][0] not in reports
+            problems.append(
+                f"{head['id']}: published, and "
+                + (
+                    "its report is no longer in the register's rows (a roster, attribution or "
+                    "year change removes it; see NEXT.md on keeping each Congress's rows)"
+                    if gone
+                    else "this run no longer produces it from the rows as they now stand"
                 )
+                + "; facts stay, so a person writes its correction (docs/signals/README.md)"
+            )
         elif not fires(head) or comparable(head) != comparable(found):
             problems.append(
                 f"{head['id']}: published, and this run would produce it differently; a Finding "
-                "is never rewritten in place, so a person writes the correction by supersession"
+                "is never rewritten in place, so a person writes its correction "
+                "(docs/signals/README.md)"
             )
     if problems:
         raise Refusal("the ledger would change a published Finding:\n  " + "\n  ".join(problems))
     return sorted(ledger + added, key=lambda row: row["id"])
+
+
+def cited_hosts(text: str) -> set[str]:
+    return {(urlsplit(url).hostname or "").lower() for url in CITED.findall(text or "")}
 
 
 def correct(
@@ -247,20 +306,27 @@ def correct(
     outcomes: list[dict],
     finding_id: str,
     because: str,
+    kind: str,
     at: str,
     digest: str,
     module,
+    primary: set[str],
 ) -> list[dict]:
     """The ledger with one correction written, or a refusal saying why there is none to write.
 
     The chain's current row gains `superseded_by` and nothing else. The new row is what the
-    Signal now produces for the report, or, where it no longer fires there, the Signal's
-    `withdrawal` row; either way it carries the person's reason as its notes, this build's
-    time and the digest of the rows read."""
-    if not CITED.search(because or ""):
+    Signal now produces for the report, or, where it does not fire there on the rows as they
+    now stand, the Signal's `withdrawal` row; either way it carries the kind (the source
+    changed, or the register erred), the person's reason as its notes, this build's time and
+    the digest of the rows read."""
+    if kind not in KINDS:
+        raise Refusal(f"a correction's kind is one of {', '.join(sorted(KINDS))}, not {kind!r}")
+    if not cited_hosts(because) & primary:
         raise Refusal(
-            "a correction cites the primary source that shows what changed: --because must "
-            "say what changed and carry the source's URL"
+            "a correction cites the primary source that shows what changed: --because must say "
+            "what changed and carry the URL of a source SOURCES.md registers as primary ("
+            + ", ".join(sorted(primary))
+            + ")"
         )
     base = CORRECTION.sub("", finding_id)
     chain = [row for row in ledger if CORRECTION.sub("", row["id"]) == base]
@@ -285,7 +351,9 @@ def correct(
         report = head["producing_filings"][0]
         row = module.withdrawal(head, next((o for o in outcomes if o["filing_id"] == report), None))
     n = 1 + max((int(m.group(1)) for r in chain if (m := CORRECTION.search(r["id"]))), default=0)
-    row.update(id=f"{base}:c{n}", notes=because.strip(), fired_at=at, build_hash=digest)
+    row.update(
+        id=f"{base}:c{n}", correction=kind, notes=because.strip(), fired_at=at, build_hash=digest
+    )
     kept = [dict(r, superseded_by=row["id"]) if r is head else r for r in ledger]
     return sorted(kept + [row], key=lambda r: r["id"])
 
@@ -316,14 +384,20 @@ def run_record(signal_id: str, digest: str, outcomes: list[dict]) -> list[dict]:
 # ---- the run -------------------------------------------------------------------------
 
 
-def plan(root: Path, at: str | None, correction: tuple[str, str] | None = None) -> dict[str, str]:
+def plan(
+    root: Path, at: str | None, corrections: list[tuple[str, str, str]] | None = None
+) -> dict[str, str]:
     """Every file this run would write, as path -> text. Refuses before writing anything.
-    With a correction, (finding id, reason), that correction is written into the ledger
-    first, and then the run goes on as any other."""
+    Corrections, each (finding id, kind, reason), are all written into the ledger first, and
+    then the run goes on as any other, so Findings that change together are corrected
+    together."""
     rows = {name: read_ndjson(root / rel) for name, rel in INPUTS.items()}
     digest = inputs_digest(root)
     ledger = read_ndjson(root / FINDINGS)
     carried = {row["id"]: row for row in read_ndjson(root / SIGNALS)}
+    pending = list(corrections or [])
+    primary = primary_hosts(root) if pending else set()
+    reports = {row["id"] for row in rows["filing"]}
     files: dict[str, str] = {}
     for path in current_definitions(root):
         definition = parse_definition(path)
@@ -333,6 +407,7 @@ def plan(root: Path, at: str | None, correction: tuple[str, str] | None = None) 
                 f"{definition['slug']}: the definition says {definition['id']} and the "
                 f"implementation says {module.SIGNAL_ID}; they must name one version"
             )
+        definition["implementation"] = implementation(root, definition)
         carried[definition["id"]] = definition
         findings, outcomes = module.evaluate(
             rows["officeholder"], rows["filing"], rows["transaction"]
@@ -340,19 +415,30 @@ def plan(root: Path, at: str | None, correction: tuple[str, str] | None = None) 
         new = [f for f in findings if f["id"] not in {r["id"] for r in ledger}]
         if new and not at:
             raise Refusal("new Findings need the build's time: pass --at <built_at>")
-        if correction and correction[0].startswith(f"fn:{definition['id']}:"):
-            if not at:
-                raise Refusal("a correction needs the build's time: pass --at <built_at>")
+        mine = [c for c in pending if c[0].startswith(f"fn:{definition['id']}:")]
+        if mine and not at:
+            raise Refusal("a correction needs the build's time: pass --at <built_at>")
+        for finding_id, kind, because in mine:
             ledger = correct(
-                ledger, findings, outcomes, correction[0], correction[1], at, digest, module
+                ledger,
+                findings,
+                outcomes,
+                finding_id,
+                because,
+                kind,
+                at,
+                digest,
+                module,
+                primary,
             )
-            correction = None
-        ledger = merge(ledger, findings, definition["id"], at or "", digest)
+            pending.remove((finding_id, kind, because))
+        ledger = merge(ledger, findings, definition["id"], at or "", digest, reports)
         record = run_record(definition["id"], digest, outcomes)
         run_path = f"{RUNS}/{definition['slug']}-v{definition['version']}.ndjson"
         files[run_path] = render_ndjson(record)
-    if correction:
-        raise Refusal(f"{correction[0]}: no current Signal produced it; nothing to correct")
+    if pending:
+        names = ", ".join(c[0] for c in pending)
+        raise Refusal(f"{names}: no current Signal produced it; nothing to correct")
     files[SIGNALS] = render_ndjson(sorted(carried.values(), key=lambda row: row["id"]))
     files[FINDINGS] = render_ndjson(ledger)
     return files
@@ -366,23 +452,37 @@ def main(argv: list[str] | None = None) -> int:
         "--check", action="store_true", help="regenerate everything and compare; write nothing"
     )
     parser.add_argument(
-        "--correct", metavar="FINDING_ID", help="write the correction of this published Finding"
+        "--correct",
+        metavar="FINDING_ID",
+        action="append",
+        default=[],
+        help="write the correction of this published Finding; repeat for each",
+    )
+    parser.add_argument(
+        "--kind",
+        choices=sorted(KINDS),
+        action="append",
+        default=[],
+        help="with each --correct: source (the record changed) or register (the register erred)",
     )
     parser.add_argument(
         "--because",
         metavar="TEXT",
-        help="with --correct: what changed, citing the primary source that shows it by URL",
+        action="append",
+        default=[],
+        help="with each --correct: what changed, citing a primary source by URL",
     )
     args = parser.parse_args(argv)
     if args.correct and args.check:
         parser.error("--correct writes; --check writes nothing; give one")
-    if bool(args.correct) != bool(args.because):
-        parser.error("--correct and --because go together")
+    if not len(args.correct) == len(args.kind) == len(args.because):
+        parser.error("each --correct takes one --kind and one --because")
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
     root = Path(args.root).resolve()
     try:
-        files = plan(root, args.at, (args.correct, args.because) if args.correct else None)
+        corrections = list(zip(args.correct, args.kind, args.because, strict=True))
+        files = plan(root, args.at, corrections)
     except Refusal as refusal:
         print(f"REFUSED  {refusal}")
         return 1

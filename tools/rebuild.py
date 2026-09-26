@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Regenerate a Finding from the rows it names. METHODOLOGY.md §7.4; RUBRIC.md gate 4.
 
-    python tools/rebuild.py fn:sg:stock-act-late-ptr:v1:fl:house-clerk:P:20032062
+    python tools/rebuild.py fn:sg:stock-act-ptr-after-deadline:v1:fl:house-clerk:P:20024346
     python tools/rebuild.py            # every Signal file, regenerated and compared
 
 With a Finding's id, it hands the Signal only what the Finding names (the filing, that

@@ -2,10 +2,14 @@
 """Silent redefinition of a Signal is prohibited. INVARIANTS.md §11; METHODOLOGY.md §3.3.
 
 Compares `data/signals.ndjson` in the tree with the published file, the same path on
-`origin/main` (or the ref in OATH_PUBLISHED_REF), and fails when:
+`origin/main` (or the ref in OATH_PUBLISHED_REF; on a push to main CI sets it to main as it
+stood before the push), and fails when:
 
   1. a published Signal row is missing, or differs in any byte, from the tree's: a change
-     to a published definition, its wording included, is a new version, never an edit;
+     to a published definition, its wording included, is a new version, never an edit, and
+     so is a change to either implementation or the known-answer cases, whose SHA-256 the
+     row carries (`implementation`), because the code is part of the criteria
+     (METHODOLOGY.md §3.2);
   2. a version above 1 does not name, in `supersedes`, the version below it, or that
      version's row is not in the ledger;
   3. a superseded version's definition file, `docs/signals/<slug>.v<n>.md`, is gone, so the

@@ -179,7 +179,7 @@ def test_a_finding_regenerates_from_the_rows_it_names():
 
 
 def test_a_tampered_finding_does_not_regenerate(tmp_path):
-    for rel in ("data", "docs/signals", "src/signals"):
+    for rel in ("data", "docs/signals", "src/signals", "fixtures"):
         shutil.copytree(ROOT / rel, tmp_path / rel)
     ledger = tmp_path / "data" / "findings.ndjson"
     lines = ledger.read_text("utf-8").splitlines()
