@@ -75,3 +75,49 @@ def test_a_run_record_without_its_set_aside_file_refuses_the_seal(tmp_path):
         assert "has no set-aside file" in str(exc)
     else:
         raise AssertionError("a record whose set-aside file is gone must refuse the seal")
+
+
+ROOT = HERE.parent
+
+
+def test_the_derived_state_carries_every_figure_the_seal_checks():
+    """The scheduled refresh seals with --derive-state; the sentence it writes must pass the
+    same check a hand-written one does, on the register as it stands."""
+    import json
+
+    seal = load()
+    verify = seal.load_verify(HERE)
+    meta = json.loads((ROOT / "data" / "meta.json").read_text("utf-8"))
+    meta["rows"] = verify.row_counts(ROOT)
+    text = seal.derive_state(ROOT, meta)
+    for run in seal.current_runs(ROOT):
+        assert seal.state_text_lacks({**meta, "state": text}, run) == ""
+    assert text == seal.derive_state(ROOT, meta), "the same tree gives the same sentence"
+    findings = meta["rows"].get("data/findings.ndjson", 0)
+    assert f"The ledger holds {findings:,} Finding" in text
+    assert text.endswith("Presence in this register is not evidence of wrongdoing.")
+
+
+def test_a_register_without_signals_says_so(tmp_path):
+    seal = load()
+    (tmp_path / "data").mkdir()
+    text = seal.derive_state(tmp_path, {"rows": {}})
+    assert "No Signal is defined, so no Finding exists." in text
+
+
+def test_the_ledger_sentence_counts_corrections_once_there_are_any():
+    seal = load()
+    fired = {"superseded_by": None, "evidence": {"after": 2}}
+    assert seal.ledger_sentence([fired, fired]) == "The ledger holds 2 Findings."
+    corrected = [dict(fired, superseded_by="fn:1:c1"), fired]
+    assert seal.ledger_sentence(corrected) == (
+        "The ledger holds 2 Findings, 1 of them superseded by a correction and kept."
+    )
+    withdrawn = [
+        dict(fired, superseded_by="fn:1:c1"),
+        {"superseded_by": None, "evidence": {"after": 0}},
+    ]
+    assert seal.ledger_sentence(withdrawn) == (
+        "The ledger holds 2 Findings, 1 of them superseded by a correction and kept, and 1 a "
+        "correction recording that the Signal no longer fires on a report."
+    )
