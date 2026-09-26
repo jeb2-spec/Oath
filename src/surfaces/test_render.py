@@ -153,7 +153,10 @@ def test_held_rows_are_counted_only_at_the_members_own_seat_by_why_they_wait():
         "a same-surname row at the seat is counted whatever reason the adapter gave"
     )
     assert render.held_total(counted) == 2
-    assert render.held_rows_at_own_seat(also, HOLDERS) == 2
+    assert render.held_rows_at_own_seat(also, HOLDERS) == 1, (
+        "the landing's 'N of them' counts only rows held because the surname matches, the same "
+        "rows as its total (the Council's second reading of S.1b)"
+    )
 
 
 def test_a_quiet_page_is_a_matching_gap_and_says_so_with_its_count():
@@ -263,14 +266,14 @@ def test_a_scanned_document_is_captured_not_read_and_the_page_says_which():
     page = render.render_officeholder(HOLDERS[0], [read, scanned, pending], META, striker)
     assert "partly read" in page
     assert "1 of 3 documents read and hashed" in page
-    assert "1 captured and hashed, not read: scanned paper, or a form" in page
-    assert "1 not yet captured" in page
+    assert "1 fetched and hashed, not read: scanned paper, or a form" in page
+    assert "1 not yet fetched" in page
     assert "the register read each document" not in page
     section = render.state_of_record(
         META, RUN, HOLDERS, [read, scanned, pending], OFFICES, 1, "https://x/rows"
     )
     assert "<dt>1</dt><dd>of those 3 documents read" in section
-    assert "1 more captured and hashed, not read" in section
+    assert "1 more fetched and hashed, not read" in section
 
 
 def test_a_row_attributed_by_the_document_says_so_on_the_page_and_the_landing():
@@ -459,7 +462,7 @@ def test_unread_and_absent_transaction_reports_are_said_plainly():
     scanned["source"] = dict(scanned["source"], content_hash="b" * 64)
     scanned["extraction_confidence"] = None
     page = render.render_officeholder(HOLDERS[0], [scanned], META, striker, 0, [])
-    assert "The report filed 2025-04-01 is captured and not read" in page
+    assert "The report filed 2025-04-01 is fetched and not read" in page
     assert "its transactions are not listed here. It is linked above." in page
     quiet = render.render_officeholder(HOLDERS[0], [FILINGS[1]], META, striker, 0, [], 12)
     assert (
@@ -652,7 +655,7 @@ def test_a_quiet_signal_says_which_silence_it_is():
             True,
             [LATE[0]],
         ),
-        "1 report is captured and not read: scanned paper": (sworn(HOLDERS[0]), False, []),
+        "1 report is fetched and not read: scanned paper": (sworn(HOLDERS[0]), False, []),
     }
     for expected, (holder_, read, rows) in cases.items():
         report = read_report(holder_["id"], "2025-03-20", 1, read)
@@ -988,25 +991,38 @@ def test_an_officeholder_the_roster_no_longer_lists_keeps_a_page_and_no_seat():
     render.KEPT["0" * 64] = "data/captures/sha256/" + "0" * 64 + ".xml"
     raw = render.render_index(HOLDERS, OFFICES, FILINGS, RUN, META, striker, changes=changes)
     page = plain(raw)
-    seats, kept = page.split("<h2>No longer on the Clerk's roster</h2>")
+    seats, kept = page.split(
+        "<h2>No longer listed on the Clerk's roster during the 119th Congress</h2>"
+    )
     roll = seats.split("<h2>Every seat in the register</h2>")[1]
     ak00 = roll[roll.index('data-seat="AK00"') :].split("</tr>")[0]
     assert "Vacant on the Clerk's roster read 2026-09-22" in ak00
-    assert "Listed here until the roster read 2026-09-22" in ak00, "reachable from the seat"
+    assert (
+        "Last listed here on the roster read 2026-09-22, and not on the one read 2026-10-05" in ak00
+    ), "reachable from the seat, dated both ways, never a last day in office"
     assert f'href="officeholders/{render.slug(gone["id"])}.html"' in ak00
     assert render.slug(gone["id"]) in kept
     assert '<td class="idx">2026-09-22</td><td class="idx">2026-10-05</td>' in kept
     assert "the roster does not say when or why a person leaves a seat" in kept
-    assert "holds only Members who left after the register first read the roster" in kept
+    assert "holds only Members the roster stopped listing after the register first read it" in kept
+    assert "SUBJECTS.md#1-the-rule" in kept
     assert 'href="#not-listed"' in page, "the door says where they are"
     assert ranking.check_index(raw) == []
     assert frame.check_page(raw) is None
     raw_own = render.render_officeholder(gone, FILINGS[:2], META, striker, changes=changes)
     own = plain(raw_own)
-    assert "The Clerk's roster read 2026-10-05, recorded in build 0006-house-2025" in own
-    assert "no longer lists this officeholder" in own
+    assert "The Clerk's roster read 2026-10-05 no longer lists this officeholder" in own
+    assert "; recorded in build 0006-house-2025)" in own, "the build at the sentence's end"
+    assert "search it for AK00" in own, "a check a reader can take on a phone"
+    assert "the register kept no copy of that one" in own, "the earlier read, said as not kept"
     assert "The roster does not say when or why a person leaves a seat" in own
-    assert "No new filing enters the register for an officeholder after their term" in own
+    assert (
+        "A report the Clerk's index dates after 2026-09-22, the last roster read that listed "
+        "them, is not attributed here and cannot be" in own
+    )
+    assert "Every row on this page was published while the roster listed them" in own
+    assert "Everything on this page" not in own and "the capture that shows it" not in own
+    assert render.HOUSE_FINDER in own and render.CLERK_SITE in own, "the next step"
     assert "data/captures/sha256/" + "0" * 64 + ".xml" in own, "the capture that shows it, kept"
     assert "No longer in the Clerk's index read 2026-10-06" in own
     assert "which does not say why" in own
@@ -1027,12 +1043,12 @@ def test_a_member_listed_again_shows_both_reads():
     )
     changes = {gone["id"]: [departure(gone), back]}
     own = plain(render.render_officeholder(gone, FILINGS[2:], META, striker, changes=changes))
-    assert (
-        "The Clerk's roster read 2026-10-05, recorded in build 0006-house-2025 did not list" in own
-    )
-    assert (
-        "The Clerk's roster read 2026-11-02, recorded in build 0006-house-2025 lists them again"
-        in own
+    masthead, checks = between(own, "<header", "</header>"), between(own, "<dt>Identity", "</dd>")
+    assert "The Clerk's roster read 2026-10-05 did not list them" in checks
+    assert "The Clerk's roster read 2026-11-02 lists them again" in checks
+    assert "did not list" not in masthead, (
+        "a lapse the roster ended is said where the page says what it can check, never in "
+        "the masthead, where one the Clerk may have made would read as a departure"
     )
     assert "no longer lists this officeholder" not in own
 
@@ -1048,9 +1064,13 @@ def test_the_landing_counts_departures_and_changes_and_no_ones_rows():
         )
     )
     assert (
-        "<dt>1</dt><dd>Member of the 119th Congress the Clerk's roster no longer lists" in section
+        "<dt>1</dt><dd>Member of the 119th Congress the Clerk's roster stopped listing during "
+        "that Congress" in section
     )
-    assert "<dt>1</dt><dd>change a later capture showed" in section
+    assert "<dt>1</dt><dd>change a later read showed" in section
+    assert "except a party, which no page shows" in section
+    assert "a refresh that fails publishes nothing" in section
+    assert "When this build was made, the register read its sources" in section
     assert "filings and" not in between(section, "<dt>1</dt><dd>Member", "</dd>")
     assert "every Monday at 09:17 UTC" in section
     assert "2 filled and 2 vacant" in section, "a Member the roster no longer lists fills no seat"
@@ -1079,7 +1099,8 @@ def test_a_closed_year_says_whose_seats_these_are_and_counts_the_rows_it_holds()
     assert "the 119th Congress's roster was last read 2026-12-28" in section
     page = plain(render.render_index(HOLDERS, OFFICES, FILINGS, closed, META, striker))
     assert "terms ended at noon on 3 January 2027 (U.S. Const. amend. XX, section 1)" in page
-    assert "Members of the 120th Congress are not in it yet" in page
+    assert "Members of the 120th Congress are not in this build" in page
+    assert "who holds each seat now" in page and "who represents you now" not in page
     assert "Find who represented you in the 119th Congress" in page
     assert "listed when the register last read it for that Congress, 2026-12-28" in page
     assert "Find your representative<" not in page
@@ -1133,8 +1154,10 @@ def test_a_finding_whose_report_a_later_capture_shows_otherwise_says_so_beside_i
         META,
         changes={report["id"]: [moved], holder_["id"]: [departure(holder_)]},
     )
-    assert "(a later capture shows the report otherwise)" in signal_page
-    assert "not on the Clerk's roster read 2026-10-05" in plain(signal_page)
+    assert (
+        "(a later index gives one of its facts otherwise; the Clerk gives no reason)" in signal_page
+    )
+    assert "not on the Clerk's roster read 2026-10-05, which gives no reason" in plain(signal_page)
     assert "says nothing about any group of them" in signal_page
     assert ranking.check_summary(signal_page) == [] and frame.check_page(signal_page) is None
 
@@ -1175,4 +1198,91 @@ def test_two_holders_of_one_seat_each_count_only_the_rows_under_their_own_surnam
             successor["id"]: {"other": 1},
         }, (first, second)
         assert render.held_reports_by_holder(rows, both) == {departed["id"]: 1}
-        assert render.held_rows_at_own_seat(rows, both) == 2
+        assert render.held_rows_at_own_seat(rows, both) == 1
+
+
+def test_a_departed_members_rows_are_said_as_decidable_or_not_and_never_mislabelled():
+    """The Council's second reading of S.1b (Seats A, D, E): after a departure the page called
+    the Member's set-aside rows documents that "print another seat or another Filing ID", and
+    promised a decision on rows no decision can attribute."""
+    gone = HOLDERS[0]
+    no_sitting = "no sitting member has this name; the row is a candidate or a former member"
+    rows = [
+        {
+            "reason": no_sitting,
+            "source_row": {"state_dst": "AK00", "last": "Alaska", "filing_date": "9/1/2026"},
+        },
+        {
+            "reason": no_sitting,
+            "source_row": {"state_dst": "AK00", "last": "Alaska", "filing_date": "11/2/2026"},
+        },
+        {
+            "reason": "the maintainer's recorded decision names an officeholder the roster stopped "
+            "listing, for a filing the index dates after the last roster read that listed "
+            "them; the register cannot show them in office after that read, and under "
+            "SUBJECTS.md §1 it enters no new filing for an officeholder after their term "
+            "(oh:us:house:a000001; dated 2026-11-09; last listed 2026-09-22)",
+            "source_row": {"state_dst": "AK00", "last": "Alaska", "filing_date": "11/9/2026"},
+        },
+    ]
+    counted = render.held_by_holder(rows, HOLDERS, {gone["id"]: "2026-09-22"})
+    assert counted == {gone["id"]: {"left_open": 1, "left_closed": 1, "after_term": 1}}
+    said = plain(render.aside_sentence(counted[gone["id"]], "2026-09-22"))
+    assert "1 is set aside for the maintainer to decide by hand: 1 listed by the index" in said
+    assert "2 cannot be attributed here, by anyone" in said
+    assert "another seat or another Filing ID" not in said
+    assert render.held_by_holder(rows, HOLDERS) == {gone["id"]: {"other": 2, "after_term": 1}}, (
+        "without a departure the reason stands as the adapter gave it"
+    )
+
+
+def test_a_seat_whose_member_was_sworn_late_says_what_the_register_cannot_show():
+    """Seat E: the register holds no one who held a seat before the Member it first read there,
+    and a page should say so where it matters, whether or not anyone has left since."""
+    late = [dict(HOLDERS[0], sworn_at="2025-06-10")] + HOLDERS[1:]
+    page = plain(render.render_index(late, OFFICES, FILINGS, RUN, META, striker))
+    roll = between(page, "<h2>Every seat in the register</h2>", "</table>")
+    ak00 = roll[roll.index('data-seat="AK00"') :].split("</tr>")[0]
+    assert "Sworn in 2025-06-10; the register holds no one who held this seat earlier" in ak00
+    assert "Sworn in" not in roll[roll.index('data-seat="AL01"') :].split("</tr>")[0]
+    assert "a Member of the 119th Congress who left before then is not in it" in roll, (
+        "said on every build, not only once someone has left"
+    )
+    assert (
+        ranking.check_index(render.render_index(late, OFFICES, FILINGS, RUN, META, striker)) == []
+    )
+
+
+def test_a_name_the_roster_restates_is_shown_and_a_party_is_not():
+    """Seats A and F: a later roster that gives a name or a swearing-in date otherwise was
+    recorded and shown on no page, though the landing said every change is beside its row."""
+    holder_ = HOLDERS[1]
+
+    def restated(field, was, now):
+        return dict(
+            departure(holder_),
+            id=f"ch:read-otherwise:{holder_['id']}:{field}:2026-10-05T09:17:00Z",
+            change="read otherwise",
+            field=field,
+            was=was,
+            now=now,
+        )
+
+    changes = {
+        holder_["id"]: [
+            restated("sworn_at", "2025-01-03", "2025-01-06"),
+            restated("party", "I", "D"),
+        ]
+    }
+    own = plain(render.render_officeholder(holder_, FILINGS[2:], META, striker, changes=changes))
+    identity = between(own, "<dt>Identity", "</dd>")
+    assert "gives the swearing-in date as 2025-01-06; the register published 2025-01-03" in identity
+    assert "party" not in own.lower().replace("third party", "")
+
+
+def test_the_footer_dates_the_reads_and_leaves_the_time_to_the_anchor():
+    """Seat G: "sealed" beside the time of the latest read said what the time is not."""
+    foot = render.footer(dict(META, built_at="2026-10-05T09:17:33Z"), home=True)
+    assert "from the sources as read up to <code>2026-10-05T09:17:33Z</code>" in foot
+    assert "the time it provably existed is its anchor's" in foot
+    assert ", sealed <code>" not in foot

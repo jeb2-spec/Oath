@@ -158,7 +158,7 @@ def held_clause(rows: list[dict]) -> str:
 
 def reach(outcomes: list[dict]) -> dict[str, int]:
     """Who a Signal's run could not reach, in counts of officeholders: those whose reports are
-    all captured and not read, those with some, and those with rows dated before this
+    all fetched and not read, those with some, and those with rows dated before this
     Congress's swearing-in, which it does not evaluate."""
     states: dict[str, set[str]] = {}
     before: set[str] = set()
@@ -260,7 +260,7 @@ def derive_state(root: Path, meta: dict) -> str:
             f"{documents.get('read', 0):,} were read from the Clerk's documents and "
             f"{documents.get('transactions', 0):,} transactions "
             "written, each checked against the seat and Filing ID printed in its report; "
-            f"{documents.get('unreadable', 0):,} are scanned paper filings the register captured, "
+            f"{documents.get('unreadable', 0):,} are scanned paper filings the register fetched, "
             "hashed and does not read"
         )
         if documents.get("seat_discrepancies"):
