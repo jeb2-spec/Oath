@@ -13,8 +13,12 @@ otherwise, or the register read or joined it wrongly), the reason, who decided a
 and the evidence as a capture: the URL at a source SOURCES.md registers as primary, when
 those bytes were retrieved, and their SHA-256, which it keeps at
 data/captures/sha256/<sha256><ext> so the correction can be checked from the repository
-alone. Then it moves the facts. tools/check-removals.py lets those moves through, and no
-other.
+alone, unless the evidence is a filed document (a PDF): that it cites by its SHA-256 and
+never keeps, because a filed document can carry the names of private people and a kept copy
+would outlast the Clerk's withdrawal or redaction of it (EVIDENCE.md §7). A correction of a
+transaction's asset or notes, the filer's own text, keeps the SHA-256 of what it carried
+(`was_sha256`), never the text. Then it moves the facts. tools/check-removals.py lets those
+moves through, and no other.
 
 An attribution moves whole. Moving a filing's officeholder_id also moves its office_id to
 the office the officeholder named holds in the same Congress, and the officeholder_id of
@@ -29,10 +33,16 @@ to go on while a published attribution is in question, goes on. The adapter neve
 refuses that fact of that row on a reading of an unchanged entry; what the source's own
 bytes later show about it is still recorded.
 
-    python tools/correct.py --row fl:house-clerk:P:20027846 --field filed_at --now 2025-02-26 \\
-        --kind source --because "The Clerk's index read 2026-10-05 dates the report 2025-02-26." \\
-        --evidence-url https://disclosures-clerk.house.gov/public_disc/financial-pdfs/2025FD.zip \\
-        --evidence-file 2025FD.zip --evidence-retrieved-at 2026-10-05T09:17:33Z \\
+With `--field transactions` on a filing it moves nothing either: it records how many rows the
+report's own bytes list (`--now`, as JSON), where a later reading of the very bytes its rows
+were published from finds more. The adapter refuses such rows until this decision names the
+bytes (the evidence is the document, whose SHA-256 must be the filing's) and the count; the
+source did not change, so its kind is register.
+
+    python tools/correct.py --row fl:house-clerk:P:<DocID> --field filed_at --now <YYYY-MM-DD> \\
+        --kind source --because "The Clerk's index read <date> dates the report <YYYY-MM-DD>." \\
+        --evidence-url https://disclosures-clerk.house.gov/public_disc/financial-pdfs/<y>FD.zip \\
+        --evidence-file <y>FD.zip --evidence-retrieved-at <YYYY-MM-DDTHH:MM:SSZ> \\
         --decided-by "the maintainer"
 
 Then run the Signal (`python src/signals/run.py --at <built_at>`): where the move changes
@@ -53,6 +63,8 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 FILES = {"oh": "officeholders", "fl": "filings", "tx": "transactions"}
+# A transaction's facts that are the filer's own text: a correction keeps their hash, not them.
+AS_FILED = frozenset({"asset", "notes"})
 FRAME = "Presence in the register is not evidence of wrongdoing."
 KINDS = ("source", "register")
 MISSING = object()
@@ -66,6 +78,12 @@ class Refusal(Exception):
 def canonical(row: dict) -> str:
     """One NDJSON line, as the adapter writes it."""
     return json.dumps(row, sort_keys=True, separators=(",", ":"), ensure_ascii=False) + "\n"
+
+
+def json_of(value) -> str:
+    """A value as canonical JSON, the form whose SHA-256 a correction keeps for as-filed text,
+    and the form tools/check-removals.py hashes to match it."""
+    return json.dumps(value, ensure_ascii=False, sort_keys=True)
 
 
 def primary_hosts(root: Path) -> set[str]:
@@ -112,6 +130,25 @@ def moves_of(
             f"{row_id}: a transaction's officeholder is its filing's; correct the filing's "
             "officeholder_id, and its transactions move with it"
         )
+    if field == "office_id" and kind == "fl":
+        filing = next(
+            json.loads(line)
+            for line in read_lines(root, "filings")
+            if json.loads(line)["id"] == row_id
+        )
+        holder = next(
+            (
+                json.loads(line)
+                for line in read_lines(root, "officeholders")
+                if json.loads(line)["id"] == filing["officeholder_id"]
+            ),
+            {},
+        )
+        if now not in {o["id"] for o in holder.get("offices", [])}:
+            raise Refusal(
+                f"{now}: not an office {filing['officeholder_id']} holds; an office moves only "
+                "to one its officeholder holds, or with its attribution (correct officeholder_id)"
+            )
     if field != "officeholder_id" or kind != "fl":
         return moves
     holders = {
@@ -176,26 +213,52 @@ def correction(
             f"host SOURCES.md registers as primary ({', '.join(sorted(primary))})"
         )
     if not evidence:
-        raise Refusal("--evidence-file is empty; a correction keeps the bytes it rests on")
+        raise Refusal("--evidence-file is empty; a correction hashes the bytes it rests on")
+    sha = hashlib.sha256(evidence).hexdigest()
     lines = read_lines(root, rows)
     found = [n for n, line in enumerate(lines) if json.loads(line)["id"] == row_id]
     if not found:
         raise Refusal(f"{row_id}: not in data/{rows}.ndjson")
-    was = fact(json.loads(lines[found[0]]), field)
-    if was is MISSING:
-        raise Refusal(f"{row_id}: carries no {field}")
     if stands and now is not MISSING:
         raise Refusal("--stands records that the published value stands; give no --now")
     if not stands and now is MISSING:
         raise Refusal("give --now, the value the row should carry, or --stands")
-    if stands:
-        moves = [(row_id, field, was, was)]
-    elif now == was:
-        raise Refusal(f"{row_id}: {field} already carries {json.dumps(now)}; nothing to move")
+    row = json.loads(lines[found[0]])
+    if field == "transactions" and rows == "filings":
+        mine = [json.loads(line) for line in read_lines(root, "transactions")]
+        was = sum(1 for tx in mine if tx["filing_id"] == row_id)
+        if stands or kind != "register" or not isinstance(now, int) or now <= was:
+            raise Refusal(
+                "--field transactions records, as --now (JSON), how many rows the report's own "
+                f"bytes list, more than the {was} published; its kind is register, because the "
+                "source did not change"
+            )
+        if sha != (row.get("source") or {}).get("content_hash"):
+            raise Refusal(
+                "--field transactions cites the document the rows were published from: the "
+                "evidence's SHA-256 must be the filing's source.content_hash"
+            )
+        moves = [(row_id, field, was, now)]
+        stands = True  # moves no fact of any row
     else:
-        moves = moves_of(root, row_id, field, was, now)
-    sha = hashlib.sha256(evidence).hexdigest()
-    kept = f"data/captures/sha256/{sha}{Path(evidence_name).suffix}"
+        was = fact(row, field)
+        if was is MISSING:
+            raise Refusal(f"{row_id}: carries no {field}")
+        if isinstance(was, (list, dict)):
+            raise Refusal(
+                f"{row_id}: {field} is a {'list' if isinstance(was, list) else 'group of facts'}; "
+                "a correction moves one fact, a value, named by its path"
+            )
+        if stands:
+            moves = [(row_id, field, was, was)]
+        elif now == was:
+            raise Refusal(f"{row_id}: {field} already carries {json.dumps(now)}; nothing to move")
+        else:
+            moves = moves_of(root, row_id, field, was, now)
+    document = any(
+        name.lower().endswith(".pdf") for name in (urlsplit(evidence_url).path, evidence_name)
+    )
+    kept = "" if document else f"data/captures/sha256/{sha}{Path(evidence_name).suffix}"
     changes, files = [], {}
     recorded = root / "data" / "changes.ndjson"
     known = (
@@ -205,13 +268,18 @@ def correction(
     )
     for moved_id, moved_field, moved_was, moved_now in moves:
         moved_rows = FILES[moved_id.split(":", 1)[0]]
+        as_filed = moved_rows == "transactions" and moved_field in AS_FILED
         change = {
             "id": f"ch:corrected:{moved_id}:{moved_field}:{decided_at}",
             "row_id": moved_id,
             "rows": moved_rows,
             "change": "corrected",
             "field": moved_field,
-            "was": moved_was,
+            **(
+                {"was_sha256": hashlib.sha256(json_of(moved_was).encode()).hexdigest()}
+                if as_filed
+                else {"was": moved_was}
+            ),
             "now": moved_now,
             "kind": kind,
             "because": because.strip(),
@@ -284,20 +352,26 @@ def main(argv: list[str] | None = None) -> int:
         print(f"REFUSED  {refusal}")
         return 1
     for change in changes:
+        was = change.get("was", "(the filer's text, kept as its SHA-256)")
         what = (
             "stands"
             if args.stands
-            else f"{json.dumps(change['was'])} -> {json.dumps(change['now'])}"
+            else f"{json.dumps(was, ensure_ascii=False)} -> {json.dumps(change['now'])}"
         )
         print(f"{change['row_id']} {change['field']}: {what}")
-    print(f"evidence kept at {kept}")
+    sha = changes[0]["capture"]["content_hash"]
     if args.dry_run:
-        print("dry run: nothing written")
+        cited = f"would be kept at {kept}" if kept else f"cited by its SHA-256, {sha}"
+        print(f"evidence {cited}\ndry run: nothing written")
         return 0
-    target = root / kept
-    target.parent.mkdir(parents=True, exist_ok=True)
-    if not target.is_file():
-        target.write_bytes(evidence.read_bytes())
+    if kept:
+        target = root / kept
+        target.parent.mkdir(parents=True, exist_ok=True)
+        if not target.is_file():
+            target.write_bytes(evidence.read_bytes())
+        print(f"evidence kept at {kept}")
+    else:
+        print(f"evidence cited by its SHA-256, {sha}; a filed document is never kept")
     for rel, lines in files.items():
         (root / rel).write_text("".join(lines), encoding="utf-8", newline="\n")
     with (root / "data" / "changes.ndjson").open("a", encoding="utf-8", newline="\n") as handle:

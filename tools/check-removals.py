@@ -18,11 +18,16 @@ stood before the push), and fails when:
      byte: a change row records what a capture showed, and never changes;
   4. a capture the register keeps is gone or altered. Every file under data/captures/sha256/ is
      named by the SHA-256 of its bytes and never changes, and every change row's capture is
-     kept there, so a change can be checked from the repository alone;
+     kept there, so a change can be checked from the repository alone; except a filed
+     document (a PDF), which is cited by its SHA-256 and never kept, because it can carry the
+     names of private people and a kept copy would outlast the Clerk's withdrawal or redaction
+     of it (EVIDENCE.md §7; the Council's third reading of S.1b, Seat B). A kept PDF fails;
   5. a correction does not say what makes it one: its kind (the source, or the register),
      its reason, who decided and when, and evidence at an https URL on a host SOURCES.md
      registers as primary. Such a row is honoured for nothing, and fails by itself, however
-     it was written (the Council's second reading of S.1b, Seat C).
+     it was written (the Council's second reading of S.1b, Seat C). A correction of a
+     transaction's asset or notes names what the fact carried by its SHA-256 (`was_sha256`),
+     so the filer's text is not kept in the changes, and the gate matches it by that hash.
 
 Findings and Signal definitions have their own gates (check-supersessions,
 check-signal-versions). It fails rather than passes when it cannot read the published ref.
@@ -162,12 +167,24 @@ def lacking(change: dict, primary: set[str]) -> list[str]:
     return missing
 
 
+def was_key(value) -> str:
+    """How a correction names what a fact carried: its canonical JSON."""
+    return canon(value)
+
+
+def hashed_key(value) -> str:
+    """How a correction of the filer's own text names what it carried: the SHA-256 of its
+    canonical JSON (tools/correct.py, `was_sha256`)."""
+    return "sha256:" + hashlib.sha256(canon(value).encode("utf-8")).hexdigest()
+
+
 def corrections(
     changes: list[dict], primary: set[str] | None = None
 ) -> tuple[set[tuple[str, str, str, str]], list[str]]:
     """Each move a whole correction names, (row, fact, what it was, what it is), and a failure
-    for each correction that lacks what makes it one. `primary` is None only where the
-    caller has already checked the corrections it passes."""
+    for each correction that lacks what makes it one. What it was is `was_key` of the value,
+    or `hashed_key`'s form where the correction keeps only its SHA-256. `primary` is None only
+    where the caller has already checked the corrections it passes."""
     moves, fails = set(), []
     for c in changes:
         if c.get("change") != "corrected":
@@ -179,7 +196,8 @@ def corrections(
                 "the gate honours it for nothing"
             )
             continue
-        moves.add((c["row_id"], c["field"], canon(c.get("was")), canon(c.get("now"))))
+        was = f"sha256:{c['was_sha256']}" if "was_sha256" in c else was_key(c.get("was"))
+        moves.add((c["row_id"], c["field"], was, canon(c.get("now"))))
     return moves, fails
 
 
@@ -194,7 +212,10 @@ def problems(rel: str, tree: list[dict], before: list[dict], corrected=frozenset
             continue
         for path, was, now in compare(old, new):
             where = ".".join(str(p) for p in path) or "(the row)"
-            if now is not MISSING and (old["id"], where, canon(was), canon(now)) in corrected:
+            if now is not MISSING and (
+                (old["id"], where, was_key(was), canon(now)) in corrected
+                or (old["id"], where, hashed_key(was), canon(now)) in corrected
+            ):
                 continue
             fails.append(f"{rel}: {old['id']} {where}: {shown(was)} -> {shown(now)}")
     return fails
@@ -218,6 +239,11 @@ def appended(tree: str, published: str) -> list[str]:
     ]
 
 
+def document(url: str) -> bool:
+    """Whether a capture's URL is a filed document (a PDF), cited and never kept."""
+    return urlsplit(url).path.lower().endswith(".pdf")
+
+
 def capture_problems(root: Path, ref: str, changes: list[dict]) -> list[str]:
     """Kept captures stay, byte for byte, each named by its hash, and every change cites one."""
     fails = []
@@ -235,8 +261,15 @@ def capture_problems(root: Path, ref: str, changes: list[dict]) -> list[str]:
         named = KEPT.match(name)
         if named is None or hashlib.sha256(path.read_bytes()).hexdigest() != named.group(1):
             fails.append(f"{CAPTURES}/{name}: not named by the SHA-256 of its bytes")
+        if name.lower().endswith(".pdf"):
+            fails.append(
+                f"{CAPTURES}/{name}: a filed document is kept; the register cites a document by "
+                "its SHA-256 and never keeps it (EVIDENCE.md §7)"
+            )
     hashes = {KEPT.match(n).group(1) for n in here if KEPT.match(n)}
     for change in changes:
+        if document(change["capture"]["url"]):
+            continue
         if change["capture"]["content_hash"] not in hashes:
             fails.append(
                 f"{APPENDED}: {change['id']} cites a capture the register does not keep "
@@ -288,14 +321,17 @@ def main(argv: list[str] | None = None) -> int:
             "evidence."
         )
         return 1
-    moved = sum(1 for c in changes if c.get("change") == "corrected")
+    rows_moved = [c for c in changes if c.get("change") == "corrected"]
+    decisions = len({(c["decided_at"], c["decided_by"], c["because"]) for c in rows_moved})
     print(
         f"OK    {rows:,} rows in the register; {held:,} published at {ref}, every one present "
         "and carrying every fact it was published with, or gaining only facts it lacked"
         + (
-            f"; {moved} {'correction' if moved == 1 else 'corrections'} by the maintainer, each "
-            "naming its fact, its reason and its primary-source evidence."
-            if moved
+            f"; {decisions:,} recorded {'decision' if decisions == 1 else 'decisions'} "
+            f"({len(rows_moved):,} change {'row' if len(rows_moved) == 1 else 'rows'}), each "
+            "saying its kind, its reason, who decided and when, and citing evidence at an https "
+            "URL on a host SOURCES.md registers as primary."
+            if rows_moved
             else "."
         )
     )

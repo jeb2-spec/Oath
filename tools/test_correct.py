@@ -148,7 +148,7 @@ def test_a_correction_that_says_nothing_or_too_much_is_refused(register, capsys,
     assert not (register / "data" / "changes.ndjson").exists()
 
 
-def test_the_evidence_must_be_a_primary_source_and_kept(register, capsys):
+def test_the_evidence_must_be_a_primary_source_and_hashed(register, capsys):
     args = [str(register), "--row", "fl:house-clerk:P:1", "--field", "filed_at"]
     tail = ["--kind", "source", "--because", "why", "--decided-by", "the maintainer"]
     tail += ["--evidence-retrieved-at", RETRIEVED]
@@ -163,7 +163,7 @@ def test_the_evidence_must_be_a_primary_source_and_kept(register, capsys):
         )
         assert code == 1
     out = capsys.readouterr().out
-    assert "primary source" in out and "keeps the bytes" in out
+    assert "primary source" in out and "hashes the bytes" in out
     assert not (register / "data" / "changes.ndjson").exists()
 
 
@@ -314,3 +314,153 @@ def test_a_trade_never_moves_alone_and_no_office_no_move(attributed, capsys):
     assert correct.main([*elsewhere, "--now", "oh:us:house:x000003"]) == 1
     assert "holds 0 offices of the Congress" in capsys.readouterr().out
     assert not (attributed / "data" / "changes.ndjson").exists()
+
+
+# ---- the Council's third reading of S.1b ---------------------------------------------------
+
+PDF = b"%PDF the Clerk's document, as the maintainer holds it"
+PDF_SHA = __import__("hashlib").sha256(PDF).hexdigest()
+DOC_URL = "https://disclosures-clerk.house.gov/public_disc/ptr-pdfs/2025/1.pdf"
+TX = {"id": "tx:house-clerk:1:001", "filing_id": "fl:house-clerk:P:1", "asset": "A Trust FBO X"}
+HOLDER = {
+    "id": "oh:us:house:x000001",
+    "offices": [
+        {"id": "of:us:house-xx01:2025", "seat": "XX01", "term_start": "2025-01-03"},
+        {"id": "of:us:house-xx02:2025", "seat": "XX02", "term_start": "2025-01-03"},
+    ],
+}
+
+
+@pytest.fixture
+def ledger(tmp_path, monkeypatch):
+    """A repository whose published filing was read from a document, with two transactions."""
+    (tmp_path / "data").mkdir()
+    (tmp_path / "tools").mkdir()
+    shutil.copy(ROOT / "SOURCES.md", tmp_path / "SOURCES.md")
+    shutil.copy(ROOT / "tools" / "check-aggregator-sole.py", tmp_path / "tools")
+    filing = dict(
+        ROW,
+        office_id="of:us:house-xx01:2025",
+        source={"url": DOC_URL, "retrieved_at": RETRIEVED, "content_hash": PDF_SHA},
+    )
+    for name, rows in (
+        ("filings", [filing]),
+        ("transactions", [TX, dict(TX, id="tx:house-clerk:1:002", asset="Other")]),
+        ("officeholders", [HOLDER]),
+    ):
+        (tmp_path / "data" / f"{name}.ndjson").write_text(
+            "".join(correct.canonical(r) for r in rows), encoding="utf-8"
+        )
+    for args in (
+        ["init", "-q", "-b", "published"],
+        ["add", "-A"],
+        ["-c", "user.email=t@example.com", "-c", "user.name=t", "commit", "-q", "-m", "p"],
+    ):
+        subprocess.run(["git", "-C", str(tmp_path), *args], check=True, capture_output=True)
+    (tmp_path / "1.pdf").write_bytes(PDF)
+    monkeypatch.setenv("OATH_PUBLISHED_REF", "published")
+    return tmp_path
+
+
+def fix(root: Path, row: str, field: str, *extra: str) -> int:
+    return correct.main(
+        [
+            str(root),
+            "--row",
+            row,
+            "--field",
+            field,
+            "--because",
+            "The report reads so.",
+            "--evidence-url",
+            DOC_URL,
+            "--evidence-file",
+            str(root / "1.pdf"),
+            "--evidence-retrieved-at",
+            RETRIEVED,
+            "--decided-by",
+            "the maintainer",
+            "--decided-at",
+            "2026-10-06T12:00:00Z",
+            *extra,
+        ]
+    )
+
+
+def test_a_filed_document_is_cited_by_its_hash_and_never_kept(ledger, capsys):
+    """Seat B on the third reading (N1): a document can carry the names of private people; a
+    kept copy would outlast the Clerk's withdrawal or redaction of it, and the gate would
+    refuse its removal. It is cited by its URL, time and SHA-256, and a kept PDF fails."""
+    assert (
+        fix(ledger, "fl:house-clerk:P:1", "filed_at", "--now", "2025-02-26", "--kind", "source")
+        == 0
+    )
+    assert "never kept" in capsys.readouterr().out
+    (change,) = changes(ledger)
+    assert change["capture"]["content_hash"] == PDF_SHA
+    assert not (ledger / "data" / "captures").exists()
+    assert gate.main([str(ledger)]) == 0
+    kept = ledger / "data" / "captures" / "sha256"
+    kept.mkdir(parents=True)
+    (kept / f"{PDF_SHA}.pdf").write_bytes(PDF)
+    assert gate.main([str(ledger)]) == 1, "a kept filed document fails"
+
+
+def test_the_filers_own_text_is_corrected_by_its_hash(ledger):
+    """Seat B on the third reading (N2): a line a filer has the Clerk remove, a private
+    person's name among them, is not kept in the register's changes; the correction names what
+    the asset was by its SHA-256, and the gate honours it by that hash."""
+    assert fix(ledger, "tx:house-clerk:1:001", "asset", "--now", "A Trust", "--kind", "source") == 0
+    (change,) = changes(ledger)
+    assert "was" not in change and "A Trust FBO X" not in json.dumps(change)
+    assert change["was_sha256"] == __import__("hashlib").sha256(b'"A Trust FBO X"').hexdigest()
+    assert gate.main([str(ledger)]) == 0
+    loaded = schemas.load_schemas(ROOT)
+    assert (
+        schemas.validate(change, loaded["change.schema.json"], loaded, "change.schema.json") == []
+    )
+
+
+def test_rows_a_report_lists_are_accepted_by_count_citing_its_own_bytes(ledger, capsys):
+    """Seat C on the third reading (N-2): rows a later reading finds in the very bytes a
+    report's rows were published from enter only by the maintainer's decision that the report
+    lists that many; the decision cites those bytes, and its kind is register."""
+    row = "fl:house-clerk:P:1"
+    assert fix(ledger, row, "transactions", "--now", "3", "--json", "--kind", "source") == 1
+    assert fix(ledger, row, "transactions", "--now", "2", "--json", "--kind", "register") == 1
+    assert "more than the 2 published" in capsys.readouterr().out
+    (ledger / "1.pdf").write_bytes(b"%PDF other bytes")
+    assert fix(ledger, row, "transactions", "--now", "3", "--json", "--kind", "register") == 1
+    assert "source.content_hash" in capsys.readouterr().out
+    (ledger / "1.pdf").write_bytes(PDF)
+    before = {p.name: p.read_bytes() for p in (ledger / "data").glob("*.ndjson")}
+    assert fix(ledger, row, "transactions", "--now", "3", "--json", "--kind", "register") == 0
+    (change,) = changes(ledger)
+    assert (change["field"], change["was"], change["now"]) == ("transactions", 2, 3)
+    after = {p.name: p.read_bytes() for p in (ledger / "data").glob("*.ndjson")}
+    assert {k: v for k, v in after.items() if k != "changes.ndjson"} == before, "nothing moves"
+    assert gate.main([str(ledger)]) == 0
+
+
+def test_a_list_or_an_office_its_holder_does_not_hold_is_refused(ledger, capsys):
+    """Seat C on the third reading (N-7): a correction moves one fact, a value; and an office
+    moves only to one its officeholder holds, or with its attribution."""
+    code = fix(ledger, HOLDER["id"], "offices", "--now", "[]", "--json", "--kind", "register")
+    assert code == 1 and "moves one fact, a value" in capsys.readouterr().out
+    args = ["--kind", "register"]
+    assert (
+        fix(ledger, "fl:house-clerk:P:1", "office_id", "--now", "of:us:house-xx09:2025", *args) == 1
+    )
+    assert "not an office" in capsys.readouterr().out
+    assert (
+        fix(ledger, "fl:house-clerk:P:1", "office_id", "--now", "of:us:house-xx02:2025", *args) == 0
+    )
+
+
+def test_a_dry_run_says_what_it_would_keep_and_writes_nothing(register, capsys):
+    """Seat G on the third reading (R3-10)."""
+    assert run(register, "--now", "2025-02-26", "--dry-run") == 0
+    out = capsys.readouterr().out
+    assert "would be kept" in out and "kept at" not in out.replace("would be kept at", "")
+    assert not (register / "data" / "changes.ndjson").exists()
+    assert not (register / "data" / "captures").exists()
