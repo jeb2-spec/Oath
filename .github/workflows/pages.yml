@@ -70,6 +70,11 @@ jobs:
         run: python tools/anchor.py
 
       - name: Render the register
+        # The set-aside rows are named for the build's captures and replaced by the next build,
+        # so the pages link them at the commit they are rendered from (the Council's third
+        # reading of S.1b, Seat G).
+        env:
+          OATH_PAGES_COMMIT: ${{ github.sha }}
         run: python src/surfaces/render.py
 
       - name: The rendering gates
