@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://oath.jeb2-spec.dev/schemas/change/v0.json",
   "title": "Change",
-  "description": "What a later capture of a primary source showed about a row the register had already published, or a correction a person made to one, citing the evidence. The published row stays exactly as published, unless a person's correction moves one of its facts; then this row keeps what the fact was (CHARTER Vow V; INVARIANTS §14). The adapter (src/adapters/house-fd/build.py) writes one where a capture later than the one a row was read from shows it otherwise; tools/correct.py writes a person's correction. Either way the bytes of the capture it cites are kept in data/captures/sha256/, named by their SHA-256, so the change can be checked from the repository alone once the source serves something else. A change row never changes and is never removed: data/changes.ndjson only grows at its end. It carries the frame, because a change row names a person's row and may be read without the page.",
+  "description": "What a later capture of a primary source showed about a row the register had already published, or a correction a person made to one, citing the evidence. The published row stays exactly as published, unless a person's correction moves one of its facts; then this row keeps what the fact was (CHARTER Vow V; INVARIANTS §14). The adapter (src/adapters/house-fd/build.py) writes one where a capture later than the one a row was read from shows it otherwise; tools/correct.py writes a person's correction. Either way the bytes of the capture it cites are kept in data/captures/sha256/, named by their SHA-256, so the change can be checked from the repository alone once the source serves something else, except a filed document (a PDF), which is never kept: a filed document can carry the names of private people, and a kept copy would outlast the Clerk's withdrawal or redaction of it (EVIDENCE.md §7), so a document is cited by its URL, the time it was read and its SHA-256, and a replaced one records which of its rows read otherwise, never what they say. A change row never changes and is never removed: data/changes.ndjson only grows at its end. It carries the frame, because a change row names a person's row and may be read without the page.",
   "type": "object",
   "required": ["id", "row_id", "rows", "change", "capture", "frame"],
   "additionalProperties": false,
@@ -24,14 +24,34 @@
     "change": {
       "type": "string",
       "enum": ["not listed", "listed again", "read otherwise", "replaced", "corrected"],
-      "description": "not listed: the capture does not list the row (the Clerk's roster no longer lists the officeholder, or the index the filing); the source does not say why. listed again: a later capture lists a row an earlier one did not. read otherwise: the capture, as the register reads it, gives one of the row's facts another value (`field`, `was`, `now`); the row keeps the value it was published with. replaced: the source serves other bytes for a filing's document, and they read otherwise; the rows read from the first bytes are kept as published. corrected: a person moved one of the row's facts, or recorded that it stands, citing the evidence (`because`, `kind`, `decided_by`, `decided_at`)."
+      "description": "not listed: the capture does not list the row (the Clerk's roster no longer lists the officeholder, or the index the filing); the source does not say why. listed again: a later capture lists a row an earlier one did not. read otherwise: the capture, as the register reads it, gives one of the row's facts another value (`field`, `was`, `now`); the row keeps the value it was published with. replaced: the source serves other bytes for a filing's document, and they read otherwise (`differs`); the rows read from the first bytes are kept as published, and neither file is kept. corrected: a person moved one of the row's facts, or recorded that it stands, or recorded how many rows a report's own bytes list (`field` transactions), citing the evidence (`because`, `kind`, `decided_by`, `decided_at`)."
     },
     "field": {
       "type": "string",
-      "description": "The fact the change is about, as a path into the row (filed_at, officeholder_id, source.content_hash). On read otherwise, replaced and corrected."
+      "description": "The fact the change is about, as a path into the row (filed_at, officeholder_id, source.content_hash). On read otherwise, replaced and corrected. On a correction of a filing, `transactions` is the number of rows the report's bytes list, which the maintainer's decision accepts where a later reading of the very bytes the rows were published from finds more; the adapter adds no such row without it."
     },
     "was": {
-      "description": "The value the published row carries for the field; for a correction, the value it carried before."
+      "description": "The value the published row carries for the field; for a correction, the value it carried before. A correction of a transaction's asset or notes carries `was_sha256` instead."
+    },
+    "was_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "On a correction of a transaction's asset or notes, the text the filer wrote: the SHA-256 of the value it carried (as canonical JSON), in place of the value. A line a filer has the Clerk remove, a private person's name among them, is not kept in the register's changes (LIMITATIONS.md §9; the Council's third reading of S.1b, Seat B)."
+    },
+    "differs": {
+      "type": "array",
+      "description": "On replaced: which rows of the document read otherwise than the rows published from it, by id and field name, never by value. Empty when a later file reads as the rows published.",
+      "items": {
+        "type": "object",
+        "required": ["row"],
+        "additionalProperties": false,
+        "properties": {
+          "row": {"type": "string", "description": "A transaction's id, or the filing's, for its header."},
+          "fields": {"type": "array", "items": {"type": "string"}, "description": "The facts a published row carries that this file gives another value."},
+          "only_in": {"type": "string", "enum": ["the file first read", "this file"], "description": "A row one file lists and the other does not."},
+          "header": {"type": "string", "description": "What the document's own header prints that refuses the row's attribution (a Filing ID, a seat, a filer status)."}
+        }
+      }
     },
     "now": {
       "description": "The value the capture gives, or the value a correction sets. Equal to `was` when the source reads as published again, or when a person records that the published value stands."
@@ -62,18 +82,18 @@
     "before_content_hash": {
       "type": "string",
       "pattern": "^[0-9a-f]{64}$",
-      "description": "The SHA-256 of the bytes of that earlier read. The register keeps them in data/captures/sha256/ only where a change row or a closed year cites them; where it does not, the page says so."
+      "description": "The SHA-256 of the bytes of that earlier read. The register keeps them in data/captures/sha256/ only where a change row or a closed year cites them."
     },
     "entry_sha256": {
       "type": "string",
       "pattern": "^[0-9a-f]{64}$",
-      "description": "On read otherwise: the SHA-256 of the row's own entry in the capture, found without the XML parser. A change is recorded only where the row's entry changed; a later capture whose entry has this same hash says nothing new about the row."
+      "description": "On read otherwise: the SHA-256 of the row's own entry in the capture, found without the XML parser. A change is recorded only where the row's entry changed since the register last read it; a later capture whose entry has this same hash says nothing new about the row."
     },
     "capture": {
       "type": "object",
       "required": ["url", "retrieved_at", "content_hash"],
       "additionalProperties": false,
-      "description": "The capture that shows the change, or the evidence a correction cites: where it was read, when (UTC), and the SHA-256 of the bytes, which the register keeps at data/captures/sha256/<content_hash> with the capture's own extension.",
+      "description": "The capture that shows the change, or the evidence a correction cites: where it was read, when (UTC), and the SHA-256 of the bytes, which the register keeps at data/captures/sha256/<content_hash> with the capture's own extension, unless they are a filed document (a PDF), which it never keeps.",
       "properties": {
         "url": {
           "type": "string",

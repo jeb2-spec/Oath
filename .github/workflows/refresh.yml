@@ -83,7 +83,7 @@ jobs:
           python-version: "3.11"
 
       - name: Install the Python dev toolchain named in pyproject.toml, and the OpenTimestamps client
-        run: python -m pip install "ruff>=0.16,<0.17" "pytest>=8" "pypdf>=6,<7" "opentimestamps-client>=0.7,<0.8"
+        run: python -m pip install "ruff>=0.16,<0.17" "pytest>=8" "pypdf==6.19.0" "opentimestamps-client>=0.7,<0.8"
 
       - name: Fetch the roster and the filing index, recording each retrieval
         run: python src/adapters/house-fd/fetch.py --year "$YEAR" | tee fetch.log

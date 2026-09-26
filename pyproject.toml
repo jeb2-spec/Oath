@@ -22,7 +22,7 @@ dev = [
 # The document layer's one dependency, taken deliberately (NEXT.md, Obtaining the record):
 # pure Python, BSD licence, reads the Clerk's e-filed PDFs. The verifier never imports it.
 extract = [
-  "pypdf>=6,<7",
+  "pypdf==6.19.0",
 ]
 # The anchor's one dependency, for stamping and completing proofs only (tools/anchor.py
 # --stamp and --upgrade): the OpenTimestamps reference client, the same tool a reader uses to

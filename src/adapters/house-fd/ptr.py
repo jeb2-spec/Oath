@@ -331,6 +331,18 @@ def verify(
     return "ok", ""
 
 
+def reader_version() -> str:
+    """The reader that read the documents, as the run record names it: a change of reader can
+    read the same bytes otherwise, and the record says which one read them (the Council's third
+    reading of S.1b, Seat C). Read from the installed package's metadata, not by importing it."""
+    from importlib.metadata import PackageNotFoundError, version
+
+    try:
+        return f"pypdf {version('pypdf')}"
+    except PackageNotFoundError:
+        return "pypdf, not installed"
+
+
 def read(pdf_path) -> tuple[str, list[list[list[tuple[float, str]]]]]:
     """The document's text and its pages of visual lines, in one pass over the file.
 

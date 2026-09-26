@@ -54,7 +54,7 @@ jobs:
           python-version: "3.11"
 
       - name: Install the Python dev toolchain named in pyproject.toml
-        run: python -m pip install "ruff>=0.16,<0.17" "pytest>=8" "pypdf>=6,<7"
+        run: python -m pip install "ruff>=0.16,<0.17" "pytest>=8" "pypdf==6.19.0"
 
       - name: Ruff, check and format
         run: |
