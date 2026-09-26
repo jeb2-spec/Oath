@@ -16,7 +16,8 @@ it lives in the proofs, and ANCHORS.md is regenerated from them (NEXT.md S.4).
     python tools/anchor.py            # the gate: the table says what the proofs say, every
                                       # proof commits to its manifest, and every manifest
                                       # to its build's digest
-    python tools/anchor.py --stamp    # write this build's manifest and stamp it
+    python tools/anchor.py --stamp    # write this build's manifest, and stamp it and every
+                                      # earlier build whose stamp is still owed
     python tools/anchor.py --upgrade  # complete pending proofs once Bitcoin holds them
     python tools/anchor.py --ledger   # rewrite the ANCHORS.md table from the proofs
     python tools/anchor.py --status   # each build, its digest, and its state
@@ -262,20 +263,28 @@ def stamp(root: Path) -> int:
     (folder / f"{build}.json").write_text(
         json.dumps(record, indent=2, sort_keys=True) + "\n", encoding="utf-8", newline="\n"
     )
-    proof = path.with_name(path.name + ".ots")
-    if proof.is_file():
+    owed = [b for b in builds(root) if b["state"] == "owed"]
+    if build not in {b["build"] for b in owed}:
+        proof = path.with_name(path.name + ".ots")
         print(f"OK    {build} is already stamped: {state_of(read_proof(proof.read_bytes()))[0]}")
-        return 0
-    done = ots("stamp", str(path))
-    if done is None or done.returncode != 0 or not proof.is_file():
-        why = "the ots command is not installed" if done is None else done.stderr.strip()[-300:]
-        print(f"OWED  {build}: the manifest is written; the stamp is owed ({why})")
-        return OWED
-    if read_proof(proof.read_bytes())["file_hash"] != digest:
-        proof.unlink()
-        raise Refusal(f"{proof.name} did not commit to the digest; it was removed")
-    print(f"OK    {build} stamped; the calendars hold digest {digest[:16]}…, awaiting Bitcoin")
-    return 0
+    code = 0
+    for b in owed:
+        path = folder / f"{b['build']}.manifest"
+        proof = path.with_name(path.name + ".ots")
+        done = ots("stamp", str(path))
+        if done is None or done.returncode != 0 or not proof.is_file():
+            why = "the ots command is not installed" if done is None else done.stderr.strip()[-300:]
+            print(f"OWED  {b['build']}: the manifest is written; the stamp is owed ({why})")
+            code = OWED
+            continue
+        if read_proof(proof.read_bytes())["file_hash"] != b["digest"]:
+            proof.unlink()
+            raise Refusal(f"{proof.name} did not commit to the digest; it was removed")
+        print(
+            f"OK    {b['build']} stamped; the calendars hold digest {b['digest'][:16]}…, "
+            "awaiting Bitcoin"
+        )
+    return code
 
 
 def upgrade(root: Path) -> int:

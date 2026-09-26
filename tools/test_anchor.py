@@ -221,3 +221,25 @@ def test_a_builds_manifest_is_never_rewritten(register, monkeypatch):
 
 def test_the_repository_ledger_says_what_its_proofs_say():
     assert anchor.main([str(ROOT)]) == 0
+
+
+def test_a_stamp_owed_by_an_earlier_build_is_retried_with_the_next(register, monkeypatch):
+    """ANCHORS.md promises every owed stamp is retried. A build sealed while the calendars
+    were unreachable stays owed until a stamp succeeds, whatever build has come since."""
+    monkeypatch.setenv("PATH", str(register / "no-ots-here"))
+    assert anchor.main([str(register), "--stamp"]) == anchor.OWED
+    verify = _load(HERE / "verify.py", "verify_for_the_next_build")
+    (register / "data" / "rows.ndjson").write_text('{"id":"x"}\n{"id":"y"}\n', "utf-8")
+    meta = {"build": "0010-test", "built_at": "2026-01-09T03:04:05Z", "digest": ""}
+    (register / "data" / "meta.json").write_text(json.dumps(meta), encoding="utf-8")
+    meta["digest"] = verify.compute_digest(register)
+    (register / "data" / "meta.json").write_text(json.dumps(meta), encoding="utf-8")
+    bin_dir = register / "bin"
+    bin_dir.mkdir()
+    stand_in_ots(bin_dir, height=None)
+    monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ['PATH']}")
+    assert anchor.main([str(register), "--stamp"]) == 0
+    states = {b["build"]: b["state"] for b in anchor.builds(register)}
+    assert states == {"0009-test": "pending", "0010-test": "pending"}
+    assert anchor.main([str(register), "--stamp"]) == 0, "nothing owed, nothing to do"
+    assert anchor.main([str(register)]) == 0
