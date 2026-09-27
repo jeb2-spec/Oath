@@ -131,6 +131,23 @@
       "pattern": "^[0-9a-f]{64}$",
       "description": "The SHA-256 of the filing's own <Member> entry in the bytes of the Clerk's index it was read from, found without the XML parser. A later index whose entry for the DocID has the same hash said nothing new about the filing, so a fact read otherwise from it is the register's own reading, and the build refuses rather than record it as the source's (COUNCIL.md §5, mode 10). A row the register published before the adapter wrote this field gains it from the first later entry that states the facts it carries; that is a later read's entry, whose bytes the register keeps only where a change row cites them, so a later reader may hold the hash and not the bytes. The build weighs an entry against the one the register last read for the row (the run record's entries_read), not only this one."
     },
+    "printed": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "What the document's own header prints about the report, read as printed and only where its labelled line says one thing: the report's type, the filer's status, the filing year and date, the date on its signature line, and on an extension its request date, length and due dates. Absent where the register has not read the document or the document prints none of them. The document these were read from is source.content_hash. The register interprets no index code; a Signal about a kind of report reads filing_type here.",
+      "properties": {
+        "filing_type": { "type": "string" },
+        "status": { "type": "string" },
+        "filing_year": { "type": "integer" },
+        "filing_date": { "type": "string", "format": "date" },
+        "signed_on": { "type": "string", "format": "date" },
+        "request_date": { "type": "string", "format": "date" },
+        "extension_length_days": { "type": "integer", "minimum": 1 },
+        "original_due_date": { "type": "string", "format": "date" },
+        "new_due_date": { "type": "string", "format": "date" },
+        "report_type_due": { "type": "string" }
+      }
+    },
     "evidence_bundle": {
       "type": "object",
       "required": [

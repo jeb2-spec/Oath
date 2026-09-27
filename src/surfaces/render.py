@@ -451,6 +451,7 @@ svg.deadline text.don { font-size: 10px; fill: var(--ink); }
 svg.deadline text.doff { font-size: 10px; fill: var(--paper); }
 figure svg text.stamp { font: 600 6px var(--mono); letter-spacing: .02em; fill: var(--ink-2); }
 .stampwave { fill: none; stroke: var(--ink-2); stroke-width: .35; }
+span.printed { color: var(--ink); }
 /* the notice clock */
 section.noticeclock { border-top: 0; }
 figure.noticeclock { margin: .6rem 0 .3rem; }
@@ -2767,6 +2768,29 @@ def moved_away_line(moved_away: list[tuple[dict, dict]]) -> str:
     )
 
 
+def printed_words(filing: dict) -> str:
+    """What a document's own header prints it is, in its words, where the register read it: the
+    index's one-letter code is the Clerk's and is interpreted nowhere, and the header is how a
+    reader learns what a row is without opening it."""
+    p = filing.get("printed") or {}
+    said = [p.get("filing_type") or ""]
+    if p.get("extension_length_days") or p.get("new_due_date"):
+        # The Committee's extension form prints no Filing Type line; it is named by the fields
+        # it prints, never by the index's code.
+        said = [
+            "an extension"
+            + (f" of {p['extension_length_days']:,} days" if p.get("extension_length_days") else "")
+            + (f" to {p['new_due_date']}" if p.get("new_due_date") else "")
+            + (f", for the {p['report_type_due']}" if p.get("report_type_due") else "")
+        ]
+    if p.get("filing_year"):
+        said.append(f"filing year {p['filing_year']}")
+    said = [w for w in said if w]
+    if not said:
+        return ""
+    return f'<span class="printed">Its header: {esc(", ".join(said))}.</span> '
+
+
 def filings_section(
     filings: list[dict],
     held_here,
@@ -2794,7 +2818,8 @@ def filings_section(
             "<tr>"
             f'<td class="idx">{esc(f["filed_at"])}</td>'
             f'<td class="code">{esc(f.get("source_form_code") or "")}</td>'
-            f'<td><a href="{esc(f["source"]["url"])}">Open the Clerk\'s copy</a>'
+            f"<td>{printed_words(f)}"
+            f'<a href="{esc(f["source"]["url"])}">Open the Clerk\'s copy</a>'
             + change_notes(changes.get(f["id"], []), holder_id)
             + "</td>"
             f'<td class="idx">{esc(f["source"]["retrieved_at"][:10])}</td>'
@@ -2833,6 +2858,12 @@ def filings_section(
         "define it; the register does not interpret it. Open the document to see what it is. "
         "Rows coded P are served from the Clerk's transaction-report path, which is the one code "
         f'the register files as a transaction report (<a href="{SOURCES_F1}">SOURCES.md F.1</a>).'
+        + (
+            " Where the register read a document's own header, the row gives what the header "
+            "prints it is, in its words."
+            if any(f.get("printed") for f in filings)
+            else ""
+        )
         + (
             f" A later read of the Clerk's index showed {reads} of them otherwise; each note "
             "says what and when, whether a later read gave the published value back, and what "

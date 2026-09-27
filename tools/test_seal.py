@@ -286,8 +286,12 @@ def test_changes_are_counted_by_kind_and_never_by_anyone_s_rows(tmp_path):
     assert "1 no longer" not in text and "2 stated" not in text, (
         "no count by kind, which, small, is a count about one person (Seat C, N-9)"
     )
+    # The totals are the tree's own, counted here, because the live index grows between builds
+    # and a total pinned from one build failed the next refresh that added a row.
+    counts = {k.removeprefix("data/").removesuffix(".ndjson"): n for k, n in meta["rows"].items()}
     assert text.startswith(
-        "The register holds 441 offices, 439 officeholders, 1,197 filings and 7,346 "
+        f"The register holds {counts['offices']:,} offices, {counts['officeholders']:,} "
+        f"officeholders, {counts['filings']:,} filings and {counts['transactions']:,} "
         "transactions. A row it has published stays, gaining only facts it lacked;"
     ), "the register's totals, never one person's, and the rule it holds them by"
     assert "carried" not in text and "derive again" not in text

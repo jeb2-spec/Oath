@@ -323,3 +323,41 @@ def test_the_register_adds_no_punctuation_the_filer_did_not_write():
     )
     assert ptr.labelled("Comments, as filed", "Why?") == "Comments, as filed: Why?"
     assert "self" not in ptr.OWNERS.values(), "the House form never states the filer's own"
+
+
+def test_printed_reads_what_an_annual_report_and_an_extension_say_of_themselves():
+    """The header's own labelled lines, as the House filing system prints them, dates unpadded
+    where the system prints them so; the register reads these and never the index's code."""
+    annual = (
+        "Name: Hon. A. Example\nStatus: Member\nState/District: ZZ01\n"
+        "Filing Type: Annual Report\nFiling Year: 2025\nFiling Date: 8/13/2026\n"
+        "Filing ID #10000001\n...\nDigitally Signed: Hon. A. Example , 08/13/2026\n"
+    )
+    assert ptr.printed(annual) == {
+        "filing_type": "Annual Report",
+        "status": "Member",
+        "filing_year": 2025,
+        "filing_date": "2026-08-13",
+        "signed_on": "2026-08-13",
+    }
+    extension = (
+        "Status: Member\nRequest Date: 04/16/2026\nExtension Length: 90 days\n"
+        "New Due Date: 08/13/2026\nReport Type Due: Original Report\nFiling Year: 2025\n"
+        "Original Due Date: 05/15/2026\n"
+    )
+    assert ptr.printed(extension) == {
+        "status": "Member",
+        "request_date": "2026-04-16",
+        "extension_length_days": 90,
+        "new_due_date": "2026-08-13",
+        "report_type_due": "Original Report",
+        "filing_year": 2025,
+        "original_due_date": "2026-05-15",
+    }
+
+
+def test_printed_leaves_out_a_line_that_says_two_things_and_reads_nothing_it_was_not_given():
+    twice = "Filing Type: Annual Report\nFiling Type: Amendment Report\nFiling Year: 2025\n"
+    assert ptr.printed(twice) == {"filing_year": 2025}, "never chosen between"
+    assert ptr.printed("Filing ID #20000001\nS 01/13/2025 01/13/2025 $1,001 - $15,000") == {}
+    assert ptr.printed("") == {}

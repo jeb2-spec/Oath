@@ -43,8 +43,13 @@ PLACES_SOMEONE = (
     (re.compile(r"(?<![\w,-])\d{5,}(?![\w,-])"), "a DocID"),
 )
 # Where a run record legitimately carries a name: the sources it read, which are files at the
-# Clerk, and the key that names the captures a build was made from.
-NOT_ABOUT_A_PERSON = {"sources", "capture_key", "build", "adapter", "year"}
+# Clerk, and the key that names the captures a build was made from. `read_at` is the same class:
+# the Clerk's documents the build read, each by its DocID, with the time it read it, written so a
+# later read that finds other bytes is measured from a dated read (the Council's fourth reading
+# of S.1b, Seat G). It is a time beside a file, never a figure beside a person, and a DocID
+# anywhere else in a run record still fails. Before 2026-09-27 no sealed run record carried it,
+# so this gate had never read one; the first build to write it would have failed here.
+NOT_ABOUT_A_PERSON = {"sources", "capture_key", "build", "adapter", "year", "read_at"}
 
 
 def names(root: Path) -> list[str]:

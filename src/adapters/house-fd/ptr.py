@@ -49,6 +49,23 @@ HEADER_NAME = re.compile(r"Name:\s*(.+)")
 HEADER_STATUS = re.compile(r"Status:\s*([^\n]+)")
 HEADER_SEAT = re.compile(r"State/District:\s*([A-Z]{2}\d{2})")
 FILING_ID = re.compile(r"Filing ID #(\d+)")
+# What the House filing system prints about a report in its header, one labelled line each, and
+# the date on its signature line. A document's own words about itself, read as printed: the
+# register interprets no index code, and a Signal that needs to know a report is annual reads
+# this, never the code (docs/wanted/wanted.ndjson, wt:the-form-codes).
+DATE = r"(\d{1,2}/\d{1,2}/\d{4})"
+PRINTED = (
+    ("filing_type", re.compile(r"(?m)^\s*Filing Type:\s*(\S.*?)\s*$"), str),
+    ("status", re.compile(r"(?m)^\s*Status:\s*(\S.*?)\s*$"), str),
+    ("filing_year", re.compile(r"(?m)^\s*Filing Year:\s*(\d{4})\s*$"), int),
+    ("filing_date", re.compile(rf"(?m)^\s*Filing Date:\s*{DATE}\s*$"), None),
+    ("request_date", re.compile(rf"(?m)^\s*Request Date:\s*{DATE}\s*$"), None),
+    ("extension_length_days", re.compile(r"(?m)^\s*Extension Length:\s*(\d+)\s*days?\s*$"), int),
+    ("original_due_date", re.compile(rf"(?m)^\s*Original Due Date:\s*{DATE}\s*$"), None),
+    ("new_due_date", re.compile(rf"(?m)^\s*New Due Date:\s*{DATE}\s*$"), None),
+    ("report_type_due", re.compile(r"(?m)^\s*Report Type Due:\s*(\S.*?)\s*$"), str),
+)
+SIGNED_ON = re.compile(rf"Digitally Signed:[^\n]*?,\s*{DATE}")
 
 # The table's columns as left edges, in points on a letter page. Measured on the Clerk's
 # form: Owner 65, Asset 104 (label keys at 103.5, label values from 157), Transaction
@@ -128,6 +145,25 @@ def header(text: str) -> dict:
         "seat": seat.group(1) if seat else "",
         "filing_id": filing_id.group(1) if filing_id else "",
     }
+
+
+def printed(text: str) -> dict:
+    """What the document's header prints about the report itself, each field only where its
+    labelled line is there and says one thing: a line printed twice with two values is left out,
+    never chosen between. Dates as ISO, as printed; the signature line's date as `signed_on`.
+    Empty for a document with no such lines, which is every transaction report and every paper
+    filing, whose text the register does not read."""
+    text = text.replace("\x00", "")
+    out: dict = {}
+    for key, pattern, cast in PRINTED:
+        values = {m.group(1) for m in pattern.finditer(text)}
+        if len(values) == 1:
+            value = values.pop()
+            out[key] = cast(value) if cast else iso(value)
+    signed = SIGNED_ON.findall(text)
+    if signed and len(set(signed)) == 1:
+        out["signed_on"] = iso(signed[0])
+    return out
 
 
 def column(x: float) -> str:
