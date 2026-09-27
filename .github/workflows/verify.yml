@@ -106,6 +106,9 @@ jobs:
       - name: measure-guards, every guard in the list has a failing input
         run: python tools/measure-guards.py
 
+      - name: highlight-charter-change, no silent softening of the antidrift core (Invariant 17)
+        run: python tools/highlight-charter-change.py
+
       - name: check-mark, the seal is struck and legible (ECOSYSTEM section 2.4)
         run: python tools/check-mark.py
 

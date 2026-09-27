@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://oath.jeb2-spec.dev/schemas/doctrine-amendment/v0.json",
+  "title": "Doctrine amendment",
+  "description": "One amendment to the antidrift core: CHARTER.md, RUBRIC.md, INVARIANTS.md, BYLAWS.md or COUNCIL.md. INVARIANTS §17, the meta-invariant, says no invariant may be removed, softened or weakened without a pull request that names the change, explains the reason, and is approved by the maintainer. This row is where that pull request's reasoning survives the pull request. A pull request body cannot be fetched with a build, a later reader holding only the repository cannot read it, and nothing re-reads it; a row under data/ is inside the seal, where every future reader meets it, and tools/highlight-charter-change.py refuses a change to the core that has no row, and a row that names a change nobody made. COUNCIL.md §7 puts an override of one Council finding in data/council-overrides.ndjson for the same reason, and an amendment to the core is at least as consequential as an override of one finding. The row never says whether the amendment was right. It says that it was made in the open.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "file",
+    "sections",
+    "direction",
+    "because",
+    "council",
+    "approved_by",
+    "decided_at"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^da:(CHARTER|RUBRIC|INVARIANTS|BYLAWS|COUNCIL):\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$",
+      "description": "da:<the core file without its extension>:<decided_at>. One row per file per decision."
+    },
+    "file": {
+      "type": "string",
+      "enum": ["CHARTER.md", "RUBRIC.md", "INVARIANTS.md", "BYLAWS.md", "COUNCIL.md"],
+      "description": "The file this amendment changes. Only the five of the antidrift core are recorded here; every other doctrine file changes by ordinary pull request, and the seal records it."
+    },
+    "sections": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 },
+      "description": "The sections the amendment touches, as a reader cites them: \"§17\", \"Vow III\", \"gate 4\", \"3\". Named rather than derived, because a diff shows the lines that moved and not the rule the author meant to change."
+    },
+    "direction": {
+      "type": "string",
+      "enum": ["adds", "narrows", "widens", "clarifies"],
+      "description": "Which way the amendment moves the core. adds: a rule or a seat the core did not hold. narrows: less is permitted than before. widens: more is permitted than before, which is the softening §17 exists to make loud, and the gate prints it as such. clarifies: the same rule, said so a stranger reads it the way it was meant. A widening called a clarification is the defect this field exists to catch, and it is caught by a reader of the row against the diff beside it, not by the gate."
+    },
+    "because": {
+      "type": "string",
+      "minLength": 60,
+      "description": "The reason, in the shape §17 asks for: what the current text costs, and what this change is expected to fix. Two clauses, not a label. A gate checks its length because \"Cleanup.\" passed every review that ever accepted it."
+    },
+    "council": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["prompt_sha", "read_at", "seats"],
+      "description": "The Council reading that read the amendment. COUNCIL.md §8 makes the prompt's git blob SHA the reproducibility guarantee, so a reading with no SHA is a reading nobody can repeat, and §8 makes amendments to the Council's own instrument Council-reviewed on purpose: a prompt that softens the seat quietly softens the review.",
+      "properties": {
+        "prompt_sha": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$",
+          "description": "git hash-object .claude/prompts/council.md, at the time of the reading."
+        },
+        "read_at": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$",
+          "description": "When the reading was held, UTC."
+        },
+        "seats": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 },
+          "description": "The seats that read it, by their letters. A seat named here must be defined in the prompt at prompt_sha, or a later reader cannot reproduce its read."
+        },
+        "findings": {
+          "type": ["string", "null"],
+          "description": "Where the reading's findings are written down: a path in this repository, or a pull request reference. Null where the reading found nothing and said so."
+        }
+      }
+    },
+    "approved_by": {
+      "type": "string",
+      "minLength": 3,
+      "description": "Who approved the amendment. §17 requires the repository maintainer; a row naming anyone else is a row a reader can weigh."
+    },
+    "decided_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$",
+      "description": "When the maintainer approved it, UTC."
+    },
+    "build": {
+      "type": ["string", "null"],
+      "description": "The build that first sealed this amendment, where one has. Written by the seal, not by hand."
+    },
+    "supersedes": {
+      "type": ["string", "null"],
+      "description": "The id of an earlier amendment of the same sections this one replaces, where it replaces one. Facts stay; an amendment is superseded, never edited (CHARTER Vow V)."
+    }
+  },
+  "examples": [
+    {
+      "id": "da:COUNCIL:2026-09-27T05:30:00Z",
+      "file": "COUNCIL.md",
+      "sections": ["3"],
+      "direction": "adds",
+      "because": "Seven seats have read every pass since the fourth reading and only three are written down, so four of the seven readings cannot be reproduced by a later reader holding the prompt's blob SHA, which section 8 makes the reproducibility guarantee.",
+      "council": {
+        "prompt_sha": "0000000000000000000000000000000000000000",
+        "read_at": "2026-09-27T05:00:00Z",
+        "seats": ["A", "B", "C"],
+        "findings": "docs/design/pages-a-reader-can-use.md section 9"
+      },
+      "approved_by": "the maintainer",
+      "decided_at": "2026-09-27T05:30:00Z",
+      "build": null,
+      "supersedes": null
+    }
+  ]
+}
