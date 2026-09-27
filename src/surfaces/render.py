@@ -48,6 +48,13 @@ from datetime import date
 from pathlib import Path
 
 FRAME = "Presence in the register is not evidence of wrongdoing."
+# The three pages at the site's root, named once: the footer's back link, every cross-link
+# and each page's own title read from here, so none can drift from another.
+HOME_TITLE = "The oath and the record"
+SEATS_TITLE = "Every seat in the register"
+SEATS_PAGE = "seats.html"
+RECORD_TITLE = "How this register was built"
+RECORD_PAGE = "record.html"
 CLERK_SITE = "https://disclosures-clerk.house.gov/FinancialDisclosure"
 HOUSE_FINDER = "https://www.house.gov/representatives/find-your-representative"
 REPO = "https://github.com/jeb2-spec/Oath/blob/main/"
@@ -1118,7 +1125,7 @@ def anchor_words(meta: dict) -> str:
 
 def footer(meta: dict, home: bool, to_root: str = "../") -> str:
     anchor_line = anchor_words(meta)
-    back = "" if home else f'<p><a href="{to_root}index.html">Every seat in the register</a></p>\n'
+    back = "" if home else f'<p><a href="{to_root}index.html">{esc(HOME_TITLE)}</a></p>\n'
     return (
         "<footer>\n"
         f"{back}"
@@ -1964,8 +1971,14 @@ class Raw(str):
     """A glossary entry that carries its own links; every other entry is escaped."""
 
 
-def disputes_section(person: bool) -> str:
+def disputes_section(person: bool, brief: bool = False) -> str:
     """How a person named here disputes a fact about themselves, on every page.
+
+    `brief` is the landing's form: the same route in one paragraph, linking the whole of it on the
+    apparatus page. Seat B's requirement is that a person who does not know whose page they are on
+    still finds the route from the front door; it is not that the front door recite all of it. The
+    full form stays where an adverse sentence about a person actually appears, which is that
+    person's own page, and on the apparatus page a reader can open.
 
     BYLAWS §6 promises a subject two routes and describes them in detail: a correction where a row
     states a fact incorrectly, and a supersession where a later primary filing shows the condition
@@ -2034,6 +2047,19 @@ def disputes_section(person: bool) -> str:
             "route SECURITY.md gives, rather than on the record.",
         ),
     ]
+    if brief:
+        return (
+            '<section id="disputes" class="disputes">\n'
+            "<h2>If a fact here is wrong</h2>\n"
+            f'<p>{who} <a href="{CORRECTION_FORM}">Name the row, say what is wrong, and cite '
+            "the primary source that shows it</a>; anyone may open it on a subject's behalf. The "
+            "maintainer acts on no private request from anyone, which cuts both ways and is meant "
+            "to: nothing is quietly removed, and nothing is quietly added. "
+            f'<a href="{RECORD_PAGE}#disputes">The whole route</a>, and what a correction does '
+            f'and does not do. For <a href="{SECURITY_MD}">something that should not be public at '
+            "all</a>, report it privately rather than on the record.</p>\n"
+            "</section>"
+        )
     listed = "\n".join(f"<dt>{term}</dt><dd>{body}</dd>" for term, body in rows)
     return (
         '<section id="disputes" class="disputes">\n'
@@ -3714,7 +3740,7 @@ def tile_map(offices: list[dict]) -> str:
         cls = "tile" if code in voting else "tile nv"
         name = STATE_NAMES.get(code, code)
         tiles.append(
-            f'<a class="{cls}" href="#state-{esc(code)}" '
+            f'<a class="{cls}" href="{SEATS_PAGE}#state-{esc(code)}" '
             f'style="grid-column:{col + 1};grid-row:{row + 1}" '
             f'title="{esc(name)}, {n} {plural(n, "seat", "seats")}">'
             f"{esc(code)}<small>{n}</small></a>"
@@ -4017,7 +4043,8 @@ def state_of_record(
         + (
             f'<p class="quiet">Members of {esc(congress_words())} the Clerk\'s roster stopped '
             "listing during that Congress keep their pages, with everything the register "
-            'published, <a href="#not-listed">listed below the seats</a> with the reads that '
+            f'published, <a href="{SEATS_PAGE}#not-listed">listed with the seats</a>, with '
+            "the reads that "
             "last listed them and first did not.</p>\n"
             if gone
             else ""
@@ -4421,6 +4448,37 @@ def narrows_figure(outcomes: list[dict], findings: list[dict], signal: dict, wor
     )
 
 
+def narrows_section(
+    signal_runs: list[tuple[dict, dict]],
+    outcomes_all: dict[str, list[dict]],
+    findings: list[dict],
+) -> str:
+    """What the register could not reach, in one place.
+
+    These four numbers and their reasons used to sit inside the glance, which already said the
+    funnel in a sentence and again in its key: three tellings of one narrowing in the first screens
+    a reader meets. Limits read better as their own movement, in the order a careful reader raises
+    them, than as a caveat hung on every number, and that is the shape the README is written in.
+    The figure and its list stay together, because the list is what the figure means.
+    """
+    parts = []
+    for signal, _summary in signal_runs:
+        words = ANSWER_WORDS.get((signal["slug"], signal["version"]))
+        outcomes = outcomes_all.get(signal["id"], [])
+        if words is None or not outcomes:
+            continue
+        parts.append(narrows_figure(outcomes, findings, signal, words))
+    if not parts:
+        return ""
+    return (
+        '<section class="narrows" id="narrows">\n'
+        "<h2>What the register could not reach</h2>\n"
+        '<p class="lede">Every other part of this page says what the register found. This one says '
+        "what it could not get to, which is the harder half and the half that decides whether any "
+        "of the rest is worth trusting.</p>\n" + "".join(parts) + "</section>"
+    )
+
+
 def glance_section(
     signal_runs: list[tuple[dict, dict]],
     outcomes_all: dict[str, list[dict]],
@@ -4457,7 +4515,6 @@ def glance_section(
             f"{esc(first)} to {esc(last)}. No square names anyone, and nothing here is sorted by "
             "anything about a person.</figcaption>\n</figure>\n"
             + square_key(counts)
-            + narrows_figure(outcomes, findings, signal, words)
             + f"<p>The {counts['after']:,} dark squares are {counts['after']:,} reports by "
             f"{named:,} "
             f"{plural(named, 'member', 'members')}. Each is on that member's page, with the dates "
@@ -4765,23 +4822,32 @@ def render_signal_page(
     return page(signal["name"], body)
 
 
-def render_index(
-    holders: list[dict],
-    offices: list[dict],
-    filings: list[dict],
-    run: dict,
-    meta: dict,
-    striker,
-    held_rows: int | dict = 0,
-    rejected_url: str = REPO + "data/rejected/house-fd/",
-    transactions: list[dict] | None = None,
-    signal_runs: list[tuple[dict, dict]] | None = None,
-    reach: dict[str, dict[str, int]] | None = None,
-    changes: dict[str, list[dict]] | None = None,
-    outcomes_all: dict[str, list[dict]] | None = None,
-    findings: list[dict] | None = None,
-) -> str:
-    ERA.update(era_of(run, holders))
+# ---- the directory and the apparatus: each its own page ---------------------------------
+
+
+def inner_head(kicker: str, title: str, lede: str = "") -> str:
+    """The header every page but the landing opens with: the frame first, then the page's own
+    name. The frame is in the header on every surface (INVARIANTS.md §7)."""
+    return (
+        '<header class="frame">\n'
+        f'<p class="frame">{esc(FRAME)}</p>\n'
+        '<div class="masthead">\n<div>\n'
+        f'<p class="kicker">{esc(kicker)}</p>\n'
+        f"<h1>{esc(title)}</h1>\n"
+        f"{lede}"
+        "</div>\n</div>\n</header>"
+    )
+
+
+def roster_reading(
+    holders: list[dict], offices: list[dict], changes: dict[str, list[dict]] | None
+) -> tuple[dict[str, dict], dict[str, dict], list[str], list[str]]:
+    """The roster as the register holds it, and the directory's rows: (the holders a later
+    roster stopped listing, keyed by id; the holder at each seat; every seat; the table rows).
+
+    One reading, three callers. The landing counts what this reads, the apparatus page states
+    it, and the directory lists it, so none of the three can say a different thing about who
+    the register holds at a seat."""
     # A seat shows who the roster lists. Whom it no longer lists is kept, with every row the
     # register published, listed below the seats and named at their seat as listed there
     # until a date, with a link, never as holding it.
@@ -4856,66 +4922,18 @@ def render_index(
             f"<td>{esc(office.get('title', ''))}</td>"
             "</tr>"
         )
-    digest = meta.get("digest", "")
-    mark = striker.strike(digest, digest, with_wordmark=True)
-    ordered = sorted(
-        (h for h in holders if h["id"] not in off_roster),
-        key=lambda h: (current_office(h)["seat"], h["id"]),
-    )
-    first = ordered[0] if ordered else None
-    example = (
-        f'<a href="officeholders/{esc(slug(first["id"]))}.html">{esc(first["legal_name"])}</a>'
-        if first
-        else "none yet"
-    )
-    ended = (
-        f'<p class="lede">The {ordinal(ERA["congress"])} Congress\'s terms ended at noon on '
-        f"{long_date(ERA['ends'])} (U.S. Const. amend. XX, section 1). This register holds that "
-        "Congress: every seat, with the Member the Clerk's roster listed when the register last "
-        f"read it for that Congress, {esc(ERA['last_roster_read'])}. Members of the "
-        f"{ordinal(ERA['congress'] + 1)} Congress are not in this build; to find who holds each "
-        f'seat now, use <a href="{HOUSE_FINDER}">the House\'s own finder</a>.</p>\n'
-        if ERA["closed"]
-        else ""
-    )
-    head = (
-        '<header class="frame">\n'
-        f'<p class="frame">{esc(FRAME)}</p>\n'
-        '<div class="masthead">\n<div>\n'
-        '<p class="kicker">A public register</p>\n'
-        '<h1 class="comic" data-text="Oath">Oath</h1>\n'
-        f"{ended}"
-        f'<p class="lede">Every member of the U.S. House in {esc(congress_words(terms=True))} '
-        "swore an oath. This register sets beside it what they filed: each row of the Clerk's "
-        f"{ERA['year']} filing index the register could match to the name on the Clerk's roster, "
-        "linked to the Clerk's own copy. It draws no conclusion about anyone.</p>\n"
-        "</div>\n"
-        + seal_figure(
-            mark,
-            f"The mark of build {build_label(meta)}, struck from its digest. Every officeholder "
-            "page carries its own.",
-        )
-        + "\n</div>\n</header>"
-    )
-    door = (
-        '<section class="door">\n'
-        + (
-            f"<div><p>Find who represented you in the {ordinal(ERA['congress'])} Congress</p>"
-            if ERA["closed"]
-            else "<div><p>Find your representative</p>"
-        )
-        + '<p><a href="#find">Choose your state</a> on the map, then the seat.'
-        + (
-            f" Members the Clerk's roster stopped listing during {esc(congress_words())} are "
-            '<a href="#not-listed">below the seats</a>, with their pages.'
-            if off_roster
-            else ""
-        )
-        + "</p></div>\n"
-        f"<div><p>Read one page in full</p><p>{example}, first in seat order.</p></div>\n"
-        f'<div><p>Understand the discipline</p><p><a href="{CHARTER}">The Charter</a>: five vows, '
-        "short on purpose.</p></div>\n</section>"
-    )
+    return off_roster, holder_by_seat, seats, rows
+
+
+def seats_sections(
+    holders: list[dict], off_roster: dict[str, dict], seats: list[str], rows: list[str]
+) -> str:
+    """Every seat in the register, and the seats a later roster stopped listing.
+
+    The directory. It is 439 names, and it belongs on the page a reader opens to find a name,
+    not in the middle of the story the landing tells: the landing showed a map and then, six
+    screens down, the same chamber again as a list. One of the two was the reader's, and the
+    list was not."""
     table = (
         "<section>\n<h2>Every seat in the register</h2>\n"
         '<table id="officeholders" data-order="seat">\n'
@@ -4969,6 +4987,59 @@ def render_index(
             "<th>Not listed, roster read</th></tr></thead>\n"
             f"<tbody>\n{kept_rows}\n</tbody>\n</table>\n</section>"
         )
+    return table
+
+
+def render_seats(
+    holders: list[dict],
+    offices: list[dict],
+    run: dict,
+    meta: dict,
+    changes: dict[str, list[dict]] | None = None,
+) -> str:
+    """The directory: every seat of this Congress, with the name the Clerk's roster gave it."""
+    ERA.update(era_of(run, holders))
+    off_roster, _at_seat, seats, rows = roster_reading(holders, offices, changes)
+    lede = (
+        f'<p class="lede">{len(seats)} seats. Choose a name to read that Member\'s page: every '
+        "transaction report the register attributes to them, every trade on it, and what it "
+        "could not read. Seat order is an order of offices; it says nothing about anyone.</p>\n"
+    )
+    body = (
+        f'{inner_head("Oath · the directory", SEATS_TITLE, lede)}\n<main id="main">\n'
+        f"{seats_sections(holders, off_roster, seats, rows)}\n"
+        f"</main>\n{footer(meta, home=False, to_root='')}"
+    )
+    return page(SEATS_TITLE, body)
+
+
+def render_record(
+    meta: dict,
+    run: dict,
+    holders: list[dict],
+    filings: list[dict],
+    offices: list[dict],
+    held_rows: int | dict = 0,
+    rejected_url: str = REPO + "data/rejected/house-fd/",
+    transactions: list[dict] | None = None,
+    signal_runs: list[tuple[dict, dict]] | None = None,
+    reach: dict[str, dict[str, int]] | None = None,
+    changes: dict[str, list[dict]] | None = None,
+) -> str:
+    """The apparatus: what this build holds, how a fact here gets corrected, and what every
+    term on the pages means.
+
+    This is the register describing itself, and it used to be two thirds of the landing's
+    words. A reader who wants it should be able to open it; a reader who came to find their
+    representative should not have to walk through it. Nothing is cut: every sentence that was
+    on the landing is here, under a heading, on a page linked from the landing's foot."""
+    ERA.update(era_of(run, holders))
+    _off_roster, at_seat, _seats, _rows = roster_reading(holders, offices, changes)
+    lede = (
+        '<p class="lede">What this build holds, how each number was arrived at, what the '
+        "register could not read, how to get a fact here corrected, and what every term on "
+        "these pages means. Nothing here is about a person.</p>\n"
+    )
     record = state_of_record(
         meta,
         run,
@@ -4981,7 +5052,103 @@ def render_index(
         signal_runs,
         reach,
         changes,
-        len(holder_by_seat),
+        len(at_seat),
+    )
+    body = (
+        f'{inner_head("Oath · the apparatus", RECORD_TITLE, lede)}\n<main id="main">\n'
+        f"{record}\n{disputes_section(False)}\n{how_to_read(False)}\n"
+        f"</main>\n{footer(meta, home=False, to_root='')}"
+    )
+    return page(RECORD_TITLE, body)
+
+
+def render_index(
+    holders: list[dict],
+    offices: list[dict],
+    filings: list[dict],
+    run: dict,
+    meta: dict,
+    striker,
+    transactions: list[dict] | None = None,
+    signal_runs: list[tuple[dict, dict]] | None = None,
+    changes: dict[str, list[dict]] | None = None,
+    outcomes_all: dict[str, list[dict]] | None = None,
+    findings: list[dict] | None = None,
+) -> str:
+    """The landing: the record, told in pictures.
+
+    It used to carry the directory of 439 names and the register's whole account of itself, and
+    those were two thirds of its words. Both have their own page now, linked from the foot. What
+    is left is one story a reader can follow without being taught anything first: a map to their
+    own representative, the rule in four panels, the chamber's reports as squares, the one date
+    the filer writes, and what the register could not reach. Every figure carries its caption;
+    the captions are where the words went.
+    """
+    ERA.update(era_of(run, holders))
+    off_roster, _at_seat, _seats, _rows = roster_reading(holders, offices, changes)
+    digest = meta.get("digest", "")
+    mark = striker.strike(digest, digest, with_wordmark=True)
+    ordered = sorted(
+        (h for h in holders if h["id"] not in off_roster),
+        key=lambda h: (current_office(h)["seat"], h["id"]),
+    )
+    first = ordered[0] if ordered else None
+    example = (
+        f'<a href="officeholders/{esc(slug(first["id"]))}.html">{esc(first["legal_name"])}</a>'
+        if first
+        else "none yet"
+    )
+    ended = (
+        f'<p class="lede">The {ordinal(ERA["congress"])} Congress\'s terms ended at noon on '
+        f"{long_date(ERA['ends'])} (U.S. Const. amend. XX, section 1). This register holds that "
+        "Congress: every seat, with the Member the Clerk's roster listed when the register last "
+        f"read it for that Congress, {esc(ERA['last_roster_read'])}. Members of the "
+        f"{ordinal(ERA['congress'] + 1)} Congress are not in this build; to find who holds each "
+        f'seat now, use <a href="{HOUSE_FINDER}">the House\'s own finder</a>.</p>\n'
+        if ERA["closed"]
+        else ""
+    )
+    head = (
+        '<header class="frame">\n'
+        f'<p class="frame">{esc(FRAME)}</p>\n'
+        '<div class="masthead">\n<div>\n'
+        '<p class="kicker">A public register</p>\n'
+        '<h1 class="comic" data-text="Oath">Oath</h1>\n'
+        f"{ended}"
+        '<p class="lede">Every member of the U.S. House swore an oath. The law adds a deadline: '
+        "report a stock trade within 45 days, sooner if you learned of it sooner.</p>\n"
+        f'<p class="quiet">This page sets the second beside the first for '
+        f"{esc(congress_words(terms=True))}: each row of the Clerk's {ERA['year']} filing index "
+        "the register could match to a name on the Clerk's roster, read against that deadline and "
+        "linked to the Clerk's own copy. It draws no conclusion about anyone.</p>\n"
+        "</div>\n"
+        + seal_figure(
+            mark,
+            "Struck from this build's own digest, so the mark changes when the record changes. "
+            "Every officeholder page carries its own.",
+        )
+        + "\n</div>\n</header>"
+    )
+    # The doors out, at the foot, where a reader who has read the page is ready for them. They
+    # used to sit in the second screen, ahead of any reason to want them.
+    door = (
+        '<section class="door" id="more">\n<h2>Where to go next</h2>\n'
+        f'<div><p><a href="{SEATS_PAGE}">Every seat in the register</a></p><p>All '
+        f"{len(offices)} seats, in seat order; each name is a Member's page.</p></div>\n"
+        f"<div><p>{example}</p><p>One page in full, first in seat order: every report the "
+        "register attributes to them, every trade, every date.</p></div>\n"
+        f'<div><p><a href="{RECORD_PAGE}">How this register was built</a></p><p>What this build '
+        "holds, what it could not read, and how to get a fact here corrected.</p></div>\n"
+        f'<div><p><a href="{CHARTER}">The Charter</a></p><p>Five vows, short on purpose.</p>'
+        "</div>\n"
+        + (
+            f'<div><p><a href="{SEATS_PAGE}#not-listed">A seat that changed hands</a></p><p>'
+            f"Members the Clerk's roster stopped listing during {esc(congress_words())} keep "
+            "their pages, with every row the register published.</p></div>\n"
+            if off_roster
+            else ""
+        )
+        + "</section>"
     )
     oath = (
         '<section class="sworn">\n<h2>What every member swore</h2>\n'
@@ -4989,6 +5156,7 @@ def render_index(
         "The register sets the record beside it.</footer></blockquote>\n</section>"
     )
     glance = glance_section(signal_runs or [], outcomes_all or {}, findings or [])
+    narrows = narrows_section(signal_runs or [], outcomes_all or {}, findings or [])
     notice = notice_section(transactions or [], filings)
     everything = [o for group in (outcomes_all or {}).values() for o in group]
     by_id = {f["id"]: f for f in filings}
@@ -5006,13 +5174,17 @@ def render_index(
         if everything
         else ""
     )
+    # The order is the editorial decision this page turns on. The reader who arrived from a
+    # friend wants their own representative, so the map is first. Then the rule, in four panels,
+    # because nobody reads a rule they have no reason to care about yet. Then what the chamber
+    # filed against it, then the one date the filer writes, then what the register could not
+    # reach, then the oath the whole page is set beside. The doors out are last.
     body = (
-        f'{head}\n<main id="main">\n{how}\n{glance}\n{notice}\n{door}\n'
-        f"{tile_map(offices)}\n{oath}\n"
-        f"{record}\n{table}\n{disputes_section(False)}\n{how_to_read(False)}\n"
+        f'{head}\n<main id="main">\n{tile_map(offices)}\n{how}\n{glance}\n'
+        f"{notice}\n{narrows}\n{oath}\n{disputes_section(False, brief=True)}\n{door}\n"
         f"</main>\n{footer(meta, home=True)}"
     )
-    return page("Every seat in the register", body)
+    return page(HOME_TITLE, body)
 
 
 # ---- main ---------------------------------------------------------------------------------
@@ -5284,17 +5456,34 @@ def main(argv: list[str] | None = None) -> int:
             run,
             meta,
             striker,
-            set_aside_counts(rejected, holders, until),
-            rejected_url,
             transactions,
             signal_runs,
-            reach,
             changes,
             {
                 sid: [o for group in by_oh.values() for o in group]
                 for sid, by_oh in outcomes_by.items()
             },
             findings,
+        ),
+        encoding="utf-8",
+        newline="\n",
+    )
+    (out / SEATS_PAGE).write_text(
+        render_seats(holders, offices, run, meta, changes), encoding="utf-8", newline="\n"
+    )
+    (out / RECORD_PAGE).write_text(
+        render_record(
+            meta,
+            run,
+            holders,
+            filings,
+            offices,
+            set_aside_counts(rejected, holders, until),
+            rejected_url,
+            transactions,
+            signal_runs,
+            reach,
+            changes,
         ),
         encoding="utf-8",
         newline="\n",
@@ -5334,7 +5523,8 @@ def main(argv: list[str] | None = None) -> int:
     quiet = sum(1 for h in holders if not by_holder.get(h["id"]))
     shown = out.relative_to(root).as_posix() if out.is_relative_to(root) else str(out)
     print(
-        f"rendered {len(holders)} pages, the index, {len(signal_runs)} signal "
+        f"rendered {len(holders)} pages, the index, {SEATS_PAGE}, {RECORD_PAGE}, "
+        f"{len(signal_runs)} signal "
         f"{plural(len(signal_runs), 'page', 'pages')} and mark.svg to {shown}"
     )
     print(f"{quiet} pages have no matched row; each says so, with the count set aside at its seat")

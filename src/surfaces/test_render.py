@@ -221,17 +221,29 @@ def test_the_seal_caption_says_it_changes_with_every_build():
 def test_every_state_in_the_data_gets_a_tile_and_nonvoting_seats_are_dashed():
     html = render.tile_map(OFFICES)
     for code in ("AK", "AL", "PR"):
-        assert f'href="#state-{code}"' in html
+        assert f'href="seats.html#state-{code}"' in html, "the map reaches the directory"
     assert 'class="tile nv"' in html and ">PR<small>1</small>" in html
     assert ">AL<small>2</small>" in html
 
 
-def test_the_index_passes_both_gates_with_state_rows_and_a_vacancy():
-    page = render.render_index(HOLDERS, OFFICES, FILINGS, RUN, META, striker, 1)
-    assert ranking.check_index(page) == []
+def test_the_directory_passes_both_gates_with_state_rows_and_a_vacancy():
+    page = render.render_seats(HOLDERS, OFFICES, RUN, META)
+    assert ranking.check_register(page) == [] and ranking.holds_the_directory(page)
     assert frame.check_page(page) is None
     assert 'id="state-AL"' in page and "Vacant" in page
     assert 'data-id="of:us:house-al02:2025"' in page, "vacant rows carry the office id"
+    assert "Every seat in the register · Oath" in page
+
+
+def test_the_landing_passes_both_gates_and_sends_a_reader_to_the_other_two_pages():
+    """The landing tells the story and holds no directory; the gates read it as a register page,
+    and the two pages the words moved to are linked from its foot."""
+    page = render.render_index(HOLDERS, OFFICES, FILINGS, RUN, META, striker)
+    assert ranking.check_register(page) == [] and not ranking.holds_the_directory(page)
+    assert frame.check_page(page) is None
+    doors = between(page, '<section class="door" id="more">', "</section>")
+    assert 'href="seats.html"' in doors and 'href="record.html"' in doors
+    assert page.index('id="find"') < page.index('id="more"'), "the doors out are last"
 
 
 def test_the_state_of_the_record_names_no_person_and_counts_the_nonvoting_seats():
@@ -253,7 +265,7 @@ def test_the_rhythm_shows_every_matched_row_across_years():
 def test_the_lede_no_longer_promises_every_filing():
     page = render.render_index(HOLDERS, OFFICES, FILINGS, RUN, META, striker)
     assert "every financial disclosure they have filed" not in page
-    assert "the register could match to the name" in page
+    assert "the register could match to a name on the Clerk's roster" in page
     assert "a written rule catches" not in page
     assert "Most pages will stay quiet" not in page
 
@@ -542,20 +554,23 @@ def test_the_landing_counts_transactions_and_names_no_one_by_them():
     assert "Example" not in section
 
 
-def test_the_landing_takes_the_set_aside_link_and_the_transaction_count_in_that_order():
-    page = render.render_index(
-        HOLDERS,
-        OFFICES,
-        FILINGS,
-        RUN,
+def test_the_apparatus_page_takes_the_set_aside_link_and_the_transaction_count_in_that_order():
+    page = render.render_record(
         META,
-        striker,
+        RUN,
+        HOLDERS,
+        FILINGS,
+        OFFICES,
         1,
         "https://x/rows",
         [transaction(FILINGS[0]["id"], n) for n in range(1, 6)],
     )
     assert "<dt>5</dt><dd>rows the read reports list" in page
     assert 'href="https://x/rows">The rows, with reasons' in page
+    assert frame.check_page(page) is None and ranking.check_register(page) == []
+    assert "How this register was built · Oath" in page
+    assert "signals defined, so 0 fired" in page
+    assert '<section id="disputes"' in page and "How to read this page" in page
 
 
 def test_held_transaction_reports_at_the_seat_are_counted_by_code():
@@ -860,22 +875,12 @@ def test_the_landing_names_the_signal_and_links_its_page():
     found, outcomes, _ = evaluated([holder_], [report], LATE)
     summary = signal_run.run_record(SIGNAL["id"], "c" * 64, outcomes)[0]
     page = render.render_index(
-        HOLDERS,
-        OFFICES,
-        FILINGS,
-        RUN,
-        META,
-        striker,
-        0,
-        "https://x/rows",
-        LATE,
-        [(SIGNAL, summary)],
+        HOLDERS, OFFICES, FILINGS, RUN, META, striker, LATE, [(SIGNAL, summary)]
     )
-    assert ranking.check_index(page) == []
+    assert ranking.check_register(page) == []
     assert frame.check_page(page) is None
     assert 'href="signals/stock-act-ptr-after-deadline/v1.html"' in page
     assert "This build holds 1 signal" in page
-    assert "signals defined, so 0 fired" not in page
     assert verdict_words(page) == []
 
 
@@ -1045,7 +1050,7 @@ def plain(page: str) -> str:
 def test_an_officeholder_the_roster_no_longer_lists_keeps_a_page_and_no_seat():
     """NEXT.md S.1b and the Council's reading of it. The register keeps every row it published
     about a Member who left, and their page, and says so; the page says the roster gives no
-    reason and no date, links the capture, and says what stops. The index never shows them
+    reason and no date, links the capture, and says what stops. The directory never shows them
     holding a seat: it names them at their seat as listed until a date, with a link, and
     lists them below the seats with the interval the change fell in."""
     gone = HOLDERS[0]
@@ -1057,7 +1062,7 @@ def test_an_officeholder_the_roster_no_longer_lists_keeps_a_page_and_no_seat():
     )
     changes = {gone["id"]: [departure(gone)], FILINGS[1]["id"]: [filing_gone]}
     render.KEPT["0" * 64] = "data/captures/sha256/" + "0" * 64 + ".xml"
-    raw = render.render_index(HOLDERS, OFFICES, FILINGS, RUN, META, striker, changes=changes)
+    raw = render.render_seats(HOLDERS, OFFICES, RUN, META, changes)
     page = plain(raw)
     seats, kept = page.split(
         "<h2>No longer listed on the Clerk's roster during the 119th Congress</h2>"
@@ -1075,9 +1080,10 @@ def test_an_officeholder_the_roster_no_longer_lists_keeps_a_page_and_no_seat():
     assert "the roster does not say when or why a person leaves a seat" in kept
     assert "holds only Members the roster stopped listing after the register first read it" in kept
     assert "SUBJECTS.md#1-the-rule" in kept
-    assert 'href="#not-listed"' in page, "the door says where they are"
-    assert ranking.check_index(raw) == []
+    assert ranking.check_register(raw) == []
     assert frame.check_page(raw) is None
+    landing = render.render_index(HOLDERS, OFFICES, FILINGS, RUN, META, striker, changes=changes)
+    assert 'href="seats.html#not-listed"' in landing, "the door says where they are"
     raw_own = render.render_officeholder(gone, FILINGS[:2], META, striker, changes=changes)
     own = plain(raw_own)
     assert "The Clerk's roster read 2026-10-05 no longer lists this officeholder" in own
@@ -1493,7 +1499,7 @@ def test_a_seat_whose_member_was_sworn_late_says_what_the_register_cannot_show()
     """Seat E: the register holds no one who held a seat before the Member it first read there,
     and a page should say so where it matters, whether or not anyone has left since."""
     late = [dict(HOLDERS[0], sworn_at="2025-06-10")] + HOLDERS[1:]
-    page = plain(render.render_index(late, OFFICES, FILINGS, RUN, META, striker))
+    page = plain(render.render_seats(late, OFFICES, RUN, META))
     roll = between(page, "<h2>Every seat in the register</h2>", "</table>")
     ak00 = roll[roll.index('data-seat="AK00"') :].split("</tr>")[0]
     assert (
@@ -1511,9 +1517,7 @@ def test_a_seat_whose_member_was_sworn_late_says_what_the_register_cannot_show()
     assert "a Member of the 119th Congress who left before then is not in it" in roll, (
         "said on every build, not only once someone has left"
     )
-    assert (
-        ranking.check_index(render.render_index(late, OFFICES, FILINGS, RUN, META, striker)) == []
-    )
+    assert ranking.check_register(render.render_seats(late, OFFICES, RUN, META)) == []
 
 
 def test_a_late_sworn_quiet_page_says_the_date_and_asks_nothing_of_the_member():
@@ -2290,11 +2294,8 @@ def test_the_landing_shows_the_house_at_a_glance_and_names_no_one():
         RUN,
         META,
         striker,
-        0,
-        "https://x/rows",
         LATE,
         [(SIGNAL, summary)],
-        None,
         None,
         {SIGNAL["id"]: outcomes},
         found,
@@ -2306,10 +2307,32 @@ def test_the_landing_shows_the_house_at_a_glance_and_names_no_one():
     assert 'href="signals/stock-act-ptr-after-deadline/v1.html">the 1 member, in seat order' in (
         glance
     )
+    # The order is the editorial decision this page turns on, so it is asserted and not left to
+    # whoever edits render_index next. A reader who arrived from a friend meets the map before any
+    # figure; the rule comes before the figures that use its marks and before the squares its own
+    # text points at as "below"; the limits come after the rule that makes them legible; and the
+    # doors out come last, once the reader has a reason to want them. Until 2026-09-27 the glance
+    # came first and the map sat about three thousand words in; the directory of 439 names and the
+    # register's account of itself sat between the oath and the foot, and are their own pages now.
     assert (
-        page.index('id="glance"') < page.index('id="find"') < page.index("What every member swore")
+        page.index('id="find"')
+        < page.index("How a stock trade becomes a public record")
+        < page.index("Every one is below")
+        < page.index('id="glance"')
+        < page.index('id="narrows"')
+        < page.index("What every member swore")
+        < page.index('id="disputes"')
+        < page.index('id="more"')
     )
-    assert ranking.check_index(page) == [] and frame.check_page(page) is None
+    assert 'id="officeholders"' not in page, "the directory is its own page"
+    assert 'id="record"' not in page, "and so is the register's account of itself"
+    narrows = between(page, '<section class="narrows" id="narrows">', "</section>")
+    assert "What the register could not reach" in narrows
+    assert '<dl class="narrows">' in narrows, "the funnel's four steps are told here, once"
+    assert '<figure class="narrows">' in narrows, "beside the figure they explain"
+    assert '<dl class="narrows">' not in glance, "and no longer a third time in the glance"
+    assert "officeholders/" not in narrows, "the limits name and link no one"
+    assert ranking.check_register(page) == [] and frame.check_page(page) is None
     assert verdict_words(page) == []
 
 
@@ -2329,11 +2352,8 @@ def test_the_strip_teaches_the_marks_and_draws_the_process_never_a_person():
         RUN,
         META,
         striker,
-        0,
-        "https://x/rows",
         LATE,
         [(SIGNAL, summary)],
-        None,
         None,
         {SIGNAL["id"]: outcomes},
         found,
@@ -2438,11 +2458,8 @@ def test_where_the_record_narrows_counts_reports_and_blames_the_rule_for_nothing
         RUN,
         META,
         striker,
-        0,
-        "https://x/rows",
         rows,
         [(SIGNAL, summary)],
-        None,
         None,
         {SIGNAL["id"]: outcomes},
         found,
@@ -2491,7 +2508,7 @@ def test_where_the_record_narrows_counts_reports_and_blames_the_rule_for_nothing
     assert "It does not show what any report says" in caption
 
     # And it is a figure about the register: no person, no place, no rate.
-    assert "officeholders/" not in figure and ranking.check_index(page) == []
+    assert "officeholders/" not in figure and ranking.check_register(page) == []
     for h in HOLDERS:
         assert h["legal_name"] not in figure and h["id"] not in figure
         for office in h["offices"]:
@@ -2786,14 +2803,36 @@ def test_every_page_tells_a_person_how_to_dispute_a_fact_about_themselves():
     assert words < 250, f"the route is linked from the answer, at word {words}"
     assert page.index('href="#disputes"') < page.index('<section id="disputes"')
 
-    # The landing carries it too, for a person who does not know whose page they are on.
-    index = render.render_index(
-        HOLDERS, OFFICES, FILINGS, RUN, META, striker, 0, "https://x/rows", LATE
-    )
+    # The landing carries it too, for a person who does not know whose page they are on. In
+    # brief there: one paragraph with the form, who may open it, the no-private-request rule, the
+    # private route, and the whole of it on the apparatus page. Seat B's requirement is that the
+    # route be reachable from the front door, not that the front door recite all of it.
+    index = render.render_index(HOLDERS, OFFICES, FILINGS, RUN, META, striker, LATE)
     landing = between(index, '<section id="disputes"', "</section>")
     assert f'href="{render.CORRECTION_FORM}"' in landing
     assert "The same route for everyone named in this register" in html.unescape(landing)
-    assert ranking.check_index(index) == [] and frame.check_page(index) is None
+    brief = html.unescape(re.sub(r"<[^>]+>", " ", landing))
+    for clause in (
+        "cite the primary source",
+        "anyone may open it on a subject's behalf",
+        "no private request from anyone",
+        "nothing is quietly removed, and nothing is quietly added",
+    ):
+        assert clause in brief, clause
+    assert f'href="{render.SECURITY_MD}"' in landing, "the private route, from the front door"
+    assert f'href="{render.RECORD_PAGE}#disputes"' in landing, "and the whole of it, one click on"
+    words = len(brief.split())
+    assert words < 120, f"the front door states the route in brief, in {words} words"
+    assert verdict_words(landing) == []
+    assert ranking.check_register(index) == [] and frame.check_page(index) is None
+
+    # And the whole of it on the apparatus page a reader opens for it.
+    apparatus = render.render_record(META, RUN, HOLDERS, FILINGS, OFFICES, 0, "https://x/rows")
+    whole = html.unescape(
+        re.sub(r"<[^>]+>", " ", between(apparatus, '<section id="disputes"', "</section>"))
+    )
+    assert "It cannot change what was filed" in whole
+    assert "It does not delete the original" in whole
 
 
 def test_the_term_every_page_uses_most_is_defined_and_says_what_is_never_counted():
