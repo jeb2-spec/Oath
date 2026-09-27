@@ -50,6 +50,7 @@ from pathlib import Path
 # The antidrift core, in the order INVARIANTS §17 names it.
 CORE = ("CHARTER.md", "RUBRIC.md", "INVARIANTS.md", "BYLAWS.md", "COUNCIL.md")
 LEDGER = "data/doctrine-amendments.ndjson"
+PROMPT = ".claude/prompts/council.md"
 # What a row must carry for the amendment to be in the open. Each is a thing a later reader needs
 # and cannot recover from the diff: the diff shows what changed, never who weighed it or why.
 REQUIRED = ("file", "sections", "direction", "because", "council", "approved_by", "decided_at")
@@ -106,7 +107,28 @@ def rows(root: Path) -> list[dict]:
     return out
 
 
-def incomplete(row: dict) -> list[str]:
+def blob(root: Path, sha: str) -> str:
+    """The bytes of one git blob, or "" when this repository does not hold it."""
+    shown = git(root, "cat-file", "-p", sha)
+    return shown.stdout if shown.returncode == 0 else ""
+
+
+def undefined_seats(root: Path, sha: str, seats: list[str]) -> list[str]:
+    """The seats a reading names that the prompt at `sha` does not define.
+
+    COUNCIL §8 makes the prompt's blob SHA the reproducibility guarantee, and a guarantee is only
+    worth the thing it points at: a reading that names a seat the prompt at that SHA does not
+    define cannot be reproduced by anyone, however carefully the SHA was recorded. This is the
+    defect the amendment itself exists to fix, so the gate holds the amendment to it. A SHA this
+    repository does not hold is the same failure, louder: the instrument is gone.
+    """
+    text = blob(root, sha)
+    if not text:
+        return [f"the prompt at {sha[:12]}… is not in this repository"]
+    return [seat for seat in seats if not re.search(rf"\bSeat {re.escape(str(seat))}\b[.:]", text)]
+
+
+def incomplete(row: dict, root: Path | None = None) -> list[str]:
     """What a justification row is missing, in the words the gate prints. A row that names a file
     and nothing else is a row that makes the amendment look weighed without weighing it."""
     missing = [field for field in REQUIRED if not row.get(field)]
@@ -128,6 +150,13 @@ def incomplete(row: dict) -> list[str]:
                 missing.append(f"council.{field}")
     elif council:
         missing.append("council (an object: prompt_sha, read_at, seats, findings)")
+    if root is not None and isinstance(council, dict) and council.get("prompt_sha"):
+        for gap in undefined_seats(root, council["prompt_sha"], council.get("seats") or []):
+            missing.append(
+                f"council.seats: {gap}"
+                if gap.startswith("the prompt")
+                else f"council.seats: Seat {gap} is not defined in {PROMPT} at that SHA"
+            )
     return missing
 
 
@@ -217,7 +246,7 @@ def check(root: Path, ref: str) -> int:
             bad += 1
             continue
         for row in mine:
-            gaps = incomplete(row)
+            gaps = incomplete(row, root)
             if gaps:
                 print(
                     notice(

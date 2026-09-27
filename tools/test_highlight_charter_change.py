@@ -34,6 +34,12 @@ CORE_TEXT = {
     "BYLAWS.md": "# Bylaws\n\n## 1. Who decides.\n\nThe maintainer.\n",
     "COUNCIL.md": "# Council\n\n## 3. The seats\n\n### Seat A. The Reader Who Wants to Be Fair\n",
 }
+PROMPT_TEXT = (
+    "# The Council prompt\n\n"
+    "**Seat A. The Reader Who Wants to Be Fair.** Watch for verdicts.\n"
+    "**Seat B. The Subject in a Room.** Read it back as the officeholder.\n"
+    "**Seat C. The Reviewer's Reviewer.** Watch for what the definition does not disclose.\n"
+)
 ROW = {
     "file": "COUNCIL.md",
     "sections": ["3"],
@@ -70,12 +76,37 @@ def repo(tmp_path: Path) -> Path:
     git(root, "config", "user.name", "jeb2-spec")
     for name, text in CORE_TEXT.items():
         (root / name).write_text(text, encoding="utf-8")
+    prompt = root / gate.PROMPT
+    prompt.parent.mkdir(parents=True, exist_ok=True)
+    prompt.write_text(PROMPT_TEXT, encoding="utf-8")
     (root / "data").mkdir()
     git(root, "add", ".")
     git(root, "commit", "--quiet", "-m", "the core as published")
     # The gate reads origin/main, so give the clone one that points at this commit.
     git(root, "update-ref", "refs/remotes/origin/main", "HEAD")
     return root
+
+
+def prompt_sha(root: Path) -> str:
+    """The blob SHA of the fixture's prompt, the way COUNCIL §8 asks a reading to record it."""
+    done = subprocess.run(
+        ["git", "-C", str(root), "hash-object", gate.PROMPT],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+    )
+    assert done.returncode == 0, done.stderr
+    return done.stdout.strip()
+
+
+def row(root: Path, **over) -> dict:
+    """A whole justification row against the fixture's own prompt."""
+    made = dict(ROW, council=dict(ROW["council"], prompt_sha=prompt_sha(root)))
+    council = over.pop("council", None)
+    if council is not None:
+        made["council"] = council
+    made.update(over)
+    return made
 
 
 def ledger(root: Path, *rows: dict) -> None:
@@ -127,7 +158,7 @@ def test_a_change_with_a_whole_justification_passes_and_prints_who_weighed_it(tm
     (root / "COUNCIL.md").write_text(
         CORE_TEXT["COUNCIL.md"] + "\n### Seat D. The Reader Who Sees One Piece\n", encoding="utf-8"
     )
-    ledger(root, ROW)
+    ledger(root, row(root))
     assert gate.check(root, "origin/main") == 0
     said = capsys.readouterr().out
     assert "justified: adds 3" in said
@@ -140,7 +171,7 @@ def test_a_widening_says_that_it_softens_the_core(tmp_path, capsys):
     so a reviewer skimming the log sees the word."""
     root = repo(tmp_path)
     (root / "COUNCIL.md").write_text(CORE_TEXT["COUNCIL.md"] + "\nMore.\n", encoding="utf-8")
-    ledger(root, dict(ROW, direction="widens"))
+    ledger(root, row(root, direction="widens"))
     assert gate.check(root, "origin/main") == 0
     assert "this SOFTENS the core" in capsys.readouterr().out
 
@@ -251,3 +282,57 @@ def test_this_repositorys_own_core_is_unchanged_and_the_gate_reads_it():
         assert gate.sections((ROOT / name).read_text("utf-8")), f"{name} holds no section"
     assert gate.sections((ROOT / "INVARIANTS.md").read_text("utf-8")).count("§17") == 1
     assert "§17" in gate.sections((ROOT / "INVARIANTS.md").read_text("utf-8"))
+
+
+def test_a_reading_that_names_a_seat_the_prompt_does_not_define_fails(tmp_path, capsys):
+    """COUNCIL §8 makes the prompt's blob SHA the reproducibility guarantee, and a guarantee is only
+    worth the thing it points at. Seven seats have read every pass since the fourth reading and the
+    committed prompt defines three, so four of those readings cannot be reproduced by anyone,
+    however carefully the SHA was recorded. That is the defect the amendment this gate protects
+    exists to fix, so the gate holds the amendment itself to it.
+    """
+    root = repo(tmp_path)
+    prompt = root / gate.PROMPT
+    prompt.parent.mkdir(parents=True, exist_ok=True)
+    prompt.write_text(
+        "# The Council prompt\n\n**Seat A. The Reader Who Wants to Be Fair.** Watch for verdicts.\n"
+        "**Seat B. The Subject in a Room.** Read it back as the officeholder.\n",
+        encoding="utf-8",
+    )
+    git(root, "add", gate.PROMPT)
+    sha = subprocess.run(
+        ["git", "-C", str(root), "hash-object", gate.PROMPT],
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+
+    (root / "COUNCIL.md").write_text(CORE_TEXT["COUNCIL.md"] + "\nMore.\n", encoding="utf-8")
+    # A reading by the seats the prompt defines passes.
+    ledger(root, dict(ROW, council=dict(ROW["council"], prompt_sha=sha, seats=["A", "B"])))
+    assert gate.check(root, "origin/main") == 0
+    assert "read by seats A, B" in capsys.readouterr().out
+
+    # A reading that names a seat the prompt does not define is refused, by name.
+    ledger(root, dict(ROW, council=dict(ROW["council"], prompt_sha=sha, seats=["A", "B", "D"])))
+    assert gate.check(root, "origin/main") == 1
+    said = capsys.readouterr().out
+    assert "Seat D is not defined in .claude/prompts/council.md at that SHA" in said
+    assert "Seat A is not defined" not in said, "it names the seat that is missing, not all of them"
+
+    # And a SHA this repository does not hold is the same failure, louder: the instrument is gone.
+    ledger(root, dict(ROW, council=dict(ROW["council"], prompt_sha="0" * 40, seats=["A"])))
+    assert gate.check(root, "origin/main") == 1
+    assert "is not in this repository" in capsys.readouterr().out
+
+
+def test_this_repositorys_own_prompt_defines_the_seats_it_names():
+    """The gap, as it stands today, asserted here so it cannot be forgotten: the committed prompt
+    defines A, B and C, and seven seats have read every pass. This test passes on the three and is
+    the test that must be extended when the prompt gains D to G, in the same commit."""
+    sha = subprocess.run(
+        ["git", "-C", str(ROOT), "hash-object", gate.PROMPT], capture_output=True, text=True
+    ).stdout.strip()
+    assert len(sha) == 40, "the prompt is in the tree and hashable"
+    defined = [s for s in "ABCDEFG" if not gate.undefined_seats(ROOT, sha, [s])]
+    assert "A" in defined and "B" in defined and "C" in defined
+    assert gate.undefined_seats(ROOT, sha, defined) == []
