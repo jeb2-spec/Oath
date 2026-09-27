@@ -153,31 +153,25 @@ seal that already sits there, and stay at the foot as well.
 6. **This adds surface to maintain.** Each of the five changes needs a test that fails without it,
    and the guard sweep must cover them, as the fourth reading's eleven unmeasured guards taught.
 
-## 4a. What shipped, and what is held
+## 4a. A second reading of the built answer
 
-*Added 2026-09-27, with the change that landed §2.2 to §2.5.*
+*Added 2026-09-27. Two sessions built this note's proposals in parallel, without knowing of each
+other: the one recorded in §7 below, which shipped on PR #42, and one that reached §2.2 to §2.5
+separately and drafted §2.1 three times. PR #42's is the implementation, and it is better: the
+answer's numbers come from the Signal's own run record rather than from a filing's extraction
+field, it says the days and what decides them, and it carries the frame inside its own paragraph.
+The parallel draft was dropped. What it contributes instead is a second seven-seat reading, of the
+merged sentence and not of a proposal, convened on the pages as published, and the page fixes the
+Council's fifth reading of S.1b found that PR #42 did not carry: the swearing-in named as the
+officeholder's own rather than the Congress's, a row said to carry a given name rather than a
+person said to have used one, a replaced file distinguished by whether its rows read otherwise, the
+build named for the first correction of a line rather than the latest, and what a fingerprint does
+and does not do.*
 
-Four of the five proposals ship without a Council reading, because none of them says anything new
-about anyone: each moves what a page already said, or draws a figure from a Finding's own rows.
-Measured on the rendered site at build `0005-house-2025`, before and after:
-
-| What a reader meets | Before | After |
-| --- | --- | --- |
-| Words before the reader meets what the Signal found | 472 | **110** |
-| Words before the citation and how to check it | 9,196 (35,816 on the longest page) | **83** |
-| Report tables that fold behind a summary a reader opens | 0 | **48** |
-| Findings whose four dates are drawn | 0 | **27** |
-| Officeholder pages | 439 | 439, every one carrying the frame |
-
-Nothing was removed from any page: *What this office requires* is below the record, complete and
-still citing every rule; every folded row is still in the page's source, the download and the
-seal; a report a Finding rests on never folds. One thing beyond the five: the mark carries its own
-title and description so that `mark.svg` stands alone, and inside a captioned figure that made a
-screen reader say the same three sentences twice. The caption is the one voice there now.
-
-**§2.1, the summary sentence, is held.** It is the only one of the five that writes a new sentence
-about a person, and §5 below says all seven seats read it first. That reading is the next step, on
-the rendered sentence and not on this proposal's words.
+*The duplication is worth recording because it cost a working session. The lesson is the one the
+memory already carries about the junction: two halves both working perfectly is exactly when nobody
+notices. A session that is about to build something already on the course should read `origin/main`
+first, not the branch it cut.*
 
 ## 5. The reading this needs before it ships
 
@@ -205,9 +199,65 @@ front:
 
 - The measurements in §1 were taken on the site this repository renders at build
   `0005-house-2025`, by counting the words a reader meets with style and markup removed. The
-  script is in the session record; the counts reproduce from `python3 src/surfaces/render.py`.
+  script is in the session record; the counts reproduce from `python3 src/surfaces/render.py` at
+  `29a17ed`, the commit before this design was built.
 - [ECOSYSTEM.md](../../ECOSYSTEM.md) §1 for what a surface may do, §2 for the marks.
 - [INVARIANTS.md](../../INVARIANTS.md) §7 the frame, §11 and §12 Findings unchanged, §13 no
   ranking.
 - [COUNCIL.md](../../COUNCIL.md) §2 for when the Council must read, §5 for the failure modes.
 - [RUBRIC.md](../../RUBRIC.md) gate 4, every Finding regenerates.
+
+## 7. What was built, and what the Council changed
+
+*Built on 2026-09-27, PR #42, at the maintainer's direction: pages are the canvas, the record is
+what they rest on; show the record, simply, and do not trip over the process to get there.*
+
+**On every officeholder's page**, in the order a reader meets it:
+
+- **The answer**, under the frame: how many transaction reports the register read and checked
+  against the STOCK Act deadline, then what the Clerk's index shows, by how many days, and, from
+  the Findings' own rows, the two facts that decide them where they apply: a weekend or holiday
+  deadline met by the next business day, and a notice date printed after the 45-day limit. Where
+  nothing could be checked it says which silence it is. The result and the sentence that frames
+  it are one paragraph, ending with *Presence in the register is not evidence of wrongdoing*, so
+  no crop carries one without the other.
+- **The reports as squares**: one per report in the order filed, dark where a Finding rests on
+  it, light where it was checked and none is after the deadline, an outline where it was not
+  checked; each links to its report.
+- **The rule in one line**: 30 days from notice, 45 from the trade; the law requires trades
+  reported and does not prohibit them.
+- Then what the register can check, the signal and its Findings, each with **its dates on a
+  line** (a ring marks the first business day after a weekend or holiday deadline, drawn on top,
+  inside the scale), the filings, the transactions (a report of more than 25 rows folds unless a
+  Finding rests on it), and the oath and the standards, whole.
+
+**On the landing**, the same squares for the whole chamber, **the House at a glance**: 463
+reports, 294 checked, 27 dated after the deadline, by 21 members, a click from the members in seat
+order. No square names anyone. The full count of the record is one tap in, whole.
+
+**What the Council changed.** Seven seats read the built pages (A to C as COUNCIL.md §3 defines
+them; D to G provisionally, with §5's questions). The findings that changed the answer:
+
+- *A count of reports ranked records backwards* (Seats A and B, blocking): three one-day Findings,
+  two of them weekend deadlines met the next business day, read as more than one Finding of 197
+  days. The answer now says the days and what decides them.
+- *A number with no noun reads as days* (Seats A, B, D, E and F): "dates 3 after the deadline"
+  now reads "dates 3 of the 14 reports checked after the deadline".
+- *The frame could be cropped away* (Seat D, blocking): the result and its framing sentence are
+  now one paragraph, with the frame inside it; "on time" left the page.
+- *"Read 6 of 6", then blaming what it could read* (Seat E, blocking): the silence is now named
+  where it is.
+- *The ring hidden under the upright line, or past it* (Seats B and C, blocking): the scale now
+  includes the next business day, and the ring is drawn on top.
+- Advisories taken: the swearing-in date in the answer; set-aside reports on every branch; a
+  withdrawn Finding said in the answer; one short spoken name for the figure; left-to-right under a
+  right-to-left page; larger figure text; neutral jump labels, hidden in print; the seal's caption
+  off a phone's first screen; the no-ranking gate reading every form a link to a person can take.
+
+**What the sealed doctrine should say, at the next sealed build.** ECOSYSTEM.md §1.3 still draws
+the page with the standards first, and §1.4 draws the landing without the glance. A build whose
+proof exists does not move, and a page is not a reason to cut a build: the record's own next build
+carries the amendment. Its text: the diagram and paragraph in PR #42's commit `02bdff4` (reverted
+there, kept in the history for this purpose), with the answer's sentence shapes quoted so a change
+to the wording moves the digest (Seat G), and §1.4 gaining *The House at a glance*. INVARIANTS §13's
+gate line should say the gate reads every officeholder's page (Seat C); that is §17's to approve.
