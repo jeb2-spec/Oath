@@ -109,6 +109,12 @@ class Report:
         self.red += 1
         self.lines.append(f"[red]  {text}")
 
+    def ask(self, text: str) -> None:
+        """A question for whoever is reading, counted as neither a pass nor a problem. The doctor
+        answers what it can measure; this is the part it cannot, and printing it is the only way to
+        make it unskippable."""
+        self.lines.append(f"[ask]  {text}")
+
     def section(self, title: str) -> None:
         self.lines.append(f"\n{title}")
 
@@ -155,6 +161,18 @@ def check_memory(root: Path, rep: Report) -> None:
 
 
 def check_deeper_ground(rep: Report) -> None:
+    rep.section("Before you start")
+    rep.ask(
+        'Name the change a reader will see from this session. "None, this is maintenance" is a '
+        "fine answer; say it out loud anyway."
+    )
+    rep.ask(
+        "On 2026-09-27 this project spent a day on its own bookkeeping while believing it was "
+        "building, and the register turned out sound in all seven places a search looked. Read "
+        ".claude/memory/story-the-product-was-fine.md before planning, and "
+        "docs/what-is-already-checked.md before auditing anything: that list was paid for once."
+    )
+
     rep.section("Deeper ground")
     if not DEEPER_GROUND:
         rep.warning("OATH_DEEPER_GROUND is not set; the seed here is the bridge, and it is enough")

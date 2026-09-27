@@ -262,3 +262,22 @@ def test_a_gate_that_announces_a_change_and_passes_is_read_back_and_not_red(
     rep = doctor.Report()
     doctor.run_gate(tmp_path, rep, "§17", "tools/highlight-charter-change.py", None)
     assert rep.red == 0 and "HIGHLIGHT" in rep.lines[-1]
+
+
+def test_the_doctor_asks_what_a_reader_will_see_and_counts_it_as_neither(capsys):
+    """The doctor answers what it can measure. This is the part it cannot, so printing it is the
+    only way to make it unskippable, and it must not be a pass (which reads as done) or a problem
+    (which reads as broken). 2026-09-27 is the day it exists for: a session spent on the register's
+    own bookkeeping while believing it was building, when rendering the site would have said so."""
+    rep = doctor.Report()
+    before = (rep.red, rep.warn)
+    rep.ask("Name the change a reader will see.")
+    assert (rep.red, rep.warn) == before, "a question is neither a pass nor a problem"
+    assert rep.lines[-1].startswith("[ask]  ")
+
+    doctor.main([str(ROOT)])
+    said = capsys.readouterr().out
+    assert "Before you start" in said
+    assert "Name the change a reader will see" in said
+    assert "story-the-product-was-fine.md" in said
+    assert "what-is-already-checked.md" in said
