@@ -342,8 +342,14 @@ who arrived for one person could not reach it until word 301.
   recoverable from nothing else (Seat G).
 - "Scanned paper" is a property no sealed row records (Seats C and G): the register should record
   why a document was not read, on the row.
-- No surface tells a subject how to dispute a fact (Seat B). BYLAWS §6 promises the route and the
-  pages never name it.
+- ~~No surface tells a subject how to dispute a fact (Seat B). BYLAWS §6 promises the route and the
+  pages never name it.~~ **Fixed.** Every page now carries *If a fact here is wrong*, linked from the
+  answer's own nav at word 149 rather than left at the foot of a page nobody scrolls: the correction
+  form (`.github/ISSUE_TEMPLATE/correction.yml`, which had asked for exactly what the bylaw requires
+  since the founding and which no surface named), the supersession route, what a correction does not
+  do, that nothing is honoured off the record and why that protects the subject too, what the register
+  cannot do at all, and the private route for something that should not be public. Every line states
+  what the bylaw states, and a test refuses a sentence that promises an outcome.
 - The answer is still four numbers where this reader holds two, and "transaction report" has no
   glossary entry (Seat E).
 - The committed Council prompt defines three seats; four of the seven that read this are defined

@@ -2741,3 +2741,56 @@ def test_a_correction_never_leaves_an_adverse_sentence_on_the_wrong_persons_page
     counted = render.answer_rests_on_these_rows({SIGNAL["id"]: by_holder}, [report], more)
     assert len(counted) == 1 and "data/transactions.ndjson holds" in counted[0]
     assert str(len(rows)) in counted[0] and str(len(more)) in counted[0]
+
+
+def test_every_page_tells_a_person_how_to_dispute_a_fact_about_themselves():
+    """BYLAWS §6 promises a subject a correction route and a supersession route, and describes both
+    in detail; `.github/ISSUE_TEMPLATE/correction.yml` has asked for exactly what the bylaw requires
+    since the founding. Neither was named on any surface, so a person reading an adverse sentence
+    about themselves had no way to reach either, and the promise was one the pages broke (the
+    Council's second reading of the built answer, Seat B).
+    """
+    holder_ = sworn(HOLDERS[0])
+    report = read_report(holder_["id"], "2025-03-20", 1)
+    _, page = signal_page(holder_, [report], LATE)
+    section = between(page, '<section id="disputes"', "</section>")
+
+    # The route, and the form that already existed.
+    assert f'href="{render.CORRECTION_FORM}"' in section
+    assert "template=correction.yml" in render.CORRECTION_FORM, "the form, not a bare issue"
+    assert f'href="{render.BYLAWS_6}"' in section, "every line cites the bylaw it states"
+    assert f'href="{render.SECURITY_MD}"' in section, "and the private route for a private name"
+
+    said = html.unescape(re.sub(r"<[^>]+>", " ", section))
+    # What it must say, because each is a thing the bylaw promises and a reader cannot infer.
+    for clause in (
+        "cite the primary source",
+        "anyone may open it on a subject's behalf",
+        "The original stays, the supersession stays",
+        "It does not delete the original",
+        "no private request from anyone",
+        "nothing is quietly removed, and nothing is quietly added",
+        "It cannot change what was filed",
+        "does not decide whether a report was late",
+    ):
+        assert clause in said, clause
+    # And what it must not do: promise an outcome, or read as a verdict about anyone.
+    assert verdict_words(section) == []
+    for promised in ("we will", "will be removed", "guarantee", "within "):
+        assert promised not in said.lower(), promised
+
+    # It is in the reader's path, not only on the page: a person who has just read an adverse
+    # sentence about themselves should not have to scroll for the route (Seats B and E).
+    body = page[page.index('<main id="main">') : page.index('href="#disputes"')]
+    words = len(re.sub(r"<[^>]+>", " ", body).split())
+    assert words < 250, f"the route is linked from the answer, at word {words}"
+    assert page.index('href="#disputes"') < page.index('<section id="disputes"')
+
+    # The landing carries it too, for a person who does not know whose page they are on.
+    index = render.render_index(
+        HOLDERS, OFFICES, FILINGS, RUN, META, striker, 0, "https://x/rows", LATE
+    )
+    landing = between(index, '<section id="disputes"', "</section>")
+    assert f'href="{render.CORRECTION_FORM}"' in landing
+    assert "The same route for everyone named in this register" in html.unescape(landing)
+    assert ranking.check_index(index) == [] and frame.check_page(index) is None
