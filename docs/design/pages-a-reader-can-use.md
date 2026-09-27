@@ -337,9 +337,23 @@ who arrived for one person could not reach it until word 301.
   report's officeholder, about a report the rows no longer hold, or about how many rows a report
   lists, naming both officeholders and the route. On build `0005-house-2025` all 463 outcomes agree,
   so the refusal is a guard and not a change to any page.
-- `producing_filings` has no `maxItems` and nine readers take `[0]` (Seat C).
-- There is no schema for the signal run record, and one of the answer's four numbers is
-  recoverable from nothing else (Seat G).
+- ~~`producing_filings` has no `maxItems` and nine readers take `[0]` (Seat C).~~ **Fixed**, and it
+  was thirteen readers, not nine. A Finding is one report, which is what the glossary on every page
+  tells a reader it is, so the schema now says so and the thirteen are correct rather than lucky: a
+  Finding over two reports would have had the second silently ignored on every surface. A Signal that
+  needs one over several reports is a design change, and `maxItems` makes it confront those thirteen
+  readers rather than pass them.
+- ~~There is no schema for the signal run record, and one of the answer's four numbers is
+  recoverable from nothing else (Seat G).~~ **Fixed.** The file lived one directory below the glob
+  `validate-schemas.py` reads, so nothing validated the rows every page's answer is counted from.
+  Two schemas now describe it, `signal-run` for the summary row and `signal-outcome` for the one row
+  per report, and their examples are one run between them because two schemas whose examples describe
+  different runs teach a contributor the wrong shape. The gate also checks that a run's summary is the
+  sum of its own outcomes, field by field and reason by reason: the summary is what the landing states
+  and the outcomes are what each page states, nothing derives one from the other at render time, and a
+  summary that does not add up is two surfaces disagreeing about one run. And one outcome per report,
+  because two rows for one report are two answers to one question and every count would take whichever
+  the loop reached last.
 - "Scanned paper" is a property no sealed row records (Seats C and G): the register should record
   why a document was not read, on the row.
 - ~~No surface tells a subject how to dispute a fact (Seat B). BYLAWS §6 promises the route and the

@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://oath.jeb2-spec.dev/schemas/signal-outcome/v0.json",
+  "title": "Signal outcome",
+  "description": "What one run of one Signal version did with one transaction report: whether the register read it, how many of its rows the Signal evaluated, how many it counted and set aside with which reason, and the Finding it produced where it produced one. One row per report the Signal was given, after the run's summary row, in data/signal-runs/. Every officeholder page's answer is counted from these rows, and the landing's narrowing figure and its 463 squares are drawn from them one report at a time, so a malformed row would have put a wrong number on a named person's page with no gate to say which (the Council's second reading of the built answer, Seat G). A row is a fact about the register's reading of a report; it is never a claim about the person the report is attributed to. The three examples below are one run between them, and the run schema's example is their sum: a report compared and fired on, a report read with every row set aside (the 115 the landing's narrowing figure names), and a report the register did not read.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "filing_id",
+    "officeholder_id",
+    "filed_at",
+    "state",
+    "rows",
+    "evaluated",
+    "after",
+    "not_evaluated",
+    "finding_id"
+  ],
+  "properties": {
+    "filing_id": {
+      "type": "string",
+      "pattern": "^fl:[a-z0-9-]+:[A-Z]:\\d+$",
+      "description": "The report, as data/filings.ndjson names it. The register refuses to render where this row and that file disagree about which officeholder the report is attributed to, because one of the two pages would then carry a sentence the rows contradict (src/surfaces/render.py, answer_rests_on_these_rows)."
+    },
+    "officeholder_id": {
+      "type": "string",
+      "pattern": "^oh:us:[a-z]+:[a-z]\\d{6}$",
+      "description": "The officeholder the register attributed the report to when the Signal ran. A later correction moves the row in data/filings.ndjson and not this one, which is what the renderer's refusal exists to catch: only a re-run of the Signal, or a supersession citing evidence, moves a conclusion between two people."
+    },
+    "filed_at": {
+      "type": "string",
+      "format": "date",
+      "description": "The date the Clerk's index gives the report. The order the landing's squares are drawn in, so that no square's position says anything about a person."
+    },
+    "state": {
+      "type": "string",
+      "enum": [
+        "evaluated",
+        "not read"
+      ],
+      "description": "Whether the register read the report from the Clerk's document. \"not read\" says the text it extracted carried no Filing ID line, or no State/District line, and nothing about what the document physically is."
+    },
+    "rows": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Transaction rows the register read from the report. Zero where it did not read the report. The renderer refuses where this and the rows data/transactions.ndjson holds for the report disagree, because a correction recording that a report lists more rows would otherwise leave the answer's trade counts at the number the Signal saw."
+    },
+    "evaluated": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Of those rows, the ones the Signal evaluated against its criteria. A report with rows and none evaluated is read and not compared, which is the 115 reports the landing's narrowing figure names and no other surface did."
+    },
+    "after": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Of the rows evaluated, the ones for which the Clerk's index dates the report after the deadline the rule sets. A count of rows on one report, which the pages state as trades and never beside a person's name as a score (INVARIANTS §13)."
+    },
+    "not_evaluated": {
+      "type": "object",
+      "description": "The rows counted and not evaluated, by the reason the Signal's criteria give, each written down before the run. Empty where every row was evaluated. The pages say these in the register's own voice: what it did not do, never what the rule does not reach, because on the 2025 record that would have been false of 1,155 of the 1,156 rows set aside.",
+      "additionalProperties": {
+        "type": "integer",
+        "minimum": 0
+      }
+    },
+    "finding_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "The Finding this report produced, or null. Never a Finding of another run: a Finding names the report it rests on, and the ledger is what keeps it after the run (INVARIANTS §12)."
+    }
+  },
+  "examples": [
+    {
+      "filing_id": "fl:house-clerk:P:20000001",
+      "officeholder_id": "oh:us:house:a000001",
+      "filed_at": "2025-03-20",
+      "state": "evaluated",
+      "rows": 2,
+      "evaluated": 1,
+      "after": 1,
+      "not_evaluated": {
+        "$1,000 or less": 1
+      },
+      "finding_id": "fn:sg:stock-act-ptr-after-deadline:v1:fl:house-clerk:P:20000001"
+    },
+    {
+      "filing_id": "fl:house-clerk:P:20000002",
+      "officeholder_id": "oh:us:house:a000001",
+      "filed_at": "2025-04-20",
+      "state": "evaluated",
+      "rows": 3,
+      "evaluated": 0,
+      "after": 0,
+      "not_evaluated": {
+        "asset coded GS": 3
+      },
+      "finding_id": null
+    },
+    {
+      "filing_id": "fl:house-clerk:P:20000003",
+      "officeholder_id": "oh:us:house:a000001",
+      "filed_at": "2025-05-20",
+      "state": "not read",
+      "rows": 0,
+      "evaluated": 0,
+      "after": 0,
+      "not_evaluated": {},
+      "finding_id": null
+    }
+  ]
+}

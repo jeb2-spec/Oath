@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://oath.jeb2-spec.dev/schemas/signal-run/v0.json",
+  "title": "Signal run",
+  "description": "The first row of a Signal's run record under data/signal-runs/: what one run of one Signal version read across the whole chamber, and what it found. Every officeholder page's answer and the landing's figures are counted from this file and from the Findings ledger, and one of the answer's four numbers (the reports the Signal read, as against the reports attributed) is recoverable from nothing else in the register. Until now the file had no schema and tools/validate-schemas.py did not see it, because that tool globs data/*.ndjson and the run records live one directory down: a malformed row would have produced a wrong number on four hundred and thirty-nine pages, or a crash, and no gate would have said which (the Council's second reading of the built answer, Seat G). The rows after this one are Signal outcomes, one per report, and carry their own schema. The example below is the sum of the three in the outcome schema, because a summary that is not the sum of its own outcomes is two surfaces disagreeing about one run, and validate-schemas.py refuses one.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "signal_id",
+    "inputs_digest",
+    "reports",
+    "reports_by_state",
+    "reports_with_a_finding",
+    "officeholders_with_a_finding",
+    "rows_evaluated",
+    "rows_after",
+    "rows_not_evaluated"
+  ],
+  "properties": {
+    "signal_id": {
+      "type": "string",
+      "pattern": "^sg:[a-z0-9-]+:v\\d+$",
+      "description": "The Signal version this run is of. A version's criteria and its run are one thing: a change to the criteria is a new version and a new record (INVARIANTS §11)."
+    },
+    "inputs_digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "The SHA-256 of the rows this run read, so a reader can tell a run over one record from a run over another. Two runs of one Signal version over the same digest produce the same outcomes, which is what makes RUBRIC gate 4's regeneration checkable."
+    },
+    "reports": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Transaction reports the Signal was given: every report the register attributes to an officeholder in the filing year. The first bar of the landing's narrowing figure."
+    },
+    "reports_by_state": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "The reports by what the Signal could do with each. The keys are the states an outcome row carries, and the counts sum to `reports`.",
+      "properties": {
+        "evaluated": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Reports the register read from the Clerk's document. Not reports it compared a trade on: a read report with every row set aside is counted here and is not in the third bar."
+        },
+        "not read": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Reports the register did not read. What it records is that the text it extracted carries no Filing ID line, or no State/District line; never that a document is a picture of its pages, which no row holds."
+        }
+      }
+    },
+    "reports_with_a_finding": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Reports a Finding of this run rests on. Never more than the reports it compared a trade on."
+    },
+    "officeholders_with_a_finding": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Officeholders those reports are attributed to. A count about the register's reach, and no page ranks anyone by it (INVARIANTS §13)."
+    },
+    "rows_evaluated": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Transaction rows the Signal evaluated against its criteria, across every report it read."
+    },
+    "rows_after": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Of those, the rows for which the Clerk's index dates the report after the deadline the rule sets. A count of rows, never set beside a person's name (§13)."
+    },
+    "rows_not_evaluated": {
+      "type": "object",
+      "description": "Rows the Signal counted and did not evaluate, by the reason its criteria give, each written down before the run. The register says what it did not do; it never says the rule does not reach a row the rule may well reach, which on the 2025 record would have been false of 1,155 of the 1,156 rows set aside.",
+      "additionalProperties": {
+        "type": "integer",
+        "minimum": 0
+      }
+    }
+  },
+  "examples": [
+    {
+      "signal_id": "sg:stock-act-ptr-after-deadline:v1",
+      "inputs_digest": "0000000000000000000000000000000000000000000000000000000000000000",
+      "reports": 3,
+      "reports_by_state": {
+        "evaluated": 2,
+        "not read": 1
+      },
+      "reports_with_a_finding": 1,
+      "officeholders_with_a_finding": 1,
+      "rows_evaluated": 1,
+      "rows_after": 1,
+      "rows_not_evaluated": {
+        "$1,000 or less": 1,
+        "asset coded GS": 3
+      }
+    }
+  ]
+}

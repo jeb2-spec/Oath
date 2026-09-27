@@ -60,6 +60,7 @@ KEYWORDS = {
     "format",
     "items",
     "minItems",
+    "maxItems",
     "minLength",
     "minimum",
     "default",
@@ -85,6 +86,12 @@ CANONICAL = {
     # sealed, and never edited once published (INVARIANTS §17; tools/highlight-charter-change.py).
     "doctrine-amendments": "doctrine-amendment",
 }
+# The run records live one directory down, so the glob above never saw them, and every page's
+# answer is counted from them: a malformed row would have put a wrong number on a named person's
+# page with no gate to say which. The first row of each is the run, the rest are its outcomes, one
+# per report (the Council's second reading of the built answer, Seat G).
+RUN_RECORDS = "signal-runs"
+RUN_ROW, OUTCOME_ROW = "signal-run", "signal-outcome"
 
 
 def load_schemas(root: Path) -> dict[str, dict]:
@@ -176,6 +183,14 @@ def validate(
     if isinstance(value, list):
         if "minItems" in schema and len(value) < schema["minItems"]:
             errors.append(f"{path}: needs at least {schema['minItems']} items, has {len(value)}")
+        # A list the code reads as holding one is a list the schema should hold to one. Thirteen
+        # places read producing_filings[0], and the schema permitted many (the Council's second
+        # reading of the built answer, Seat C).
+        if "maxItems" in schema and len(value) > schema["maxItems"]:
+            errors.append(
+                f"{path}: holds {len(value)} items, and this field takes at most "
+                f"{schema['maxItems']}"
+            )
         if "items" in schema:
             for i, item in enumerate(value):
                 errors += validate(item, schema["items"], schemas, doc, f"{path}[{i}]")
@@ -290,7 +305,89 @@ def check_rows(root: Path, schemas: dict[str, dict]) -> tuple[list[str], int, in
                             f"{seen[rid]}; an id is a key"
                         )
                     seen.setdefault(rid, lineno)
+    for path in sorted((root / "data" / RUN_RECORDS).glob("*.ndjson")):
+        rel = f"data/{RUN_RECORDS}/{path.name}"
+        files += 1
+        lines = [ln for ln in path.read_text("utf-8").splitlines() if ln.strip()]
+        if not lines:
+            problems.append(f"{rel}: a run record with no run row says nothing about a run")
+            continue
+        seen_reports: dict[str, int] = {}
+        for lineno, line in enumerate(lines, 1):
+            rows += 1
+            try:
+                row = json.loads(line)
+            except json.JSONDecodeError as exc:
+                problems.append(f"{rel}:{lineno}: not valid JSON ({exc.msg})")
+                continue
+            name = RUN_ROW if lineno == 1 else OUTCOME_ROW
+            schema = schemas[f"{name}.schema.json"]
+            for err in validate(row, schema, schemas, f"{name}.schema.json"):
+                problems.append(f"{rel}:{lineno}: {err}")
+            if lineno == 1 or not isinstance(row, dict):
+                continue
+            # One outcome per report: two rows for one report are two answers to one question, and
+            # every count the pages state would take whichever the loop reached last.
+            report = row.get("filing_id")
+            if isinstance(report, str):
+                if report in seen_reports:
+                    problems.append(
+                        f"{rel}:{lineno}: {report} already has an outcome at line "
+                        f"{seen_reports[report]}; a report has one"
+                    )
+                seen_reports.setdefault(report, lineno)
+        problems += run_agrees_with_itself(rel, lines)
     return problems + joins(root), rows, files
+
+
+def run_agrees_with_itself(rel: str, lines: list[str]) -> list[str]:
+    """Whether a run record's summary row is the sum of its own outcomes.
+
+    The summary is what the landing states and the outcomes are what each page states, so a summary
+    that does not add up is two surfaces disagreeing about one run. Nothing derives one from the
+    other at render time, which is exactly why it is checked here (Seat G).
+    """
+    try:
+        run = json.loads(lines[0])
+        outcomes = [json.loads(ln) for ln in lines[1:]]
+    except json.JSONDecodeError:
+        return []  # reported above
+    if not isinstance(run, dict) or not all(isinstance(o, dict) for o in outcomes):
+        return []
+    problems = []
+    by_state: dict[str, int] = {}
+    for o in outcomes:
+        state = o.get("state")
+        if isinstance(state, str):
+            by_state[state] = by_state.get(state, 0) + 1
+    totals = {
+        "reports": len(outcomes),
+        "reports_by_state": by_state,
+        "reports_with_a_finding": sum(1 for o in outcomes if o.get("finding_id")),
+        "officeholders_with_a_finding": len(
+            {o.get("officeholder_id") for o in outcomes if o.get("finding_id")}
+        ),
+        "rows_evaluated": sum(o.get("evaluated") or 0 for o in outcomes),
+        "rows_after": sum(o.get("after") or 0 for o in outcomes),
+        "rows_not_evaluated": {},
+    }
+    for o in outcomes:
+        for reason, n in (o.get("not_evaluated") or {}).items():
+            totals["rows_not_evaluated"][reason] = totals["rows_not_evaluated"].get(reason, 0) + (
+                n or 0
+            )
+    for field, counted in totals.items():
+        said = run.get(field)
+        if said != counted:
+            problems.append(
+                f"{rel}:1: the run says {field} is {canon(said)} and its own outcomes come to "
+                f"{canon(counted)}"
+            )
+    return problems
+
+
+def canon(value: object) -> str:
+    return json.dumps(value, sort_keys=True, ensure_ascii=False)
 
 
 def joins(root: Path) -> list[str]:
