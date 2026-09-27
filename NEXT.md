@@ -207,7 +207,7 @@ report set aside by the name match is the Member's and fires, which makes six Fi
 on the scratch build; the territory's report is the Delegate's and is compared on time. The decision
 route now works where only the printed seat differs. An adapter alias for the territory's two seat
 codes would let the document's own header settle such a row without a person; not built. An outside witness for every document a Finding rests on (INVARIANTS §16) is owed for
-both Signals.
+both Signals. *Measured from 2026-09-27, not yet recorded:* `tools/witness.py` asks the Internet Archive whether it holds each such document byte for byte, and observes without submitting; whether the register should submit, record the witness in the sealed record, or link the copy is the Council's question, set out in [docs/design/an-outside-witness.md](docs/design/an-outside-witness.md).
 
 **One sentence of the first Signal's own definition is now stale, and it stays until a version says
 so.** `stock-act-ptr-after-deadline` v1 says *the register has not compared the index date with the
