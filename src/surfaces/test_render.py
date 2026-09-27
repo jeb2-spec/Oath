@@ -2276,3 +2276,40 @@ def test_the_landing_shows_the_house_at_a_glance_and_names_no_one():
     )
     assert ranking.check_index(page) == [] and frame.check_page(page) is None
     assert verdict_words(page) == []
+
+
+def test_the_strip_teaches_the_marks_and_draws_the_process_never_a_person():
+    """The comic layer is the institution's and the process's: four panels, each teaching one mark
+    the Findings' figures use; no person drawn, named or linked; a person's name is never lettered
+    in the comic face (the maintainer's direction of 2026-09-27)."""
+    holder_ = sworn(HOLDERS[0])
+    report = read_report(holder_["id"], "2025-03-20", 1)
+    unread = read_report(holder_["id"], "2025-04-20", 2, read=False)
+    found, outcomes, _ = evaluated([holder_], [report, unread], LATE)
+    summary = signal_run.run_record(SIGNAL["id"], "c" * 64, outcomes)[0]
+    page = render.render_index(
+        HOLDERS,
+        OFFICES,
+        FILINGS + [report, unread],
+        RUN,
+        META,
+        striker,
+        0,
+        "https://x/rows",
+        LATE,
+        [(SIGNAL, summary)],
+        None,
+        None,
+        {SIGNAL["id"]: outcomes},
+        found,
+    )
+    strip = between(page, '<section class="howto" id="how">', "</section>")
+    assert strip.count('<li class="panel">') == 4
+    for mark in ("trade", "notice", "deadline", "after"):
+        assert render.KEY_MARKS[mark] in strip, mark
+    assert "officeholders/" not in strip and verdict_words(strip) == []
+    assert "it does not ask anyone to stop trading" in strip
+    assert "lists 2 of these reports. 1 of them arrived as scanned paper" in strip
+    assert page.index('id="how"') < page.index('id="glance"')
+    person = render.render_officeholder(HOLDERS[0], FILINGS[:1], META, striker, 0, [])
+    assert 'class="comic"' not in person, "a person's name is never lettered as a comic"

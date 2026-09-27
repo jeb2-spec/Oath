@@ -267,9 +267,12 @@ CSS = """
   --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif;
   --mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
   --measure: 46rem;
+  --spot: #f2dc7d; --spot-ink: #1c1b16;
+  --letter: "Avenir Next", "Trebuchet MS", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
 }
 @media (prefers-color-scheme: dark) {
-  :root { --paper: #141410; --ink: #e9e5d8; --ink-2: #a8a394; --rule: #3a382f; --link: #9ab6f5; }
+  :root { --paper: #141410; --ink: #e9e5d8; --ink-2: #a8a394; --rule: #3a382f; --link: #9ab6f5;
+          --spot: #4a3f17; --spot-ink: #f3ead0; }
 }
 * { box-sizing: border-box; }
 html { background: var(--paper); color: var(--ink); font: 17px/1.55 var(--serif); }
@@ -333,6 +336,44 @@ nav.jump { font-size: .9rem; margin: .2rem 0 .5rem; line-height: 1.7; }
 p.check { font-size: .85rem; color: var(--ink-2); }
 span.either { color: var(--ink-2); }
 p.rule { font-size: .9rem; color: var(--ink-2); max-width: 38rem; margin: 0 0 .5rem; }
+/* the comic layer: the institution's and the process's, never a person's */
+h1.comic { font: 900 3.6rem/1 var(--letter); text-transform: uppercase; letter-spacing: .03em;
+           position: relative; isolation: isolate; margin: .1rem 0 .5rem; }
+h1.comic::before { content: attr(data-text); position: absolute; left: .06em; top: .07em;
+                   z-index: -1; color: transparent;
+                   background-image: radial-gradient(var(--ink-2) 34%, transparent 38%);
+                   background-size: 5px 5px; -webkit-background-clip: text; background-clip: text; }
+span.tag { display: inline-block; background: var(--spot); color: var(--spot-ink);
+           border: 2px solid var(--ink); padding: .15rem .5rem; font: 700 .8rem/1.3 var(--letter);
+           letter-spacing: .06em; text-transform: uppercase; box-shadow: 3px 3px 0 var(--ink); }
+section.howto, section.glance { border-top: 0; }
+ol.strip { list-style: none; padding: 0; margin: .9rem 0 .6rem; display: grid; gap: .7rem;
+           grid-template-columns: repeat(4, minmax(0, 1fr)); }
+li.panel { border: 3px solid var(--ink); background: var(--paper); box-shadow: 4px 4px 0 var(--ink);
+           display: flex; flex-direction: column; }
+li.panel p.cap { margin: 0; background: var(--spot); color: var(--spot-ink);
+                 border-bottom: 3px solid var(--ink); padding: .35rem .5rem;
+                 font: 700 .78rem/1.2 var(--letter); text-transform: uppercase;
+                 letter-spacing: .04em; }
+li.panel span.no { display: inline-block; min-width: 1.3em; height: 1.3em; line-height: 1.3em;
+                   text-align: center; border-radius: 50%; background: var(--ink);
+                   color: var(--paper); margin-right: .25rem; }
+li.panel > svg { display: block; width: 100%; height: auto; padding: .4rem .5rem 0; }
+li.panel p:last-child { margin: .25rem .55rem .55rem; font-size: .82rem; line-height: 1.4;
+                        color: var(--ink-2); }
+li.panel .ln { fill: none; stroke: var(--ink); stroke-width: 3; stroke-linecap: round;
+               stroke-linejoin: round; }
+li.panel .ln.thin { stroke-width: 1.8; }
+li.panel .paper { fill: var(--paper); }
+li.panel .ink { fill: var(--ink); }
+li.panel .ht { fill: url(#benday); }
+li.panel .bar { fill: var(--ink-2); opacity: .75; }
+li.panel text { font: 700 11px var(--letter); fill: var(--ink); }
+p.punch { font: 700 1.02rem/1.45 var(--letter); max-width: 40rem; margin: .8rem 0 0; }
+@media (max-width: 40rem) {
+  ol.strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  h1.comic { font-size: 3rem; }
+}
 /* the house at a glance */
 p.glance { font-size: 1.12rem; line-height: 1.5; max-width: 38rem; margin: 0 0 .5rem; }
 figure.glance { margin: .5rem 0 .2rem; }
@@ -340,7 +381,7 @@ figure.glance svg.squares { width: 100%; max-width: 30rem; }
 /* the reports as squares, the same on the landing and on a person's page */
 svg.squares { display: block; max-width: 100%; height: auto; margin: .3rem 0 .4rem; }
 .sq.s-after { fill: var(--ink); }
-.sq.s-checked { fill: var(--ink-2); fill-opacity: .38; }
+.sq.s-checked { fill: url(#benday); }
 .sq.s-unchecked { fill: none; stroke: var(--ink-2); stroke-width: .8; stroke-dasharray: 1.5 1.5; }
 svg.squares a:focus-visible rect { stroke: var(--link); stroke-width: 2.5; }
 div.reportline { display: flex; flex-wrap: wrap; align-items: center; gap: .2rem 1rem;
@@ -2776,6 +2817,12 @@ def transactions_section(
 # ---- the reports as squares: one visual language, from the chamber to the person -----------
 
 SQUARE, SQUARE_GAP, SQUARE_COLUMNS = 10, 2, 30
+# Ben-Day dots: the halftone of the old four-colour comic press, inked from the page's own token.
+# Defined once in the squares' drawing; every other drawing on the page refers to it by id.
+BENDAY = (
+    '<defs><pattern id="benday" width="2.6" height="2.6" patternUnits="userSpaceOnUse">'
+    '<circle cx="1.3" cy="1.3" r=".85" fill="var(--ink-2)"/></pattern></defs>'
+)
 SQUARE_WORDS = {
     "after": (
         "dated by the Clerk's index after the STOCK Act deadline for at least one trade checked"
@@ -2830,7 +2877,7 @@ def squares(
     width, height = cols * step + 1, rows * step + 1
     return (
         f'<svg class="squares" viewBox="0 0 {width} {height}" width="{width}" height="{height}" '
-        f'role="img" aria-label="{esc(label)}">' + "".join(parts) + "</svg>"
+        f'role="img" aria-label="{esc(label)}">{BENDAY}' + "".join(parts) + "</svg>"
     )
 
 
@@ -3628,6 +3675,92 @@ def state_of_record(
     )
 
 
+# ---- the strip: how a stock trade becomes a public record ------------------------------------
+#
+# The comic energy is the institution's and the process's, never a person's: no member is drawn,
+# named or caricatured. The four panels teach the four marks the Findings' figures use, so a
+# reader who has read the strip can read the figure (the maintainer's direction of 2026-09-27:
+# immersion, curb appeal, "someone really thought about this").
+
+PANELS = (
+    (
+        "A trade is made",
+        "In a member's own account, or a spouse's or dependent child's. On every figure, the "
+        "trade is a dot.",
+        "trade",
+        '<path class="ht" d="M10 72 L40 58 L60 64 L85 38 L110 48 L140 22 L150 22 L150 92 L10 92Z"/>'
+        '<path class="ln" d="M10 72 L40 58 L60 64 L85 38 L110 48 L140 22"/>'
+        '<circle class="ink" cx="85" cy="38" r="6"/>'
+        '<path class="ln thin" d="M10 92 H150"/>',
+    ),
+    (
+        "Notice arrives",
+        "The report prints the date the member was notified of the trade. On every figure, the "
+        "notice is a diamond.",
+        "notice",
+        '<rect class="ht" x="36" y="30" width="100" height="58" rx="3"/>'
+        '<rect class="paper ln" x="28" y="22" width="100" height="58" rx="3"/>'
+        '<path class="ln" d="M28 24 L78 56 L128 24"/>'
+        '<path class="paper ln" d="M78 45 L89 56 L78 67 L67 56Z"/>',
+    ),
+    (
+        "The clock runs",
+        "The report is due 30 days after the notice or 45 days after the trade, whichever comes "
+        "first. On every figure, the deadline is a tick.",
+        "deadline",
+        '<rect class="ht" x="40" y="22" width="100" height="70" rx="3"/>'
+        '<rect class="paper ln" x="32" y="14" width="100" height="70" rx="3"/>'
+        '<rect class="ink" x="32" y="14" width="100" height="14"/>'
+        '<path class="ln thin" d="M32 46 H132 M32 65 H132 M57 28 V84 M82 28 V84 M107 28 V84"/>'
+        '<circle class="ln thin" cx="44.5" cy="37.5" r="10"/>'
+        '<circle class="ln thin" cx="119.5" cy="74.5" r="10"/>'
+        '<text x="44.5" y="41.5" text-anchor="middle">30</text>'
+        '<text x="119.5" y="78.5" text-anchor="middle">45</text>',
+    ),
+    (
+        "The report goes public",
+        "The Clerk publishes it, dated. Where that date falls after the deadline, the days "
+        "between are a bar.",
+        "after",
+        '<rect class="ht" x="58" y="10" width="54" height="56"/>'
+        '<path class="paper ln" d="M50 4 H94 L104 14 V58 H50Z"/>'
+        '<path class="ln thin" d="M58 20 H86 M58 29 H96 M58 38 H96 M58 47 H80"/>'
+        '<path class="ln thin" d="M14 82 H112"/><circle class="ink" cx="16" cy="82" r="4"/>'
+        '<path class="paper ln thin" d="M30 77 L35 82 L30 87 L25 82Z"/>'
+        '<path class="ln" d="M92 74 V90"/><rect class="bar" x="92" y="79" width="40" height="6"/>'
+        '<path class="ln" d="M132 70 V94"/>',
+    ),
+)
+
+
+def strip_section(unread: int, total: int, year: int) -> str:
+    """How a stock trade becomes a public record, in four panels, each teaching one mark of the
+    figures the Findings carry; then the one wry fact the record itself supplies, about the
+    machinery and not about anyone: how many of the chamber's reports arrived as scanned paper."""
+    panels = []
+    for n, (head, words, mark, art) in enumerate(PANELS, 1):
+        panels.append(
+            f'<li class="panel"><p class="cap"><span class="no">{n}</span> {esc(head)}</p>'
+            f'<svg viewBox="0 0 160 100" aria-hidden="true" focusable="false">{art}</svg>'
+            f"<p>{key_mark(mark)} {esc(words)}</p></li>"
+        )
+    paper = (
+        f" {unread:,} of them arrived as scanned paper: pictures of pages, which the register "
+        "cannot read. Every one is below, one square each; those are the outlines."
+        if unread
+        else " Every one is below, one square each."
+    )
+    return (
+        '<section class="howto" id="how">\n<h2><span class="tag">How a stock trade becomes a '
+        "public record</span></h2>\n"
+        f'<ol class="strip">{"".join(panels)}</ol>\n'
+        '<p class="punch">That is the rule, in four steps, for each trade over $1,000. '
+        "The law asks for the report; it does not ask "
+        f"anyone to stop trading. The Clerk's {year} index lists {total:,} of these reports."
+        f"{paper}</p>\n</section>"
+    )
+
+
 def glance_section(
     signal_runs: list[tuple[dict, dict]],
     outcomes_all: dict[str, list[dict]],
@@ -3674,7 +3807,8 @@ def glance_section(
         )
     lede = signals_lede(signal_runs).replace('<p class="lede">', "<p>", 1)
     return (
-        '<section class="glance" id="glance">\n<h2>The House at a glance</h2>\n'
+        '<section class="glance" id="glance">\n<h2><span class="tag">The House at a glance</span>'
+        "</h2>\n"
         + "".join(parts)
         + "<details>\n<summary>What a signal is, and what it does not say</summary>\n"
         + lede
@@ -4082,7 +4216,7 @@ def render_index(
         f'<p class="frame">{esc(FRAME)}</p>\n'
         '<div class="masthead">\n<div>\n'
         '<p class="kicker">A public register</p>\n'
-        "<h1>Oath</h1>\n"
+        '<h1 class="comic" data-text="Oath">Oath</h1>\n'
         f"{ended}"
         f'<p class="lede">Every member of the U.S. House in {esc(congress_words(terms=True))} '
         "swore an oath. This register sets beside it what they filed: each row of the Clerk's "
@@ -4188,8 +4322,24 @@ def render_index(
         "The register sets the record beside it.</footer></blockquote>\n</section>"
     )
     glance = glance_section(signal_runs or [], outcomes_all or {}, findings or [])
+    everything = [o for group in (outcomes_all or {}).values() for o in group]
+    by_id = {f["id"]: f for f in filings}
+    how = (
+        strip_section(
+            sum(
+                1
+                for o in everything
+                if o["state"] != "evaluated"
+                and (by_id.get(o["filing_id"], {}).get("source") or {}).get("content_hash")
+            ),
+            len(everything),
+            ERA["year"],
+        )
+        if everything
+        else ""
+    )
     body = (
-        f'{head}\n<main id="main">\n{glance}\n{door}\n{tile_map(offices)}\n{oath}\n'
+        f'{head}\n<main id="main">\n{how}\n{glance}\n{door}\n{tile_map(offices)}\n{oath}\n'
         f"{record}\n{table}\n{how_to_read(False)}\n</main>\n{footer(meta, home=True)}"
     )
     return page("Every seat in the register", body)
