@@ -67,6 +67,19 @@ coupling a future Seat H would silently break. It would not: the check is
 seat COUNCIL.md defines rather than the floor, so Seat H is still compared with the prompt. The
 constant's job is to stop A to G being removed, which is what §3's floor sentence says.
 
+## The reading's own weakest point
+
+The seats that read this amendment were held by the same session that drafted it. A reading found one
+blocking defect in its author's own text and withdrew two findings that did not survive a check,
+which is better than a reading that found nothing, and it is not what §8's independence is for. An
+author is the worst available reviewer of their own intent: the defects they cannot see are the ones
+they wrote on purpose. This record says so rather than letting the word *Council* carry an
+independence it did not have here.
+
+What would fix it is not more seats from the same hand. It is the maintainer reading the amendment,
+or a session that did not write it holding the seats. Until one of those happens, treat this reading
+as the author's own adversarial pass, which is what it is.
+
 ## What the reading did not cover
 
 The three seats reading this are the three whose watch the amendment does not change. Seat B's
