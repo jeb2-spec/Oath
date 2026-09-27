@@ -234,24 +234,23 @@ def test_a_core_file_that_is_gone_fails(tmp_path, capsys):
     assert "CHARTER.md is part of the antidrift core and is missing" in capsys.readouterr().out
 
 
-def test_a_gate_that_cannot_read_the_published_core_fails_rather_than_passes(tmp_path, capsys):
+def test_a_gate_that_cannot_read_the_published_core_fails_rather_than_passes(
+    tmp_path, capsys, monkeypatch
+):
     """Every comparing gate here holds this rule: a gate that cannot read the record fails. A pass
-    on an unreadable ref is a green tick that measured nothing."""
+    on an unreadable ref is a green tick that measured nothing.
+
+    `main` takes the ref from the environment, so both halves of this test say which ref they mean.
+    The half below sets an unreadable one. The line above it used to take whatever the machine
+    held, and on a push to main that is CI's own `OATH_PUBLISHED_REF`, a commit this temporary
+    repository has never heard of: the gate refused it, correctly, and the assertion that a
+    well-formed tree passes failed on main and nowhere else. `conftest.py` clears it now."""
     root = repo(tmp_path)
     assert gate.main([str(root)]) == 0
     assert gate.readable(root, "refs/remotes/origin/nothing-here") is False
-    import os
-
-    was = os.environ.get("OATH_PUBLISHED_REF")
-    os.environ["OATH_PUBLISHED_REF"] = "refs/remotes/origin/nothing-here"
-    try:
-        assert gate.main([str(root)]) == 1
-        assert "Nothing was checked" in capsys.readouterr().out
-    finally:
-        if was is None:
-            os.environ.pop("OATH_PUBLISHED_REF", None)
-        else:
-            os.environ["OATH_PUBLISHED_REF"] = was
+    monkeypatch.setenv("OATH_PUBLISHED_REF", "refs/remotes/origin/nothing-here")
+    assert gate.main([str(root)]) == 1
+    assert "Nothing was checked" in capsys.readouterr().out
 
 
 def test_a_ledger_line_that_does_not_parse_fails_loudly(tmp_path):
