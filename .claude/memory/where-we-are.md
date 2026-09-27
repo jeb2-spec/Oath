@@ -16,7 +16,7 @@ metadata:
 
 **Read [feedback-pages-are-the-window.md](feedback-pages-are-the-window.md) before touching a page.** Jared stopped a full local CI run for this change: the pages are the window into the record, not the record. A check on a page stays if it keeps a sentence about a person true and goes if it only keeps the window arranged; the evidence for a page change is the render, the page gates, the render tests and a screenshot. 34 of the 67 measured guards sit on `render.py`, and sorting them by that question is his call, not a session's.
 
-**The logo is locked: read [feedback-the-mark-is-his.md](feedback-the-mark-is-his.md).** No change to the seal's or the masthead's look without Jared's distinct authorization for it. The figures, by contrast, are open for a design pass so they read as Oath's and not as a generic chart; the proposal there (a build stamp inside each figure) waits on his yes.
+**The logo is locked: read [feedback-the-mark-is-his.md](feedback-the-mark-is-his.md).** No change to the seal's or the masthead's look without Jared's distinct authorization for it. The figures, by contrast, are open for a design pass so they read as Oath's and not as a generic chart. The build stamp inside a figure was approved as a small detail and is on the deadline figure as a trial; **the graphs themselves are the real estate and the focus**, in his words, so the next pass is their drawing language, not more stamps.
 
 **The other two open threads need things this session did not have either.**
 

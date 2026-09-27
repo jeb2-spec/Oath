@@ -2439,6 +2439,9 @@ def test_the_deadline_figure_draws_both_sides_of_the_line_and_names_no_one():
 
     svg = between(section, '<svg class="deadline"', "</svg>")
     assert "NaN" not in svg and svg.count('class="dl by"') == 1
+    assert render.esc(f"oath · {render.build_label(META)}") in svg, (
+        "a crop of the figure still says which sealed build it was drawn from"
+    )
     assert f">{on_time:,}</text>" in svg and f">{len(late):,}</text>" in svg, (
         "both counts are on the blocks they belong to, so the picture says what it is"
     )

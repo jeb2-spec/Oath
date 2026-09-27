@@ -49,4 +49,11 @@ is *cite the build, not the page* done in ink, and it answers Seat D's crop find
 needs his yes before it is built, and it must not borrow the mark itself without his word, because
 that is the lock above.
 
+**Approved the same day, with two conditions, in his words:** *"so long as it does not distract too
+heavily or attempt to become the only thing we're doing to remain distinct.. our graphs are the
+biggest real estate.. I'd rather focus there."* The stamp is on the deadline figure as a trial, in the
+quietest ink, under the axis; it spreads to the other figures only after he has seen it. **It is a
+detail, not the answer.** The work he wants is the graphs themselves drawn in a language that is
+Oath's, and that is where the next design pass spends its effort.
+
 Related: [[feedback-pages-are-the-window]], [[who-i-am-for-oath]].
