@@ -39,6 +39,7 @@ import argparse
 import html
 import importlib.util
 import json
+import math
 import os
 import posixpath
 import re
@@ -443,6 +444,8 @@ svg.deadline { width: 100%; max-width: 36rem; height: auto; display: block; }
 svg.deadline text { font: 700 9px var(--letter); fill: var(--ink-2); }
 svg.deadline text.don { font-size: 10px; fill: var(--ink); }
 svg.deadline text.doff { font-size: 10px; fill: var(--paper); }
+svg text.stamp { font: 600 6px var(--mono); letter-spacing: .02em; fill: var(--ink-2); }
+.stampwave { fill: none; stroke: var(--ink-2); stroke-width: .35; }
 /* the notice clock */
 section.noticeclock { border-top: 0; }
 figure.noticeclock { margin: .6rem 0 .3rem; }
@@ -4395,7 +4398,44 @@ def days_after_rows(findings: list[dict], signal_id: str) -> list[int]:
     )
 
 
-def deadline_chart(on_time: int, late: list[int]) -> str:
+def figure_stamp(meta: dict | None, left: float, right: float, y: float) -> str:
+    """The build a figure was drawn from, inside the drawing, so a crop of it still says which
+    sealed record it shows and a reader can find that build in ANCHORS.md and check it.
+
+    One line at the figure's foot, in the build's one written form, and after it a short engraved
+    band struck from the digest the way the mark is: fine interlaced waves whose counts and phases
+    are the digest's own bytes, so each build draws its own, and a band that does not match the
+    digest printed beside it shows it was drawn for another build. It borrows the mark's craft and
+    never the mark (feedback-the-mark-is-his.md), and it is set in the quietest ink the figure has,
+    because it is provenance and not a subject."""
+    if not meta or not meta.get("digest"):
+        return ""
+    raw = bytes.fromhex(str(meta["digest"])[:64].ljust(64, "0"))
+    label = f"oath · {build_label(meta)}"
+    # The words take their width from the type, roughly; the band takes what is left, and is left
+    # out entirely on a figure too narrow to hold it quietly.
+    text_w = len(label) * 3.6
+    x0, x1 = left + text_w + 8, right
+    parts = [
+        f'<text class="stamp" x="{left}" y="{y + 2.4:.1f}" text-anchor="start">{esc(label)}</text>'
+    ]
+    if x1 - x0 > 40:
+        for i in range(3):
+            cycles = 4 + raw[i] % 5
+            phase = raw[i + 3] / 255 * 2 * math.pi
+            amp = 1.0 + (raw[i + 6] % 3) * 0.35
+            pts = []
+            for k in range(81):
+                t = k / 80
+                pts.append(
+                    f"{x0 + (x1 - x0) * t:.1f},"
+                    f"{y + amp * math.sin(2 * math.pi * cycles * t + phase):.2f}"
+                )
+            parts.append(f'<polyline class="stampwave" points="{" ".join(pts)}"/>')
+    return "".join(parts)
+
+
+def deadline_chart(on_time: int, late: list[int], meta: dict | None = None) -> str:
     """One drawing, two registers.
 
     Above: every trade the Signal compared, as a single bar split where the deadline falls, so the
@@ -4464,13 +4504,16 @@ def deadline_chart(on_time: int, late: list[int]) -> str:
     parts.append(
         f'<text x="{w - pad}" y="{base + 24}" text-anchor="end">days after the deadline</text>'
     )
+    stamp = figure_stamp(meta, pad, w - pad, base + 40)
     return (
-        f'<svg class="deadline" viewBox="0 0 {w} {base + 28}" direction="ltr" aria-hidden="true" '
-        'focusable="false">' + "".join(parts) + "</svg>"
+        f'<svg class="deadline" viewBox="0 0 {w} {base + (46 if stamp else 28)}" direction="ltr" '
+        'aria-hidden="true" focusable="false">' + "".join(parts) + stamp + "</svg>"
     )
 
 
-def deadline_section(signal_runs: list[tuple[dict, dict]], findings: list[dict]) -> str:
+def deadline_section(
+    signal_runs: list[tuple[dict, dict]], findings: list[dict], meta: dict | None = None
+) -> str:
     """The one figure the page is for: the deadline, and how many trades fell on each side of it.
 
     Every other figure here says which reports the register could read, or where a filer's own
@@ -4507,7 +4550,7 @@ def deadline_section(signal_runs: list[tuple[dict, dict]], findings: list[dict])
         against = words["against"] if words else "the deadline the rule sets"
         parts.append(
             '<figure class="deadline">\n'
-            + deadline_chart(on_time, late)
+            + deadline_chart(on_time, late, meta)
             + "\n<figcaption>Every trade the signal compared, as one bar split where the deadline "
             "falls, and below it the part after, spread one bar a day by the days between the "
             "deadline and the date the Clerk's index gives the report, on a plain scale where a "
@@ -5783,7 +5826,7 @@ def render_index(
         f'<blockquote class="oath"><p>{esc(OATH)}</p><footer>{OATH_CITE} Every member took it. '
         "The register sets the record beside it.</footer></blockquote>\n</section>"
     )
-    deadline = deadline_section(signal_runs or [], findings or [])
+    deadline = deadline_section(signal_runs or [], findings or [], meta)
     ends = ends_section(signal_runs or [], findings or [])
     narrows = narrows_section(signal_runs or [], outcomes_all or {}, findings or [])
     notice = notice_section(transactions or [], filings)
