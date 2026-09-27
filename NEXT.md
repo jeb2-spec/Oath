@@ -257,6 +257,10 @@ Taking 1 and 2 lands the page near **1,750 words and six visual blocks**; with 3
 
 **What does not move, at any word count.** The two-population split of the 27 reports. The both-halves-or-neither bar and its guard. The empty second row of *Where the record ends* and the clause that says the emptiness is this register's and not the Committee's. Those three are the message; the slimming is everything around them.
 
+### P.7 The record, drawn, not described
+
+*Added and landed 2026-09-27, PR #73, from the maintainer: "we are still doing some describing of the record instead of illustrating the record and showing it back in powerful and meaningful ways."* Every officeholder page now opens its answer with **one drawing of the person's year**: each transaction report a row (its trades as dots on the dates it prints, its square on the date the index gives it, a line between), the days past a deadline a solid bar from the Finding's own evidence, the annual report beside its bracket, a document whose header the register could not read an outline where the index dates it, and what the register did not read outlined and said. One line of time for the whole build; the figure computes no deadline of its own. Who decides is said once, the links and the verify line sit under the sentences, long report tables and the glossary fold, and each Signal page opens with its rule drawn. Four seats read it ([record](docs/council/2026-09-27-the-year-figure.md)); four blocking findings, each fixed before merge, the first of them the lesson: a figure that draws a state from the run record must draw every state the run record holds, or it will say *in between* about a day the sentence above calls *the day after*.
+
 ### E.0 The wanted register, and the work of reading it
 
 *Added 2026-09-27, at the maintainer's direction: keep a register of exactly what pieces of official information, public or not, would close the loop.*
