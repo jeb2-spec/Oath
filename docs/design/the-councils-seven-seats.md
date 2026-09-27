@@ -185,9 +185,25 @@ questions about what a person must bear, and leaves §6 and §7 in force over it
 
 ## 5. What the amendment needs, and what it cannot take from me
 
-The mechanical part is written and small: COUNCIL.md §3 gains the four seats and the extension, the
-prompt gains the same four in its own register, and `tools/test_highlight_charter_change.py`'s
-assertion about which seats the prompt defines is extended in the same commit.
+The mechanical part is small: COUNCIL.md §3 gains the four seats and the extension, the prompt
+gains the same four in its own register, and `tools/test_highlight_charter_change.py`'s assertion
+about which seats the prompt defines is extended in the same commit.
+
+A working draft of exactly that was cut on 2026-09-26, 220 added lines across COUNCIL.md, the prompt
+and INVARIANTS.md, and it is **not durable**: it sits as uncommitted files on two local-only branches
+in one cloud session's scratchpad, and it goes when that container is reclaimed. Little is lost that
+this document cannot rebuild, because §2 above carries each seat's definition and watch-list whole.
+What would have to be written again is the prompt's own register: the same four seats addressed to the
+reader who sits in one, rather than stated as doctrine. Saying that is better than letting a later
+reader read *written* and think the text is in hand.
+
+One thing the draft settled differently from this document, and it is the maintainer's to settle. §2
+above heads Seat F **The Reader Beyond the Border**; the draft heads it **The Person Beyond the
+Border**, in COUNCIL.md and in the prompt alike. The draft's reading is that this seat is named for
+someone the decisions reach rather than for someone reading a page, and Seat F is the one seat of the
+four where those are not the same person; against it, every other seat is named as a reader. Both
+names must not ship: COUNCIL.md §8 makes the prompt's blob SHA the reproducibility guarantee, and a
+seat the two documents name differently is a reading nobody can reproduce.
 
 Three things it needs that are not mine to supply.
 
@@ -199,8 +215,10 @@ Three things it needs that are not mine to supply.
    after it. That reading is held against the prompt as it stands, by the three seats the prompt
    defines, and its SHA goes in the row.
 3. **A re-seal.** COUNCIL.md is sealed, so amending it changes the build's digest. Build
-   `0005-house-2025`'s OpenTimestamps proof is still *pending*, and a re-seal under the same build id
-   would leave the ledger pointing a proof at a file that no longer exists. The honest form is a new
+   `0005-house-2025`'s OpenTimestamps proof is **confirmed at Bitcoin block 968733** as of
+   2026-09-27, which makes this stricter and not looser: a re-seal under the same build id would
+   leave the ledger pointing a completed proof at a file that no longer exists, and that proof is
+   the earliest evidence the register holds of its own contents. The honest form is a new
    build id carrying the same rows, its own manifest, and an anchor marked owed, with ANCHORS.md
    showing both. That changes the published integrity digest of the register, which is not a decision
    to take on one engineer's judgement.
