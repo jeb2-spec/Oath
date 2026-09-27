@@ -1,0 +1,187 @@
+# The pages a reader can use
+
+*Design note, 2026-09-27, after the seven-seat Council's four readings of S.1b (PR #40) and the
+merge. It proposes no change to what the register holds, and no change to a Signal. It proposes
+where a page puts what it already says, and one figure it does not yet draw. Nothing here ships
+before the Council reads it: the sentence at the top of a person's page is the most sensitive
+sentence this project can write.*
+
+## 1. Abstract
+
+Four Council readings asked whether every sentence on a page is true. None asked whether a person
+who arrives with a question and thirty seconds gets an answer. Those are different tests, and the
+second has never been run.
+
+Measured on the pages this repository publishes at build `0005-house-2025`:
+
+| What a reader meets | Measured |
+| --- | --- |
+| Officeholder pages where no Signal fired | 418, a median of **2,146 words** |
+| Officeholder pages where one fired | 21, a median of **5,394 words** |
+| The longest officeholder page | **35,616 words**, printing 1,429 transaction rows |
+| Officeholders whose page prints more than 100 rows | 15 |
+| The landing page | **5,553 words** |
+| Words before the reader meets what the Signal found | 472 |
+| Words before "Verify it", on a page of 19,825 | **9,196** |
+
+The register's own discipline says *the practical thing at the end*. On a page of nineteen
+thousand words there is no end a reader reaches. The paper's shape, which the README sets and the
+pages inherit, puts method before result: correct for a paper a reader has chosen to study, wrong
+for a door a reader arrives at.
+
+## 2. What this proposes
+
+Five changes, in the order a reader meets them.
+
+### 2.1 The answer first, in one sentence, identical in shape for everyone
+
+Every officeholder page opens, above the standards and below the frame, with what the register
+read and what it found, in one sentence of fixed shape:
+
+> The register read **20** of the **20** transaction reports the Clerk's 2025 index attributes to
+> this officeholder. On **3** of them, the index dates the report after the deadline the STOCK Act
+> rule sets from the dates the report prints.
+
+And, unchanged in shape, where nothing fired:
+
+> The register read **4** of the **4** transaction reports the Clerk's 2025 index attributes to
+> this officeholder. On **none** of them does the index date the report after the deadline the
+> STOCK Act rule sets from the dates the report prints.
+
+And where it could not read:
+
+> The register read **0** of the **2** transaction reports the Clerk's 2025 index attributes to
+> this officeholder: both are scanned paper, whose dates are printed in a document the register
+> does not read. It evaluated nothing here, which is a fact about the register, not about what was
+> filed.
+
+**The constraints this sentence must meet, which the Council will test:**
+
+- **One shape, both ways.** The same clauses, in the same order, whether a Signal fired or not. A
+  sentence that appears only on a page where something fired is a verdict by placement (COUNCIL
+  §5, mode 6).
+- **It names a condition and cites a standard.** It never uses *late*, *failed*, *violated*, or
+  any word the lint forbids; the deadline is the rule's, and the dates are the report's own.
+- **It counts the register's reading, not the person.** "Read 20 of 20" is a fact about coverage.
+  It is the one number a reader needs before any other, and it is the number the register is
+  answerable for.
+- **It says nothing a later build could make false.** No present tense that floats: the index is
+  named by the year, the read by its date in the line below.
+- **It is followed, immediately, by the existing not-a-determination sentence.** The frame does
+  not move: it stays in the header, above this, on every page (INVARIANTS §7).
+
+A reader who stops after this sentence has not been misled. That is the test.
+
+### 2.2 A quiet page is a short page
+
+418 of 439 pages spend a median of 2,146 words, most of it the standards block that is identical
+on every page, to say that nothing fired. The honest page should also be the brief one.
+
+- The summary sentence, the record, and where to read it come first.
+- *What this office requires* moves below the record, unchanged, still complete, still citing and
+  linking every rule. It is reference, and reference belongs where a reader who wants it can find
+  it, not in front of a reader who came for one fact.
+- Nothing is removed from any page. The lints that count the frame, the citations and the absence
+  of ranking must pass unchanged, and a test asserts each one on a quiet page and a fired page.
+
+### 2.3 One figure per Finding: the dates on a line
+
+A Finding is arithmetic on four dates: the transaction, the notice, the deadline the rule sets,
+and the date the Clerk's index gives the report. The page states them in prose. For a reader who
+thinks in pictures, and for one skimming on a phone, that arithmetic is currently invisible.
+
+Draw it: a single horizontal rule, four marks, the span between the deadline and the filing date
+shaded, inline SVG, no client JavaScript, legible at 360px, and legible in a screen reader through
+its caption.
+
+The caption carries what the figure shows **and what it does not**, as every figure here must:
+
+> The four dates this Finding rests on, as the report prints them and the Clerk's index dates it.
+> The figure shows a span of days. It does not show why the span is what it is, whether notice
+> reached the filer when the report says, or anything the Committee on Ethics has determined.
+
+This is the same move as the seals: the thing that means something and cannot be faked, rather
+than the thing that is merely pretty. The figure is derived from the Finding's own rows, so it
+regenerates byte for byte with them (RUBRIC gate 4).
+
+### 2.4 The long pages become navigable
+
+Fifteen officeholders' pages print more than a hundred rows; one prints 1,429. A page nobody can
+traverse keeps its promise to nobody.
+
+- Each report's rows sit inside a `<details>` element, summarised by the report's date, its row
+  count and whether a Finding rests on it. HTML alone, no JavaScript, open to a screen reader,
+  and every row still in the page's source and in the download.
+- A report a Finding rests on is open by default. Nothing a reader needs to see is behind a click
+  they must know to make.
+- A short jump list at the top of the transactions section, by report date.
+
+### 2.5 The practical thing where a reader reaches it
+
+*Verify it* at word 9,196 is a rule we wrote and then broke with length. The verify line, the
+build's mark and the citation a reader should use move into the page's head matter, beside the
+seal that already sits there, and stay at the foot as well.
+
+## 3. What this does not propose
+
+- **No new claim about anyone.** Every number in the summary sentence is already on the page.
+- **No change to a Signal**, its definition, its version, or any Finding. Findings stay byte for
+  byte (INVARIANTS §11, §12).
+- **No client JavaScript that changes what a page says** (ECOSYSTEM §1).
+- **No ranking, no sorting by anything the register computes about a person** (INVARIANTS §13).
+- **No page shorter by omission.** Everything now published stays published, on the same page.
+
+## 4. Threats to validity, in the order a careful reader would raise them
+
+1. **A summary sentence is a verdict with extra steps.** This is the real risk and the reason the
+   Council must read it before it ships. The mitigations are the fixed shape, the coverage number
+   first, the absence of any word the lint forbids, and the frame above it. The test that decides
+   it: read the sentence as the officeholder it describes, then as their opponent. If the two
+   readings differ in what the sentence asserts, it is wrong.
+2. **A number at the top invites comparison between people.** No page will carry another person's
+   number, no page will sort, and the index will not print these counts. The existing no-ranking
+   lint covers the index and the Signal page; it should cover the officeholder pages too, and
+   that is a gate to add with this work.
+3. **`<details>` hides evidence.** A collapsed section is still in the source, the download and
+   the seal. A Finding's own rows are never collapsed.
+4. **Moving the standards down reads as demoting the standards.** They are the reason the register
+   exists. The summary sentence cites the rule by name and links to it, so a reader meets the
+   standard in the first sentence, in the only form a first sentence can carry.
+5. **A figure can mislead by scale.** A span of nine days and a span of three hundred must not
+   look alike, and a very long span must not dwarf the marks. The axis is days, stated in the
+   caption, with the scale named.
+6. **This adds surface to maintain.** Each of the five changes needs a test that fails without it,
+   and the guard sweep must cover them, as the fourth reading's eleven unmeasured guards taught.
+
+## 5. The reading this needs before it ships
+
+COUNCIL §2 requires an adversarial reading for any surface that names an officeholder in a new
+way. A sentence that summarises a person at the top of their page is exactly that, and it is the
+sharpest such surface the project has proposed. All seven seats read it, with these questions in
+front:
+
+- **Seat A**, the reader who wants to be fair: does the summary read the same for an ally and an
+  opponent, on structurally identical records?
+- **Seat B**, the subject and the private persons beside them: read the sentence back as the
+  officeholder. Does it assert anything the record does not hold?
+- **Seat C**, the reviewer's reviewer: does the summary's every number derive from the rows, and
+  does the figure regenerate with them?
+- **Seat D**, the partisans: is the sentence one you would screenshot as proof of bias, in either
+  direction, and is the shape identical across the divide?
+- **Seat E**, the constituent the averages leave out: can a person on a phone, in thirty seconds,
+  get the answer they came for, and is the quiet page as clear as the fired one?
+- **Seat F**, the reader beyond the border: does the sentence survive translation without becoming
+  an accusation, and does the figure need words a translation will break?
+- **Seat G**, the reader who comes later: can the summary and the figure be rebuilt from the
+  sealed rows alone, years from now?
+
+## 6. Sources
+
+- The measurements in §1 were taken on the site this repository renders at build
+  `0005-house-2025`, by counting the words a reader meets with style and markup removed. The
+  script is in the session record; the counts reproduce from `python3 src/surfaces/render.py`.
+- [ECOSYSTEM.md](../../ECOSYSTEM.md) §1 for what a surface may do, §2 for the marks.
+- [INVARIANTS.md](../../INVARIANTS.md) §7 the frame, §11 and §12 Findings unchanged, §13 no
+  ranking.
+- [COUNCIL.md](../../COUNCIL.md) §2 for when the Council must read, §5 for the failure modes.
+- [RUBRIC.md](../../RUBRIC.md) gate 4, every Finding regenerates.
