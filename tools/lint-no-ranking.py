@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 """No cross-officeholder ranking on any surface. INVARIANTS.md §13.
 
-Reads the rendered index at `docs/build/index.html` and every summary page under
-`docs/build/signals/`, and finds every list of officeholders on them: the index's
-`officeholders` table, any table or `<ol>`/`<ul>` that declares
-`data-lists="officeholders"`, and any table or list whose rows link to two or more
+Reads every page of the rendered site at `docs/build/`, and finds every list of
+officeholders on each: the directory's `officeholders` table, any table or `<ol>`/`<ul>` that
+declares `data-lists="officeholders"`, and any table or list whose rows link to two or more
 officeholders' pages, declared or not, because a list of persons is one whatever its author
-called it. On a summary page every link to an officeholder's page must sit inside such a
+called it. Every page is read and not a named few, so a page a later build adds cannot list
+persons unchecked; that hole was open for the length of one commit, when the register's
+directory of seats moved off the landing onto its own page. Somewhere in the site one page
+must hold the `officeholders` table, or a renderer could drop the directory and pass. On a
+summary page under `signals/` every link to an officeholder's page must sit inside such a
 declared list. Of each list it requires two things:
 
   1. Its rows are in a declared, permitted order. The list announces its order in a
@@ -26,8 +29,9 @@ report from one to the other, and says so (`data-cross="correction"`); and its a
 section a reader meets first (`id="answer"`), links to no officeholder's page at all, so no
 other person's number can stand beside this one's (docs/design/pages-a-reader-can-use.md §4).
 
-A site with no index fails too: a gate that reads nothing proves nothing, and CI renders
-before it runs this. Standard library, and no code shared with the renderer.
+A site with no page fails too, and so does one whose pages hold no directory: a gate that
+reads nothing proves nothing, and CI renders before it runs this. Standard library, and no
+code shared with the renderer.
 
     python tools/lint-no-ranking.py
     python tools/lint-no-ranking.py --site docs/build
@@ -128,10 +132,16 @@ def lists_on(text: str) -> list[tuple[dict[str, str], list[tuple[str, str]], str
     return found
 
 
-def check_index(text: str) -> list[str]:
-    tables = [(attrs(a), body) for a, body in TABLE.findall(text)]
-    if not any(a.get("id") == "officeholders" for a, _ in tables):
-        return ['no table with id="officeholders"; the index cannot be checked']
+def holds_the_directory(text: str) -> bool:
+    """Whether this page holds the register's directory of seats, the `officeholders` table."""
+    return any(attrs(raw).get("id") == "officeholders" for raw, _body in TABLE.findall(text))
+
+
+def check_register(text: str) -> list[str]:
+    """Any page but an officeholder's own: every list on it that lists officeholders is checked,
+    wherever the page sits. The landing, the directory, the apparatus, and whatever a later build
+    adds are all read this way, because a list of persons is checked where it is published and
+    not where a gate happened to be pointed."""
     failures = []
     for list_attrs, rows, _body in lists_on(text):
         failures += check_list(list_attrs, rows, list_name(list_attrs))
@@ -139,11 +149,11 @@ def check_index(text: str) -> list[str]:
 
 
 def check_summary(text: str) -> list[str]:
-    """A summary page may list no one; every list on it that lists officeholders is checked,
-    and no link to an officeholder's page may stand outside a declared list."""
-    failures, inside = [], 0
-    for list_attrs, rows, body in lists_on(text):
-        failures += check_list(list_attrs, rows, list_name(list_attrs))
+    """A summary page under `signals/`: every list checked as on any page, and no link to an
+    officeholder's page standing outside a declared list. A signal page's whole subject is the
+    persons its Findings are attributed to, so a loose link there is a list of one."""
+    failures, inside = check_register(text), 0
+    for list_attrs, _rows, body in lists_on(text):
         if list_attrs.get("data-lists") == "officeholders":
             inside += len(OFFICEHOLDER_LINK.findall(body))
     total = len(OFFICEHOLDER_LINK.findall(text))
@@ -184,34 +194,47 @@ def main(argv: list[str] | None = None) -> int:
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
     site = Path(args.root).resolve() / args.site
-    index = site / "index.html"
-    if not index.is_file():
-        print(
-            f"FAIL  no index at {args.site}/index.html; a gate that reads nothing proves nothing."
-        )
+    people = sorted(site.glob("officeholders/*.html"))
+    summaries = sorted(site.glob("signals/**/*.html"))
+    claimed = set(people) | set(summaries)
+    register = [p for p in sorted(site.rglob("*.html")) if p not in claimed]
+    if not register and not people and not summaries:
+        print(f"FAIL  no page under {args.site}; a gate that reads nothing proves nothing.")
         print("      Render first: python src/surfaces/render.py")
         return 1
-    failures = [f"index.html: {line}" for line in check_index(index.read_text(encoding="utf-8"))]
-    summaries = sorted((site / "signals").glob("**/*.html"))
+    failures, directories = [], []
+    for path in register:
+        where = path.relative_to(site).as_posix()
+        text = path.read_text(encoding="utf-8")
+        if holds_the_directory(text):
+            directories.append(where)
+        failures += [f"{where}: {line}" for line in check_register(text)]
     for path in summaries:
         where = path.relative_to(site).as_posix()
         failures += [f"{where}: {line}" for line in check_summary(path.read_text("utf-8"))]
-    people = sorted((site / "officeholders").glob("*.html"))
     for path in people:
         where = path.relative_to(site).as_posix()
         failures += [
             f"{where}: {line}" for line in check_person(path.read_text("utf-8"), path.stem)
         ]
+    if not directories:
+        failures.append(
+            f'no page under {args.site} holds a table with id="officeholders"; the register\'s '
+            "directory of seats is what this gate is here to check, and a renderer that drops it "
+            "must not pass"
+        )
     for line in failures:
         print(f"FAIL  {line}")
     if failures:
         print(f"\n{len(failures)} problems; the register does not rank persons.")
         return 1
-    pages = f"{len(summaries)} signal page{'' if len(summaries) == 1 else 's'}"
+    held = " and ".join(directories)
     print(
-        f"OK    the officeholders index and {pages} list persons only in a permitted order, "
-        f"and carry no number about anyone; {len(people)} officeholder pages list no one else, "
-        "and name another only where a correction moved a report."
+        f"OK    {len(register)} register {'page' if len(register) == 1 else 'pages'} "
+        f"(the directory of seats is in {held}) and "
+        f"{len(summaries)} signal {'page' if len(summaries) == 1 else 'pages'} list persons only "
+        f"in a permitted order, and carry no number about anyone; {len(people)} officeholder "
+        "pages list no one else, and name another only where a correction moved a report."
     )
     return 0
 

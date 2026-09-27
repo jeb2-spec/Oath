@@ -63,6 +63,7 @@ GATES = [
     ("§12 supersessions chained", "tools/check-supersessions.py"),
     ("§13 no ranking", "tools/lint-no-ranking.py"),
     ("§7 §13 no person in a figure", "tools/lint-no-names.py"),
+    ("§1 §4 the wanted register knows what it does not know", "tools/check-wanted.py"),
     ("Council §2 every guard is measured", "tools/measure-guards.py"),
     ("§14 facts stay", "tools/check-removals.py"),
     ("§15 contributor COI", "tools/check-coi-disclosure.py"),

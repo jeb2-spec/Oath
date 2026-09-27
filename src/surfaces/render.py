@@ -48,6 +48,13 @@ from datetime import date
 from pathlib import Path
 
 FRAME = "Presence in the register is not evidence of wrongdoing."
+# The three pages at the site's root, named once: the footer's back link, every cross-link
+# and each page's own title read from here, so none can drift from another.
+HOME_TITLE = "The oath and the record"
+SEATS_TITLE = "Every seat in the register"
+SEATS_PAGE = "seats.html"
+RECORD_TITLE = "How this register was built"
+RECORD_PAGE = "record.html"
 CLERK_SITE = "https://disclosures-clerk.house.gov/FinancialDisclosure"
 HOUSE_FINDER = "https://www.house.gov/representatives/find-your-representative"
 REPO = "https://github.com/jeb2-spec/Oath/blob/main/"
@@ -74,6 +81,7 @@ PTR_FORM = "https://ethics.house.gov/wp-content/uploads/2026/02/Final-CY-2025-PT
 # The Committee's memorandum on the reports' due dates, and the codified deadline. STANDARDS.md
 # S.2 records both, and records that neither was read at its source by the session that cited
 # them; a reading at the source is owed before the first Signal publishes.
+NEXT_ENDS = REPO + "NEXT.md#e1-the-committees-own-record-the-source-the-register-does-not-read"
 PTR_DUE_MEMO = (
     "https://ethics.house.gov/wp-content/uploads/2023/01/FINAL-PTR-Due-Date-Pink-Sheet.pdf"
 )
@@ -388,6 +396,53 @@ p.punch { font: 700 1.02rem/1.45 var(--letter); max-width: 40rem; margin: .8rem 
   ol.strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   h1.comic { font-size: 3rem; }
 }
+/* closing the loop: the chain, and the pieces that would mend it */
+figure.loop { margin: .6rem 0 .3rem; }
+svg.loop { width: 100%; max-width: 34rem; height: auto; display: block; }
+.link.held { fill: var(--ink); fill-opacity: .16; stroke: var(--ink); stroke-width: 2.2; }
+.link.open { fill: none; stroke: var(--ink-2); stroke-width: 1.4; stroke-dasharray: 4 3; }
+.lbrace { stroke: var(--ink-2); stroke-width: 1; }
+svg.loop text { font: 700 9px var(--letter); fill: var(--ink-2); }
+svg.loop text.lct { font-size: 8px; }
+nav.parts ul { list-style: none; margin: .6rem 0 0; padding: 0; display: flex;
+  flex-wrap: wrap; gap: .3rem 1.1rem; font-size: .9rem; }
+div.want { margin: 1.1rem 0 0; padding-top: .7rem; border-top: 1px solid var(--rule); }
+div.want h3 { margin: 0 0 .25rem; font: 700 1.06rem/1.35 var(--letter); }
+p.tags { margin: 0 0 .5rem; display: flex; flex-wrap: wrap; gap: .35rem .5rem;
+  align-items: baseline; font-size: .82rem; }
+span.tag2 { border: 1px solid var(--rule); padding: .04rem .38rem; color: var(--ink-2); }
+div.want dl { margin: 0; display: grid; grid-template-columns: minmax(8rem, 12rem) 1fr;
+  gap: .18rem .9rem; font-size: .94rem; }
+div.want dt { font: 700 .78rem/1.5 var(--letter); letter-spacing: .04em;
+  text-transform: uppercase; color: var(--ink-2); }
+div.want dd { margin: 0; }
+@media (max-width: 34rem) { div.want dl { grid-template-columns: 1fr; }
+  div.want dd { margin: 0 0 .4rem; } }
+/* where the record ends */
+section.ends { border-top: 0; }
+figure.ends { margin: .6rem 0 .3rem; }
+svg.ends { width: 100%; max-width: 36rem; height: auto; display: block; }
+.esq { fill: var(--ink); }
+.evoid { fill: none; stroke: var(--ink-2); stroke-width: 1; stroke-dasharray: 4 3; }
+.eline { stroke: var(--ink); stroke-width: 1.4; stroke-dasharray: 3 2; }
+.eaxis { stroke: var(--ink); stroke-width: 1.2; }
+svg.ends text { font: 700 9px var(--letter); fill: var(--ink-2); }
+svg.ends text.eq { font: 700 22px var(--letter); fill: var(--ink-2); }
+ul.squarekey svg.key .evoid { stroke-width: 1.6; stroke-dasharray: 3 2; }
+/* the deadline: by it, or after it */
+section.deadline { border-top: 0; }
+figure.deadline { margin: .6rem 0 .3rem; }
+svg.deadline { width: 100%; max-width: 36rem; height: auto; display: block; }
+.dl.by { fill: var(--ink); fill-opacity: .22; stroke: var(--ink); stroke-width: .7; }
+.dl.after { fill: var(--ink); }
+.dfan { fill: var(--ink); fill-opacity: .1; stroke: var(--ink-2); stroke-width: .6;
+  stroke-dasharray: 2 1.6; }
+.dline { stroke: var(--ink); stroke-width: 1.4; }
+.daxis { stroke: var(--ink); stroke-width: 1.2; }
+.dtick { stroke: var(--ink-2); stroke-width: .8; }
+svg.deadline text { font: 700 9px var(--letter); fill: var(--ink-2); }
+svg.deadline text.don { font-size: 10px; fill: var(--ink); }
+svg.deadline text.doff { font-size: 10px; fill: var(--paper); }
 /* the notice clock */
 section.noticeclock { border-top: 0; }
 figure.noticeclock { margin: .6rem 0 .3rem; }
@@ -1118,7 +1173,7 @@ def anchor_words(meta: dict) -> str:
 
 def footer(meta: dict, home: bool, to_root: str = "../") -> str:
     anchor_line = anchor_words(meta)
-    back = "" if home else f'<p><a href="{to_root}index.html">Every seat in the register</a></p>\n'
+    back = "" if home else f'<p><a href="{to_root}index.html">{esc(HOME_TITLE)}</a></p>\n'
     return (
         "<footer>\n"
         f"{back}"
@@ -1964,8 +2019,14 @@ class Raw(str):
     """A glossary entry that carries its own links; every other entry is escaped."""
 
 
-def disputes_section(person: bool) -> str:
+def disputes_section(person: bool, brief: bool = False) -> str:
     """How a person named here disputes a fact about themselves, on every page.
+
+    `brief` is the landing's form: the same route in one paragraph, linking the whole of it on the
+    apparatus page. Seat B's requirement is that a person who does not know whose page they are on
+    still finds the route from the front door; it is not that the front door recite all of it. The
+    full form stays where an adverse sentence about a person actually appears, which is that
+    person's own page, and on the apparatus page a reader can open.
 
     BYLAWS §6 promises a subject two routes and describes them in detail: a correction where a row
     states a fact incorrectly, and a supersession where a later primary filing shows the condition
@@ -2034,6 +2095,19 @@ def disputes_section(person: bool) -> str:
             "route SECURITY.md gives, rather than on the record.",
         ),
     ]
+    if brief:
+        return (
+            '<section id="disputes" class="disputes">\n'
+            "<h2>If a fact here is wrong</h2>\n"
+            f'<p>{who} <a href="{CORRECTION_FORM}">Name the row, say what is wrong, and cite '
+            "the primary source that shows it</a>; anyone may open it on a subject's behalf. The "
+            "maintainer acts on no private request from anyone, which cuts both ways and is meant "
+            "to: nothing is quietly removed, and nothing is quietly added. "
+            f'<a href="{RECORD_PAGE}#disputes">The whole route</a>, and what a correction does '
+            f'and does not do. For <a href="{SECURITY_MD}">something that should not be public at '
+            "all</a>, report it privately rather than on the record.</p>\n"
+            "</section>"
+        )
     listed = "\n".join(f"<dt>{term}</dt><dd>{body}</dd>" for term, body in rows)
     return (
         '<section id="disputes" class="disputes">\n'
@@ -3714,7 +3788,7 @@ def tile_map(offices: list[dict]) -> str:
         cls = "tile" if code in voting else "tile nv"
         name = STATE_NAMES.get(code, code)
         tiles.append(
-            f'<a class="{cls}" href="#state-{esc(code)}" '
+            f'<a class="{cls}" href="{SEATS_PAGE}#state-{esc(code)}" '
             f'style="grid-column:{col + 1};grid-row:{row + 1}" '
             f'title="{esc(name)}, {n} {plural(n, "seat", "seats")}">'
             f"{esc(code)}<small>{n}</small></a>"
@@ -3726,10 +3800,9 @@ def tile_map(offices: list[dict]) -> str:
     )
     return (
         f'<section class="finder" id="find">\n<h2>{esc(heading)}</h2>\n'
-        '<p class="quiet">Choose your state. Every square is the same size on purpose; the '
-        "number is its House seats, a fact about the office. Dashed: seats without a floor vote. "
-        f'Not sure of your district? <a href="{HOUSE_FINDER}">The '
-        "House's own finder</a> takes a ZIP code.</p>\n"
+        '<p class="quiet">Every square is the same size on purpose; the number is its House '
+        "seats. Dashed: seats with no floor vote. Not sure of your district? "
+        f'<a href="{HOUSE_FINDER}">The House\'s own finder</a> takes a ZIP code.</p>\n'
         f'<div class="tiles" role="navigation" aria-label="States">{"".join(tiles)}</div>\n'
         "</section>"
     )
@@ -4017,7 +4090,8 @@ def state_of_record(
         + (
             f'<p class="quiet">Members of {esc(congress_words())} the Clerk\'s roster stopped '
             "listing during that Congress keep their pages, with everything the register "
-            'published, <a href="#not-listed">listed below the seats</a> with the reads that '
+            f'published, <a href="{SEATS_PAGE}#not-listed">listed with the seats</a>, with '
+            "the reads that "
             "last listed them and first did not.</p>\n"
             if gone
             else ""
@@ -4104,11 +4178,10 @@ def strip_section(unread: int, total: int, year: int) -> str:
             f"<p>{key_mark(mark)} {esc(words)}</p></li>"
         )
     paper = (
-        f" On {unread:,} the register found no Filing ID line to read, so it read nothing "
-        "from them: a limit of the register, not a fact about what was filed. Every one is "
-        "below, one square each; those are the outlines."
+        f" On {unread:,} of them the register found no Filing ID line, so it read nothing from "
+        "them: a limit of the register, not a fact about what was filed."
         if unread
-        else " Every one is below, one square each."
+        else ""
     )
     return (
         '<section class="howto" id="how">\n<h2><span class="tag">How a stock trade becomes a '
@@ -4121,7 +4194,336 @@ def strip_section(unread: int, total: int, year: int) -> str:
     )
 
 
+# ---- where the record ends ------------------------------------------------------------------
+
+# The Committee on Ethics's own published rule for what follows a report dated after the deadline:
+# past thirty more days its memorandum of 30 January 2023 sets a minimum fee of $200 a report, and
+# its filing-deadlines page says the fee may be waived in exceptional circumstances (STANDARDS.md
+# S.2, both read at the source 2026-09-21 and 2026-09-23). The register places its own rows against
+# that published line and computes no fee for anyone: a fee is assessed, or waived, by the
+# Committee, and the register sees none of its decisions.
+GRACE_DAYS = 30
+
+
+def report_lateness(findings: list[dict], signal_id: str) -> list[int]:
+    """Each current Finding of this signal as one number: the days between the report's own due
+    date and the date the Clerk's index gives it.
+
+    A report is due by the earliest deadline among the rows on it, so the row with the earliest
+    deadline is the row furthest past it, and its `days_after` is the report's. The arithmetic is
+    the Signal's, sealed with the Finding; this reads it back."""
+    out = []
+    for finding in fired_now(findings, signal_id):
+        days = [
+            row["days_after"]
+            for row in finding["evidence"]["rows"]
+            if isinstance(row.get("days_after"), int)
+        ]
+        if days:
+            out.append(max(days))
+    return sorted(out)
+
+
+def ends_chart(late: list[int]) -> str:
+    """Two rows, one span: the days after a report's own due date.
+
+    Above, every report the Clerk's index dates after the deadline, one square each, stacked where
+    two fall on the same day, with the upright line at the thirtieth day the Committee's memorandum
+    names. Below, at the same width, what the register holds about what followed, which is nothing,
+    so the row is empty.
+
+    A draft drew the lower row as the upper row's shadow: the same 27 squares in the same places,
+    hollow. It was the more clever figure and the less legible one — twenty-seven empty boxes read
+    as twenty-seven things, and the eye counts them instead of noticing there is nothing to count.
+    An empty band is what emptiness looks like. Nothing is drawn in the lower row at all, so the
+    figure asserts no fact about the Committee; it draws this register's own silence at the size of
+    the question."""
+    if not late:
+        return ""
+    pad, w = 10, 360
+    sq, step = 6.0, 7.5
+    floor_y, axis_y = 70.0, 78.0
+    band_top, band_h = 124.0, 46.0
+    span = max(max(late), GRACE_DAYS + 1)
+    inner = w - 2 * pad
+
+    def x(day: int) -> float:
+        return pad + inner * day / span
+
+    stacked: dict[int, int] = {}
+    squares = []
+    for day in late:
+        k = stacked.get(day, 0)
+        stacked[day] = k + 1
+        squares.append(
+            f'<rect class="esq" x="{x(day) - sq / 2:.2f}" y="{floor_y - k * step:.1f}" '
+            f'width="{sq}" height="{sq}"/>'
+        )
+    xg = x(GRACE_DAYS)
+    parts = [
+        f'<text x="{pad}" y="10" text-anchor="start">what the Clerk\'s index shows</text>',
+        f'<line class="eline" x1="{xg:.1f}" y1="16" x2="{xg:.1f}" y2="{axis_y}"/>',
+        *squares,
+        f'<line class="eaxis" x1="{pad}" y1="{axis_y}" x2="{w - pad}" y2="{axis_y}"/>',
+        f'<text x="{pad}" y="{axis_y + 12}" text-anchor="start">0</text>',
+        f'<text x="{xg:.1f}" y="{axis_y + 12}" text-anchor="middle">{GRACE_DAYS}</text>',
+        f'<text x="{w - pad}" y="{axis_y + 12}" text-anchor="end">{span}</text>',
+        f'<text x="{w - pad}" y="{axis_y + 24}" text-anchor="end">'
+        "days after the report was due</text>",
+        f'<text x="{pad}" y="{band_top - 6}" text-anchor="start">what followed</text>',
+        f'<rect class="evoid" x="{pad}" y="{band_top}" width="{inner}" height="{band_h}"/>',
+        f'<text class="eq" x="{w / 2:.1f}" y="{band_top + band_h / 2 + 8:.1f}" '
+        'text-anchor="middle">?</text>',
+    ]
+    return (
+        f'<svg class="ends" viewBox="0 0 {w} {band_top + band_h + 8:.0f}" direction="ltr" '
+        'aria-hidden="true" focusable="false">' + "".join(parts) + "</svg>"
+    )
+
+
+def ends_section(signal_runs: list[tuple[dict, dict]], findings: list[dict]) -> str:
+    """Where this register's chain stops, drawn at the width of the part it can see.
+
+    Every other figure on this page is about what the register found or could not read inside the
+    filings. This one is about what happens to a filing after the register has read it, which is
+    the question a reader asks next and the one the pages had no answer for. The honest answer has
+    three parts and the section gives all three: the rule the Committee publishes, where these
+    reports fall against it, and the number of rows here about what the Committee then did, which
+    is nothing.
+
+    Three things it must not do. It must not compute a fee for anyone: a fee is assessed, or
+    waived, by the Committee (STANDARDS.md S.2). It must not read its own silence as the
+    Committee's: the register reads the Clerk's filing index, a Committee decision is not among
+    its sources, and whether one is published to read is a question it has not answered. And it
+    must not lump the two populations the record plainly holds, because eighteen of these reports
+    are days past their due date, seven of them by one, and nine are three to six months past;
+    a figure that drew them as one number would be false about every report in it."""
+    for signal, _summary in signal_runs:
+        late = report_lateness(findings, signal["id"])
+        if not late:
+            continue
+        inside = [d for d in late if d <= GRACE_DAYS]
+        past = [d for d in late if d > GRACE_DAYS]
+        one_day = sum(1 for d in late if d == 1)
+        # The emptiness between the two groups is worth a sentence when it is wider than the
+        # whole window the Committee's line marks: that is a threshold the record supplies rather
+        # than one chosen here, and it keeps a one-day gap, which is noise, out of the page.
+        gap = ""
+        if inside and past and min(past) - max(inside) > GRACE_DAYS:
+            gap = f" No report in this build falls between {max(inside):,} days and {min(past):,}."
+        filed = sorted(f["evidence"]["filed_at"] for f in fired_now(findings, signal["id"]))
+        swatch = (
+            '<svg class="key" viewBox="0 0 12 12" aria-hidden="true" focusable="false">'
+            '<rect class="{0}" x="1" y="1" width="10" height="10"/></svg>'
+        )
+        n = len(late)
+        return (
+            '<section class="ends" id="ends">\n'
+            '<h2><span class="tag">Where the record ends</span></h2>\n'
+            f'<p class="glance">A report the Clerk\'s index dates after the deadline is where this '
+            "register stops being able to follow anything. What the rule does next is the "
+            f"Committee on Ethics's: past {GRACE_DAYS} more days its "
+            f'<a href="{PTR_DUE_MEMO}">memorandum of 30 January 2023</a> sets a minimum fee of '
+            f'$200 a report, and <a href="{ETHICS_FD}">its filing-deadlines page</a> says the fee '
+            "may be waived in exceptional circumstances. The register computes no fee for anyone "
+            "and holds no row about what the Committee did.</p>\n"
+            '<figure class="ends">\n'
+            + ends_chart(late)
+            + f"\n<figcaption>Above: the {n:,} {plural(n, 'report', 'reports')} the Clerk's "
+            f"{ERA['year']} index dates after the deadline, one square each, placed by the days "
+            "between the report's own due date and the date the index gives it, and stacked where "
+            f"two fall on the same day. The upright line is the {GRACE_DAYS}th day. Below, on the "
+            "same span and at the same width: every row this register holds about what followed, "
+            "whether a fee was assessed, waived, or neither. There are none, which is why it is "
+            "empty. That emptiness is a fact about this register's sources and not about the "
+            "Committee: the register reads the Clerk's filing index, a Committee decision is not "
+            "among the sources it reads, and whether one is published to read is a question it "
+            "has not answered. It counts reports, not trades or people, and it names no one."
+            "</figcaption>\n</figure>\n"
+            '<ul class="squarekey">'
+            f"<li>{swatch.format('esq')} <b>{len(inside):,}</b> "
+            f"{plural(len(inside), 'report', 'reports')} at or inside the {GRACE_DAYS}th day past "
+            f"their own due date"
+            + (f", {one_day:,} of them by one day" if one_day else "")
+            + "</li>"
+            f"<li>{swatch.format('esq')} <b>{len(past):,}</b> "
+            f"{plural(len(past), 'report', 'reports')} past it, at {min(past):,} to "
+            f"{max(past):,} days.{gap}</li>"
+            f"<li>{swatch.format('evoid')} <b>0</b> rows here about what followed, for any of the "
+            f"{n:,}</li></ul>\n"
+            f"<p>The Clerk's index dates these reports between {esc(filed[0])} and "
+            f"{esc(filed[-1])}. What followed each is the Committee's to say, on "
+            f'<a href="{ETHICS_FD}">its own page</a>. Every piece of official information that '
+            f"would let the register carry on past this point is listed, one row each, in "
+            f'<a href="{WANTED_PAGE}">what would close the loop</a>.</p>\n'
+            f'<p class="quiet">{esc(EITHER_WAY)}</p>\n'
+            "</section>"
+        )
+    return ""
+
+
 # ---- the notice clock: the one date the filer writes ----------------------------------------
+
+
+# The key's swatch, drawn from the same two fills the figure uses, so a reader matches the block
+# in the key to the block in the bar without being told which is which.
+DEADLINE_SWATCH = (
+    '<svg class="key" viewBox="0 0 12 12" aria-hidden="true" focusable="false">'
+    '<rect class="dl {0}" x="1" y="1" width="10" height="10"/></svg>'
+)
+
+
+# ---- the deadline: by it, or after it -------------------------------------------------------
+
+
+def days_after_rows(findings: list[dict], signal_id: str) -> list[int]:
+    """Every row a current Finding of this signal rests on, as the days the Signal computed between
+    the deadline and the date the Clerk's index gives the report. The arithmetic is the Signal's and
+    is sealed with the Finding; this reads it back and never recomputes it."""
+    return sorted(
+        row["days_after"]
+        for finding in fired_now(findings, signal_id)
+        for row in finding["evidence"]["rows"]
+        if isinstance(row.get("days_after"), int)
+    )
+
+
+def deadline_chart(on_time: int, late: list[int]) -> str:
+    """One drawing, two registers.
+
+    Above: every trade the Signal compared, as a single bar split where the deadline falls, so the
+    proportion is the first thing a reader takes in and not a number they have to divide. Below:
+    the far side of that split enlarged, spread by the days past the deadline, one bar a day. A
+    bracket joins the two, because the lower register is the upper one's dark segment magnified and
+    a reader should not have to be told that in words.
+
+    The page taught four marks in its four panels; the tick is the deadline and the bar is how late.
+    This is where it draws them at the scale of the whole chamber."""
+    # Room above the bar for its one label, and room between the two registers for the bracket to
+    # read as a bracket: the whole drawing is the one line at the split, twice, joined.
+    pad, w = 8, 360
+    bar_y, bar_h, gap = 20, 16, 3
+    head, base = 78, 168
+    # A day carrying any trade at all is drawn at least this high. Without a floor the long tail,
+    # where a day holds one or two trades against a busiest day of hundreds, falls below a pixel
+    # and the figure shows four spikes and an empty plain; with one, the caption says so.
+    FLOOR = 2.5
+    inner = w - 2 * pad
+    total = on_time + len(late)
+    if not total:
+        return ""
+    split = pad + inner * on_time / total
+    per_day: dict[int, int] = {}
+    for d in late:
+        per_day[d] = per_day.get(d, 0) + 1
+    furthest = max(per_day, default=1)
+    step = inner / max(furthest, 1)
+    top = max(per_day.values(), default=1)
+    parts = [
+        # the whole, and the part of it past the deadline
+        f'<rect class="dl by" x="{pad}" y="{bar_y}" width="{split - pad:.1f}" height="{bar_h}"/>',
+        f'<rect class="dl after" x="{split:.1f}" y="{bar_y}" width="{w - pad - split:.1f}" '
+        f'height="{bar_h}"/>',
+        # the deadline itself, the one line the rest of the drawing hangs on
+        f'<line class="dline" x1="{split:.1f}" y1="{bar_y - 4}" x2="{split:.1f}" '
+        f'y2="{bar_y + bar_h + 4}"/>',
+        f'<text x="{split:.1f}" y="{bar_y - 6}" text-anchor="middle">the deadline</text>',
+        # Both counts on the blocks they belong to, so the picture says what it is without the
+        # key: a reader should be able to take the whole of it in before reading a word below.
+        f'<text class="don" x="{(pad + split) / 2:.1f}" y="{bar_y + bar_h - 4.5}" '
+        f'text-anchor="middle">{on_time:,}</text>',
+        f'<text class="doff" x="{(split + w - pad) / 2:.1f}" y="{bar_y + bar_h - 4.5}" '
+        f'text-anchor="middle">{len(late):,}</text>',
+        # the bracket: the dark segment, opened out into the register below it
+        f'<path class="dfan" d="M{split:.1f} {bar_y + bar_h + gap} L{pad} {head - 6} '
+        f'L{w - pad} {head - 6} L{w - pad} {bar_y + bar_h + gap} Z"/>',
+    ]
+    for day, n in sorted(per_day.items()):
+        h = max(round(n / top * (base - head), 1), FLOOR)
+        x = pad + (day - 1) * step
+        parts.append(
+            f'<rect class="dl after" x="{x:.2f}" y="{base - h:.1f}" '
+            f'width="{min(step - 0.25, 3):.2f}" height="{h:.1f}"/>'
+        )
+    parts.append(f'<line class="dline" x1="{pad}" y1="{head - 6}" x2="{pad}" y2="{base}"/>')
+    parts.append(f'<line class="daxis" x1="{pad}" y1="{base}" x2="{w - pad}" y2="{base}"/>')
+    for day in (30, 90, furthest):
+        if day > furthest:
+            continue
+        x = pad + (day - 1) * step
+        parts.append(f'<line class="dtick" x1="{x:.1f}" y1="{base}" x2="{x:.1f}" y2="{base + 3}"/>')
+        parts.append(f'<text x="{x:.1f}" y="{base + 12}" text-anchor="middle">{day}</text>')
+    parts.append(f'<text x="{pad}" y="{base + 12}" text-anchor="start">1</text>')
+    parts.append(
+        f'<text x="{w - pad}" y="{base + 24}" text-anchor="end">days after the deadline</text>'
+    )
+    return (
+        f'<svg class="deadline" viewBox="0 0 {w} {base + 28}" direction="ltr" aria-hidden="true" '
+        'focusable="false">' + "".join(parts) + "</svg>"
+    )
+
+
+def deadline_section(signal_runs: list[tuple[dict, dict]], findings: list[dict]) -> str:
+    """The one figure the page is for: the deadline, and how many trades fell on each side of it.
+
+    Every other figure here says which reports the register could read, or where a filer's own
+    notice date fell. None said the thing the register was built to show: that of the trades it
+    compared, most were reported inside the limit the law sets, and that where a report came after
+    it the distance is usually days and occasionally months. Both halves are the record, and a
+    figure that drew only the second would be an indictment rather than a register.
+
+    The counts come from the run record; the distribution comes from the rows the Findings carry,
+    which is the Signal's own arithmetic, sealed. Where the two disagree about how many rows are
+    past the deadline the section says so and draws nothing, because a picture drawn from one and
+    labelled from the other is the defect this project exists to prevent."""
+    parts = []
+    for signal, summary in signal_runs:
+        compared = summary.get("rows_evaluated") or 0
+        after = summary.get("rows_after") or 0
+        if not compared:
+            continue
+        late = days_after_rows(findings, signal["id"])
+        if len(late) != after:
+            parts.append(
+                f'<p class="quiet">This build\'s run record counts {after:,} '
+                f"{plural(after, 'trade', 'trades')} past the deadline and its Findings carry "
+                f"{len(late):,}, so the register draws neither: "
+                f'<a href="{signal_page_path(signal)}">the signal\'s own page</a> has what it '
+                "did.</p>\n"
+            )
+            continue
+        on_time = compared - len(late)
+        reports = summary.get("reports_with_a_finding") or 0
+        middle = late[len(late) // 2] if late else 0
+        parts.append(
+            '<figure class="deadline">\n'
+            + deadline_chart(on_time, late)
+            + f"\n<figcaption>Every trade the signal compared against the deadline, as one bar "
+            f"split where the deadline falls: {on_time:,} reported by it, {len(late):,} after. "
+            "Below, that second part on its own and spread by the days between the deadline and "
+            "the date the Clerk's index gives the report, one bar a day, on a plain scale; a day "
+            "carrying any trade at all is drawn at least a tick high, so the far days show. It "
+            "counts trades and not reports or people: one report can list hundreds of trades, so "
+            "a tall bar can be a single report. The arithmetic is the signal's, sealed with each "
+            "Finding, and this draws it back. It names no one, and nothing here is ordered by "
+            "anything about a person.</figcaption>\n</figure>\n"
+            '<ul class="squarekey">'
+            f"<li>{DEADLINE_SWATCH.format('by')} <b>{on_time:,}</b> trades whose report the "
+            "Clerk's index dates on or before the deadline the rule sets</li>"
+            f"<li>{DEADLINE_SWATCH.format('after')} <b>{len(late):,}</b> trades whose report it "
+            f"dates after the deadline, on {reports:,} {plural(reports, 'report', 'reports')}: "
+            f"half of them by {middle:,} {plural(middle, 'day', 'days')} or fewer, the "
+            f"furthest by {max(late):,}</li></ul>\n"
+        )
+    if not parts:
+        return ""
+    return (
+        '<section class="deadline" id="deadline">\n'
+        '<h2><span class="tag">By the deadline, or after it</span></h2>\n'
+        + "".join(parts)
+        + f'<p class="quiet">{esc(EITHER_WAY)}</p>\n'
+        "</section>"
+    )
 
 
 def notice_bands(transactions: list[dict], filings: list[dict]) -> dict:
@@ -4237,10 +4639,11 @@ def notice_section(transactions: list[dict], filings: list[dict]) -> str:
     return (
         '<section class="noticeclock" id="notice">\n<h2><span class="tag">The one date the filer '
         "writes</span></h2>\n"
-        '<p class="glance">Every trade on these reports carries a notice date: the day the member '
-        "says they learned of it. It is the filer's own entry, and it is the only date that can "
-        "move the deadline, by at most 15 days. Past 45 days after the trade, the deadline no "
-        "longer waits for it.</p>\n"
+        f'<p class="glance">On {past["trades"]:,} of these trades the notice date the report '
+        "prints falls more than 45 days after the trade itself, so, as the dates are printed, the "
+        "deadline had passed before the member says they learned of it. The notice date is the "
+        "filer's own entry and the only date that can move a deadline, by at most 15 days; past "
+        "45 days after the trade it no longer waits for one.</p>\n"
         '<figure class="noticeclock">\n'
         + notice_chart(facts["days"])
         + f"\n<figcaption>All {total:,} trades on the transaction reports the register has read, "
@@ -4255,8 +4658,7 @@ def notice_section(transactions: list[dict], filings: list[dict]) -> str:
         "notices printed the same day as the trade or up to 45 days after it "
         f"({b['same']['trades']:,} the same day)</li>"
         f"<li>{swatch.format('past')} <b>{past['trades']:,}</b> printed more than 45 days after "
-        f"the trade, so, as the dates are printed, the deadline had already passed when the notice "
-        f"came: {trio(past)}."
+        f"the trade, the ones this section opens with: {trio(past)}."
         f"{spouse}</li>"
         f"<li>{swatch.format('before')} <b>{b['before']['trades']:,}</b> printed before the "
         f"trade itself, dates that cannot both be right: {trio(b['before'])}.</li></ul>\n"
@@ -4421,6 +4823,37 @@ def narrows_figure(outcomes: list[dict], findings: list[dict], signal: dict, wor
     )
 
 
+def narrows_section(
+    signal_runs: list[tuple[dict, dict]],
+    outcomes_all: dict[str, list[dict]],
+    findings: list[dict],
+) -> str:
+    """What the register could not reach, in one place.
+
+    These four numbers and their reasons used to sit inside the glance, which already said the
+    funnel in a sentence and again in its key: three tellings of one narrowing in the first screens
+    a reader meets. Limits read better as their own movement, in the order a careful reader raises
+    them, than as a caveat hung on every number, and that is the shape the README is written in.
+    The figure and its list stay together, because the list is what the figure means.
+    """
+    parts = []
+    for signal, _summary in signal_runs:
+        words = ANSWER_WORDS.get((signal["slug"], signal["version"]))
+        outcomes = outcomes_all.get(signal["id"], [])
+        if words is None or not outcomes:
+            continue
+        parts.append(narrows_figure(outcomes, findings, signal, words))
+    if not parts:
+        return ""
+    return (
+        '<section class="narrows" id="narrows">\n'
+        "<h2>What the register could not reach</h2>\n"
+        '<p class="lede">Every other part of this page says what the register found. This one says '
+        "what it could not get to, which is the harder half and the half that decides whether any "
+        "of the rest is worth trusting.</p>\n" + "".join(parts) + "</section>"
+    )
+
+
 def glance_section(
     signal_runs: list[tuple[dict, dict]],
     outcomes_all: dict[str, list[dict]],
@@ -4445,9 +4878,9 @@ def glance_section(
         n = len(states)
         first, last = states[0][0], states[-1][0]
         parts.append(
-            f'<p class="glance">The Clerk\'s {ERA["year"]} index lists {n:,} '
+            f'<p class="glance">One square for each of the {n:,} '
             f"{plural(n, one, many)} "
-            f"(reports of trades in stocks, bonds and other securities) attributed to {members:,} "
+            f"the Clerk's {ERA['year']} index attributes to {members:,} "
             f"{plural(members, 'member', 'members')}. The register compared {checked:,} of them "
             f"against {words['against']}, and the Clerk's index dates {counts['after']:,} of "
             "those after it, for at least one trade compared.</p>\n"
@@ -4457,7 +4890,6 @@ def glance_section(
             f"{esc(first)} to {esc(last)}. No square names anyone, and nothing here is sorted by "
             "anything about a person.</figcaption>\n</figure>\n"
             + square_key(counts)
-            + narrows_figure(outcomes, findings, signal, words)
             + f"<p>The {counts['after']:,} dark squares are {counts['after']:,} reports by "
             f"{named:,} "
             f"{plural(named, 'member', 'members')}. Each is on that member's page, with the dates "
@@ -4765,23 +5197,32 @@ def render_signal_page(
     return page(signal["name"], body)
 
 
-def render_index(
-    holders: list[dict],
-    offices: list[dict],
-    filings: list[dict],
-    run: dict,
-    meta: dict,
-    striker,
-    held_rows: int | dict = 0,
-    rejected_url: str = REPO + "data/rejected/house-fd/",
-    transactions: list[dict] | None = None,
-    signal_runs: list[tuple[dict, dict]] | None = None,
-    reach: dict[str, dict[str, int]] | None = None,
-    changes: dict[str, list[dict]] | None = None,
-    outcomes_all: dict[str, list[dict]] | None = None,
-    findings: list[dict] | None = None,
-) -> str:
-    ERA.update(era_of(run, holders))
+# ---- the directory and the apparatus: each its own page ---------------------------------
+
+
+def inner_head(kicker: str, title: str, lede: str = "") -> str:
+    """The header every page but the landing opens with: the frame first, then the page's own
+    name. The frame is in the header on every surface (INVARIANTS.md §7)."""
+    return (
+        '<header class="frame">\n'
+        f'<p class="frame">{esc(FRAME)}</p>\n'
+        '<div class="masthead">\n<div>\n'
+        f'<p class="kicker">{esc(kicker)}</p>\n'
+        f"<h1>{esc(title)}</h1>\n"
+        f"{lede}"
+        "</div>\n</div>\n</header>"
+    )
+
+
+def roster_reading(
+    holders: list[dict], offices: list[dict], changes: dict[str, list[dict]] | None
+) -> tuple[dict[str, dict], dict[str, dict], list[str], list[str]]:
+    """The roster as the register holds it, and the directory's rows: (the holders a later
+    roster stopped listing, keyed by id; the holder at each seat; every seat; the table rows).
+
+    One reading, three callers. The landing counts what this reads, the apparatus page states
+    it, and the directory lists it, so none of the three can say a different thing about who
+    the register holds at a seat."""
     # A seat shows who the roster lists. Whom it no longer lists is kept, with every row the
     # register published, listed below the seats and named at their seat as listed there
     # until a date, with a link, never as holding it.
@@ -4856,66 +5297,18 @@ def render_index(
             f"<td>{esc(office.get('title', ''))}</td>"
             "</tr>"
         )
-    digest = meta.get("digest", "")
-    mark = striker.strike(digest, digest, with_wordmark=True)
-    ordered = sorted(
-        (h for h in holders if h["id"] not in off_roster),
-        key=lambda h: (current_office(h)["seat"], h["id"]),
-    )
-    first = ordered[0] if ordered else None
-    example = (
-        f'<a href="officeholders/{esc(slug(first["id"]))}.html">{esc(first["legal_name"])}</a>'
-        if first
-        else "none yet"
-    )
-    ended = (
-        f'<p class="lede">The {ordinal(ERA["congress"])} Congress\'s terms ended at noon on '
-        f"{long_date(ERA['ends'])} (U.S. Const. amend. XX, section 1). This register holds that "
-        "Congress: every seat, with the Member the Clerk's roster listed when the register last "
-        f"read it for that Congress, {esc(ERA['last_roster_read'])}. Members of the "
-        f"{ordinal(ERA['congress'] + 1)} Congress are not in this build; to find who holds each "
-        f'seat now, use <a href="{HOUSE_FINDER}">the House\'s own finder</a>.</p>\n'
-        if ERA["closed"]
-        else ""
-    )
-    head = (
-        '<header class="frame">\n'
-        f'<p class="frame">{esc(FRAME)}</p>\n'
-        '<div class="masthead">\n<div>\n'
-        '<p class="kicker">A public register</p>\n'
-        '<h1 class="comic" data-text="Oath">Oath</h1>\n'
-        f"{ended}"
-        f'<p class="lede">Every member of the U.S. House in {esc(congress_words(terms=True))} '
-        "swore an oath. This register sets beside it what they filed: each row of the Clerk's "
-        f"{ERA['year']} filing index the register could match to the name on the Clerk's roster, "
-        "linked to the Clerk's own copy. It draws no conclusion about anyone.</p>\n"
-        "</div>\n"
-        + seal_figure(
-            mark,
-            f"The mark of build {build_label(meta)}, struck from its digest. Every officeholder "
-            "page carries its own.",
-        )
-        + "\n</div>\n</header>"
-    )
-    door = (
-        '<section class="door">\n'
-        + (
-            f"<div><p>Find who represented you in the {ordinal(ERA['congress'])} Congress</p>"
-            if ERA["closed"]
-            else "<div><p>Find your representative</p>"
-        )
-        + '<p><a href="#find">Choose your state</a> on the map, then the seat.'
-        + (
-            f" Members the Clerk's roster stopped listing during {esc(congress_words())} are "
-            '<a href="#not-listed">below the seats</a>, with their pages.'
-            if off_roster
-            else ""
-        )
-        + "</p></div>\n"
-        f"<div><p>Read one page in full</p><p>{example}, first in seat order.</p></div>\n"
-        f'<div><p>Understand the discipline</p><p><a href="{CHARTER}">The Charter</a>: five vows, '
-        "short on purpose.</p></div>\n</section>"
-    )
+    return off_roster, holder_by_seat, seats, rows
+
+
+def seats_sections(
+    holders: list[dict], off_roster: dict[str, dict], seats: list[str], rows: list[str]
+) -> str:
+    """Every seat in the register, and the seats a later roster stopped listing.
+
+    The directory. It is 439 names, and it belongs on the page a reader opens to find a name,
+    not in the middle of the story the landing tells: the landing showed a map and then, six
+    screens down, the same chamber again as a list. One of the two was the reader's, and the
+    list was not."""
     table = (
         "<section>\n<h2>Every seat in the register</h2>\n"
         '<table id="officeholders" data-order="seat">\n'
@@ -4969,6 +5362,59 @@ def render_index(
             "<th>Not listed, roster read</th></tr></thead>\n"
             f"<tbody>\n{kept_rows}\n</tbody>\n</table>\n</section>"
         )
+    return table
+
+
+def render_seats(
+    holders: list[dict],
+    offices: list[dict],
+    run: dict,
+    meta: dict,
+    changes: dict[str, list[dict]] | None = None,
+) -> str:
+    """The directory: every seat of this Congress, with the name the Clerk's roster gave it."""
+    ERA.update(era_of(run, holders))
+    off_roster, _at_seat, seats, rows = roster_reading(holders, offices, changes)
+    lede = (
+        f'<p class="lede">{len(seats)} seats. Choose a name to read that Member\'s page: every '
+        "transaction report the register attributes to them, every trade on it, and what it "
+        "could not read. Seat order is an order of offices; it says nothing about anyone.</p>\n"
+    )
+    body = (
+        f'{inner_head("Oath · the directory", SEATS_TITLE, lede)}\n<main id="main">\n'
+        f"{seats_sections(holders, off_roster, seats, rows)}\n"
+        f"</main>\n{footer(meta, home=False, to_root='')}"
+    )
+    return page(SEATS_TITLE, body)
+
+
+def render_record(
+    meta: dict,
+    run: dict,
+    holders: list[dict],
+    filings: list[dict],
+    offices: list[dict],
+    held_rows: int | dict = 0,
+    rejected_url: str = REPO + "data/rejected/house-fd/",
+    transactions: list[dict] | None = None,
+    signal_runs: list[tuple[dict, dict]] | None = None,
+    reach: dict[str, dict[str, int]] | None = None,
+    changes: dict[str, list[dict]] | None = None,
+) -> str:
+    """The apparatus: what this build holds, how a fact here gets corrected, and what every
+    term on the pages means.
+
+    This is the register describing itself, and it used to be two thirds of the landing's
+    words. A reader who wants it should be able to open it; a reader who came to find their
+    representative should not have to walk through it. Nothing is cut: every sentence that was
+    on the landing is here, under a heading, on a page linked from the landing's foot."""
+    ERA.update(era_of(run, holders))
+    _off_roster, at_seat, _seats, _rows = roster_reading(holders, offices, changes)
+    lede = (
+        '<p class="lede">What this build holds, how each number was arrived at, what the '
+        "register could not read, how to get a fact here corrected, and what every term on "
+        "these pages means. Nothing here is about a person.</p>\n"
+    )
     record = state_of_record(
         meta,
         run,
@@ -4981,7 +5427,321 @@ def render_index(
         signal_runs,
         reach,
         changes,
-        len(holder_by_seat),
+        len(at_seat),
+    )
+    body = (
+        f'{inner_head("Oath · the apparatus", RECORD_TITLE, lede)}\n<main id="main">\n'
+        f"{record}\n{disputes_section(False)}\n{how_to_read(False)}\n"
+        f"</main>\n{footer(meta, home=False, to_root='')}"
+    )
+    return page(RECORD_TITLE, body)
+
+
+# ---- closing the loop: what the register would need ------------------------------------------
+
+WANTED_ROWS = "docs/wanted/wanted.ndjson"
+WANTED_PAGE = "closing-the-loop.html"
+WANTED_TITLE = "What would close the loop"
+# The chain, left to right, and which of its links this register can read. The first four are
+# dates in the Clerk's index; the last three are what follows a report, and the register holds
+# no row about any of them. The break between them is the figure.
+# One word a link: at seven links across 360 units a label has 44 units, and "the deadline"
+# needs 46. The article goes, not the link.
+LOOP = (
+    ("trade", True, None),
+    ("notice", True, None),
+    ("report", True, None),
+    ("deadline", True, "the-date"),
+    ("fee", False, "the-fee"),
+    ("review", False, "the-review"),
+    ("court", False, "the-courts"),
+)
+# Each part of the loop, in the order a reader meets it, and the heading it is published under.
+# tools/check-wanted.py writes the same keys on its own and refuses a row whose key is not here.
+WANTED_GROUPS = (
+    ("the-date", "The date every sentence here rests on"),
+    ("the-fee", "The fee the rule itself sets"),
+    ("the-review", "Whether anyone looked"),
+    ("the-courts", "What happens outside the chamber"),
+    ("the-shut-door", "The door that may not open"),
+)
+PUBLICNESS = {
+    "published": "published",
+    "obtainable": "obtainable",
+    "not public": "not public",
+    "unknown": "nobody here has looked yet",
+}
+
+
+def load_wanted(root: Path) -> list[dict]:
+    """The wanted register, or nothing. It is not sealed with the build, so a checkout may not
+    carry it and the page it feeds is simply not written."""
+    path = root / WANTED_ROWS
+    return read_ndjson(path) if path.is_file() else []
+
+
+def loop_chain(rows: list[dict]) -> str:
+    """The loop as a chain of seven links, broken where this register stops.
+
+    The first four links are dates the Clerk's index carries and the register reads. The last
+    three are what follows a report, and the register holds no row about any of them, so they are
+    drawn open, in the same outline this page uses everywhere for *nothing here*. The break is the
+    figure: a chain is the one picture where a missing link needs no caption."""
+    w, link_w, link_h, overlap = 360, 52.0, 24.0, 8.0
+    gap, top = 16.0, 30.0
+    counts: dict[str, int] = {}
+    for r in rows:
+        counts[r["closes"]] = counts.get(r["closes"], 0) + 1
+    span = len(LOOP) * link_w - (len(LOOP) - 1) * overlap + gap
+    x = (w - span) / 2
+    parts = []
+    for i, (label, held, key) in enumerate(LOOP):
+        if i and LOOP[i - 1][1] is not held:
+            x += gap
+        parts.append(
+            f'<rect class="link {"held" if held else "open"}" x="{x:.1f}" y="{top}" '
+            f'width="{link_w}" height="{link_h}" rx="{link_h / 2:.1f}"/>'
+        )
+        mid = x + link_w / 2
+        parts.append(
+            f'<text x="{mid:.1f}" y="{top + link_h + 12}" text-anchor="middle">{label}</text>'
+        )
+        if key and not held:
+            n = counts.get(key, 0)
+            parts.append(
+                f'<text class="lct" x="{mid:.1f}" y="{top + link_h + 24}" text-anchor="middle">'
+                f"{n} wanted</text>"
+            )
+        x += link_w - overlap
+    held_to = (w - span) / 2 + 4 * link_w - 3 * overlap
+    parts.append(
+        f'<line class="lbrace" x1="{(w - span) / 2:.1f}" y1="{top - 8}" x2="{held_to:.1f}" '
+        f'y2="{top - 8}"/>'
+    )
+    parts.append(
+        f'<text x="{((w - span) / 2 + held_to) / 2:.1f}" y="{top - 12}" text-anchor="middle">'
+        "what this register reads</text>"
+    )
+    parts.append(f'<text x="{w - 6}" y="{top - 12}" text-anchor="end">what follows a report</text>')
+    return (
+        f'<svg class="loop" viewBox="0 0 {w} {top + link_h + 32:.0f}" direction="ltr" '
+        'aria-hidden="true" focusable="false">' + "".join(parts) + "</svg>"
+    )
+
+
+def wanted_row(row: dict) -> str:
+    """One wanted piece, in the shape a reader reads it: the question, what the register can say
+    without it, what it could say with it, and then the apparatus."""
+    lines = [
+        ("Today", row["today"]),
+        ("With it", row["with_it"]),
+        ("Who holds it", row["holder"]),
+        ("How it would be got", row["route"]),
+    ]
+    if row.get("joins_on"):
+        lines.append(
+            (
+                "What it would join on",
+                f"{row['joins_on']}, which every report here carries.",
+            )
+        )
+    else:
+        lines.append(
+            (
+                "What it would join on",
+                "Nothing known. A record naming a member and a period does not name a report, "
+                "and joining one to the other would be an inference published against a named "
+                "person, which this register does not do.",
+            )
+        )
+    if not row["verified"]:
+        lines.append(("What to read to settle it", row["check"]))
+    body = "\n".join(f"<dt>{esc(term)}</dt><dd>{esc(text)}</dd>" for term, text in lines)
+    seen = "read at its source" if row["verified"] else "not read at any source by this project"
+    links = "".join(
+        f' <a href="{esc(c["url"])}">{esc(c["what"])}</a>;'
+        if c.get("url")
+        else f" {esc(c['what'])};"
+        for c in row.get("candidates") or []
+    ).rstrip(";")
+    where = (
+        f'<p class="quiet">Where it might be: {links}. {esc(seen.capitalize())}.</p>\n'
+        if links
+        else f'<p class="quiet">{esc(seen.capitalize())}.</p>\n'
+    )
+    return (
+        f'<div class="want" id="{esc(row["id"])}">\n'
+        f"<h3>{esc(row['question'])}</h3>\n"
+        f'<p class="tags"><span class="tag2">{esc(PUBLICNESS[row["publicness"]])}</span>'
+        f'<span class="tag2">one row per {esc(row["unit"].replace("-", " "))}</span>'
+        f"<code>{esc(row['id'])}</code></p>\n"
+        f"<dl>\n{body}\n</dl>\n{where}</div>"
+    )
+
+
+def render_closing(rows: list[dict], run: dict, holders: list[dict], meta: dict) -> str:
+    """The register of what this register does not have.
+
+    Every other page here says what the record holds. This one says, piece by piece, what would
+    have to exist and be readable before the register could follow a report past its deadline to
+    whatever followed it. It is a register and not an essay because the difference matters: a row
+    has an id, a row says what to read to settle it, a row can close, and a row is never deleted.
+
+    It asks for nothing. Naming what is missing is not the same as claiming it is being kept back,
+    and twelve of these rows say plainly that nobody here has looked yet."""
+    ERA.update(era_of(run, holders))
+    open_rows = [r for r in rows if not r.get("closed")]
+    verified = sum(1 for r in rows if r["verified"])
+    lede = (
+        '<p class="lede">The register can follow a trade to the day the Clerk\'s index dates the '
+        "report that carries it, and read that against the deadline. Then it stops. This is every "
+        "piece of official information it would need to carry on, one row each, with what it "
+        "could say if it had it and what to read to find out whether it exists.</p>\n"
+    )
+    groups, nav = [], []
+    for key, heading in WANTED_GROUPS:
+        here = [r for r in rows if r.get("closes") == key]
+        if here:
+            nav.append(f'<li><a href="#{esc(key)}">{esc(heading)}</a> ({len(here)})</li>')
+    for key, heading in WANTED_GROUPS:
+        here = [r for r in rows if r.get("closes") == key]
+        if not here:
+            continue
+        groups.append(
+            f'<section class="wants" id="{esc(key)}">\n<h2>{esc(heading)}</h2>\n'
+            + "\n".join(wanted_row(r) for r in here)
+            + "\n</section>"
+        )
+    figure = (
+        '<section class="loop">\n<h2><span class="tag">The loop, and where it breaks</span></h2>\n'
+        '<figure class="loop">\n'
+        + loop_chain(rows)
+        + "\n<figcaption>The seven stages of a reported trade. The register reads the first four, "
+        "because the Clerk publishes them: the trade, the notice the filer prints, the report, and "
+        "the deadline the rule sets. It holds no row about any of the last three. They are drawn "
+        "open because on these pages an outline means the register has nothing, and the count "
+        "under each is the number of pieces below that would fill it; "
+        f"{sum(1 for r in rows if r.get('closes') == 'the-shut-door')} more are about why the "
+        "break is there at all. The break is not a claim that anything is being kept back; it is "
+        "where this project's own reading stops.</figcaption>\n</figure>\n</section>"
+    )
+    counted = (
+        f"<section>\n<h2>How to read this list</h2>\n"
+        f"<p>{len(rows):,} {plural(len(rows), 'piece', 'pieces')}, {len(open_rows):,} still open. "
+        f"{verified:,} of them {plural(verified, 'has', 'have')} been read at a source by this "
+        f"project; the rest say <em>nobody here has looked yet</em>, which is the honest state and "
+        "not a finding about anyone. A row saying a thing is published, obtainable or not public "
+        "when nobody here has read it is refused by "
+        f'<a href="{REPO}tools/check-wanted.py">the gate that keeps this file</a>, because '
+        "believing a thing is public is not knowing it.</p>\n"
+        f'<p>The rows are data: <a href="{REPO}{WANTED_ROWS}">{esc(WANTED_ROWS)}</a>, one JSON '
+        f'object a line, under <a href="{REPO}schemas/wanted.schema.json">a schema</a>. A piece '
+        "that stops being wanted is marked closed and stays; nothing here is deleted. If you know "
+        "the answer to one of these, or where to read it, "
+        f'<a href="{CORRECTION_FORM}">the same route that corrects a fact</a> opens a row.</p>\n'
+        "</section>"
+    )
+    body = (
+        f'{inner_head("Oath · what is missing", WANTED_TITLE, lede)}\n<main id="main">\n'
+        f"{figure}\n"
+        + (f'<nav class="parts"><ul>{"".join(nav)}</ul></nav>\n' if nav else "")
+        + "\n".join(groups)
+        + f"\n{counted}\n"
+        f"</main>\n{footer(meta, home=False, to_root='')}"
+    )
+    return page(WANTED_TITLE, body)
+
+
+def render_index(
+    holders: list[dict],
+    offices: list[dict],
+    filings: list[dict],
+    run: dict,
+    meta: dict,
+    striker,
+    transactions: list[dict] | None = None,
+    signal_runs: list[tuple[dict, dict]] | None = None,
+    changes: dict[str, list[dict]] | None = None,
+    outcomes_all: dict[str, list[dict]] | None = None,
+    findings: list[dict] | None = None,
+) -> str:
+    """The landing: the record, told in pictures.
+
+    It used to carry the directory of 439 names and the register's whole account of itself, and
+    those were two thirds of its words. Both have their own page now, linked from the foot. What
+    is left is one story a reader can follow without being taught anything first: a map to their
+    own representative, the rule in four panels, the chamber's reports as squares, the one date
+    the filer writes, and what the register could not reach. Every figure carries its caption;
+    the captions are where the words went.
+    """
+    ERA.update(era_of(run, holders))
+    off_roster, _at_seat, _seats, _rows = roster_reading(holders, offices, changes)
+    digest = meta.get("digest", "")
+    mark = striker.strike(digest, digest, with_wordmark=True)
+    ordered = sorted(
+        (h for h in holders if h["id"] not in off_roster),
+        key=lambda h: (current_office(h)["seat"], h["id"]),
+    )
+    first = ordered[0] if ordered else None
+    example = (
+        f'<a href="officeholders/{esc(slug(first["id"]))}.html">{esc(first["legal_name"])}</a>'
+        if first
+        else "none yet"
+    )
+    ended = (
+        f'<p class="lede">The {ordinal(ERA["congress"])} Congress\'s terms ended at noon on '
+        f"{long_date(ERA['ends'])} (U.S. Const. amend. XX, section 1). This register holds that "
+        "Congress: every seat, with the Member the Clerk's roster listed when the register last "
+        f"read it for that Congress, {esc(ERA['last_roster_read'])}. Members of the "
+        f"{ordinal(ERA['congress'] + 1)} Congress are not in this build; to find who holds each "
+        f'seat now, use <a href="{HOUSE_FINDER}">the House\'s own finder</a>.</p>\n'
+        if ERA["closed"]
+        else ""
+    )
+    head = (
+        '<header class="frame">\n'
+        f'<p class="frame">{esc(FRAME)}</p>\n'
+        '<div class="masthead">\n<div>\n'
+        '<p class="kicker">A public register</p>\n'
+        '<h1 class="comic" data-text="Oath">Oath</h1>\n'
+        f"{ended}"
+        '<p class="lede">Every member of the U.S. House swore an oath. The law adds a deadline: '
+        "report a stock trade within 45 days, sooner if you learned of it sooner.</p>\n"
+        f'<p class="quiet">This page sets the second beside the first for '
+        f"{esc(congress_words(terms=True))}: each row of the Clerk's {ERA['year']} filing index "
+        "the register could match to a name on the Clerk's roster, read against that deadline and "
+        "linked to the Clerk's own copy. It draws no conclusion about anyone.</p>\n"
+        "</div>\n"
+        + seal_figure(
+            mark,
+            "Struck from this build's own digest, so the mark changes when the record changes. "
+            "Every officeholder page carries its own.",
+        )
+        + "\n</div>\n</header>"
+    )
+    # The doors out, at the foot, where a reader who has read the page is ready for them. They
+    # used to sit in the second screen, ahead of any reason to want them.
+    door = (
+        '<section class="door" id="more">\n<h2>Where to go next</h2>\n'
+        f'<div><p><a href="{SEATS_PAGE}">Every seat in the register</a></p><p>All '
+        f"{len(offices)} seats, in seat order; each name is a Member's page.</p></div>\n"
+        # The name goes in the card's body and never in its heading. A member's name set as a
+        # headline on the front door invites the question the frame exists to answer, and seat
+        # order is a reason a reader should read before they read the name, not after.
+        f"<div><p>Read one page in full</p><p>{example}, first in seat order: every report the "
+        "register attributes to them, every trade, every date.</p></div>\n"
+        f'<div><p><a href="{RECORD_PAGE}">How this register was built</a></p><p>What this build '
+        "holds, what it could not read, and how to get a fact here corrected.</p></div>\n"
+        f'<div><p><a href="{CHARTER}">The Charter</a></p><p>Five vows, short on purpose.</p>'
+        "</div>\n"
+        + (
+            f'<div><p><a href="{SEATS_PAGE}#not-listed">A seat that changed hands</a></p><p>'
+            f"Members the Clerk's roster stopped listing during {esc(congress_words())} keep "
+            "their pages, with every row the register published.</p></div>\n"
+            if off_roster
+            else ""
+        )
+        + "</section>"
     )
     oath = (
         '<section class="sworn">\n<h2>What every member swore</h2>\n'
@@ -4989,6 +5749,9 @@ def render_index(
         "The register sets the record beside it.</footer></blockquote>\n</section>"
     )
     glance = glance_section(signal_runs or [], outcomes_all or {}, findings or [])
+    deadline = deadline_section(signal_runs or [], findings or [])
+    ends = ends_section(signal_runs or [], findings or [])
+    narrows = narrows_section(signal_runs or [], outcomes_all or {}, findings or [])
     notice = notice_section(transactions or [], filings)
     everything = [o for group in (outcomes_all or {}).values() for o in group]
     by_id = {f["id"]: f for f in filings}
@@ -5006,13 +5769,18 @@ def render_index(
         if everything
         else ""
     )
+    # The order is the editorial decision this page turns on. The reader who arrived from a
+    # friend wants their own representative, so the map is first. Then the rule, in four panels,
+    # because nobody reads a rule they have no reason to care about yet. Then what the chamber
+    # filed against it, then the one date the filer writes, then what the register could not
+    # reach, then the oath the whole page is set beside. The doors out are last.
     body = (
-        f'{head}\n<main id="main">\n{how}\n{glance}\n{notice}\n{door}\n'
-        f"{tile_map(offices)}\n{oath}\n"
-        f"{record}\n{table}\n{disputes_section(False)}\n{how_to_read(False)}\n"
+        f'{head}\n<main id="main">\n{tile_map(offices)}\n{how}\n{deadline}\n{glance}\n'
+        f"{notice}\n{narrows}\n{ends}\n{oath}\n"
+        f"{disputes_section(False, brief=True)}\n{door}\n"
         f"</main>\n{footer(meta, home=True)}"
     )
-    return page("Every seat in the register", body)
+    return page(HOME_TITLE, body)
 
 
 # ---- main ---------------------------------------------------------------------------------
@@ -5284,17 +6052,39 @@ def main(argv: list[str] | None = None) -> int:
             run,
             meta,
             striker,
-            set_aside_counts(rejected, holders, until),
-            rejected_url,
             transactions,
             signal_runs,
-            reach,
             changes,
             {
                 sid: [o for group in by_oh.values() for o in group]
                 for sid, by_oh in outcomes_by.items()
             },
             findings,
+        ),
+        encoding="utf-8",
+        newline="\n",
+    )
+    (out / SEATS_PAGE).write_text(
+        render_seats(holders, offices, run, meta, changes), encoding="utf-8", newline="\n"
+    )
+    wanted = load_wanted(root)
+    if wanted:
+        (out / WANTED_PAGE).write_text(
+            render_closing(wanted, run, holders, meta), encoding="utf-8", newline="\n"
+        )
+    (out / RECORD_PAGE).write_text(
+        render_record(
+            meta,
+            run,
+            holders,
+            filings,
+            offices,
+            set_aside_counts(rejected, holders, until),
+            rejected_url,
+            transactions,
+            signal_runs,
+            reach,
+            changes,
         ),
         encoding="utf-8",
         newline="\n",
@@ -5334,7 +6124,9 @@ def main(argv: list[str] | None = None) -> int:
     quiet = sum(1 for h in holders if not by_holder.get(h["id"]))
     shown = out.relative_to(root).as_posix() if out.is_relative_to(root) else str(out)
     print(
-        f"rendered {len(holders)} pages, the index, {len(signal_runs)} signal "
+        f"rendered {len(holders)} pages, the index, {SEATS_PAGE}, {RECORD_PAGE}, "
+        f"{WANTED_PAGE + ', ' if wanted else ''}"
+        f"{len(signal_runs)} signal "
         f"{plural(len(signal_runs), 'page', 'pages')} and mark.svg to {shown}"
     )
     print(f"{quiet} pages have no matched row; each says so, with the count set aside at its seat")

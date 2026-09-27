@@ -60,6 +60,7 @@ rests on it.
 | --- | --- |
 | Every page naming an officeholder opens with the frame | `tools/lint-frame-presence.py` |
 | No list ranks officeholders, and no number sits beside a person | `tools/lint-no-ranking.py` |
+| The register of what is missing never says a record is public, obtainable or withheld until somebody here has read it at its source, and every row that does not know says what to read | `tools/check-wanted.py` |
 | The sealed state and every run record name no person | `tools/lint-no-names.py` |
 | No verdict language on any user-facing surface | `tools/lint-verdict-language.py` |
 | Every page tells a person how to dispute a fact about themselves | guards in `tools/guards.ndjson`, measured |

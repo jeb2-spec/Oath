@@ -36,51 +36,88 @@ def index(order: str | None, rows: list[tuple[str, str]], extra_cell: str | None
 
 def test_seat_order_with_no_numbers_passes():
     page = index("seat", [("AK00", "A"), ("AL01", "B"), ("AL02", "C")])
-    assert lint.check_index(page) == []
+    assert lint.check_register(page) == []
 
 
 def test_name_order_is_also_permitted():
     page = index("name", [("Adams", "Adams"), ("Baker", "Baker")])
-    assert lint.check_index(page) == []
+    assert lint.check_register(page) == []
 
 
 def test_rows_out_of_declared_order_fail():
     page = index("seat", [("AL02", "C"), ("AK00", "A")])
-    assert "rows are not in the declared seat order" in lint.check_index(page)
+    assert "rows are not in the declared seat order" in lint.check_register(page)
 
 
 def test_an_order_the_invariant_does_not_permit_fails():
     page = index("findings", [("3", "A"), ("1", "B")])
-    failures = lint.check_index(page)
+    failures = lint.check_register(page)
     assert any("does not permit" in f for f in failures)
 
 
 def test_an_undeclared_order_fails():
     page = index(None, [("AK00", "A")])
-    assert "the officeholders list declares no data-order" in lint.check_index(page)
+    assert "the officeholders list declares no data-order" in lint.check_register(page)
 
 
 def test_a_bare_number_beside_a_person_fails():
     page = index("seat", [("AK00", "A"), ("AL01", "B")], extra_cell="7")
-    failures = lint.check_index(page)
+    failures = lint.check_register(page)
     assert any("number beside a person" in f for f in failures)
 
 
 def test_a_date_is_not_a_bare_number():
     page = index("seat", [("AK00", "A")], extra_cell="2025-01-03")
-    assert lint.check_index(page) == []
+    assert lint.check_register(page) == []
 
 
-def test_missing_table_fails():
-    assert lint.check_index("<html><body><p>nothing</p></body></html>") == [
-        'no table with id="officeholders"; the index cannot be checked'
-    ]
+def test_a_page_with_no_list_of_persons_is_read_and_passes():
+    """Most pages list nobody. Reading one is not the same as requiring a directory of it."""
+    assert lint.check_register("<html><body><p>nothing</p></body></html>") == []
+
+
+def test_holds_the_directory_finds_the_officeholders_table():
+    assert lint.holds_the_directory(index("seat", [("AK00", "A")]))
+    assert not lint.holds_the_directory("<html><body><table><tr><td>x</td></tr></table></body>")
 
 
 def test_nothing_rendered_is_a_failure(tmp_path: Path, capsys):
     """A gate that reads nothing proves nothing; CI renders before it runs this."""
     assert lint.main([str(tmp_path)]) == 1
     assert "reads nothing" in capsys.readouterr().out
+
+
+def test_a_site_whose_pages_hold_no_directory_fails(tmp_path: Path, capsys):
+    """The directory of seats is what this gate exists to check. A renderer that stops writing
+    it must not pass by writing nothing for the gate to read."""
+    (tmp_path / "index.html").write_text("<html><body><p>a story, no seats</p></body></html>")
+    assert lint.main([str(tmp_path), "--site", "."]) == 1
+    assert 'no page under . holds a table with id="officeholders"' in capsys.readouterr().out
+
+
+def test_the_directory_is_found_wherever_in_the_site_it_lives(tmp_path: Path, capsys):
+    """It sat on index.html until the landing became a story; the gate follows the table, not
+    the file name."""
+    (tmp_path / "index.html").write_text("<html><body><p>a story</p></body></html>")
+    (tmp_path / "seats.html").write_text(index("seat", [("AK00", "A"), ("AL01", "B")]))
+    assert lint.main([str(tmp_path), "--site", "."]) == 0
+    assert "the directory of seats is in seats.html" in capsys.readouterr().out
+
+
+def test_a_page_the_old_gate_never_read_is_read_now(tmp_path: Path, capsys):
+    """The hole this closes: a page at the site's root, neither the index nor under signals/,
+    listing persons in an order §13 does not permit. The gate read index.html, signals/** and
+    officeholders/* by name, so such a page was checked by nothing at all."""
+    (tmp_path / "seats.html").write_text(index("seat", [("AK00", "A")]))
+    (tmp_path / "record.html").write_text(
+        '<html><body><table id="by-count" data-order="findings">'
+        '<tr data-findings="3"><td><a href="officeholders/oh-a.html">A</a></td></tr>'
+        '<tr data-findings="1"><td><a href="officeholders/oh-b.html">B</a></td></tr>'
+        "</table></body></html>"
+    )
+    assert lint.main([str(tmp_path), "--site", "."]) == 1
+    out = capsys.readouterr().out
+    assert "record.html" in out and "does not permit" in out
 
 
 def listing(attributes: str, rows: list[tuple[str, str, str]]) -> str:
