@@ -2570,7 +2570,8 @@ def test_the_square_that_reassures_is_as_visible_as_the_one_that_does_not():
     def over(fg: str, bg: str, alpha: float) -> str:
         f = [int(fg[i : i + 2], 16) for i in (1, 3, 5)]
         b = [int(bg[i : i + 2], 16) for i in (1, 3, 5)]
-        return "#%02x%02x%02x" % tuple(round(f[i] * alpha + b[i] * (1 - alpha)) for i in range(3))
+        mixed = (round(f[i] * alpha + b[i] * (1 - alpha)) for i in range(3))
+        return "#" + "".join(f"{part:02x}" for part in mixed)
 
     for paper, ink in (("#f7f4ec", "#1c1b16"), ("#141410", "#e9e5d8")):
         assert f"--paper: {paper}" in css and f"--ink: {ink}" in css, "the tokens the page declares"
@@ -2601,7 +2602,8 @@ def test_a_corrected_line_names_the_build_before_the_first_correction_of_it():
     """The sentence tells a private person where a filer's own line survives as filed. Where the
     text was corrected twice, the builds before the SECOND carry the maintainer's first wording,
     not the line as filed, so naming this correction's build sent the reader to builds that do not
-    hold what the sentence promises (the fourth reading, Seats B, E and G; the fifth, Seats C, F)."""
+    hold what the sentence promises (the fourth reading, Seats B, E and G; the fifth, Seats C
+    and F)."""
     first = corrected(
         "fl:house-clerk:P:1",
         "data/filings.ndjson",
