@@ -536,3 +536,16 @@ def test_a_dry_run_says_what_it_would_keep_and_writes_nothing(register, capsys):
     assert "would be kept" in out and "kept at" not in out.replace("would be kept at", "")
     assert not (register / "data" / "changes.ndjson").exists()
     assert not (register / "data" / "captures").exists()
+
+
+def test_a_correction_already_recorded_is_refused(register, capsys):
+    """The Council's fourth reading of S.1b (Seat C): the rule that a change id already in the
+    ledger is refused had no failing input. Twice the same correction, and the second is refused
+    before it writes, so a change row is never written over."""
+    assert run(register, "--now", "2025-02-26") == 0
+    (recorded,) = changes(register)
+    assert run(register, "--now", "2025-02-27") == 1, (
+        "the same row, fact and decision time: the id is the one already recorded"
+    )
+    assert f"{recorded['id']} is already recorded" in capsys.readouterr().out
+    assert changes(register) == [recorded], "and the ledger is what it was"

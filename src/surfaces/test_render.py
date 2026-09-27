@@ -1799,3 +1799,102 @@ def test_the_landing_counts_the_rows_no_decision_attributes_apart():
     )
     assert "<dt>1</dt><dd>index rows set aside for the maintainer to decide by hand" in section
     assert "1 more is not attributed, because the register cannot show the officeholder" in section
+
+
+# ---- the two page guards the fourth reading found unmeasured (Seat A, A4-9) -----------------
+
+
+def test_a_closed_years_row_dated_after_the_terms_is_never_offered_for_a_decision():
+    """Seat A on the fourth reading: `closed_after` could be taken out of UNDECIDABLE and the
+    whole suite still passed. Such a row would read "set aside for the maintainer to decide by
+    hand" again, though no decision can attribute it."""
+    holder_row = holder("AK00", "Example Alaska", "a000001")
+    rows = [
+        {
+            "reason": "the register closed the filing year; the index dates this row after those "
+            "terms, and nothing attributes it (Alaska, Example, AK00)",
+            "source_row": {
+                "state_dst": "AK00",
+                "last": "Alaska",
+                "first": "Example",
+                "filing_type": "P",
+                "filing_date": "1/8/2027",
+            },
+        }
+    ]
+    counted = render.held_by_holder(rows, [holder_row])
+    assert counted == {holder_row["id"]: {"closed_after": 1}}
+    assert "closed_after" in render.UNDECIDABLE, "no decision attributes it"
+    said = render.aside_sentence(counted[holder_row["id"]])
+    assert "for the maintainer to decide by hand" not in said
+    assert "is not attributed here: 1 dated by the index after the Congress's terms ended" in said
+    assert render.set_aside_counts(rows, [holder_row]) == {"waits": 0, "at_seat": 0, "shut": 1}
+
+
+def test_the_landing_takes_its_set_aside_counts_from_the_page_kinds():
+    """Seat A on the fourth reading: the landing's count could be swapped back for the old
+    by-seat count and nothing failed, because no test rendered through the wiring. The landing
+    and the pages count the same rows the same way."""
+    holder_row = holder("AK00", "Example Alaska", "a000001")
+    rows = [
+        {
+            "reason": "surname matches a sitting member (Alaska, Example, AK00) but the given "
+            "names differ; the document carries no Filing ID line; a human decides this one",
+            "source_row": {
+                "state_dst": "AK00",
+                "last": "Alaska",
+                "first": "E.",
+                "filing_type": "P",
+                "filing_date": "3/1/2025",
+            },
+        },
+        {
+            "reason": "the register closed the filing year; the index dates this row after those "
+            "terms, and nothing attributes it (Alaska, Example, AK00)",
+            "source_row": {
+                "state_dst": "AK00",
+                "last": "Alaska",
+                "first": "Example",
+                "filing_type": "P",
+                "filing_date": "1/8/2027",
+            },
+        },
+    ]
+    counts = render.set_aside_counts(rows, [holder_row])
+    assert counts == {"waits": 1, "at_seat": 1, "shut": 1}
+    section = plain(
+        render.state_of_record(META, RUN, HOLDERS, FILINGS, OFFICES, counts, "https://x/rows")
+    )
+    assert "<dt>1</dt><dd>index rows set aside for the maintainer to decide by hand" in section
+    assert "1 of them sit at an officeholder's own seat under their surname" in section
+    assert "1 more is not attributed" in section, "and the row no decision attributes, apart"
+
+
+def test_a_read_that_gives_the_published_value_again_is_said_and_counted_as_that():
+    """Seats A, B and F on the fourth reading: a later read that gives back the value the row
+    carries was written as a disagreement awaiting the maintainer, and counted in the caption
+    among the reads that show a row otherwise."""
+    agrees = {
+        "id": "ch:read-otherwise:fl:house-clerk:P:1:filed_at:2026-10-12T00:00:00Z",
+        "row_id": "fl:house-clerk:P:1",
+        "rows": "filings",
+        "change": "read otherwise",
+        "field": "filed_at",
+        "was": "2025-03-01",
+        "now": "2025-03-01",
+        "capture": {
+            "url": "https://x/2025FD.zip",
+            "retrieved_at": "2026-10-12T00:00:00Z",
+            "content_hash": "0" * 64,
+        },
+    }
+    page = plain(
+        render.render_officeholder(
+            HOLDERS[0], [FILINGS[0]], META, striker, changes={FILINGS[0]["id"]: [agrees]}
+        )
+    )
+    assert "again gives the date filed as the register published it" in page
+    assert "keeps it until the maintainer decides" not in page, "the two agree; nothing is pending"
+    assert "A later read of the Clerk's index shows" not in page, (
+        "and the caption counts what it says (Seat A)"
+    )

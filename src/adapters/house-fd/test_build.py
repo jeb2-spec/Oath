@@ -293,7 +293,8 @@ def roster_xml(congress: int, members: list[dict], sworn: str, seats=("XX01", "X
             f"<lastname>{m['last']}</lastname><firstname>{m['first']}</firstname>"
             f"<middlename/><official-name>{m['first']} {m['last']}</official-name>"
             f"<namelist>{m['last']}, {m['first']}</namelist><party>{m.get('party', 'I')}</party>"
-            f'<district>1st</district><sworn-date date="{sworn}"/></member-info>'
+            f"<district>1st</district>{m.get('extra', '')}"
+            f'<sworn-date date="{sworn}"/></member-info>'
             if m
             else "<member-info><bioguideID/></member-info>"
         )
@@ -940,6 +941,10 @@ class StubReader:
     @staticmethod
     def notes(tx):
         return f"Asset code {tx['asset_code']} per the Clerk's legend."
+
+    @staticmethod
+    def reader_version():
+        return "a stand-in for the tests"
 
 
 TX = {
@@ -1621,7 +1626,7 @@ def test_a_confirmed_mass_not_listing_and_each_documents_read_are_recorded(regis
     assert build.build(2025, expect_not_listed=2) == 0
     record = run_record(register)
     assert record["confirmed_not_listed"] == {"filings": {"rows": 2, "confirmed": 2}}
-    assert "read_at" in record["documents"]
+    assert record["documents"]["read_at"] == {}, "no document was read in this build"
 
 
 def test_the_reasons_the_seal_quotes_keep_their_clause_and_isolate_no_one():
@@ -1906,3 +1911,120 @@ def test_the_read_that_closed_a_year_is_carried_not_the_latest(register):
     )
     assert build.build(2025) == 0
     assert run_record(register)["congress"]["closed_by"] == closing
+
+
+# ---- each guard has a failing input, measured again (the Council's fourth reading, Seat C) ---
+#
+# Seat C removed each guard in turn against the whole suite and found eleven that no test
+# caught, nine of them this change's own. Each has an input here that fails without it.
+
+
+def test_an_entry_the_read_does_not_find_keeps_the_one_the_register_last_read(register):
+    """The run record keeps a row's last-read entry through a read that does not find the row,
+    so the next build still weighs the entry against what the register last read and not against
+    the entry the row was first read from."""
+    telephone = dict(BEA, extra="<phone>202-225-0000</phone>")
+    later(
+        register, [ADA, telephone], [(ADA, "30000001"), (BEA, "30000002")], "2026-02-02T00:00:00Z"
+    )
+    assert build.build(2025) == 0
+    kept = run_record(register)["entries_read"]
+    assert "oh:us:house:x000002" in kept, "her entry changed in a part the register does not read"
+    assert not changes_of(register), "and nothing the register reads changed, so no change row"
+    later(register, [ADA], [(ADA, "30000001")], "2026-02-09T00:00:00Z")
+    assert build.build(2025) == 0
+    assert (
+        run_record(register)["entries_read"]["oh:us:house:x000002"] == (kept["oh:us:house:x000002"])
+    ), "the read that no longer lists her keeps the entry the register last read for her"
+
+
+def test_a_trade_a_different_file_states_otherwise_is_a_difference(reports, monkeypatch):
+    """Other bytes that give a published trade another value are a difference, recorded by row
+    and field. Without the comparison the register would say a replaced file read the same."""
+    dearer = {**TX["amount"], "max": 50000}
+    document(
+        reports,
+        "20000001",
+        ADA,
+        [dict(TX, amount=dearer), dict(TX, asset="Other Holdings", amount=dearer)],
+        "2026-02-02T00:00:00Z",
+    )
+    assert build.build(2025) == 0
+    (recorded,) = [c for c in changes_of(reports) if c["change"] == "replaced"]
+    assert [d["fields"] for d in recorded["differs"]] == [["amount_range"], ["amount_range"]]
+    assert rows_of(reports, "transactions"), "and no published trade moves"
+
+
+def test_a_departed_members_row_keeps_its_reason_when_the_index_redates_it(register):
+    """A row set aside while the roster listed a Member keeps that reason once it stops listing
+    them, whatever else the index restates about the row."""
+    namesake = dict(BEA, first="Bee")
+    held = [(ADA, "30000001"), (BEA, "30000002"), (namesake, "30000009", "O", "12/20/2025")]
+    later(register, [ADA, BEA], held, "2026-02-02T00:00:00Z")
+    assert build.build(2025) == 0
+    before = set_aside(register)["30000009"]
+    assert before.startswith("surname matches a sitting member")
+    redated = [(ADA, "30000001"), (BEA, "30000002"), (namesake, "30000009", "O", "12/21/2025")]
+    later(register, [ADA], redated, "2026-02-09T00:00:00Z")
+    assert build.build(2025) == 0
+    after = set_aside(register)["30000009"]
+    assert after.startswith(build.DEPARTED_KEPT + before), "the reason it was set aside for, kept"
+
+
+def test_a_closed_year_reads_the_documents_of_decided_rows_and_only_those(tmp_path, monkeypatch):
+    """A closed year fetches no roster and no document but those of rows a decision names, and
+    its capture key names them, so the refresh's key matches the record it compares with."""
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(build, "load_ptr", lambda: StubReader)
+    rows = [(ADA, "30000001", "P", "3/1/2025"), (ADA, "20000002", "P", "4/1/2025")]
+    captures(
+        tmp_path,
+        roster_xml(119, [ADA], "20250103"),
+        index_xml(rows),
+        "2026-02-02T00:00:00Z",
+        "2026-02-02T00:00:01Z",
+    )
+    document(tmp_path, "30000001", ADA, [TX], "2026-02-02T00:00:02Z")
+    document(tmp_path, "20000002", ADA, [TX], "2026-02-02T00:00:03Z")
+    assert build.build(2025) == 0
+    decisions = tmp_path / "src" / "adapters" / "house-fd" / "adjudications.ndjson"
+    decisions.parent.mkdir(parents=True, exist_ok=True)
+    decisions.write_text(
+        json.dumps(
+            {
+                "doc_id": "20000002",
+                "officeholder_id": "oh:us:house:x000001",
+                "evidence_url": "https://disclosures-clerk.house.gov/public_disc/ptr-pdfs/2025/"
+                "20000002.pdf",
+                "decided_by": "the maintainer",
+                "decided_at": "2027-01-12",
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    captures(
+        tmp_path,
+        roster_xml(120, [ADA], "20270103"),
+        index_xml(rows),
+        "2027-01-11T00:00:00Z",
+        "2027-01-11T00:00:01Z",
+    )
+    assert [d["doc_id"] for d in build.wanted_documents(2025)] == ["20000002"]
+    assert build.build(2025) == 0
+    record = run_record(tmp_path)
+    assert record["congress"]["closed"] is True
+    assert record["documents"]["manifest_sha256"] is not None, "the decided documents' manifest"
+    assert record["capture_key"] == build.capture_key(
+        {"sha256": record["sources"][0]["sha256"], "url": record["sources"][0]["url"]},
+        None,
+        record["documents"]["manifest_sha256"],
+    ), "the key names the decided documents, so the refresh's key matches the record's"
+    assert record["documents"]["read_at"] == {"20000002": "2026-02-02T00:00:03Z"}, (
+        "the day the register read the document, which a replacement is measured from"
+    )
+
+
+def test_the_reader_that_read_the_documents_is_named_in_the_run_record(reports):
+    """A change of reader can change what a document says; the record names the one that read."""
+    assert run_record(reports)["documents"]["reader"] == StubReader.reader_version()

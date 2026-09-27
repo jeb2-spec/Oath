@@ -267,3 +267,17 @@ def test_without_the_registry_no_correction_is_honoured(tmp_path, monkeypatch, c
     assert gate.main([str(root)]) == 1
     out = capsys.readouterr().out
     assert "on a host SOURCES.md registers as primary" in out and "x000001" in out
+
+
+def test_a_change_whose_capture_the_register_never_kept_fails(tmp_path, monkeypatch):
+    """The Council's fourth reading of S.1b (Seat C): the rule that every change row's roster or
+    index capture is kept had one test, which deleted a kept file, and a different rule caught
+    that first. A change citing a capture the register never kept at all fails by itself."""
+    roster = b"<MemberData>the roster as read</MemberData>"
+    root = repo_with(tmp_path, {CHANGES: lines(change(roster))})
+    monkeypatch.setenv("OATH_PUBLISHED_REF", "published")
+    assert gate.main([str(root)]) == 1, "nothing under data/captures/sha256 backs it"
+    kept = root / "data" / "captures" / "sha256" / f"{hashlib.sha256(roster).hexdigest()}.xml"
+    kept.parent.mkdir(parents=True, exist_ok=True)
+    kept.write_bytes(roster)
+    assert gate.main([str(root)]) == 0, "and it passes once the register keeps it"
