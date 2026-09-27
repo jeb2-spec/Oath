@@ -153,6 +153,32 @@ seal that already sits there, and stay at the foot as well.
 6. **This adds surface to maintain.** Each of the five changes needs a test that fails without it,
    and the guard sweep must cover them, as the fourth reading's eleven unmeasured guards taught.
 
+## 4a. What shipped, and what is held
+
+*Added 2026-09-27, with the change that landed §2.2 to §2.5.*
+
+Four of the five proposals ship without a Council reading, because none of them says anything new
+about anyone: each moves what a page already said, or draws a figure from a Finding's own rows.
+Measured on the rendered site at build `0005-house-2025`, before and after:
+
+| What a reader meets | Before | After |
+| --- | --- | --- |
+| Words before the reader meets what the Signal found | 472 | **110** |
+| Words before the citation and how to check it | 9,196 (35,816 on the longest page) | **83** |
+| Report tables that fold behind a summary a reader opens | 0 | **48** |
+| Findings whose four dates are drawn | 0 | **27** |
+| Officeholder pages | 439 | 439, every one carrying the frame |
+
+Nothing was removed from any page: *What this office requires* is below the record, complete and
+still citing every rule; every folded row is still in the page's source, the download and the
+seal; a report a Finding rests on never folds. One thing beyond the five: the mark carries its own
+title and description so that `mark.svg` stands alone, and inside a captioned figure that made a
+screen reader say the same three sentences twice. The caption is the one voice there now.
+
+**§2.1, the summary sentence, is held.** It is the only one of the five that writes a new sentence
+about a person, and §5 below says all seven seats read it first. That reading is the next step, on
+the rendered sentence and not on this proposal's words.
+
 ## 5. The reading this needs before it ships
 
 COUNCIL §2 requires an adversarial reading for any surface that names an officeholder in a new

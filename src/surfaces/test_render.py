@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import html
 import importlib.util
+import json
+import re
 from pathlib import Path
 
 import pytest
@@ -472,7 +474,8 @@ def test_transactions_are_listed_as_filed_grouped_by_report_and_interpreted_not_
         ),
     ]
     page = render.render_officeholder(HOLDERS[0], [read, later], META, striker, 0, rows)
-    section = page[page.index('<section id="transactions">') : page.index("<h2>Signals that fired")]
+    start = page.index('<section id="transactions">')
+    section = page[start : page.find("<section", start + 1)]
     assert "Transactions reported" in section
     assert "House Committee on Ethics</a>" in section and "the form and" in section
     assert (
@@ -1911,3 +1914,112 @@ def test_a_read_that_gives_the_published_value_again_is_said_and_counted_as_that
     assert "A later read of the Clerk's index shows" not in page, (
         "and the caption counts what it says (Seat A)"
     )
+
+
+def real_finding() -> dict:
+    """A Finding the register has published, as it published it. The habit two readings named: a
+    fixture not shaped like a real row hides the behaviour it was written to check."""
+    line = (ROOT / "data" / "findings.ndjson").read_text("utf-8").splitlines()[0]
+    return json.loads(line)
+
+
+def test_a_findings_four_dates_are_drawn_on_a_line_with_a_caption_that_says_its_limits():
+    """NEXT.md P.1 §2.3. A Finding is arithmetic on four dates and the page had only prose, so a
+    reader who takes numbers in by eye had nothing. Inline SVG, no script, legible through its
+    caption in a screen reader, and derived from the Finding's own rows so it regenerates with
+    them (RUBRIC gate 4)."""
+    found = real_finding()
+    figure = render.dates_figure(found)
+    assert figure.startswith('<figure class="dates">') and "<svg" in figure
+    assert "<script" not in figure and "onclick" not in figure
+    assert 'role="img"' in figure and 'aria-label="' in figure
+    assert "It does not show why the span is what it is" in figure
+    assert "anything the Committee on Ethics has determined" in figure
+    # Every coordinate is a plain number: no scientific notation, no float tail a browser rounds
+    # differently, so the same rows draw the same bytes anywhere.
+    assert not re.search(r"\d\.\d{3,}|\d[eE][-+]?\d", figure), figure
+    assert render.dates_figure(found) == figure, "the same rows, the same bytes"
+    quiet = dict(found, evidence=dict(found["evidence"], rows=[]))
+    assert render.dates_figure(quiet) == "", "no rows the rule counts, no figure"
+    # And it reaches the page, not only this call: the fourth and fifth readings both found guards
+    # measured by a direct call while the wiring that uses them went unmeasured.
+    holder_ = sworn(HOLDERS[0])
+    report = read_report(holder_["id"], "2025-03-20", 1)
+    fired, _, by_holder = evaluated([holder_], [report], LATE)
+    page = render.render_officeholder(
+        holder_,
+        [report],
+        META,
+        striker,
+        0,
+        LATE,
+        0,
+        [SIGNAL],
+        fired,
+        {SIGNAL["id"]: by_holder[holder_["id"]]},
+    )
+    drawn = between(page, "<h2>Signals that fired", "<h2>Signals that did not fire")
+    assert '<figure class="dates">' in drawn, "the figure is on the page, beside its Finding"
+    assert render.dates_figure(fired[0]) in drawn
+
+
+def test_a_long_report_folds_and_a_report_a_finding_rests_on_never_does():
+    """NEXT.md P.1 §2.4. Fifteen officeholders' pages print more than a hundred rows and one
+    prints 1,429; a page nobody can traverse keeps its promise to nobody. HTML alone: every row
+    stays in the page, the download and the seal, and what a reader needs is never behind a click
+    they must know to make."""
+    filing = dict(
+        FILINGS[0],
+        id="fl:house-clerk:P:900001",
+        source=dict(FILINGS[0]["source"], content_hash="a" * 64),
+        extraction_confidence="structured",
+    )
+    rows = [
+        transaction(filing["id"], n, transaction_date=f"2025-03-{n % 28 + 1:02d}")
+        for n in range(1, render.FOLD_ROWS + 6)
+    ]
+    long_page = render.transactions_section([filing], rows)
+    assert "<details>" in long_page
+    assert f"{len(rows)} rows of this report" in long_page and "Show them." in long_page
+    assert long_page.count("<tr>") >= len(rows), "every row is still in the page"
+    resting = render.transactions_section([filing], rows, with_a_finding={filing["id"]})
+    assert "<details>" not in resting, "a report a Finding rests on is never folded"
+    short = render.transactions_section([filing], rows[: render.FOLD_ROWS])
+    assert "<details>" not in short, "a short report does not need folding"
+
+
+def test_the_answer_comes_before_the_method_and_the_citation_before_both():
+    """NEXT.md P.1 §2.2 and §2.5. The paper's order puts method before result, which is right for
+    a paper someone chose to study and wrong for a door someone arrives at: the standards block,
+    identical on all 439 pages, stood between the reader and the one fact they came for. And
+    *the practical thing at the end* is a rule we wrote and then broke with length, so the
+    citation is in the head matter as well as the foot."""
+    page = render.render_officeholder(HOLDERS[0], FILINGS[:1], META, striker, 0, [])
+    at = {
+        name: page.index(needle)
+        for name, needle in (
+            ("cite", 'class="cite"'),
+            ("signals", "<h2>Signals that fired"),
+            ("requires", "What this office requires"),
+            ("how", 'id="how-to-read"'),
+        )
+    }
+    assert at["cite"] < at["signals"] < at["requires"] < at["how"], at
+    assert "Cite the build, not the page" in page
+    assert "python tools/verify.py" in page[: at["signals"]], "reachable without scrolling a page"
+    assert page.count("What this office requires") == 1, "moved, never removed"
+    assert page.count("python tools/verify.py") == 2, "and still at the foot"
+
+
+def test_the_seal_speaks_once_inside_its_figure():
+    """The mark carries its own title and description, so that mark.svg stands alone; inside a
+    captioned figure that made a screen reader say the same three sentences twice."""
+    page = render.render_officeholder(HOLDERS[0], FILINGS[:1], META, striker, 0, [])
+    figure = between(page, '<figure class="seal">', "</figure>")
+    assert 'role="presentation"' in figure and "aria-labelledby" not in figure
+    caption = between(figure, "<figcaption>", "</figcaption>")
+    assert caption.count("It says nothing about the person.") == 1, "the caption says it once"
+    drawing = figure[: figure.index("<figcaption>")]
+    assert "aria-labelledby" not in drawing, "and the drawing does not say it again"
+    alone = striker.strike("oh:us:house:a000001", "a" * 64)
+    assert 'role="img"' in alone, "and the mark served on its own keeps its own voice"

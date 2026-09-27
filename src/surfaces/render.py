@@ -44,6 +44,7 @@ import posixpath
 import re
 import sys
 import unicodedata
+from datetime import date
 from pathlib import Path
 
 FRAME = "Presence in the register is not evidence of wrongdoing."
@@ -258,6 +259,10 @@ UNDECIDABLE = frozenset({"after_term", "left_closed", "closed_after"})
 # Kinds that say what a document printed while the register still read it; a Member the
 # roster no longer lists keeps them for the rows set aside while it listed them.
 DOC_KINDS = frozenset({"no_filing_id", "status", "before_sworn"})
+# Above this many rows a report's table folds behind a summary a reader opens. Fifteen
+# officeholders' pages print more than a hundred rows and one prints 1,429; a page nobody can
+# traverse keeps its promise to nobody (NEXT.md P.1).
+FOLD_ROWS = 25
 HONORIFICS = frozenset({"jr", "sr", "ii", "iii", "iv", "v", "mr", "mrs", "ms", "miss", "dr", "hon"})
 
 CSS = """
@@ -294,6 +299,15 @@ p.lede { margin: .75rem 0 0; max-width: 34rem; }
 figure.seal { margin: 0; width: 104px; }
 figure.seal svg { width: 104px; height: 104px; display: block; margin: 0 auto .35rem; }
 figcaption { font-size: .78rem; line-height: 1.35; color: var(--ink-2); }
+p.cite { margin: .5rem 0 0; font-size: .82rem; color: var(--ink-2); }
+p.cite code { font-size: .95em; }
+/* the dates a Finding rests on: one line, no colour carrying meaning by itself */
+figure.dates { margin: 1rem 0; }
+figure.dates svg { width: 100%; height: auto; display: block; color: var(--ink); }
+figure.dates figcaption { margin-top: .4rem; }
+details { margin: .75rem 0 1.25rem; }
+details > summary { cursor: pointer; color: var(--link); padding: .35rem 0; }
+details > summary:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
 blockquote.oath { margin: .25rem 0 1rem; padding: .6rem 1rem; border-left: 3px solid var(--rule); }
 blockquote.oath p { margin: 0; font-style: italic; }
 blockquote.oath footer { border: 0; margin: .4rem 0 0; padding: 0; font-size: .8rem; }
@@ -963,7 +977,104 @@ def footer(meta: dict, home: bool, to_root: str = "../") -> str:
 
 
 def seal_figure(svg: str, caption: str) -> str:
-    return f'<figure class="seal">\n{svg}<figcaption>{esc(caption)}</figcaption>\n</figure>'
+    """The mark with its caption. The mark carries its own title and description, because it is
+    also served on its own as mark.svg; inside a captioned figure those make a screen reader say
+    the same three sentences twice, so here the caption is the one voice and the drawing is
+    presentational."""
+    quiet = svg.replace('role="img" aria-labelledby="t d"', 'role="presentation"', 1)
+    return f'<figure class="seal">\n{quiet}<figcaption>{esc(caption)}</figcaption>\n</figure>'
+
+
+def cite_line(meta: dict) -> str:
+    """How to cite this page and check it, in the head matter. The register's own rule is *the
+    practical thing at the end*, and on a page of nineteen thousand words there is no end a reader
+    reaches: at build 0005 the verify line sat at word 9,196 of one page and word 35,816 of the
+    longest (NEXT.md P.1). So it is here as well as at the foot, in one line, dated by the build."""
+    return (
+        '<p class="cite">Cite the build, not the page: '
+        f"<code>{esc(build_label(meta))}</code>, from the sources as read up to "
+        f"<code>{esc(meta.get('built_at'))}</code>. Check it against the rows with "
+        "<code>python tools/verify.py</code>, or read "
+        '<a href="#how-to-read">how to read this page</a>.</p>\n'
+    )
+
+
+def day(iso: str) -> date:
+    return date.fromisoformat(iso)
+
+
+def dates_figure(finding: dict) -> str:
+    """The dates a Finding rests on, drawn on one line: the transaction the report prints, the
+    notification it prints, the deadline the rule sets from them, and the day the Clerk's index
+    dates the report. The arithmetic is in the sentence above; a reader who takes it in by eye
+    has had only prose (NEXT.md P.1).
+
+    Inline SVG, no script, no colour carrying meaning on its own, and a caption that says what
+    the figure shows and what it does not. Drawn from the Finding's own rows, so it regenerates
+    with them (RUBRIC gate 4).
+    """
+    counted = [r for r in finding["evidence"]["rows"] if (r.get("days_after") or 0) > 0]
+    if not counted:
+        return ""
+    filed = day(finding["evidence"]["filed_at"])
+    deadlines = sorted({day(r["deadline"]) for r in counted})
+    trades = sorted({day(r["transaction_date"]) for r in counted})
+    notices = sorted({day(r["notified_date"]) for r in counted if r.get("notified_date")})
+    start, end = min(trades[0], deadlines[0]), max(filed, deadlines[-1])
+    span = (end - start).days or 1
+    w, mid = 720, 34
+
+    def x(d: date) -> float:
+        return round(24 + (w - 48) * ((d - start).days / span), 1)
+
+    late = max((r["days_after"] for r in counted), default=0)
+    shade = (
+        f'<rect x="{x(deadlines[-1])}" y="{mid - 9}" '
+        f'width="{round(max(x(filed) - x(deadlines[-1]), 1), 1)}"'
+        f' height="18" fill="currentColor" opacity=".13"/>'
+        if filed > deadlines[-1]
+        else ""
+    )
+
+    def mark(d: date, label: str, below: bool = False) -> str:
+        at = x(d)
+        y1, y2 = (mid + 9, mid + 20) if below else (mid - 9, mid - 20)
+        anchor = "start" if at < 90 else ("end" if at > w - 90 else "middle")
+        return (
+            f'<line x1="{at}" y1="{y1}" x2="{at}" y2="{y2}" stroke="currentColor" '
+            'stroke-width="1"/>'
+            f'<text x="{at}" y="{y2 + (13 if below else -5)}" text-anchor="{anchor}" '
+            f'font-size="11">{esc(label)}</text>'
+        )
+
+    def named(days: list[date]) -> str:
+        return str(days[0]) if len(days) == 1 else f"{days[0]} to {days[-1]}"
+
+    marks = [mark(trades[0], f"traded {named(trades)}", below=True)]
+    if notices:
+        marks.append(mark(notices[-1], f"notified {named(notices)}"))
+    marks.append(mark(deadlines[-1], f"deadline {named(deadlines)}", below=True))
+    marks.append(mark(filed, f"index dates the report {filed}"))
+    label = (
+        f"A line of {span} days. The Clerk's index dates the report {late} "
+        f"{plural(late, 'day', 'days')} after the deadline the rule sets."
+    )
+    svg = (
+        f'<svg viewBox="0 0 {w} 74" role="img" aria-label="{esc(label)}" '
+        'xmlns="http://www.w3.org/2000/svg">'
+        f"{shade}"
+        f'<line x1="24" y1="{mid}" x2="{w - 24}" y2="{mid}" stroke="currentColor" '
+        'stroke-width="1.5"/>' + "".join(marks) + "</svg>"
+    )
+    caption = (
+        f"The dates this Finding rests on, on a line of {span} days: the transaction and the "
+        "notification as the report prints them, the deadline the rule sets from them, and the "
+        "day the Clerk's index dates the report. The shaded span is the days between the "
+        "deadline and that date. The figure shows a span of days. It does not show why the span "
+        "is what it is, whether notice reached the filer when the report says, or anything the "
+        "Committee on Ethics has determined."
+    )
+    return f'<figure class="dates">\n{svg}\n<figcaption>{esc(caption)}</figcaption>\n</figure>\n'
 
 
 REQUIRES = (
@@ -1493,6 +1604,7 @@ def finding_block(
         f"<p>{esc(finding['description'])}</p>\n"
         f"{finding_changes(finding, changes)}"
         f"{correction_line(finding, findings or [])}"
+        f"{dates_figure(finding)}"
         f"{finding_rows_table(finding)}\n"
         f'<p class="quiet">Finding <code>{esc(finding["id"])}</code>, first produced from the '
         f"record as retrieved {esc(finding['fired_at'])}, from rows whose digest is "
@@ -2431,6 +2543,7 @@ def transactions_section(
     transactions: list[dict],
     held_reports: int = 0,
     changes: dict[str, list[dict]] | None = None,
+    with_a_finding: set[str] | frozenset[str] = frozenset(),
 ) -> str:
     """What the reports the register read list, as filed, grouped by report.
 
@@ -2575,13 +2688,23 @@ def transactions_section(
             "</tr>"
             for t in rows
         )
-        parts.append(
+        table = (
             f"<table>\n<caption>{n} {plural(n, 'row', 'rows')} of the report, oldest transaction "
             "date first; the report itself may list them in another order.</caption>\n"
             "<thead><tr><th>Transaction date</th><th>Notified</th><th>Type</th>"
             "<th>Owner, as marked</th><th>Asset, as named</th><th>Amount</th></tr></thead>\n"
             f"<tbody>\n{body}\n</tbody>\n</table>\n"
         )
+        # A report of many rows folds, so a page of a thousand can be walked. HTML alone, no
+        # script: the rows are in the page, the download and the seal either way. A report a
+        # Finding rests on never folds, and nor does a short one (NEXT.md P.1).
+        if n > FOLD_ROWS and f["id"] not in with_a_finding:
+            parts.append(
+                f"<details>\n<summary>{n} {plural(n, 'row', 'rows')} of this report"
+                f"{marked_clause(rows)}. Show them.</summary>\n{table}</details>\n"
+            )
+        else:
+            parts.append(table)
     return (
         '<section id="transactions">\n<h2>Transactions reported</h2>\n'
         + "".join(parts)
@@ -2733,6 +2856,9 @@ def render_officeholder(
         )
     history = f'<p class="office">{" ".join(lines)}</p>\n' if lines else ""
     check_line = signal_check_line(signals, findings, outcomes, held_reports)
+    fired_on = {
+        report for f in findings if not f.get("superseded_by") for report in f["producing_filings"]
+    }
     section = signals_section(
         signals,
         findings,
@@ -2752,6 +2878,7 @@ def render_officeholder(
         f"<h1>{esc(holder['legal_name'])}</h1>\n"
         f'<p class="office">{office_line}</p>\n'
         f"{history}"
+        f"{cite_line(meta)}"
         "</div>\n"
         + seal_figure(
             seal,
@@ -2761,12 +2888,17 @@ def render_officeholder(
         )
         + "\n</div>\n</header>"
     )
+    # What the register found, then the record it rests on, then what the register could and
+    # could not read, then the rules, then how to read it. The paper's order (method, then
+    # result) put the reader 470 words from the answer they came for: right for a paper someone
+    # chose to study, wrong for a door someone arrives at (NEXT.md P.1).
     body = (
-        f'{head}\n<main id="main">\n{REQUIRES}\n'
-        f"{checks_section(holder, filings, held_here, check_line, until, listings, changes)}\n"
-        f"{filings_section(filings, held_here, changes, until, moved_away, holder['id'], sworn)}\n"
-        f"{transactions_section(filings, transactions or [], held_reports, changes)}\n"
+        f'{head}\n<main id="main">\n'
         f"{section}\n"
+        f"{filings_section(filings, held_here, changes, until, moved_away, holder['id'], sworn)}\n"
+        f"{transactions_section(filings, transactions or [], held_reports, changes, fired_on)}\n"
+        f"{checks_section(holder, filings, held_here, check_line, until, listings, changes)}\n"
+        f"{REQUIRES}\n"
         f"{how_to_read(True)}\n"
         "</main>\n"
         f"{footer(meta, home=False)}"
@@ -3305,6 +3437,7 @@ def render_signal_page(
         f"<h1>{esc(signal['name'])}</h1>\n"
         f'<p class="office">Version {signal["version"]} · <code>{esc(signal["id"])}</code> · '
         f"{standard_links(signal)}</p>\n"
+        f"{cite_line(meta)}"
         "</div>\n</div>\n</header>"
     )
     c = reach or {}
