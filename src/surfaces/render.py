@@ -622,9 +622,12 @@ def moved_here(history: list[dict], holder_id: str) -> dict | None:
 
 
 def page_of(holder_id: str, to_root: str = "") -> str:
-    """A link to an officeholder's page, named as the Clerk's roster listed them."""
+    """A link to an officeholder's page, named as the Clerk's roster listed them. Every caller
+    names the officeholder a correction moved a report from or to, and the link says so, so the
+    no-ranking gate can hold every other link off a person's page (INVARIANTS §13)."""
     return (
-        f'<a href="{to_root}{esc(slug(holder_id))}.html">{esc(NAMES.get(holder_id, holder_id))}</a>'
+        f'<a href="{to_root}{esc(slug(holder_id))}.html" data-cross="correction">'
+        f"{esc(NAMES.get(holder_id, holder_id))}</a>"
     )
 
 

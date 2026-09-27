@@ -178,3 +178,63 @@ def test_a_link_to_a_person_outside_a_declared_list_fails():
     assert "1 links to officeholders' pages stand outside a declared list" in (
         lint.check_summary(page)
     )
+
+
+# An officeholder's page (docs/design/pages-a-reader-can-use.md §4): it lists no one else, it
+# names another officeholder only where a correction moved a report, and its answer, the part
+# a reader meets first, names no officeholder's page at all.
+
+OWN = "oh-us-house-a000001"
+
+
+def person(answer: str = "", body: str = "") -> str:
+    return (
+        "<header><p>Presence in the register is not evidence of wrongdoing.</p></header>"
+        f'<main><section id="answer" class="answer"><p>{answer}</p></section>{body}</main>'
+    )
+
+
+def test_a_person_page_that_names_no_one_else_passes():
+    page = person("The register read 2 of 2 reports.", f'<a href="{OWN}.html">this page</a>')
+    assert lint.check_person(page, OWN) == []
+
+
+def test_a_correction_may_name_the_other_officeholder_and_says_so():
+    body = '<p>moved from <a href="oh-us-house-b000002.html" data-cross="correction">B</a></p>'
+    assert lint.check_person(person(body=body), OWN) == []
+
+
+def test_any_other_link_to_another_person_fails():
+    body = '<p>compare <a href="oh-us-house-b000002.html">B</a>, 7 reports</p>'
+    assert lint.check_person(person(body=body), OWN) == [
+        "a link to oh-us-house-b000002 is not a correction's"
+    ]
+
+
+def test_the_answer_names_no_officeholder_even_by_a_correction():
+    answer = 'unlike <a href="oh-us-house-b000002.html" data-cross="correction">B</a>'
+    assert lint.check_person(person(answer), OWN) == ["its answer links to an officeholder's page"]
+
+
+def test_a_person_page_that_lists_officeholders_fails():
+    body = (
+        '<table data-lists="officeholders" data-order="seat"><tr data-seat="AK00"><td>'
+        '<a href="../officeholders/oh-us-house-b000002.html" data-cross="correction">B</a>'
+        "</td></tr></table>"
+    )
+    assert lint.check_person(person(body=body), OWN) == [
+        "it lists officeholders (the officeholders list)"
+    ]
+
+
+def test_the_walk_reads_every_officeholder_page_and_names_the_failing_one(tmp_path: Path, capsys):
+    site = tmp_path / "docs" / "build"
+    (site / "officeholders").mkdir(parents=True)
+    (site / "index.html").write_text(index("seat", [("AK00", "A")]), encoding="utf-8")
+    (site / "officeholders" / f"{OWN}.html").write_text(person(), encoding="utf-8")
+    bad = person(body='<a href="oh-us-house-b000002.html">B</a>')
+    (site / "officeholders" / "oh-us-house-c000003.html").write_text(bad, encoding="utf-8")
+    assert lint.main([str(tmp_path)]) == 1
+    out = capsys.readouterr().out
+    assert "officeholders/oh-us-house-c000003.html: a link to oh-us-house-b000002" in out
+    assert OWN not in out

@@ -19,6 +19,13 @@ declared list. Of each list it requires two things:
      whether or not the list is sorted by it ("3 reports" as much as "3"), and
      METHODOLOGY.md §10 says the register does not curate persons.
 
+It reads every officeholder's page under `docs/build/officeholders/` too, because a page about
+one person must not become a page about others. An officeholder's page lists no officeholders
+at all; a link on it to another officeholder's page is allowed only where a correction moved a
+report from one to the other, and says so (`data-cross="correction"`); and its answer, the
+section a reader meets first (`id="answer"`), links to no officeholder's page at all, so no
+other person's number can stand beside this one's (docs/design/pages-a-reader-can-use.md §4).
+
 A site with no index fails too: a gate that reads nothing proves nothing, and CI renders
 before it runs this. Standard library, and no code shared with the renderer.
 
@@ -43,6 +50,11 @@ ATTR = re.compile(r"""\b([a-z-]+)="([^"]*)\"""", re.I)
 TAGS = re.compile(r"<[^>]+>")
 SEAT_OR_DATE = re.compile(r"\b[A-Z]{2}\d{2}\b|\b\d{4}-\d{2}-\d{2}\b")
 OFFICEHOLDER_LINK = re.compile(r"""href="[^"]*\bofficeholders/[^"/]+\.html""", re.I)
+# On an officeholder's own page, a link to another person's page is a sibling file's name.
+PERSON_LINK = re.compile(
+    r"""<a\b([^>]*\bhref="(?:\.\./officeholders/|\./)?(oh-[a-z0-9-]+)\.html"[^>]*)>""", re.I
+)
+ANSWER = re.compile(r"""<section\b[^>]*\bid="answer"[^>]*>(.*?)</section>""", re.S | re.I)
 
 
 def attrs(fragment: str) -> dict[str, str]:
@@ -141,6 +153,22 @@ def check_summary(text: str) -> list[str]:
     return failures
 
 
+def check_person(text: str, own: str) -> list[str]:
+    """An officeholder's page, whose own page name (without `.html`) is `own`: it lists no
+    officeholders; each link to another officeholder's page is a correction's, and says so; and
+    its answer links to no officeholder's page, its own included."""
+    failures = []
+    for list_attrs, _rows, _body in lists_on(text):
+        failures.append(f"it lists officeholders (the {list_name(list_attrs)} list)")
+    for link_attrs, name in PERSON_LINK.findall(text):
+        if name != own and attrs(link_attrs).get("data-cross") != "correction":
+            failures.append(f"a link to {name} is not a correction's")
+    answer = ANSWER.search(text)
+    if answer and PERSON_LINK.search(answer.group(1)):
+        failures.append("its answer links to an officeholder's page")
+    return failures
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("root", nargs="?", default=".", help="repository root (default: .)")
@@ -161,6 +189,12 @@ def main(argv: list[str] | None = None) -> int:
     for path in summaries:
         where = path.relative_to(site).as_posix()
         failures += [f"{where}: {line}" for line in check_summary(path.read_text("utf-8"))]
+    people = sorted((site / "officeholders").glob("*.html"))
+    for path in people:
+        where = path.relative_to(site).as_posix()
+        failures += [
+            f"{where}: {line}" for line in check_person(path.read_text("utf-8"), path.stem)
+        ]
     for line in failures:
         print(f"FAIL  {line}")
     if failures:
@@ -169,7 +203,8 @@ def main(argv: list[str] | None = None) -> int:
     pages = f"{len(summaries)} signal page{'' if len(summaries) == 1 else 's'}"
     print(
         f"OK    the officeholders index and {pages} list persons only in a permitted order, "
-        "and carry no number about anyone."
+        f"and carry no number about anyone; {len(people)} officeholder pages list no one else, "
+        "and name another only where a correction moved a report."
     )
     return 0
 

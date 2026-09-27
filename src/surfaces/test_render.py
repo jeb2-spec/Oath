@@ -1619,15 +1619,19 @@ def test_a_moved_report_is_said_on_the_page_it_left_and_the_page_it_reached():
         )
         assert '<td class="code">correction</td>' in page, "never 'name' for a moved row"
         assert "the register had attributed this report to" in page
-        assert f'{render.slug(left["id"])}.html">{left["legal_name"]}</a>' in page
+        assert (
+            f'{render.slug(left["id"])}.html" data-cross="correction">{left["legal_name"]}</a>'
+            in page
+        )
         assert left["id"] not in page.replace(render.slug(left["id"]), ""), "no raw id"
         assert "the office was" not in page, "the office moves with its attribution, one note"
         assert (
             "Attributed to this officeholder by the maintainer's correction of 2026-10-06" in page
         )
-        assert f'on the page of <a href="{render.slug(left["id"])}.html">' in page, (
-            "the Finding's chain names the page it came from"
-        )
+        assert (
+            f'on the page of <a href="{render.slug(left["id"])}.html" data-cross="correction">'
+            in page
+        ), "the Finding's chain names the page it came from"
         assert "For 1 of them the maintainer recorded a correction" in page
         assert "A later read of the Clerk's index shows" not in page, "a correction is not a read"
         gone = plain(
@@ -1650,7 +1654,8 @@ def test_a_moved_report_is_said_on_the_page_it_left_and_the_page_it_reached():
             "1 report the register published on this page is attributed to another officeholder "
             "by the maintainer's recorded correction" in gone
         )
-        assert f'{render.slug(reached["id"])}.html">{reached["legal_name"]}</a>' in gone
+        cross = f'{render.slug(reached["id"])}.html" data-cross="correction">'
+        assert f"{cross}{reached['legal_name']}</a>" in gone
         assert f"The Finding <code>{first['id']}</code>" in gone and "is superseded" in gone
         assert frame.check_page(gone) is None and verdict_words(gone) == []
         signal_page = render.render_signal_page(
