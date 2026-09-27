@@ -341,3 +341,77 @@ who arrived for one person could not reach it until word 301.
 - The committed Council prompt defines three seats; four of the seven that read this are defined
   only in §5 above (Seats E and G). COUNCIL §8 makes the prompt's blob SHA the reproducibility
   guarantee, and a later reader holding it cannot reproduce four of these readings.
+
+## 9. Where the record narrows, and what the measurement found
+
+This section records one addition to the landing and two findings the addition produced, the second
+of them against the tool that keeps every other finding honest.
+
+### 9.1 The figure
+
+The landing said what the register found and never said what it could reach. Three surfaces each
+held a piece of the answer and none held the shape: the comic strip names the 463 transaction
+reports the Clerk's 2025 index lists, the paragraph under the glance names the 294 the register
+compared, and nothing accounted for the 169 between them. Of those, 54 the register fetched and
+could not read and **115 it read and compared no trade on**, and that second number appeared on no
+surface at all. It is the one a reader who has run out of ways to check whether they are getting a
+fair game needs before they trust any other, and it is the half of the work nobody else publishes.
+
+Four bars, one opacity per step so the narrowing reads without colour carrying the meaning, the
+count inside the wide bars and beside the narrow one; then a definition list saying what fell out at
+each step and why, in the register's own voice, with every reason linking the Signal that wrote it
+down before it ran. Derived from the Signal's run record, so it regenerates with the rows; a test
+derives all four numbers again from `answer_counts` using none of the figure's code.
+
+### 9.2 Three defects the first draft of it shipped
+
+Recorded because each is a way a figure built to honour the discipline can break it.
+
+- **It asserted a physical fact the register has never recorded.** The draft said 54 reports were
+  "scanned paper, or a form that prints no Filing ID line", and published that more prominently than
+  any surface had before. What the rows hold is that all 54 were fetched and hashed and that the
+  text the register extracted carried no `Filing ID` line and no `State/District` line. A picture of
+  the pages would read that way; so would a form that prints neither. The register does not record
+  which. The same claim was in eight other places, among them the strip's own wry line and the
+  seal's sentence, and all nine now say what the register looked for and did not find. The fifth
+  reading had raised this (Seat G) and it was published anyway, in the figure built to answer it.
+- **It counted reports while the rule operates on trades, and said so nowhere.** A report where one
+  of two hundred trades was compared counts whole in the third bar. The caption now states the unit.
+- **It called the rule's scope what is the register's own reach.** The draft listed "a kind of asset
+  the register does not evaluate, an amount at or under the threshold, or a trade dated before the
+  swearing-in" as one series, which reads as three ways the law does not apply. Of the 1,156 trades
+  set aside across every report the register read, **exactly one** was out of the rule's reach by
+  amount. The figure now names each group, attributes it to the register, the report, or the rule,
+  and states the count on each side. This is Seat B's finding reproduced inside the figure written
+  to answer it, which is worth recording plainly: a rule you are applying elsewhere is not a rule
+  you are applying.
+
+### 9.3 The measurement that was not one
+
+`tools/measure-guards.py` reported thirty-one guards each failing a test it names. Eight of those
+were not measurements, and the tool's own reading of pytest's exit code is what hid them.
+
+pytest exits non-zero for a usage error, for an interrupted run, and for a run that collected no
+test at all. The runner read every non-zero exit as the guard being caught. Six guards named tests
+that the merge with main's pages had dropped, and all six reported measured; a seventh named its
+tests as a `-k` expression that a whitespace split turned into a path called `or`, and pytest's
+"file or directory not found" read as a catch. A measurement that passes because the measurement
+broke is worse than no measurement, because it prints a number.
+
+A second defect made the results depend on the order of the run. A `.pyc` header records its
+source's mtime **to the second**; thirty-nine guards measure in twelve seconds, so removals shared
+seconds with the restores before them and the tests ran against code no longer on disk. One guard
+reported caught on its own and uncaught in the sweep. Both runs printed a number and neither said
+which to believe.
+
+Both are fixed, and the fixes are themselves guards. Only "ran, and something failed" is a
+measurement now. `tools/test_measure_guards.py` is new and is the first test this tool has had:
+twelve cases, one for each way it could lie, including a run that collected nothing and a
+measurement that does not depend on what was measured before it. The list stands at thirty-nine
+guards, every one removed on its own against a passing baseline, each failing a test it names.
+
+The pattern across four readings is worth stating once: **every claim this project makes about its
+own rigour has decayed exactly where nothing re-ran it.** "Each guard has a test" decayed three
+times. The list is the repair; the runner is the repair for the list; the runner's own test is the
+repair for the runner. There is no further turtle, because the runner's test fails in CI with
+everything else.
