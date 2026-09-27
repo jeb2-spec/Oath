@@ -2323,6 +2323,7 @@ def test_the_landing_shows_the_house_at_a_glance_and_names_no_one():
         < page.index("How a stock trade becomes a public record")
         < page.index('id="glance"')
         < page.index('id="narrows"')
+        < page.index('id="ends"')
         < page.index("What every member swore")
         < page.index('id="disputes"')
         < page.index('id="more"')
@@ -2460,6 +2461,108 @@ def test_the_deadline_figure_reads_the_signals_own_arithmetic_and_never_recomput
     rows = [r for f in found for r in f["evidence"]["rows"]]
     assert render.days_after_rows(found, SIGNAL["id"]) == sorted(r["days_after"] for r in rows)
     assert render.days_after_rows(found, "sg:no-such-signal:v1") == []
+
+
+def finding_late_by(days: list[int], filed: str, n: int = 1) -> dict:
+    """A ledger row shaped as this page reads it: what it rests on is each row's days_after."""
+    return {
+        "id": f"fn:{SIGNAL['id']}:fl:house-clerk:P:{n}",
+        "signal_id": SIGNAL["id"],
+        "officeholder_id": f"oh:us:house:x{n:06d}",
+        "producing_filings": [f"fl:house-clerk:P:{n}"],
+        "superseded_by": None,
+        "evidence": {
+            "filed_at": filed,
+            "after": len(days),
+            "evaluated": len(days),
+            "rows": [{"days_after": d} for d in days],
+        },
+    }
+
+
+def test_a_reports_lateness_is_the_row_it_is_furthest_past():
+    """A report is due by the earliest deadline among the rows on it, so the row furthest past its
+    deadline is the one that says how late the report is. The arithmetic is the Signal's."""
+    findings = [
+        finding_late_by([1, 12, 40], "2025-03-01", 1),
+        finding_late_by([3], "2025-04-01", 2),
+    ]
+    assert render.report_lateness(findings, SIGNAL["id"]) == [3, 40]
+    assert render.report_lateness(findings, "sg:no-such:v1") == []
+    withdrawn = dict(findings[0], superseded_by="fn:later")
+    assert render.report_lateness([withdrawn, findings[1]], SIGNAL["id"]) == [3]
+
+
+def test_where_the_record_ends_draws_the_rule_the_committee_publishes_and_its_own_silence():
+    """The section a reader reaches after every other figure has said what the register found.
+
+    It must do three things and refuse a fourth. It states the rule the Committee publishes, with
+    the sources; it places the register's own rows against that rule; it says how many rows it
+    holds about what the Committee then did, which is none. It computes no fee for anyone.
+    """
+    findings = [
+        finding_late_by([d], f"2025-0{1 + i % 8}-15", i) for i, d in enumerate([1, 1, 5, 120])
+    ]
+    summary = signal_run.run_record(SIGNAL["id"], "c" * 64, [])[0]
+    section = render.ends_section([(SIGNAL, summary)], findings)
+
+    svg = between(section, '<svg class="ends"', "</svg>")
+    assert "NaN" not in svg
+    assert svg.count('class="esq"') == 4, "one square per report the index dates after the deadline"
+    assert svg.count('class="evoid"') == 1, "and one empty row, at the same width"
+    assert "what the Clerk's index shows" in svg and "what followed" in svg
+
+    said = html.unescape(re.sub(r"<[^>]+>", " ", section))
+    # The rule, as its regulator publishes it, with the two sources STANDARDS.md S.2 records.
+    assert f'href="{render.PTR_DUE_MEMO}"' in section
+    assert f'href="{render.ETHICS_FD}"' in section
+    assert "minimum fee of $200 a report" in said and "may be waived" in said
+    assert "computes no fee for anyone" in said
+
+    # The register's own silence, said as its own and never as the Committee's.
+    assert "fact about this register's sources and not about the Committee" in said
+    assert "whether one is published to read is a question it has not answered" in said
+    assert "0" in between(section, '<ul class="squarekey">', "</ul>")
+
+    # And no claim about what the Committee did, failed to do, or should do.
+    assert verdict_words(section) == []
+    for never in ("failed to", "has not acted", "ignored", "no action", "should "):
+        assert never not in said.lower(), never
+    assert "officeholders/" not in section, "it names and links no one"
+    assert render.FRAME in said
+
+
+def test_the_late_reports_are_never_drawn_as_one_number():
+    """Eighteen of these reports are days past their due date, seven of them by one; nine are
+    three to six months past. A figure that drew them as one number would be false about every
+    report in it, and the direction it is false in depends on which report you are."""
+    findings = [
+        finding_late_by([1], "2025-02-13", 1),
+        finding_late_by([1], "2025-02-14", 2),
+        finding_late_by([28], "2025-03-01", 3),
+        finding_late_by([91], "2025-06-01", 4),
+        finding_late_by([197], "2025-12-14", 5),
+    ]
+    summary = signal_run.run_record(SIGNAL["id"], "c" * 64, [])[0]
+    said = " ".join(
+        html.unescape(
+            re.sub(r"<[^>]+>", " ", render.ends_section([(SIGNAL, summary)], findings))
+        ).split()
+    )
+    assert "3 reports at or inside the 30th day" in said
+    assert "2 of them by one day" in said
+    assert "2 reports past it, at 91 to 197 days" in said
+    assert "No report in this build falls between 28 days and 91" in said
+    assert "The Clerk's index dates these reports between 2025-02-13 and 2025-12-14" in said
+
+    # The sentence appears only where the emptiness is wider than the whole window the
+    # Committee's line marks, a threshold the record supplies: a one-day gap is noise.
+    close = [finding_late_by([29], "2025-03-01", 1), finding_late_by([31], "2025-04-01", 2)]
+    assert "falls between" not in render.ends_section([(SIGNAL, summary)], close)
+    wide = [finding_late_by([10], "2025-03-01", 1), finding_late_by([90], "2025-08-01", 2)]
+    assert "falls between 10 days and 90" in render.ends_section([(SIGNAL, summary)], wide)
+    # And a build with no Finding draws nothing at all: silence is a legitimate result.
+    assert render.ends_section([(SIGNAL, summary)], []) == ""
 
 
 def test_the_notice_clock_counts_trades_reports_and_members_and_names_no_one():

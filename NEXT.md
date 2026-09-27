@@ -149,6 +149,29 @@ legend; and a decision about whether a signal that reaches 24 of 441 members sho
 a page that fires on a fifth of a chamber and is silent on the rest invites the reader to read the
 silence as clearance, which is COUNCIL §5 mode 6 in a new shape.
 
+### E.1 The Committee's own record, the source the register does not read
+
+*Added 2026-09-27, from the maintainer's reading of the landing: what happens after a report is dated late, and why does the trail go cold there?*
+
+The register can follow a trade from the day it was made to the day the Clerk's index dates the report that carries it, and read that against the deadline. Then it stops. Everything after that point belongs to the House Committee on Ethics, and nothing the register reads says what the Committee did.
+
+**What is sourced, and already in [STANDARDS.md](STANDARDS.md) S.2.** Past thirty days beyond the due date, the Committee's memorandum of 30 January 2023 sets a minimum fee of $200 a report; its filing-deadlines page says the fee may be waived in exceptional circumstances; and the Ethics in Government Act separately provides penalties for knowingly and willfully falsifying a report or failing to file one (5 U.S.C. § 13106). The register computes no fee for anyone.
+
+**What this build can determine, and the landing now draws.** Of the 27 reports the Clerk's 2025 index dates after the deadline, 18 fall at or inside the thirtieth day past the report's own due date and 7 of those are one day past; 9 fall beyond it, at 91 to 197 days; and no report in this build falls between 28 days and 91. The two groups share no officeholder. That structure is arithmetic on sealed rows and needs no source the register does not have.
+
+**What it cannot determine, and must not imply.** Whether a fee was assessed on any of these reports, whether one was waived, whether the Committee looked at all. The register holds zero rows about any of it, and *the register holds no row* is not *no record exists*. The difference between those two sentences is the whole discipline, and the landing's figure says which one it is.
+
+**What an adapter would need before a row of it could enter the register.** In the order the questions arise:
+
+1. **A primary source with a stable address.** The Committee publishes annual reports, and the Office of Congressional Ethics publishes referrals and reports the Committee did not extend review on. Neither was reachable from the cloud sessions (`ethics.house.gov` and `oce.house.gov` both return 000 through the agent proxy), so what either actually contains is unread here and must be read at the source before a word of it is written down.
+2. **A row shape that can say nothing.** The common case will be *this report has no published outcome*, and that has to be a row the register can hold and a page can render, not an absence a reader fills in. The Signal's own `NOT_EVALUATED` states are the model.
+3. **An identifier that joins.** A Committee document that names a Member and a period does not name a Filing ID. Joining an outcome to a report without one is an inference, and an inference published against a named person is the defect this project exists to prevent. If the join cannot be made from the documents, the register carries the outcome at the officeholder and never at the report.
+4. **A rule for the asymmetry.** A published outcome is most likely to exist for the worst cases, so a register that carries outcomes where they exist and silence where they do not will show a pattern that is about publication and not about conduct. The page has to say that where it says anything, the same way the reach figure does today.
+5. **SOURCES.md and STANDARDS.md rows,** each read at the source, before any of it ships.
+
+**The honest interim, which is what shipped.** Draw the rule as the Committee publishes it, place the register's own rows against it, and draw the emptiness at the width of the part the register can see. Presence in that emptiness is not evidence of anything, and neither is absence from it.
+
+
 ## Phase 2. The decisions the adapter needs (goal: schema settled, identifier settled, empty register anchored)
 
 Ship this phase as: schemas a stranger can read, an identifier convention that will survive contact with real data, and an anchored seal over a register that still holds nothing.

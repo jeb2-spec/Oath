@@ -81,6 +81,7 @@ PTR_FORM = "https://ethics.house.gov/wp-content/uploads/2026/02/Final-CY-2025-PT
 # The Committee's memorandum on the reports' due dates, and the codified deadline. STANDARDS.md
 # S.2 records both, and records that neither was read at its source by the session that cited
 # them; a reading at the source is owed before the first Signal publishes.
+NEXT_ENDS = REPO + "NEXT.md#e1-the-committees-own-record-the-source-the-register-does-not-read"
 PTR_DUE_MEMO = (
     "https://ethics.house.gov/wp-content/uploads/2023/01/FINAL-PTR-Due-Date-Pink-Sheet.pdf"
 )
@@ -395,6 +396,17 @@ p.punch { font: 700 1.02rem/1.45 var(--letter); max-width: 40rem; margin: .8rem 
   ol.strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   h1.comic { font-size: 3rem; }
 }
+/* where the record ends */
+section.ends { border-top: 0; }
+figure.ends { margin: .6rem 0 .3rem; }
+svg.ends { width: 100%; max-width: 36rem; height: auto; display: block; }
+.esq { fill: var(--ink); }
+.evoid { fill: none; stroke: var(--ink-2); stroke-width: 1; stroke-dasharray: 4 3; }
+.eline { stroke: var(--ink); stroke-width: 1.4; stroke-dasharray: 3 2; }
+.eaxis { stroke: var(--ink); stroke-width: 1.2; }
+svg.ends text { font: 700 9px var(--letter); fill: var(--ink-2); }
+svg.ends text.eq { font: 700 22px var(--letter); fill: var(--ink-2); }
+ul.squarekey svg.key .evoid { stroke-width: 1.6; stroke-dasharray: 3 2; }
 /* the deadline: by it, or after it */
 section.deadline { border-top: 0; }
 figure.deadline { margin: .6rem 0 .3rem; }
@@ -4160,6 +4172,174 @@ def strip_section(unread: int, total: int, year: int) -> str:
     )
 
 
+# ---- where the record ends ------------------------------------------------------------------
+
+# The Committee on Ethics's own published rule for what follows a report dated after the deadline:
+# past thirty more days its memorandum of 30 January 2023 sets a minimum fee of $200 a report, and
+# its filing-deadlines page says the fee may be waived in exceptional circumstances (STANDARDS.md
+# S.2, both read at the source 2026-09-21 and 2026-09-23). The register places its own rows against
+# that published line and computes no fee for anyone: a fee is assessed, or waived, by the
+# Committee, and the register sees none of its decisions.
+GRACE_DAYS = 30
+
+
+def report_lateness(findings: list[dict], signal_id: str) -> list[int]:
+    """Each current Finding of this signal as one number: the days between the report's own due
+    date and the date the Clerk's index gives it.
+
+    A report is due by the earliest deadline among the rows on it, so the row with the earliest
+    deadline is the row furthest past it, and its `days_after` is the report's. The arithmetic is
+    the Signal's, sealed with the Finding; this reads it back."""
+    out = []
+    for finding in fired_now(findings, signal_id):
+        days = [
+            row["days_after"]
+            for row in finding["evidence"]["rows"]
+            if isinstance(row.get("days_after"), int)
+        ]
+        if days:
+            out.append(max(days))
+    return sorted(out)
+
+
+def ends_chart(late: list[int]) -> str:
+    """Two rows, one span: the days after a report's own due date.
+
+    Above, every report the Clerk's index dates after the deadline, one square each, stacked where
+    two fall on the same day, with the upright line at the thirtieth day the Committee's memorandum
+    names. Below, at the same width, what the register holds about what followed, which is nothing,
+    so the row is empty.
+
+    A draft drew the lower row as the upper row's shadow: the same 27 squares in the same places,
+    hollow. It was the more clever figure and the less legible one — twenty-seven empty boxes read
+    as twenty-seven things, and the eye counts them instead of noticing there is nothing to count.
+    An empty band is what emptiness looks like. Nothing is drawn in the lower row at all, so the
+    figure asserts no fact about the Committee; it draws this register's own silence at the size of
+    the question."""
+    if not late:
+        return ""
+    pad, w = 10, 360
+    sq, step = 6.0, 7.5
+    floor_y, axis_y = 70.0, 78.0
+    band_top, band_h = 124.0, 46.0
+    span = max(max(late), GRACE_DAYS + 1)
+    inner = w - 2 * pad
+
+    def x(day: int) -> float:
+        return pad + inner * day / span
+
+    stacked: dict[int, int] = {}
+    squares = []
+    for day in late:
+        k = stacked.get(day, 0)
+        stacked[day] = k + 1
+        squares.append(
+            f'<rect class="esq" x="{x(day) - sq / 2:.2f}" y="{floor_y - k * step:.1f}" '
+            f'width="{sq}" height="{sq}"/>'
+        )
+    xg = x(GRACE_DAYS)
+    parts = [
+        f'<text x="{pad}" y="10" text-anchor="start">what the Clerk\'s index shows</text>',
+        f'<line class="eline" x1="{xg:.1f}" y1="16" x2="{xg:.1f}" y2="{axis_y}"/>',
+        *squares,
+        f'<line class="eaxis" x1="{pad}" y1="{axis_y}" x2="{w - pad}" y2="{axis_y}"/>',
+        f'<text x="{pad}" y="{axis_y + 12}" text-anchor="start">0</text>',
+        f'<text x="{xg:.1f}" y="{axis_y + 12}" text-anchor="middle">{GRACE_DAYS}</text>',
+        f'<text x="{w - pad}" y="{axis_y + 12}" text-anchor="end">{span}</text>',
+        f'<text x="{w - pad}" y="{axis_y + 24}" text-anchor="end">'
+        "days after the report was due</text>",
+        f'<text x="{pad}" y="{band_top - 6}" text-anchor="start">what followed</text>',
+        f'<rect class="evoid" x="{pad}" y="{band_top}" width="{inner}" height="{band_h}"/>',
+        f'<text class="eq" x="{w / 2:.1f}" y="{band_top + band_h / 2 + 8:.1f}" '
+        'text-anchor="middle">?</text>',
+    ]
+    return (
+        f'<svg class="ends" viewBox="0 0 {w} {band_top + band_h + 8:.0f}" direction="ltr" '
+        'aria-hidden="true" focusable="false">' + "".join(parts) + "</svg>"
+    )
+
+
+def ends_section(signal_runs: list[tuple[dict, dict]], findings: list[dict]) -> str:
+    """Where this register's chain stops, drawn at the width of the part it can see.
+
+    Every other figure on this page is about what the register found or could not read inside the
+    filings. This one is about what happens to a filing after the register has read it, which is
+    the question a reader asks next and the one the pages had no answer for. The honest answer has
+    three parts and the section gives all three: the rule the Committee publishes, where these
+    reports fall against it, and the number of rows here about what the Committee then did, which
+    is nothing.
+
+    Three things it must not do. It must not compute a fee for anyone: a fee is assessed, or
+    waived, by the Committee (STANDARDS.md S.2). It must not read its own silence as the
+    Committee's: the register reads the Clerk's filing index, a Committee decision is not among
+    its sources, and whether one is published to read is a question it has not answered. And it
+    must not lump the two populations the record plainly holds, because eighteen of these reports
+    are days past their due date, seven of them by one, and nine are three to six months past;
+    a figure that drew them as one number would be false about every report in it."""
+    for signal, _summary in signal_runs:
+        late = report_lateness(findings, signal["id"])
+        if not late:
+            continue
+        inside = [d for d in late if d <= GRACE_DAYS]
+        past = [d for d in late if d > GRACE_DAYS]
+        one_day = sum(1 for d in late if d == 1)
+        # The emptiness between the two groups is worth a sentence when it is wider than the
+        # whole window the Committee's line marks: that is a threshold the record supplies rather
+        # than one chosen here, and it keeps a one-day gap, which is noise, out of the page.
+        gap = ""
+        if inside and past and min(past) - max(inside) > GRACE_DAYS:
+            gap = f" No report in this build falls between {max(inside):,} days and {min(past):,}."
+        filed = sorted(f["evidence"]["filed_at"] for f in fired_now(findings, signal["id"]))
+        swatch = (
+            '<svg class="key" viewBox="0 0 12 12" aria-hidden="true" focusable="false">'
+            '<rect class="{0}" x="1" y="1" width="10" height="10"/></svg>'
+        )
+        n = len(late)
+        return (
+            '<section class="ends" id="ends">\n'
+            '<h2><span class="tag">Where the record ends</span></h2>\n'
+            f'<p class="glance">A report the Clerk\'s index dates after the deadline is where this '
+            "register stops being able to follow anything. What the rule does next is the "
+            f"Committee on Ethics's: past {GRACE_DAYS} more days its "
+            f'<a href="{PTR_DUE_MEMO}">memorandum of 30 January 2023</a> sets a minimum fee of '
+            f'$200 a report, and <a href="{ETHICS_FD}">its filing-deadlines page</a> says the fee '
+            "may be waived in exceptional circumstances. The register computes no fee for anyone "
+            "and holds no row about what the Committee did.</p>\n"
+            '<figure class="ends">\n'
+            + ends_chart(late)
+            + f"\n<figcaption>Above: the {n:,} {plural(n, 'report', 'reports')} the Clerk's "
+            f"{ERA['year']} index dates after the deadline, one square each, placed by the days "
+            "between the report's own due date and the date the index gives it, and stacked where "
+            f"two fall on the same day. The upright line is the {GRACE_DAYS}th day. Below, on the "
+            "same span and at the same width: every row this register holds about what followed, "
+            "whether a fee was assessed, waived, or neither. There are none, which is why it is "
+            "empty. That emptiness is a fact about this register's sources and not about the "
+            "Committee: the register reads the Clerk's filing index, a Committee decision is not "
+            "among the sources it reads, and whether one is published to read is a question it "
+            "has not answered. It counts reports, not trades or people, and it names no one."
+            "</figcaption>\n</figure>\n"
+            '<ul class="squarekey">'
+            f"<li>{swatch.format('esq')} <b>{len(inside):,}</b> "
+            f"{plural(len(inside), 'report', 'reports')} at or inside the {GRACE_DAYS}th day past "
+            f"their own due date"
+            + (f", {one_day:,} of them by one day" if one_day else "")
+            + "</li>"
+            f"<li>{swatch.format('esq')} <b>{len(past):,}</b> "
+            f"{plural(len(past), 'report', 'reports')} past it, at {min(past):,} to "
+            f"{max(past):,} days.{gap}</li>"
+            f"<li>{swatch.format('evoid')} <b>0</b> rows here about what followed, for any of the "
+            f"{n:,}</li></ul>\n"
+            f"<p>The Clerk's index dates these reports between {esc(filed[0])} and "
+            f"{esc(filed[-1])}. What followed each is the Committee's to say, on "
+            f'<a href="{ETHICS_FD}">its own page</a>. Closing this gap needs a source the '
+            f'register does not read yet; <a href="{NEXT_ENDS}">NEXT.md E.1</a> says what such a '
+            "source would have to carry before a row of it could enter the register.</p>\n"
+            f'<p class="quiet">{esc(EITHER_WAY)}</p>\n'
+            "</section>"
+        )
+    return ""
+
+
 # ---- the notice clock: the one date the filer writes ----------------------------------------
 
 
@@ -5333,6 +5513,7 @@ def render_index(
     )
     glance = glance_section(signal_runs or [], outcomes_all or {}, findings or [])
     deadline = deadline_section(signal_runs or [], findings or [])
+    ends = ends_section(signal_runs or [], findings or [])
     narrows = narrows_section(signal_runs or [], outcomes_all or {}, findings or [])
     notice = notice_section(transactions or [], filings)
     everything = [o for group in (outcomes_all or {}).values() for o in group]
@@ -5358,7 +5539,8 @@ def render_index(
     # reach, then the oath the whole page is set beside. The doors out are last.
     body = (
         f'{head}\n<main id="main">\n{tile_map(offices)}\n{how}\n{deadline}\n{glance}\n'
-        f"{notice}\n{narrows}\n{oath}\n{disputes_section(False, brief=True)}\n{door}\n"
+        f"{notice}\n{narrows}\n{ends}\n{oath}\n"
+        f"{disputes_section(False, brief=True)}\n{door}\n"
         f"</main>\n{footer(meta, home=True)}"
     )
     return page(HOME_TITLE, body)
