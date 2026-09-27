@@ -315,6 +315,8 @@ td.idx { font-family: var(--mono); font-size: .88rem; color: var(--ink-2); white
 td.code { font-family: var(--mono); }
 td.idx span.note { white-space: normal; min-width: 8rem; }
 td.setby { min-width: 7.5rem; }
+span.note.clash { color: var(--ink); border-left: 3px solid var(--ink); padding-left: .35rem;
+                  margin-top: .2rem; }
 p.quiet { color: var(--ink-2); max-width: 36rem; }
 h3 { font-size: 1rem; font-weight: 600; margin: 1.4rem 0 .3rem; }
 h3 a { font-weight: 400; }
@@ -2650,6 +2652,28 @@ def marked_clause(rows: list[dict]) -> str:
 FOLD_AT = 25
 
 
+def dates_disagree(tx: dict, report: dict) -> str:
+    """A note beside a row whose own dates cannot all be right, as the report prints them: a
+    notice dated before the trade, or a trade dated after the report that lists it. The register
+    annotates the filed row; it does not say which date is wrong, or why."""
+    traded, notified, filed = (
+        tx.get("transaction_date"),
+        tx.get("notified_date"),
+        report.get("filed_at"),
+    )
+    said = []
+    if traded and notified and notified < traded:
+        said.append("the notice is dated before the trade")
+    if traded and filed and traded > filed:
+        said.append("the trade is dated after the report that lists it")
+    if not said:
+        return ""
+    return (
+        f'<span class="note clash">As printed, {" and ".join(said)}: these dates cannot all be '
+        "right, and the report does not say which is wrong.</span>"
+    )
+
+
 def transactions_section(
     filings: list[dict],
     transactions: list[dict],
@@ -2791,7 +2815,7 @@ def transactions_section(
 
         body = "\n".join(
             "<tr>"
-            f'<td class="idx">{esc(t["transaction_date"])}</td>'
+            f'<td class="idx">{esc(t["transaction_date"])}{dates_disagree(t, f)}</td>'
             f'<td class="idx">{esc(t["notified_date"])}</td>'
             f"<td>{type_cell(t)}</td>"
             f"<td>{esc(OWNER_WORDS.get(t['owner'], t['owner']))}</td>"

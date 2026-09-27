@@ -2347,3 +2347,20 @@ def test_the_notice_clock_counts_trades_reports_and_members_and_names_no_one():
     words = re.sub(r"<[^>]+>", " ", drawing).replace("&lt;", "<").split()
     assert all(re.fullmatch(r"<0|\d+\+?", w) for w in words), words
     assert render.notice_section([], []) == ""
+
+
+def test_a_row_whose_own_dates_cannot_all_be_right_says_so_and_no_more():
+    report = read_report(HOLDERS[0]["id"], "2025-03-20", 1)
+    rows = [
+        transaction(report["id"], 1, transaction_date="2025-03-05", notified_date="2025-03-02"),
+        transaction(report["id"], 2, transaction_date="2025-03-25", notified_date="2025-03-26"),
+        transaction(report["id"], 3, transaction_date="2025-03-01", notified_date="2025-03-02"),
+    ]
+    page = render.render_officeholder(HOLDERS[0], [report], META, striker, 0, rows)
+    section = between(page, '<section id="transactions">', '<section id="requires"')
+    assert section.count('class="note clash"') == 2, "only the two rows whose dates clash"
+    assert "As printed, the notice is dated before the trade: these dates cannot all be right" in (
+        section
+    )
+    assert "the trade is dated after the report that lists it" in section
+    assert "does not say which is wrong" in section and verdict_words(section) == []
