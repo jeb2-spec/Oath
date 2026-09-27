@@ -8,7 +8,26 @@ metadata:
 
 # Where we are
 
-*Last updated: 2026-09-27, Opus 5.5 in a cloud session. The register is still build `0005-house-2025` (27 Findings, its proof confirmed at Bitcoin block 968733). PR #40 (S.1b) and #41 (P.1's design) are merged. PR #42 built P.1: the pages a reader can use, and the House at a glance on the landing, read by all seven seats. Another session is populating the record in parallel.*
+*Last updated: 2026-09-27, Opus 5 in a cloud session. The register is still build `0005-house-2025` (27 Findings, its proof confirmed at Bitcoin block 968733). PR #40 (S.1b) and #41 (P.1's design) are merged. PR #42 built P.1: the pages a reader can use, and the House at a glance on the landing, read by all seven seats. Another session is populating the record in parallel.*
+
+**Pages: the landing became a story in figures, 2026-09-27, P.3.** Jared set the frame and told me to throw away the script: *our data and the record is the record. Pages is how we are choosing to reflect that… imagery and data colliding to form a story and give insights… like a master finish carpenter… Less words, less describe me, describe this. Translate the record to something a child could understand.*
+
+The landing carried **6,942 reader-visible words**. It carries **1,837**. Nothing was cut: two thirds of it was the register describing itself and a directory of 439 names six screens below a map that already did that job, and both now have their own page — `seats.html` (the directory) and `record.html` (the state of the record, the dispute route in full, the glossary), each one click from the foot.
+
+What is on the landing is one story in pictures: the map, the rule in four panels, **the deadline**, the chamber's reports as squares, the one date the filer writes, what the register could not reach, the oath, the route to correct a fact, the doors out.
+
+**The new figure is the one the project was built for and had never drawn.** Every trade the Signal compared, as a single bar split where the deadline falls — 5,085 reported by it, 1,105 after, each count printed on its own block so the proportion is read before any number is — and that dark segment opened out by a bracket into a distribution of how many days after, one bar a day, 1 to 197. The strip had taught in panel four that *a bar is how late*, and then the page never drew one.
+
+Four things worth keeping:
+
+1. **Both halves or neither.** A figure drawn from the 1,105 alone is an indictment: a long dark bar and 197 days with no scale to read either against. A page that drew only the 5,085 is a brochure. The block carrying the reassuring half is the one a later hand is likeliest to think decorative, so a guard holds it. This is the same discipline as *describe, never condemn*, applied to a drawing instead of a sentence.
+2. **Cutting words made the page more doctrinal, not less.** CLAUDE.md already says *a figure caption instead of a paragraph under the chart*. Almost every word that left the landing was a paragraph doing a caption's job, or the register describing itself where a reader had not asked. Less words and more discipline turned out to be the same move.
+3. **A name is never a heading on the front door.** The door that shows a reader one member's page had that member's name as the card's title, with *first in seat order* in small type underneath. A name set as a headline invites exactly the question the frame exists to answer. The heading says what the door is for; the name and its reason follow, in that order.
+4. **The gates moved with the pages, and one hole closed.** `lint-no-ranking` read `index.html`, `signals/**` and `officeholders/*` **by name**; a page anywhere else was checked by nothing. It reads every page now, and the requirement *some page holds the directory of seats* moved from a file name to the site. Two guards on the new figure, one repaired when my own word-cut moved its call site — the measurer caught it the same minute.
+
+**And one the suite caught before it could ship.** A stray uncommitted edit had blanked `dates_figure(finding)` out of every Finding block: 27 Findings with no drawing of the dates they rest on, on 21 people's pages. It was never committed and main never carried it. Worth keeping: *the test that fails for a reason you did not intend is the one earning its keep.*
+
+**What I did not do.** ECOSYSTEM §1.4 now describes a landing the code no longer renders, in two sentences. ECOSYSTEM.md is sealed, so amending it supersedes a build whose anchor is confirmed in Bitcoin block 968733 — for two sentences of description. NEXT.md D.4 carries the replacement words; the Monday refresh re-seals and re-anchors, and it rides that.
 
 **The whole second reading, closed out, 2026-09-27, PRs #43 and #48 to #52.** Every finding the second seven-seat reading of the built answer left open is now fixed, blocked on something nameable, or waiting on the maintainer. What the six passes came to, and the one pattern underneath them:
 
