@@ -259,7 +259,8 @@ the page with the standards first, and §1.4 draws the landing without the glanc
 proof exists does not move, and a page is not a reason to cut a build: the record's own next build
 carries the amendment. Its text: the diagram and paragraph in PR #42's commit `02bdff4` (reverted
 there, kept in the history for this purpose), with the answer's sentence shapes quoted so a change
-to the wording moves the digest (Seat G), and §1.4 gaining *The House at a glance*. INVARIANTS §13's
+to the wording moves the digest (Seat G), and §1.4 gaining *The House at a glance* (no longer:
+the glance moved to `record.html` later the same day, NEXT.md P.6). INVARIANTS §13's
 gate line should say the gate reads every officeholder's page (Seat C); that is §17's to approve.
 
 ## 8. The second reading, of the pages as published

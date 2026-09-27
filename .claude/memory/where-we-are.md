@@ -8,17 +8,17 @@ metadata:
 
 # Where we are
 
-*Last updated: 2026-09-27, Opus 5 in a cloud session, at the end of the pages work. **Main is `a18fe91`, PR #59 merged, and the register is live at <https://jeb2-spec.github.io/Oath/>.** Still build `0005-house-2025` (27 Findings, proof confirmed at Bitcoin block 968733); nothing in PR #59 touched a sealed row, so the digest and the anchor are unchanged.*
+*Last updated: 2026-09-27, Opus 5.5 in a cloud session, after slimming the landing. **Main was `66cec80` when this branch left it; the register is live at <https://jeb2-spec.github.io/Oath/>.** Still build `0005-house-2025` (27 Findings, proof confirmed at Bitcoin block 968733); the slimming touched no sealed row, so the digest and the anchor are unchanged.*
 
 ## The next session starts here
 
-**One task, and it is [NEXT.md P.6](../../NEXT.md): slim the landing without diluting the message or changing the tone.** That is the maintainer's direction, given after he read the deployed pages, and it is the whole of the open work that does not need network.
+**P.6 landed, items 1 to 3** ([NEXT.md P.6](../../NEXT.md) has the numbers): who decides said once in full, the frame under every result, the glance on `record.html`, the captions' shared caveats said once. Item 4 was weighed and left, because the narrows list is the landing's statement of its own limits. The three things that do not move did not move.
 
-The measurements are in P.6 and they are not a vibe: 2,197 words, seven visual blocks back to back, captions at 21% of the page, and four consecutive sections of about 330 words each that make up 62% of it. The largest cut costs nothing — `EITHER_WAY` is printed four times — but it is not a free delete, because the repetition exists to answer Seat D's crop finding, and P.6 says how the second reading already resolved that trade-off. **Read the finding before acting on the paragraph.**
+**Read [feedback-pages-are-the-window.md](feedback-pages-are-the-window.md) before touching a page.** Jared stopped a full local CI run for this change: the pages are the window into the record, not the record. A check on a page stays if it keeps a sentence about a person true and goes if it only keeps the window arranged; the evidence for a page change is the render, the page gates, the render tests and a screenshot. 34 of the 67 measured guards sit on `render.py`, and sorting them by that question is his call, not a session's.
 
-Three things do not move at any word count: the two-population split of the 27 late reports, the both-halves-or-neither bar, and the empty second row with the clause that says the emptiness is this register's and not the Committee's. Those are the message.
+**The logo is locked: read [feedback-the-mark-is-his.md](feedback-the-mark-is-his.md).** No change to the seal's or the masthead's look without Jared's distinct authorization for it. The figures, by contrast, are open for a design pass so they read as Oath's and not as a generic chart; the proposal there (a build stamp inside each figure) waits on his yes.
 
-**The other two open threads need things this session did not have.**
+**The other two open threads need things this session did not have either.**
 
 - **Network.** [NEXT.md E.0](../../NEXT.md) is thirteen rows of official information the register would need to follow a report past its deadline, twelve of them saying *nobody here has looked yet* because `ethics.house.gov`, `oce.house.gov`, `uscode.house.gov` and the federal dockets all return 000 through the cloud proxy. Every row carries a `check` naming exactly what to read. `wt:the-clerks-filing-date` goes first and is the highest-priority item in the project: the Clerk's index row carries eight fields and one date, nothing says whether it is the day the member filed or the day the Clerk posted, and **all 27 Findings rest on it.** It is the only open item that could make a sentence already published wrong about a person.
 - **A re-seal.** The Monday refresh (09:17 UTC) re-reads the source, re-seals and re-anchors. Two things should ride it: the ECOSYSTEM §1.4 correction in [NEXT.md D.4](../../NEXT.md), whose replacement words are written out there, and the maintainer's answer to E.0's question of whether `docs/wanted/wanted.ndjson` should join the sealed set.

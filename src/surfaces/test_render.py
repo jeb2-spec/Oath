@@ -2282,7 +2282,11 @@ def test_the_figure_keeps_every_mark_inside_its_scale_across_a_year_and_a_sunday
     assert ticks == expect, (ticks, expect)
 
 
-def test_the_landing_shows_the_house_at_a_glance_and_names_no_one():
+def test_the_house_at_a_glance_is_on_the_record_page_and_names_no_one():
+    """One square per report, for the whole chamber, on the record page. It left the landing when
+    the deadline figure came to answer the landing's question better (NEXT.md P.6), and what only
+    it carried there moved with the reader: the link to the members in seat order, the statute,
+    and what a signal is."""
     holder_ = sworn(HOLDERS[0])
     report = read_report(holder_["id"], "2025-03-20", 1)
     found, outcomes, _ = evaluated([holder_], [report], LATE)
@@ -2300,7 +2304,19 @@ def test_the_landing_shows_the_house_at_a_glance_and_names_no_one():
         {SIGNAL["id"]: outcomes},
         found,
     )
-    glance = between(page, '<section class="glance" id="glance">', "</section>")
+    record = render.render_record(
+        META,
+        RUN,
+        HOLDERS,
+        FILINGS,
+        OFFICES,
+        transactions=LATE,
+        signal_runs=[(SIGNAL, summary)],
+        outcomes_all={SIGNAL["id"]: outcomes},
+        findings=found,
+    )
+    assert 'id="glance"' not in page, "the squares are apparatus, and the record page holds them"
+    glance = between(record, '<section class="glance" id="glance">', "</section>")
     assert "One square for each of the 1 transaction report" in glance
     assert "attributes to 1 member" in glance
     assert "index lists" not in glance, (
@@ -2311,17 +2327,33 @@ def test_the_landing_shows_the_house_at_a_glance_and_names_no_one():
     assert 'href="signals/stock-act-ptr-after-deadline/v1.html">the 1 member, in seat order' in (
         glance
     )
+    assert 'href="index.html#find">on the map' in glance, "the map is on another page from here"
+    assert render.esc(render.EITHER_WAY) in glance, "said once in full on the page that shows it"
+    assert ranking.check_register(record) == [] and frame.check_page(record) is None
+    assert verdict_words(record) == []
+
+    # What only the glance carried on the landing is still on the landing, where a reader meets
+    # the signal at work.
+    deadline = between(page, '<section class="deadline" id="deadline">', "</section>")
+    assert 'href="signals/stock-act-ptr-after-deadline/v1.html">the 1 member, in seat order' in (
+        deadline
+    )
+    assert f'href="{render.USC_13105}"' in deadline, "the standard is cited where it is drawn"
+    assert "What a signal is, and what it does not say" in deadline
+    assert "officeholders/" not in deadline
+
     # The order is the editorial decision this page turns on, so it is asserted and not left to
     # whoever edits render_index next. A reader who arrived from a friend meets the map before any
-    # figure; the rule comes before the figures that use its marks and before the squares its own
-    # text points at as "below"; the limits come after the rule that makes them legible; and the
-    # doors out come last, once the reader has a reason to want them. Until 2026-09-27 the glance
-    # came first and the map sat about three thousand words in; the directory of 439 names and the
-    # register's account of itself sat between the oath and the foot, and are their own pages now.
+    # figure; the rule comes before the figures that use its marks; the limits come after the rule
+    # that makes them legible; and the doors out come last, once the reader has a reason to want
+    # them. Until 2026-09-27 the glance came first and the map sat about three thousand words in;
+    # the directory of 439 names and the register's account of itself sat between the oath and the
+    # foot, and are their own pages now, and so, since P.6, is the glance.
     assert (
         page.index('id="find"')
         < page.index("How a stock trade becomes a public record")
-        < page.index('id="glance"')
+        < page.index('id="deadline"')
+        < page.index('id="notice"')
         < page.index('id="narrows"')
         < page.index('id="ends"')
         < page.index("What every member swore")
@@ -2334,7 +2366,6 @@ def test_the_landing_shows_the_house_at_a_glance_and_names_no_one():
     assert "What the register could not reach" in narrows
     assert '<dl class="narrows">' in narrows, "the funnel's four steps are told here, once"
     assert '<figure class="narrows">' in narrows, "beside the figure they explain"
-    assert '<dl class="narrows">' not in glance, "and no longer a third time in the glance"
     assert "officeholders/" not in narrows, "the limits name and link no one"
     assert ranking.check_register(page) == [] and frame.check_page(page) is None
     assert verdict_words(page) == []
@@ -2371,7 +2402,7 @@ def test_the_strip_teaches_the_marks_and_draws_the_process_never_a_person():
     assert "lists 2 of these reports. On 1 of them the register found no Filing ID line" in strip, (
         "never a physical fact about a document the register only failed to read (Seat G)"
     )
-    assert page.index('id="how"') < page.index('id="glance"')
+    assert page.index('id="how"') < page.index('id="deadline"')
     person = render.render_officeholder(HOLDERS[0], FILINGS[:1], META, striker, 0, [])
     assert 'class="comic"' not in person, "a person's name is never lettered as a comic"
 
@@ -2430,8 +2461,8 @@ def test_the_deadline_figure_draws_both_sides_of_the_line_and_names_no_one():
     assert "officeholders/" not in section, "it names and links no one"
     assert verdict_words(section) == []
     assert ranking.check_register(page) == []
-    # After the rule that makes it legible, before the report-by-report squares it summarises.
-    assert page.index('id="how"') < page.index('id="deadline"') < page.index('id="glance"')
+    # After the rule that makes it legible, and before the one date the filer writes.
+    assert page.index('id="how"') < page.index('id="deadline"') < page.index('id="notice"')
 
 
 def test_the_deadline_figure_refuses_where_the_run_record_and_the_findings_disagree():

@@ -3271,6 +3271,14 @@ NOT_A_RULING = (
     "Committee on Ethics to decide, and the register sees none of its decisions."
 )
 EITHER_WAY = NOT_A_RULING + " " + FRAME
+# What every figure on the landing would otherwise say in its own caption, said once before the
+# first of them. Each caption keeps what is true of it alone (its unit, its scale, what it cannot
+# show); these are true of all four, and four tellings of them were a quarter of the captions.
+HOW_TO_READ = (
+    "How to read the figures from here: each is drawn from this build's sealed rows, names no "
+    "one, and orders nothing by anything about a person; and each says whether it counts trades "
+    "or reports, because one report can list hundreds of trades."
+)
 
 
 def finding_facts(findings: list[dict], signal_id: str) -> dict:
@@ -4338,8 +4346,7 @@ def ends_section(signal_runs: list[tuple[dict, dict]], findings: list[dict]) -> 
             "empty. That emptiness is a fact about this register's sources and not about the "
             "Committee: the register reads the Clerk's filing index, a Committee decision is not "
             "among the sources it reads, and whether one is published to read is a question it "
-            "has not answered. It counts reports, not trades or people, and it names no one."
-            "</figcaption>\n</figure>\n"
+            "has not answered. It counts reports, not trades or people.</figcaption>\n</figure>\n"
             '<ul class="squarekey">'
             f"<li>{swatch.format('esq')} <b>{len(inside):,}</b> "
             f"{plural(len(inside), 'report', 'reports')} at or inside the {GRACE_DAYS}th day past "
@@ -4356,7 +4363,7 @@ def ends_section(signal_runs: list[tuple[dict, dict]], findings: list[dict]) -> 
             f'<a href="{ETHICS_FD}">its own page</a>. Every piece of official information that '
             f"would let the register carry on past this point is listed, one row each, in "
             f'<a href="{WANTED_PAGE}">what would close the loop</a>.</p>\n'
-            f'<p class="quiet">{esc(EITHER_WAY)}</p>\n'
+            f'<p class="quiet">{esc(FRAME)}</p>\n'
             "</section>"
         )
     return ""
@@ -4494,35 +4501,54 @@ def deadline_section(signal_runs: list[tuple[dict, dict]], findings: list[dict])
             continue
         on_time = compared - len(late)
         reports = summary.get("reports_with_a_finding") or 0
+        named = len({f["officeholder_id"] for f in fired_now(findings, signal["id"])})
         middle = late[len(late) // 2] if late else 0
+        words = ANSWER_WORDS.get((signal["slug"], signal["version"]))
+        against = words["against"] if words else "the deadline the rule sets"
         parts.append(
             '<figure class="deadline">\n'
             + deadline_chart(on_time, late)
-            + f"\n<figcaption>Every trade the signal compared against the deadline, as one bar "
-            f"split where the deadline falls: {on_time:,} reported by it, {len(late):,} after. "
-            "Below, that second part on its own and spread by the days between the deadline and "
-            "the date the Clerk's index gives the report, one bar a day, on a plain scale; a day "
-            "carrying any trade at all is drawn at least a tick high, so the far days show. It "
-            "counts trades and not reports or people: one report can list hundreds of trades, so "
-            "a tall bar can be a single report. The arithmetic is the signal's, sealed with each "
-            "Finding, and this draws it back. It names no one, and nothing here is ordered by "
-            "anything about a person.</figcaption>\n</figure>\n"
+            + "\n<figcaption>Every trade the signal compared, as one bar split where the deadline "
+            "falls, and below it the part after, spread one bar a day by the days between the "
+            "deadline and the date the Clerk's index gives the report, on a plain scale where a "
+            "day carrying any trade at all is drawn at least a tick high so the far days show. It "
+            "counts trades and not reports or people: a tall bar can be a single report."
+            "</figcaption>\n</figure>\n"
             '<ul class="squarekey">'
             f"<li>{DEADLINE_SWATCH.format('by')} <b>{on_time:,}</b> trades whose report the "
-            "Clerk's index dates on or before the deadline the rule sets</li>"
+            f"Clerk's index dates on or before {against}</li>"
             f"<li>{DEADLINE_SWATCH.format('after')} <b>{len(late):,}</b> trades whose report it "
             f"dates after the deadline, on {reports:,} {plural(reports, 'report', 'reports')}: "
             f"half of them by {middle:,} {plural(middle, 'day', 'days')} or fewer, the "
             f"furthest by {max(late):,}</li></ul>\n"
+            + (
+                f"<p>The {reports:,} {plural(reports, 'report is', 'reports are')} by {named:,} "
+                f"{plural(named, 'member', 'members')}. Each is on that member's page, with the "
+                f'dates it rests on drawn: <a href="{signal_page_path(signal)}">the {named:,} '
+                f"{plural(named, 'member', 'members')}, in seat order</a>.</p>\n"
+                if reports and named
+                else ""
+            )
         )
+    # What a signal is, said here because this is where a reader first meets one at work. It
+    # carries the only link from the landing to each Signal's own page, and in a build with no
+    # signal it is the sentence that says which silence the landing is.
+    what = (
+        "<details>\n<summary>What a signal is, and what it does not say</summary>\n"
+        + signals_lede(signal_runs).replace('<p class="lede">', "<p>", 1)
+        + "</details>\n"
+    )
     if not parts:
-        return ""
+        return f'<section class="deadline" id="deadline">\n{what}</section>'
+    # The thirty words about who decides are said in full once, here, where a result is first
+    # drawn. Every later figure carries the nine-word frame, which is the sentence Seat D's
+    # finding says must never travel without the result; the rest said four times on one page
+    # made it sound as if it were apologising, which is a change of tone nobody chose (P.6).
     return (
         '<section class="deadline" id="deadline">\n'
         '<h2><span class="tag">By the deadline, or after it</span></h2>\n'
-        + "".join(parts)
-        + f'<p class="quiet">{esc(EITHER_WAY)}</p>\n'
-        "</section>"
+        f'<p class="quiet">{esc(HOW_TO_READ)}</p>\n' + "".join(parts) + f'<p class="quiet">'
+        f"{esc(EITHER_WAY)}</p>\n{what}</section>"
     )
 
 
@@ -4647,12 +4673,11 @@ def notice_section(transactions: list[dict], filings: list[dict]) -> str:
         '<figure class="noticeclock">\n'
         + notice_chart(facts["days"])
         + f"\n<figcaption>All {total:,} trades on the transaction reports the register has read, "
-        "by the days from the trade to the notice date the report prints: one bar a day, the "
-        "last collecting every trade 61 days or more after, and one at the left for notices "
-        "printed before the trade. The upright lines are 30 and 45 days after the trade. It "
-        "counts trades, not reports or people: one report can list hundreds of trades, so a tall "
-        "bar can be a single report. The dates are the reports' own, as printed; a date typed "
-        "wrong on a form is drawn where it was typed. It names no one.</figcaption>\n</figure>\n"
+        "by the days from the trade to the notice date the report prints, one bar a day, with "
+        "every trade 61 days or more after in the last bar, notices printed before the trade in "
+        "one at the left, and upright lines at 30 and 45 days. It counts trades, not reports or "
+        "people, and draws each date as the report prints it, so a date typed wrong on a form is "
+        "drawn where it was typed.</figcaption>\n</figure>\n"
         '<ul class="squarekey">'
         f"<li>{swatch.format('within')} <b>{b['same']['trades'] + b['within']['trades']:,}</b> "
         "notices printed the same day as the trade or up to 45 days after it "
@@ -4782,8 +4807,7 @@ def narrows_figure(outcomes: list[dict], findings: list[dict], signal: dict, wor
         (
             fired,
             "the index dates after the deadline",
-            "For at least one trade compared. What that means for a filer is the House Committee "
-            "on Ethics's to decide, and the register sees none of its decisions.",
+            "For at least one trade compared.",
             "",
         ),
     )
@@ -4858,11 +4882,19 @@ def glance_section(
     signal_runs: list[tuple[dict, dict]],
     outcomes_all: dict[str, list[dict]],
     findings: list[dict],
+    home: str = "",
 ) -> str:
     """The House at a glance: one square for every report a Signal read or tried to read, across
     the whole chamber, in the order filed, and the same three states a person's page draws. No
     square names anyone and no square links to anyone; the members a Finding rests on are one
-    click away, in seat order, on the Signal's own page (Invariant §13)."""
+    click away, in seat order, on the Signal's own page (Invariant §13).
+
+    It lives on the record page, not the landing (NEXT.md P.6). The deadline figure answers the
+    landing's question, whether the chamber's trades were reported by the deadline, better than
+    463 squares in filing order do, and its counts are the narrowing figure's and the ends
+    figure's; report-by-report detail is apparatus. What only the glance carried moved with the
+    reader: the link to the members in seat order, the statute, and what a signal is. `home` is
+    the path back to the landing, for the link to the map."""
     parts = []
     for signal, _summary in signal_runs:
         words = ANSWER_WORDS.get((signal["slug"], signal["version"]))
@@ -4895,17 +4927,14 @@ def glance_section(
             f"{plural(named, 'member', 'members')}. Each is on that member's page, with the dates "
             f'it rests on drawn: <a href="{signal_page_path(signal)}">the {named:,} '
             f"{plural(named, 'member', 'members')}, in seat order</a>. Or find your own "
-            'representative <a href="#find">on the map</a>.</p>\n'
+            f'representative <a href="{home}#find">on the map</a>.</p>\n'
             f'<p class="quiet">{esc(EITHER_WAY)}</p>\n'
         )
-    lede = signals_lede(signal_runs).replace('<p class="lede">', "<p>", 1)
+    if not parts:
+        return ""
     return (
         '<section class="glance" id="glance">\n<h2><span class="tag">The House at a glance</span>'
-        "</h2>\n"
-        + "".join(parts)
-        + "<details>\n<summary>What a signal is, and what it does not say</summary>\n"
-        + lede
-        + "</details>\n</section>"
+        "</h2>\n" + "".join(parts) + "</section>"
     )
 
 
@@ -5400,6 +5429,8 @@ def render_record(
     signal_runs: list[tuple[dict, dict]] | None = None,
     reach: dict[str, dict[str, int]] | None = None,
     changes: dict[str, list[dict]] | None = None,
+    outcomes_all: dict[str, list[dict]] | None = None,
+    findings: list[dict] | None = None,
 ) -> str:
     """The apparatus: what this build holds, how a fact here gets corrected, and what every
     term on the pages means.
@@ -5407,7 +5438,9 @@ def render_record(
     This is the register describing itself, and it used to be two thirds of the landing's
     words. A reader who wants it should be able to open it; a reader who came to find their
     representative should not have to walk through it. Nothing is cut: every sentence that was
-    on the landing is here, under a heading, on a page linked from the landing's foot."""
+    on the landing is here, under a heading, on a page linked from the landing's foot. So is the
+    House at a glance, one square per report, which left the landing when the deadline figure
+    came to answer its question better (NEXT.md P.6)."""
     ERA.update(era_of(run, holders))
     _off_roster, at_seat, _seats, _rows = roster_reading(holders, offices, changes)
     lede = (
@@ -5429,9 +5462,10 @@ def render_record(
         changes,
         len(at_seat),
     )
+    glance = glance_section(signal_runs or [], outcomes_all or {}, findings or [], "index.html")
     body = (
         f'{inner_head("Oath · the apparatus", RECORD_TITLE, lede)}\n<main id="main">\n'
-        f"{record}\n{disputes_section(False)}\n{how_to_read(False)}\n"
+        f"{record}\n{glance}\n{disputes_section(False)}\n{how_to_read(False)}\n"
         f"</main>\n{footer(meta, home=False, to_root='')}"
     )
     return page(RECORD_TITLE, body)
@@ -5670,9 +5704,10 @@ def render_index(
     It used to carry the directory of 439 names and the register's whole account of itself, and
     those were two thirds of its words. Both have their own page now, linked from the foot. What
     is left is one story a reader can follow without being taught anything first: a map to their
-    own representative, the rule in four panels, the chamber's reports as squares, the one date
-    the filer writes, and what the register could not reach. Every figure carries its caption;
-    the captions are where the words went.
+    own representative, the rule in four panels, the deadline and the trades on each side of it,
+    the one date the filer writes, what the register could not reach, and where the record ends.
+    Every figure carries its caption; the captions are where the words went. The chamber's
+    reports as squares, one per report, are on the record page (NEXT.md P.6).
     """
     ERA.update(era_of(run, holders))
     off_roster, _at_seat, _seats, _rows = roster_reading(holders, offices, changes)
@@ -5748,7 +5783,6 @@ def render_index(
         f'<blockquote class="oath"><p>{esc(OATH)}</p><footer>{OATH_CITE} Every member took it. '
         "The register sets the record beside it.</footer></blockquote>\n</section>"
     )
-    glance = glance_section(signal_runs or [], outcomes_all or {}, findings or [])
     deadline = deadline_section(signal_runs or [], findings or [])
     ends = ends_section(signal_runs or [], findings or [])
     narrows = narrows_section(signal_runs or [], outcomes_all or {}, findings or [])
@@ -5773,9 +5807,10 @@ def render_index(
     # friend wants their own representative, so the map is first. Then the rule, in four panels,
     # because nobody reads a rule they have no reason to care about yet. Then what the chamber
     # filed against it, then the one date the filer writes, then what the register could not
-    # reach, then the oath the whole page is set beside. The doors out are last.
+    # reach, then where the record ends, then the oath the whole page is set beside. The doors out
+    # are last.
     body = (
-        f'{head}\n<main id="main">\n{tile_map(offices)}\n{how}\n{deadline}\n{glance}\n'
+        f'{head}\n<main id="main">\n{tile_map(offices)}\n{how}\n{deadline}\n'
         f"{notice}\n{narrows}\n{ends}\n{oath}\n"
         f"{disputes_section(False, brief=True)}\n{door}\n"
         f"</main>\n{footer(meta, home=True)}"
@@ -6085,6 +6120,11 @@ def main(argv: list[str] | None = None) -> int:
             signal_runs,
             reach,
             changes,
+            {
+                sid: [o for group in by_oh.values() for o in group]
+                for sid, by_oh in outcomes_by.items()
+            },
+            findings,
         ),
         encoding="utf-8",
         newline="\n",
