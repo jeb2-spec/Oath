@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://oath.jeb2-spec.dev/schemas/wanted/v1.json",
+  "title": "A piece of official information the register does not have",
+  "description": "One row of docs/wanted/wanted.ndjson. A row is not a claim about the world; it is a claim about this project: a question the register cannot answer, what it can honestly say without the answer, and what it could say with it. Rows are not sealed with the build, because the seal vouches for evidence and this file is a work list. tools/check-wanted.py holds the rules the schema cannot express, chief among them that a row may not assert whether something is public until somebody here has read it at its source.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id", "closes", "question", "today", "with_it", "unit", "joins_on",
+    "holder", "publicness", "route", "candidates", "verified", "added"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^wt:[a-z0-9]+(-[a-z0-9]+)*$",
+      "description": "Stable identifier. A row is never renumbered; a row that stops being wanted is marked closed, never deleted."
+    },
+    "closes": {
+      "type": "string",
+      "enum": ["the-date", "the-fee", "the-review", "the-courts", "the-shut-door"],
+      "description": "Which part of the loop this piece would close. The page renders the groups in this order and refuses a key it has no heading for."
+    },
+    "question": {
+      "type": "string",
+      "minLength": 12,
+      "description": "The question a reader would ask, in their words, that this piece answers."
+    },
+    "today": {
+      "type": "string",
+      "minLength": 12,
+      "description": "What the register can honestly say now, without this piece. Usually: nothing, and why."
+    },
+    "with_it": {
+      "type": "string",
+      "minLength": 12,
+      "description": "What the register could say with it, stated as carefully as a published sentence, because one day it will be one."
+    },
+    "unit": {
+      "type": "string",
+      "enum": ["report", "officeholder", "matter", "chamber-year"],
+      "description": "What one row of this piece would be about. A piece whose unit is chamber-year names nobody and is the cheapest ask in the list."
+    },
+    "joins_on": {
+      "type": ["string", "null"],
+      "description": "The identifier that would let a row of this piece join the register's own rows without inference. Null means no such identifier is known, and a join would be a guess published against a named person, which this project does not do."
+    },
+    "holder": {"type": "string", "minLength": 3, "description": "Who holds it, as far as this project understands."},
+    "publicness": {
+      "type": "string",
+      "enum": ["published", "obtainable", "not public", "unknown"],
+      "description": "Only a row somebody here has read at its source may say anything but unknown (tools/check-wanted.py). Believing a thing is public is not knowing it."
+    },
+    "route": {"type": "string", "minLength": 12, "description": "How a person would get it, or why there is no route."},
+    "candidates": {
+      "type": "array",
+      "description": "Documents or systems that might carry it. A candidate is a lead, not a citation.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["what", "url"],
+        "properties": {
+          "what": {"type": "string", "minLength": 3},
+          "url": {"type": ["string", "null"]}
+        }
+      }
+    },
+    "verified": {"type": "boolean", "description": "Whether somebody on this project has read a candidate at its source and recorded what it holds."},
+    "check": {"type": "string", "description": "Required while verified is false: exactly what to read, and where, to settle this row. A row that says the project does not know must say how to find out."},
+    "blocks": {
+      "type": "array",
+      "description": "Signal ids whose next version this piece would let the register define, if any.",
+      "items": {"type": "string"}
+    },
+    "closed": {"type": ["string", "null"], "description": "The date this stopped being wanted, and nothing else changes; a row is never deleted."},
+    "added": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"}
+  }
+}
