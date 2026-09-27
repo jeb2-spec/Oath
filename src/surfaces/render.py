@@ -249,6 +249,7 @@ HELD_KINDS = (
     ("status", "not Member"),
     ("before_sworn", "before the swearing-in"),
     ("not_captured", "has not been captured"),
+    ("left_other_name", "the row carries another given name"),
 )
 # Rows no decision can attribute: the register cannot show the officeholder in office when
 # the index dates them (SUBJECTS.md §1). A page never says these wait for a decision.
@@ -649,18 +650,30 @@ def held_kind(reason: str) -> str:
     return "other"
 
 
-def held_kind_for(reason: str, source: dict, until: str = "") -> str:
+def held_kind_for(reason: str, source: dict, until: str = "", sworn: str = "") -> str:
     """A set-aside row's kind for one holder: `until`, where the roster stopped listing them,
-    is the last roster read the register built from that listed them."""
+    is the last roster read the register built from that listed them; `sworn`, where it lists
+    them, the swearing-in it records."""
     kind = held_kind(reason)
-    if not until or kind in ("after_term", "closed_after"):
+    if kind in ("after_term", "closed_after"):
         return kind
     filed = iso_of(source.get("filing_date") or "")
+    if not until:
+        # A holder the roster lists: a row the index dates before their swearing-in is said by
+        # that date, which is what a reader needs, rather than by what a document could not
+        # confirm (the Council's fourth reading of S.1b, Seat F).
+        if sworn and filed and filed < sworn and kind not in ("before_sworn", "closed_open"):
+            return "before_sworn"
+        return kind
     if filed and filed > until:
         return "left_closed"
-    if kind in DOC_KINDS or (kind == "other" and "the document prints" in reason):
+    # A document kind is this holder's only where the register set the row aside while the
+    # roster still listed them; the header check of a successor at the seat is about the
+    # successor (the Council's fourth reading of S.1b, Seat D).
+    kept = "; while it did, the row was set aside because " in reason
+    if kept and (kind in DOC_KINDS or (kind == "other" and "the document prints" in reason)):
         return kind
-    return "left_open"
+    return "left_other_name" if kind == "left_other_name" else "left_open"
 
 
 def current_office(holder: dict) -> dict:
@@ -764,7 +777,15 @@ def held_by_holder(
         reason = row.get("reason", "")
         mine = theirs(at.get(seat, []), source)
         for holder in mine:
-            add(holder["id"], held_kind_for(reason, source, until.get(holder["id"], "")))
+            add(
+                holder["id"],
+                held_kind_for(
+                    reason,
+                    source,
+                    until.get(holder["id"], ""),
+                    "" if holder["id"] in until else (holder.get("sworn_at") or ""),
+                ),
+            )
         if mine:
             continue
         named = HELD_REASON.search(reason)
@@ -777,16 +798,17 @@ def held_by_holder(
 
 def held_reports_by_holder(rejected: list[dict], holders: list[dict]) -> dict[str, int]:
     """Set-aside rows coded P at a holder's seat under the holder's surname, by officeholder:
-    the transaction reports the page must say are set aside and not read."""
+    the transaction reports the page must say are set aside and not read. Split by given name
+    as the filings line is, so a successor of the same surname is not told that the Member
+    before them filed a report of theirs (the Council's fourth reading of S.1b, Seat A)."""
     at = holders_by_seat(holders)
     counts: dict[str, int] = {}
     for row in rejected:
         source = row.get("source_row", {})
         if source.get("filing_type") != "P":
             continue
-        for holder in at.get(source.get("state_dst", "").strip(), []):
-            if carries_surname(holder, source.get("last") or ""):
-                counts[holder["id"]] = counts.get(holder["id"], 0) + 1
+        for holder in theirs(at.get(source.get("state_dst", "").strip(), []), source):
+            counts[holder["id"]] = counts.get(holder["id"], 0) + 1
     return counts
 
 
@@ -1785,6 +1807,8 @@ HELD_CLAUSES = {
     "closed_open": "listed by the index after the register closed the year and dated within "
     "the Congress's terms, whose {docs} the register has not read: the maintainer's recorded "
     "decision can attribute {it}",
+    "left_other_name": "under another given name, whose {docs} the register has not read: the "
+    "name join attributes no row to a member the roster does not list",
     "left_closed": "dated after {until}, the last roster read the register built from that "
     "listed them, which no decision attributes to them while the roster does not list them",
     "after_term": "that the maintainer's recorded decision attributes to them, dated by the "

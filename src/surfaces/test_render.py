@@ -30,6 +30,7 @@ render = _load(HERE / "render.py", "render_surface")
 ranking = _load(ROOT / "tools" / "lint-no-ranking.py", "lint_no_ranking")
 frame = _load(ROOT / "tools" / "lint-frame-presence.py", "lint_frame")
 striker = _load(ROOT / "tools" / "strike-mark.py", "strike_mark")
+build_reasons = _load(ROOT / "src" / "adapters" / "house-fd" / "build.py", "house_fd_reasons")
 ERA = dict(render.ERA)
 
 
@@ -73,6 +74,7 @@ def holder(seat: str, name: str, key: str, sworn: str = "2025-01-03", title: str
         "id": f"oh:us:house:{key}",
         "legal_name": name,
         "offices": [office(seat, title) if title else office(seat)],
+        "sworn_at": sworn,
         "notes": f"Sworn {sworn}. Presence in the register is not evidence of wrongdoing.",
         "source": {"url": "https://example.com", "retrieved_at": "2026-09-22T21:40:17Z"},
     }
@@ -1226,6 +1228,88 @@ def test_a_finding_whose_report_a_later_capture_shows_otherwise_says_so_beside_i
     assert ranking.check_summary(signal_page) == [] and frame.check_page(signal_page) is None
 
 
+def test_a_row_under_another_given_name_at_a_departed_seat_is_said_apart():
+    """The Council's fourth reading of S.1b (Seats B, D and E): a row at the seat of a Member
+    the roster no longer lists, under their surname but another given name, was classed by its
+    date alone and offered for a decision, which framed a relative's filing as the Member's.
+    The register says the given names differ and that it has not read the document. And a
+    document kind is that Member's only where the register set the row aside while the roster
+    still listed them; the header check of a successor at the seat is about the successor
+    (Seat D)."""
+    gone = holder("PA08", "Pat Departed", "d000001")
+    rows = [
+        {
+            "reason": build_reasons.DEPARTED_OTHER_NAME + " (Departed, Pat, PA08; last listed "
+            "2026-09-28)",
+            "source_row": {
+                "state_dst": "PA08",
+                "last": "Departed",
+                "first": "Casey",
+                "filing_type": "C",
+                "filing_date": "9/15/2026",
+            },
+        },
+        {
+            "reason": "surname matches a sitting member (Successor, Sam, PA08) but the given "
+            "names differ; the index dates the filing 2026-09-26, before the swearing-in the "
+            "roster records for the 119th Congress (2026-10-10); a human decides this one",
+            "source_row": {
+                "state_dst": "PA08",
+                "last": "Departed",
+                "first": "Casey",
+                "filing_type": "C",
+                "filing_date": "9/26/2026",
+            },
+        },
+    ]
+    counted = render.held_by_holder(rows, [gone], {gone["id"]: "2026-09-28"})
+    assert counted == {gone["id"]: {"left_other_name": 1, "left_open": 1}}, counted
+    said = render.aside_sentence(counted[gone["id"]], "2026-09-28")
+    assert "1 under another given name, whose document the register has not read" in said
+    assert "before the swearing-in" not in said, "the successor's own check is not about them"
+    assert "2 rows of the index at this seat carry this surname and are set aside" in said
+
+
+def test_a_listed_holders_row_is_said_by_the_date_before_their_swearing_in():
+    """Seat F on the fourth reading (N31): a row at a seat whose surname two holders share,
+    carrying neither given name, counted on the successor's page as one whose document could
+    not confirm the filer, though the index dates it long before they were sworn in."""
+    successor = holder("PA08", "Sam Departed", "s000001", sworn="2026-10-10")
+    row = {
+        "reason": "surname matches a sitting member (Departed, Sam, PA08) but the given names "
+        "differ; the document carries no Filing ID line and cannot confirm the filer; a human "
+        "decides this one",
+        "source_row": {
+            "state_dst": "PA08",
+            "last": "Departed",
+            "first": "Casey",
+            "filing_type": "P",
+            "filing_date": "4/14/2025",
+        },
+    }
+    assert render.held_by_holder([row], [successor]) == {successor["id"]: {"before_sworn": 1}}
+
+
+def test_a_held_report_counts_only_for_the_holder_whose_given_name_it_carries():
+    """Seat A on the fourth reading (A3-1's residue): the count of set-aside transaction
+    reports was keyed by surname alone, so a successor's page said a report the predecessor
+    filed under their own given name was set aside at the successor's seat."""
+    departed = holder("PA08", "Pat Departed", "d000002")
+    successor = holder("PA08", "Sam Departed", "s000002", sworn="2026-10-10")
+    rows = [
+        {
+            "reason": "held",
+            "source_row": {
+                "state_dst": "PA08",
+                "last": "Departed",
+                "first": "Pat",
+                "filing_type": "P",
+            },
+        }
+    ]
+    assert render.held_reports_by_holder(rows, [departed, successor]) == {departed["id"]: 1}
+
+
 def test_two_holders_of_one_seat_each_count_only_the_rows_under_their_own_surname():
     """Carrying a Member the roster no longer lists puts two holders at one seat. Found by
     the Council's reading of S.1b: counted by seat, whichever holder sorted last took the
@@ -1380,7 +1464,10 @@ def test_a_seat_whose_member_was_sworn_late_says_what_the_register_cannot_show()
     assert "The register holds no Member of this seat in that Congress" in al02, (
         "a seat vacant since before the first read says so too (Seat E)"
     )
-    assert "Sworn in" not in roll[roll.index('data-seat="AL01"') :].split("</tr>")[0]
+    on_time = roll[roll.index('data-seat="PR00"') :].split("</tr>")[0]
+    assert "Sworn in" not in on_time, "a seat whose holder was sworn with the Congress says nothing"
+    al01 = roll[roll.index('data-seat="AL01"') :].split("</tr>")[0]
+    assert "Sworn in 2026-09-01" in al01, "and every seat sworn after the terms began says so"
     assert "a Member of the 119th Congress who left before then is not in it" in roll, (
         "said on every build, not only once someone has left"
     )

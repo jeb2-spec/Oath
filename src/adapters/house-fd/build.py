@@ -390,6 +390,15 @@ DEPARTED_SHUT = (
     "from that listed them; the register cannot show them in office then, so no row dated after "
     "it is attributed to them while the roster does not list them"
 )
+# A row under the surname carrying another given name. For a member the roster lists, the
+# document decides such a row; at the seat of one it no longer lists, no document is read, and
+# saying only that a decision can attribute it framed a relative's filing as the member's (the
+# Council's fourth reading of S.1b, Seats B, D and E).
+DEPARTED_OTHER_NAME = (
+    DEPARTED + ", and the row carries another given name; the name join attributes no row to a "
+    "member the roster does not list, and the register has not read the document that would say "
+    "who filed it"
+)
 
 
 def given_of(person: dict) -> str:
@@ -413,10 +422,13 @@ def departed_of(row: dict, kept: dict[str, dict], held: dict | None) -> dict | N
     return near[0] if len(near) == 1 else None
 
 
-def departed_reason(gone: dict, filed_at: str | None, before: str | None) -> str:
+def departed_reason(
+    gone: dict, filed_at: str | None, before: str | None, same_given: bool = True
+) -> str:
     """Why a row at a departed member's seat under their surname is set aside. `before` is the
     reason the tree's last build gave it, if it set the row aside: one given while the roster
-    listed them is kept, prefixed, and one given since is kept as it is."""
+    listed them is kept, prefixed, and one given since is kept as it is. `same_given` is
+    whether the row carries their given name."""
     specifics = f" ({gone['namelist']}, {gone['seat']}; last listed {gone['_until']})"
     if before and before.startswith(DEPARTED_KEPT):
         return before
@@ -424,6 +436,8 @@ def departed_reason(gone: dict, filed_at: str | None, before: str | None) -> str
         return DEPARTED_KEPT + before + specifics
     if filed_at and filed_at > gone["_until"]:
         return DEPARTED_SHUT + specifics
+    if not same_given:
+        return DEPARTED_OTHER_NAME + specifics
     return DEPARTED_OPEN + specifics
 
 
@@ -1508,6 +1522,7 @@ def build(year: int, dry_run: bool = False, expect_not_listed: int = 0) -> int:
                         (row["doc_id"], row["last"], row["first"], row["state_dst"])
                     )
                     or reason_before.get(("refused", row["doc_id"])),
+                    same_given=bool(given_of(gone)) and given_of(gone) in tokens(row["first"]),
                 )
         if person is None or filed_at is None:
             rejected.append(
