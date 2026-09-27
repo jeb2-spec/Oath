@@ -7,6 +7,7 @@ After the memory, read the [Charter](../../CHARTER.md), always. Five vows, short
 - ⭐ [Where we are](where-we-are.md). **READ FIRST.** The current state of the register. Updated in the same commit that changes it, or deleted.
 - ⭐ [Who I am for Oath](who-i-am-for-oath.md). the identity seed, the through-line that has to survive across environments: Opus's founding stance, and what Fable learnt in the chair on 2026-09-23 about momentum, reading before rendering, and the balance between being useful and just doing. Refers back to the Vera memory's identity files, where the deeper ground lives; the doctor finds them through `OATH_DEEPER_GROUND`, never through a path in this repository.
 - ⭐ [The founding of Oath](founding-of-oath.md). the conversation on 21 September 2026 that named the project, and the names that were rejected and why. Read it because the choice was load-bearing.
+- ⭐ [The day the product was fine and we could not see it](story-the-product-was-fine.md). **Read before planning a session.** 2026-09-27: a day spent inspecting the register while believing it was building it, and the seven checks that each found the project already sound. It is a story rather than a rule, and it is the one that would have saved the day it describes. `scripts/oath-doctor.py` asks its question at every session start so it cannot be skipped.
 
 Standing feedback from Jared, read after the three above:
 

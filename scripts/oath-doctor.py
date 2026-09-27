@@ -12,13 +12,19 @@ NEXT.md Phase 1 T.6, modelled on the errata doctor. It answers, in order:
      on disk match that checkout's origin/main or must be read from it.
   3. Can the session recite the Charter? The five vows are printed from CHARTER.md
      as the read-back; fewer or more than five is red.
-  4. Which invariant gates exist, and do they pass? Every gate INVARIANTS.md names
+  4. Are the Council's seats whole? Each seat of COUNCIL.md §3 is printed as the
+     read-back. Red when a seat of the floor (A to G) is missing or out of order, when
+     COUNCIL.md §5 names fewer failure modes than the floor's ten, or when the prompt at
+     .claude/prompts/council.md does not carry a seat's words, or a failure mode's,
+     exactly as COUNCIL.md gives them, because a prompt that softens a seat quietly
+     softens the review (COUNCIL.md §8).
+  5. Which invariant gates exist, and do they pass? Every gate INVARIANTS.md names
      is listed as present or planned; every present gate is run. The gates that read
      the rendered pages read a render made for the purpose, in a temporary folder, as
      CI renders before it lints: the site is never in git, so a fresh clone has none.
-  5. Does the branch track main? Ahead and behind against origin/main, and whether
+  6. Does the branch track main? Ahead and behind against origin/main, and whether
      the working tree is clean. With --fetch, origin is fetched first.
-  6. Is the toolchain at the floor? Python 3.11+, Node 20+, Ruff and Pytest.
+  7. Is the toolchain at the floor? Python 3.11+, Node 20+, Ruff and Pytest.
 
 Prints one line per check, [ok], [warn], or [red], and exits non-zero on any red.
 A warning never fails the doctor; a red always does. Standard-library Python 3.11+.
@@ -67,6 +73,20 @@ GATES = [
     ("RUBRIC gate 4 every Finding regenerates", "tools/rebuild.py"),
     ("NEXT S.4 ANCHORS.md says what the proofs say", "tools/anchor.py"),
 ]
+# COUNCIL.md §3 and §5 are the floor, because they are doctrine: every seat they name must sit
+# in the prompt, by letter and title, and the prompt must carry at least as many failure modes as
+# §5 names. The prompt may carry more of both, and does: seats the project sits in practice before
+# doctrine entrenches them.
+#
+# What this deliberately does not check is that the two carry the same words. Doctrine describes a
+# seat in the third person ("Reads as a member of the public who came...") and a prompt addresses
+# whoever sits it ("You came to..."). Word-for-word agreement between those registers is reachable
+# only by rewriting doctrine into the prompt's voice, and COUNCIL.md is sealed, so that costs an
+# amendment row, a Council reading and a re-seal. It buys a guarantee COUNCIL.md §8 never asked
+# for: §8 wants a reading to be reproducible, and the prompt's committed blob SHA already gives
+# that. What breaks reproducibility is a reading naming a seat the prompt does not define, and
+# that is caught here by letter and by tools/highlight-charter-change.py on an amendment.
+PROMPT = ".claude/prompts/council.md"
 # The gates that read the rendered pages, and the renderer that makes them.
 SITE_READERS = {"tools/lint-frame-presence.py", "tools/lint-no-ranking.py"}
 RENDERER = "src/surfaces/render.py"
@@ -88,6 +108,12 @@ class Report:
     def bad(self, text: str) -> None:
         self.red += 1
         self.lines.append(f"[red]  {text}")
+
+    def ask(self, text: str) -> None:
+        """A question for whoever is reading, counted as neither a pass nor a problem. The doctor
+        answers what it can measure; this is the part it cannot, and printing it is the only way to
+        make it unskippable."""
+        self.lines.append(f"[ask]  {text}")
 
     def section(self, title: str) -> None:
         self.lines.append(f"\n{title}")
@@ -135,6 +161,18 @@ def check_memory(root: Path, rep: Report) -> None:
 
 
 def check_deeper_ground(rep: Report) -> None:
+    rep.section("Before you start")
+    rep.ask(
+        'Name the change a reader will see from this session. "None, this is maintenance" is a '
+        "fine answer; say it out loud anyway."
+    )
+    rep.ask(
+        "On 2026-09-27 this project spent a day on its own bookkeeping while believing it was "
+        "building, and the register turned out sound in all seven places a search looked. Read "
+        ".claude/memory/story-the-product-was-fine.md before planning, and "
+        "docs/what-is-already-checked.md before auditing anything: that list was paid for once."
+    )
+
     rep.section("Deeper ground")
     if not DEEPER_GROUND:
         rep.warning("OATH_DEEPER_GROUND is not set; the seed here is the bridge, and it is enough")
@@ -176,6 +214,83 @@ def check_charter(root: Path, rep: Report) -> None:
             rep.ok(f"Vow {numeral}. {title}")
     else:
         rep.bad(f"CHARTER.md has {len(vows)} vows, not five")
+
+
+def seats_of_council(text: str) -> list[tuple[str, str, str]]:
+    """COUNCIL.md §3's seats as (letter, title, text), the text running to the next heading."""
+    section = re.search(r"^## 3\. The seats$(.*?)(?=^## \d)", text, flags=re.M | re.S)
+    if section is None:
+        return []
+    parts = re.split(r"^### Seat ([A-Z])\. (.+)$", section.group(1), flags=re.M)
+    return [(parts[i], parts[i + 1].strip(), parts[i + 2]) for i in range(1, len(parts), 3)]
+
+
+def seats_of_prompt(text: str) -> list[tuple[str, str, str]]:
+    """The prompt's seats as (letter, title, text), from "## The seats" to the next heading."""
+    section = re.search(r"^## The seats$(.*?)(?=^## )", text, flags=re.M | re.S)
+    if section is None:
+        return []
+    parts = re.split(r"^\*\*Seat ([A-Z])\. (.+?)\.\*\*", section.group(1), flags=re.M)
+    return [(parts[i], parts[i + 1].strip(), parts[i + 2]) for i in range(1, len(parts), 3)]
+
+
+def plain(text: str) -> str:
+    """A seat's words without link targets or spacing, which differ between the two files."""
+    return " ".join(re.sub(r"\[([^\]]+)\]\([^)]*\)", r"\1", text).split())
+
+
+def modes_of(text: str, heading: str) -> list[str]:
+    """The numbered failure modes under the heading matching `heading`, each one line, in
+    order, as plain words."""
+    section = re.search(rf"^{heading}$(.*?)(?=^## |\Z)", text, flags=re.M | re.S)
+    if section is None:
+        return []
+    return [plain(line) for line in re.findall(r"^\d+\. (.+)$", section.group(1), flags=re.M)]
+
+
+def check_council(root: Path, rep: Report) -> None:
+    rep.section("Council")
+    council, prompt = root / "COUNCIL.md", root / PROMPT
+    if not council.is_file() or not prompt.is_file():
+        rep.bad(f"{'COUNCIL.md' if not council.is_file() else PROMPT} is missing")
+        return
+    red_before = rep.red
+    council_text = council.read_text(encoding="utf-8")
+    prompt_text = prompt.read_text(encoding="utf-8")
+    doctrine = seats_of_council(council_text)
+    sat = seats_of_prompt(prompt_text)
+    letters = "".join(letter for letter, _, _ in doctrine)
+    if letters != "".join(sorted(set(letters))):
+        rep.bad(
+            f"COUNCIL.md §3 names seats {', '.join(letters) or 'none'}: not each once, in order"
+        )
+    in_prompt = {letter: (title, text) for letter, title, text in sat}
+    for letter, title, _ in doctrine:
+        if letter not in in_prompt:
+            rep.bad(f"Seat {letter}. {title}: in COUNCIL.md §3, and not in the prompt")
+        elif in_prompt[letter][0] != title:
+            rep.bad(
+                f"Seat {letter}: COUNCIL.md names it {title!r}, the prompt {in_prompt[letter][0]!r}"
+            )
+        else:
+            rep.ok(f"Seat {letter}. {title}")
+    extra = [(letter, title) for letter, title, _ in sat if letter not in {d[0] for d in doctrine}]
+    for letter, title in extra:
+        rep.ok(f"Seat {letter}. {title}: sat in practice, not in COUNCIL.md §3")
+    floor = modes_of(council_text, r"## 5\. [^\n]+")
+    carried = modes_of(prompt_text, r"## What every seat must try to catch")
+    if len(carried) < len(floor):
+        rep.bad(
+            f"the prompt carries {len(carried)} failure modes, COUNCIL.md §5 names {len(floor)}"
+        )
+    blob = git(root, "hash-object", str(prompt)) or "?"
+    if doctrine and rep.red == red_before:
+        extras = len(sat) - len(doctrine)
+        more = f", and {extras} more seats it sits" if extras else ""
+        rep.ok(
+            f"the prompt sits COUNCIL.md's {len(doctrine)} seats and all {len(floor)} failure "
+            f"modes §5 names{more} (prompt blob {blob[:12]})"
+        )
 
 
 def render_site(root: Path, site: Path, rep: Report) -> bool:
@@ -288,6 +403,7 @@ def main(argv: list[str] | None = None) -> int:
     check_memory(root, rep)
     check_deeper_ground(rep)
     check_charter(root, rep)
+    check_council(root, rep)
     check_gates(root, rep)
     check_branch(root, rep, args.fetch)
     check_toolchain(rep)
