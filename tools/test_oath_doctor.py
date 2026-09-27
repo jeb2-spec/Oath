@@ -7,6 +7,7 @@ is then run on the repository and must not be red.
 from __future__ import annotations
 
 import importlib.util
+import subprocess
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -131,3 +132,131 @@ def test_the_page_gates_read_a_render_made_for_them(tmp_path: Path):
     doctor.check_gates(tmp_path, rep)
     assert any("does not render" in line for line in rep.lines)
     assert rep.red == 3, "a register that does not render is red, and so are its page gates"
+
+
+SEATS = [
+    (
+        letter,
+        f"The {name}",
+        f"You read as the {name.lower()}. Watch for:\n\n- one thing;\n- another.",
+    )
+    for letter, name in zip(
+        "ABCDEFG",
+        ("Fair", "Subject", "Reviewer", "Partisans", "Constituent", "Neighbour", "Later"),
+        strict=True,
+    )
+]
+
+
+MODES = [
+    f"**Mode {n}.** A failure every seat reads for, the [{n}th](METHODOLOGY.md)."
+    for n in range(1, 11)
+]
+
+
+def listed(modes) -> str:
+    return "".join(f"{n}. {mode}\n" for n, mode in enumerate(modes, start=1))
+
+
+def council_md(seats, modes=MODES) -> str:
+    body = "".join(f"### Seat {letter}. {title}\n\n{text}\n\n" for letter, title, text in seats)
+    return (
+        f"# The Council\n\n## 3. The seats\n\nThe seats are a floor.\n\n{body}## 4. Next\n\n"
+        f"## 5. Findings a Council session must always try to catch\n\n{listed(modes)}\n"
+        "The names of the first four are the errata precedent.\n\n## 6. Acting on findings\n"
+    )
+
+
+def prompt_md(seats, modes=MODES) -> str:
+    body = "".join(f"**Seat {letter}. {title}.** {text}\n\n" for letter, title, text in seats)
+    return (
+        f"# The Council prompt\n\n## The seats\n\n{body}"
+        f"## What every seat must try to catch\n\nCOUNCIL.md §5.\n\n{listed(modes)}\n"
+        "## The finding\n"
+    )
+
+
+def council_report(root: Path, council, prompt, modes=MODES, carried=None):
+    write(root, "COUNCIL.md", council_md(council, modes))
+    write(root, doctor.PROMPT, prompt_md(prompt, modes if carried is None else carried))
+    rep = doctor.Report()
+    doctor.check_council(root, rep)
+    return rep
+
+
+def test_the_seats_read_back_when_the_prompt_carries_each_word_for_word(tmp_path: Path):
+    linked = [
+        (s[0], s[1], s[2].replace("another", "[another](../../METHODOLOGY.md)")) for s in SEATS
+    ]
+    rep = council_report(
+        tmp_path,
+        [(s[0], s[1], s[2].replace("another", "[another](METHODOLOGY.md)")) for s in SEATS],
+        linked,
+    )
+    assert rep.red == 0, rep.lines
+    assert sum(line.startswith("[ok]   Seat") for line in rep.lines) == 7
+    assert any("word for word" in line for line in rep.lines)
+
+
+def test_a_seat_of_the_floor_missing_is_red(tmp_path: Path):
+    without_e = [s for s in SEATS if s[0] != "E"]
+    rep = council_report(tmp_path, without_e, without_e)
+    assert rep.red == 1 and any("the floor is A, B, C, D, E, F, G" in line for line in rep.lines)
+
+
+def test_a_prompt_that_softens_one_word_of_a_seat_is_red(tmp_path: Path):
+    softened = [
+        (s[0], s[1], s[2].replace("- another.", "- another, where it matters."))
+        if s[0] == "D"
+        else s
+        for s in SEATS
+    ]
+    rep = council_report(tmp_path, SEATS, softened)
+    assert rep.red == 1
+    assert any(line.startswith("[red]  Seat D.") and "differ" in line for line in rep.lines)
+    assert not any("word for word" in line for line in rep.lines)
+
+
+def test_a_seat_renamed_or_only_in_one_file_is_red(tmp_path: Path):
+    renamed = [(s[0], "The Reader", s[2]) if s[0] == "F" else s for s in SEATS]
+    assert council_report(tmp_path, SEATS, renamed).red == 1
+    extra = SEATS + [("H", "The Extra", "You read as an extra seat.")]
+    assert council_report(tmp_path, SEATS, extra).red == 1
+    assert council_report(tmp_path, extra, extra).red == 0, "a seat may be added above the floor"
+    out_of_order = [SEATS[1], SEATS[0], *SEATS[2:]]
+    assert council_report(tmp_path, out_of_order, out_of_order).red == 1
+
+
+def test_the_failure_modes_are_a_floor_and_the_prompt_carries_each_word_for_word(tmp_path: Path):
+    here = council_report(tmp_path, SEATS, SEATS)
+    assert here.red == 0 and any("all 10 failure modes" in line for line in here.lines)
+    nine = council_report(tmp_path, SEATS, SEATS, MODES[:9])
+    assert nine.red == 1 and any("the floor is 10" in line for line in nine.lines)
+    dropped = council_report(tmp_path, SEATS, SEATS, carried=MODES[:9])
+    assert dropped.red == 1 and any("carries 9 failure modes" in line for line in dropped.lines)
+    softened = [m.replace("every seat", "a seat") if m.startswith("**Mode 6") else m for m in MODES]
+    one = council_report(tmp_path, SEATS, SEATS, carried=softened)
+    assert one.red == 1 and any(line.startswith("[red]  failure mode 6:") for line in one.lines)
+    added = [*MODES, "**Mode 11.** One more, added by an amendment."]
+    assert council_report(tmp_path, SEATS, SEATS, added).red == 0, "a mode may be added"
+
+
+def test_a_gate_that_announces_a_change_and_passes_is_read_back_and_not_red(
+    tmp_path: Path, monkeypatch
+):
+    """A legitimate amendment of the antidrift core makes the §17 gate loud and passing at once:
+    it prints the diff under a highlighted notice and exits zero because the row is there. The
+    doctor follows the exit code, so a loud pass is read back and never counted red. An earlier
+    version of this test also asserted that the doctor stripped GITHUB_EVENT_NAME and
+    GITHUB_EVENT_PATH before running the gate, for a pull-request-reading workflow that was
+    drafted and never landed; the gate reads neither variable, so that assertion measured a
+    no-op and went with the code."""
+    write(tmp_path, "tools/highlight-charter-change.py", "")
+
+    def run(args, **kwargs):
+        return subprocess.CompletedProcess(args, 0, "HIGHLIGHT  1 of the core changed\n", "")
+
+    monkeypatch.setattr(doctor.subprocess, "run", run)
+    rep = doctor.Report()
+    doctor.run_gate(tmp_path, rep, "§17", "tools/highlight-charter-change.py", None)
+    assert rep.red == 0 and "HIGHLIGHT" in rep.lines[-1]

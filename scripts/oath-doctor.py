@@ -12,13 +12,19 @@ NEXT.md Phase 1 T.6, modelled on the errata doctor. It answers, in order:
      on disk match that checkout's origin/main or must be read from it.
   3. Can the session recite the Charter? The five vows are printed from CHARTER.md
      as the read-back; fewer or more than five is red.
-  4. Which invariant gates exist, and do they pass? Every gate INVARIANTS.md names
+  4. Are the Council's seats whole? Each seat of COUNCIL.md §3 is printed as the
+     read-back. Red when a seat of the floor (A to G) is missing or out of order, when
+     COUNCIL.md §5 names fewer failure modes than the floor's ten, or when the prompt at
+     .claude/prompts/council.md does not carry a seat's words, or a failure mode's,
+     exactly as COUNCIL.md gives them, because a prompt that softens a seat quietly
+     softens the review (COUNCIL.md §8).
+  5. Which invariant gates exist, and do they pass? Every gate INVARIANTS.md names
      is listed as present or planned; every present gate is run. The gates that read
      the rendered pages read a render made for the purpose, in a temporary folder, as
      CI renders before it lints: the site is never in git, so a fresh clone has none.
-  5. Does the branch track main? Ahead and behind against origin/main, and whether
+  6. Does the branch track main? Ahead and behind against origin/main, and whether
      the working tree is clean. With --fetch, origin is fetched first.
-  6. Is the toolchain at the floor? Python 3.11+, Node 20+, Ruff and Pytest.
+  7. Is the toolchain at the floor? Python 3.11+, Node 20+, Ruff and Pytest.
 
 Prints one line per check, [ok], [warn], or [red], and exits non-zero on any red.
 A warning never fails the doctor; a red always does. Standard-library Python 3.11+.
@@ -67,6 +73,12 @@ GATES = [
     ("RUBRIC gate 4 every Finding regenerates", "tools/rebuild.py"),
     ("NEXT S.4 ANCHORS.md says what the proofs say", "tools/anchor.py"),
 ]
+# The Council's seats are a floor (COUNCIL.md §3): these letters, in order, each once, and
+# at least this many failure modes in §5; the prompt carries each seat's words, and each
+# failure mode's, exactly as COUNCIL.md gives them.
+SEAT_FLOOR = "ABCDEFG"
+MODE_FLOOR = 10
+PROMPT = ".claude/prompts/council.md"
 # The gates that read the rendered pages, and the renderer that makes them.
 SITE_READERS = {"tools/lint-frame-presence.py", "tools/lint-no-ranking.py"}
 RENDERER = "src/surfaces/render.py"
@@ -176,6 +188,108 @@ def check_charter(root: Path, rep: Report) -> None:
             rep.ok(f"Vow {numeral}. {title}")
     else:
         rep.bad(f"CHARTER.md has {len(vows)} vows, not five")
+
+
+def seats_of_council(text: str) -> list[tuple[str, str, str]]:
+    """COUNCIL.md §3's seats as (letter, title, text), the text running to the next heading."""
+    section = re.search(r"^## 3\. The seats$(.*?)(?=^## \d)", text, flags=re.M | re.S)
+    if section is None:
+        return []
+    parts = re.split(r"^### Seat ([A-Z])\. (.+)$", section.group(1), flags=re.M)
+    return [(parts[i], parts[i + 1].strip(), parts[i + 2]) for i in range(1, len(parts), 3)]
+
+
+def seats_of_prompt(text: str) -> list[tuple[str, str, str]]:
+    """The prompt's seats as (letter, title, text), from "## The seats" to the next heading."""
+    section = re.search(r"^## The seats$(.*?)(?=^## )", text, flags=re.M | re.S)
+    if section is None:
+        return []
+    parts = re.split(r"^\*\*Seat ([A-Z])\. (.+?)\.\*\*", section.group(1), flags=re.M)
+    return [(parts[i], parts[i + 1].strip(), parts[i + 2]) for i in range(1, len(parts), 3)]
+
+
+def plain(text: str) -> str:
+    """A seat's words without link targets or spacing, which differ between the two files."""
+    return " ".join(re.sub(r"\[([^\]]+)\]\([^)]*\)", r"\1", text).split())
+
+
+def modes_of(text: str, heading: str) -> list[str]:
+    """The numbered failure modes under the heading matching `heading`, each one line, in
+    order, as plain words."""
+    section = re.search(rf"^{heading}$(.*?)(?=^## |\Z)", text, flags=re.M | re.S)
+    if section is None:
+        return []
+    return [plain(line) for line in re.findall(r"^\d+\. (.+)$", section.group(1), flags=re.M)]
+
+
+def differ_at(ours: str, theirs: str) -> str:
+    """A few words of `ours` around where `theirs` first departs from it."""
+    a, b = ours.split(), theirs.split()
+    at = next(
+        (i for i, (x, y) in enumerate(zip(a, b, strict=False)) if x != y), min(len(a), len(b))
+    )
+    return " ".join(a[max(0, at - 3) : at + 3])
+
+
+def check_council(root: Path, rep: Report) -> None:
+    rep.section("Council")
+    council, prompt = root / "COUNCIL.md", root / PROMPT
+    if not council.is_file() or not prompt.is_file():
+        rep.bad(f"{'COUNCIL.md' if not council.is_file() else PROMPT} is missing")
+        return
+    red_before = rep.red
+    council_text = council.read_text(encoding="utf-8")
+    prompt_text = prompt.read_text(encoding="utf-8")
+    doctrine = seats_of_council(council_text)
+    sat = seats_of_prompt(prompt_text)
+    letters = "".join(letter for letter, _, _ in doctrine)
+    if not letters.startswith(SEAT_FLOOR) or letters != "".join(sorted(set(letters))):
+        rep.bad(
+            f"COUNCIL.md §3 seats {', '.join(letters) or 'none'}; the floor is "
+            f"{', '.join(SEAT_FLOOR)}, in order, each once (COUNCIL.md §3; INVARIANTS.md §17)"
+        )
+    in_prompt = {letter: (title, text) for letter, title, text in sat}
+    for letter, title, text in doctrine:
+        if letter not in in_prompt:
+            rep.bad(f"Seat {letter}. {title}: in COUNCIL.md §3, and not in the prompt")
+        elif in_prompt[letter][0] != title:
+            rep.bad(
+                f"Seat {letter}: COUNCIL.md names it {title!r}, the prompt {in_prompt[letter][0]!r}"
+            )
+        elif plain(in_prompt[letter][1]) != plain(text):
+            rep.bad(
+                f"Seat {letter}. {title}: the prompt's words differ from COUNCIL.md §3 at "
+                f"{differ_at(plain(text), plain(in_prompt[letter][1]))!r}"
+            )
+        else:
+            rep.ok(f"Seat {letter}. {title}")
+    for letter, title, _ in sat:
+        if letter not in {d[0] for d in doctrine}:
+            rep.bad(f"Seat {letter}. {title}: in the prompt, and not in COUNCIL.md §3")
+    floor = modes_of(council_text, r"## 5\. [^\n]+")
+    carried = modes_of(prompt_text, r"## What every seat must try to catch")
+    if len(floor) < MODE_FLOOR:
+        rep.bad(
+            f"COUNCIL.md §5 names {len(floor)} failure modes; the floor is {MODE_FLOOR} "
+            "(COUNCIL.md §3; INVARIANTS.md §17)"
+        )
+    if len(carried) != len(floor):
+        rep.bad(
+            f"the prompt carries {len(carried)} failure modes, COUNCIL.md §5 names {len(floor)}"
+        )
+    else:
+        for n, (ours, theirs) in enumerate(zip(floor, carried, strict=True), start=1):
+            if ours != theirs:
+                rep.bad(
+                    f"failure mode {n}: the prompt's words differ from COUNCIL.md §5 at "
+                    f"{differ_at(ours, theirs)!r}"
+                )
+    blob = git(root, "hash-object", str(prompt)) or "?"
+    if doctrine and rep.red == red_before:
+        rep.ok(
+            f"the prompt carries every seat and all {len(floor)} failure modes word for word "
+            f"(prompt blob {blob[:12]})"
+        )
 
 
 def render_site(root: Path, site: Path, rep: Report) -> bool:
@@ -288,6 +402,7 @@ def main(argv: list[str] | None = None) -> int:
     check_memory(root, rep)
     check_deeper_ground(rep)
     check_charter(root, rep)
+    check_council(root, rep)
     check_gates(root, rep)
     check_branch(root, rep, args.fetch)
     check_toolchain(rep)
