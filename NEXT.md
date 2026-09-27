@@ -181,9 +181,22 @@ where a report is dated after the latest date any extension the statute allows c
 true whatever the register holds; on the build of 2026-09-22 that is 5 of 422 annual-coded rows before
 their headers are read, and 252 sit in the window it does not evaluate. The join is display only.
 
-**Next:** the adapter reads and records the headers of the annual and extension documents (the
-draft's *What it needs*, item 1), then the Signal, its known-answer cases and its pages, then the
-Council's reading of the built Signal, then first publication on the regular cadence.
+**Built, 2026-09-27, and held.** The adapter reads the headers (PR #69; from the refresh of
+2026-09-28). The Signal is built: [its definition](docs/design/annual-report-after-extension-limit.md),
+held in `docs/design/` so the runner does not read it; both implementations, sharing no code and
+agreeing on 18 known-answer cases; and the pages' own voice for it, with its answer, its silences and
+two figures, so no sentence written for trades is said of it. A second Signal was the first test of
+every shape written for the first: the run record's outcome allowed two states, the renderer checked
+each report's rows against the transactions it lists, and the ledger told a withdrawal from a Finding
+by `evidence.after`. Each is met in the house shape, not bent: a read report with one row, its date,
+compared or set aside with the reason. On the dry run's build over the live index (399 annual reports
+read by their headers): 151 on or before the due date, 239 in the window, 3 the day after the latest
+date, 1 whose dates disagree, and 5 after the latest date, by 5 members. **Next:** the Council reads
+the built Signal and its pages; its findings are folded in; then the definition moves to
+`docs/signals/` with its sealed build and the rows STANDARDS.md S.1 and SOURCES.md F.1 carry for it
+(written, read at the source 2026-09-27: § 13103(d), (f)(9), (g); § 13101; § 13106(d); § 13107(d),
+which keeps a Member's reports until six years after they leave, not six years after filing), and it
+first publishes on the Monday after the Council closes.
 
 **One sentence of the first Signal's own definition is now stale, and it stays until a version says
 so.** `stock-act-ptr-after-deadline` v1 says *the register has not compared the index date with the
