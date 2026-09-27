@@ -106,6 +106,31 @@ naming both deadlines (E).
   An adapter alias is owed and is in NEXT.md; until then, that page says no annual report is
   attributed, which is true and incomplete.
 
+### Decided the same evening
+
+Both, on the maintainer's written instruction to decide them, by the adapter's recorded-decision route
+(`src/adapters/house-fd/adjudications.ndjson`), each document read at the source and each decision
+citing it:
+
+- **The report set aside by the name match is the Member's, and is attributed.** The document and the
+  extension form beside it print *Status: Member*, the Member's legal given names and the surname of
+  the one Member of that surname the roster lists; the seat they print is the one the Clerk's 2024
+  index gives the same filer name for that year's annual report and extension. The report is dated 29
+  days after the latest date, and the Signal fires on it as on the other five: six Findings, by six
+  members, on the scratch build. Leaving it set aside would have left the one silence that turned on
+  how the index spelled a given name.
+- **The territory's report is the Delegate's, and is attributed.** The document prints *Status:
+  Member*, the seat code the index uses, and words of the name the roster gives the Delegate of the
+  seat it codes differently and records under the same postal code. Dated before the original due
+  date, it is compared and does not fire.
+
+Deciding them showed the route did not work for the case it was built for: a new row whose document
+printed another seat was refused before any decision was read, though the adapter's README promised a
+decision could settle "a filing at a seat other than the member's". A recorded decision now confirms
+the officeholder where only the seat differs, and the row carries both facts in its notes; a document
+naming another Filing ID still refuses, decided or not. The same test standard applies to the next
+such row: the document's own header, read at the source, and a primary source for any difference.
+
 ## The reading's own weakest point
 
 No seat could read the 71 documents without a text layer, 47 of them extension forms: whether any

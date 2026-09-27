@@ -200,11 +200,13 @@ date, 1 whose dates disagree, and 5 after the latest date, by 5 members. **Next:
 to `docs/signals/` with its sealed build and the rows STANDARDS.md S.1 and SOURCES.md F.1 carry for it
 (written, read at the source 2026-09-27: § 13103(d), (f)(9), (g); § 13101; § 13106(d); § 13107(d),
 which keeps a Member's reports until six years after they leave, not six years after filing; § 6103),
-and it first publishes on the Monday after the Council closed. **Two items the Council left for others:**
-a report the index sets aside under a sitting member's surname, e-filed, printing *Annual Report* and
-*Member*, and dated after the latest date, waits for the maintainer's decision by hand; and one
-territory's Delegate seat is coded differently by the roster and the index, which an adapter alias
-should settle. An outside witness for every document a Finding rests on (INVARIANTS §16) is owed for
+and it first publishes on the Monday after the Council closed. **The two items the Council left for the
+maintainer were decided the same evening** on the maintainer's instruction, by recorded decisions
+citing each document ([the record](docs/council/2026-09-27-the-annual-report-signal-built.md)): the
+report set aside by the name match is the Member's and fires, which makes six Findings by six members
+on the scratch build; the territory's report is the Delegate's and is compared on time. The decision
+route now works where only the printed seat differs. An adapter alias for the territory's two seat
+codes would let the document's own header settle such a row without a person; not built. An outside witness for every document a Finding rests on (INVARIANTS §16) is owed for
 both Signals.
 
 **One sentence of the first Signal's own definition is now stale, and it stays until a version says
