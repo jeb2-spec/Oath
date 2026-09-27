@@ -201,9 +201,18 @@ One thing the draft settled differently from this document, and it is the mainta
 above heads Seat F **The Reader Beyond the Border**; the draft heads it **The Person Beyond the
 Border**, in COUNCIL.md and in the prompt alike. The draft's reading is that this seat is named for
 someone the decisions reach rather than for someone reading a page, and Seat F is the one seat of the
-four where those are not the same person; against it, every other seat is named as a reader. Both
-names must not ship: COUNCIL.md §8 makes the prompt's blob SHA the reproducibility guarantee, and a
-seat the two documents name differently is a reading nobody can reproduce.
+four where those are not the same person.
+
+The argument first recorded against it here was that every other seat is named as a reader. That is
+false, and counting the set settles the question rather than leaving it on taste: of the six settled
+seats only two are readers, A *The Reader Who Wants to Be Fair* and G *The Reader Who Comes Later*,
+while B is *The Subject in a Room*, C *The Reviewer's Reviewer*, D *The Partisans* and E *The
+Constituent the Averages Leave Out*. The pattern is to name a seat by the standpoint it reads from,
+not to call everyone a reader, so **The Person Beyond the Border** is the better fit and is the
+recommendation. The decision stays the maintainer's; only the argument against it has gone.
+
+Both names must not ship: COUNCIL.md §8 makes the prompt's blob SHA the reproducibility guarantee, and
+a seat the two documents name differently is a reading nobody can reproduce.
 
 Three things it needs that are not mine to supply.
 
