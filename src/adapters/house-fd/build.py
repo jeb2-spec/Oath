@@ -1763,12 +1763,22 @@ def build(year: int, dry_run: bool = False, expect_not_listed: int = 0) -> int:
             names = [person["_tokens"]]
             if filing["officeholder_id"] in published_holders:
                 names.append(name_tokens(published_holders[filing["officeholder_id"]]))
+            # Or the maintainer's recorded decision, citing its evidence, names this officeholder
+            # for this DocID: the confirmation the join's test could not make, which is what the
+            # route exists for. The README promised a decision could settle "a filing at a seat
+            # other than the member's", and the refusal below reached such a row before any
+            # decision was read, so the route was unreachable for the case it names. The Filing ID
+            # must still agree, and is checked first (the Council's second reading of the annual
+            # Signal, Seat A).
+            by_decision = (
+                adjudications.get(doc_id, {}).get("officeholder_id") == filing["officeholder_id"]
+            )
             status, reason = ptr.verify(
                 text,
                 seat,
                 doc_id,
-                name_confirms=lambda printed, names=names: any(
-                    known <= tokens(printed) for known in names
+                name_confirms=lambda printed, names=names, by_decision=by_decision: (
+                    by_decision or any(known <= tokens(printed) for known in names)
                 ),
             )
             derived = dict(filing, source=dict(filing["source"], content_hash=capture["sha256"]))
@@ -1783,11 +1793,17 @@ def build(year: int, dry_run: bool = False, expect_not_listed: int = 0) -> int:
                     derived["printed"] = facts
             rows_read: list[dict] = []
             if status == "discrepancy":
+                confirmed = any(known <= tokens(ptr.header(text)["name"]) for known in names)
                 discrepancy = (
                     f"The document prints State/District {ptr.header(text)['seat']}; the "
                     f"Clerk's roster lists this officeholder at {seat}. The "
-                    "attribution rests on the filer's printed name and the Filing ID, which "
-                    "both agree with the Clerk's index."
+                    + (
+                        "attribution rests on the filer's printed name and the Filing ID, which "
+                        "both agree with the Clerk's index."
+                        if confirmed
+                        else "attribution rests on the maintainer's recorded decision and the "
+                        "Filing ID, which agrees with the Clerk's index."
+                    )
                 )
                 derived["notes"] = " ".join(p for p in (filing["notes"], discrepancy) if p)
             # A document whose header refuses the attribution has its rows read once the

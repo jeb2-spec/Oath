@@ -2204,3 +2204,63 @@ def test_a_report_that_is_not_a_transaction_report_records_what_its_header_print
     # A second build over the same bytes carries the row exactly as published.
     assert build.build(2025) == 0
     assert json.loads(rows_of(tmp_path, "filings")["fl:house-clerk:O:10000001"]) == annual
+
+
+def test_a_decision_settles_a_report_printed_at_another_seat_and_never_another_filing_id(
+    tmp_path, monkeypatch
+):
+    """A person's recorded decision is the confirmation the join's name test could not make: a
+    Member's report whose index row and document give a former seat and a legal given name stands
+    by the decision, with both facts in its notes. The README promised a decision could settle
+    "a filing at a seat other than the member's", and the document's refusal reached such a row
+    before any decision was read. A document naming another Filing ID still refuses, decision or
+    none (the Council's second reading of the annual Signal, Seat A)."""
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(build, "load_ptr", lambda: StubReader)
+    former = {"bioguide": "X000001", "last": "Example", "first": "Adelaide Ms", "seat": "XX02"}
+    rows = [(former, "10000001", "O", "9/11/2026"), (former, "10000002", "O", "9/12/2026")]
+    captures(
+        tmp_path,
+        roster_xml(119, [ADA], "20250103"),
+        index_xml(rows),
+        "2026-09-27T00:00:00Z",
+        "2026-09-27T00:00:01Z",
+    )
+    header = "Filing Type: Annual Report\nFiling Year: 2025\nFiling Date: 09/11/2026\n"
+    document(tmp_path, "10000001", former, [], "2026-09-27T00:00:02Z", pad=header)
+    document(tmp_path, "10000002", former, [], "2026-09-27T00:00:03Z", pad=header)
+    docs = tmp_path / "data" / "cache" / "house-fd" / "docs"
+    other = json.loads((docs / "10000002.pdf").read_text("utf-8"))
+    other["text"] = other["text"].replace("Filing ID #10000002", "Filing ID #10000009")
+    (docs / "10000002.pdf").write_text(json.dumps(other, sort_keys=True), encoding="utf-8")
+    decisions = tmp_path / "src" / "adapters" / "house-fd" / "adjudications.ndjson"
+    decisions.parent.mkdir(parents=True, exist_ok=True)
+    decisions.write_text(
+        "".join(
+            json.dumps(
+                {
+                    "doc_id": doc_id,
+                    "officeholder_id": "oh:us:house:x000001",
+                    "evidence_url": f"https://example.test/{doc_id}.pdf",
+                    "decided_by": "the maintainer",
+                    "decided_at": "2026-09-27",
+                }
+            )
+            + "\n"
+            for doc_id in ("10000001", "10000002")
+        ),
+        encoding="utf-8",
+    )
+    assert build.build(2025) == 0
+    filings = {
+        json.loads(line)["id"]: json.loads(line)
+        for line in (tmp_path / "data" / "filings.ndjson").read_text("utf-8").splitlines()
+        if line.strip()
+    }
+    decided = filings["fl:house-clerk:O:10000001"]
+    assert decided["officeholder_id"] == "oh:us:house:x000001"
+    assert decided["notes"].startswith("Attributed by the maintainer's recorded decision")
+    assert "The document prints State/District XX02" in decided["notes"]
+    assert "rests on the maintainer's recorded decision and the Filing ID" in decided["notes"]
+    assert decided["printed"]["filing_type"] == "Annual Report"
+    assert "fl:house-clerk:O:10000002" not in filings, "another Filing ID refuses, decided or not"

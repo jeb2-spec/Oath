@@ -5888,8 +5888,8 @@ def annual_notices(filings: list[dict], held: list[dict] | None = None) -> str:
     n, k = len(mine), len(aside)
     lead = (
         f'<p class="quiet">The Clerk\'s index lists its extension forms under the code '
-        f"{EXTENSION_CODE}; every document so coded that the register has read is one. At this "
-        f"seat under this surname it lists {n:,} attributed to this officeholder and {k:,} set "
+        f"{EXTENSION_CODE}; every document so coded that the register has read is one. It lists "
+        f"{n:,} attributed to this officeholder, and at this seat under this surname {k:,} set "
         "aside. The register lists them as the index does; no sentence on this page rests on any "
         "of them, and nothing here says whether an extension covers a report.</p>\n"
     )
