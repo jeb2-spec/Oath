@@ -44,6 +44,7 @@ import posixpath
 import re
 import sys
 import unicodedata
+from datetime import date
 from pathlib import Path
 
 FRAME = "Presence in the register is not evidence of wrongdoing."
@@ -309,6 +310,8 @@ th { font-size: .85rem; }
 td.idx { font-family: var(--mono); font-size: .88rem; color: var(--ink-2); white-space: nowrap;
          width: 5.5rem; }
 td.code { font-family: var(--mono); }
+td.idx span.note { white-space: normal; min-width: 8rem; }
+td.setby { min-width: 7.5rem; }
 p.quiet { color: var(--ink-2); max-width: 36rem; }
 h3 { font-size: 1rem; font-weight: 600; margin: 1.4rem 0 .3rem; }
 h3 a { font-weight: 400; }
@@ -328,6 +331,21 @@ section.answer p { max-width: 38rem; margin: 0 0 .6rem; }
 section.answer p.quiet { font-size: .95rem; }
 nav.jump { font-size: .9rem; margin: .2rem 0 .5rem; line-height: 1.7; }
 p.check { font-size: .85rem; color: var(--ink-2); }
+/* a Finding's dates on a line, drawn from its rows; inked from the page's own tokens */
+figure.dates { margin: .9rem 0 .4rem; }
+figure.dates > svg { width: 100%; max-width: 34rem; height: auto; display: block; }
+figure.dates figcaption { max-width: 36rem; margin-top: .35rem; }
+.dates .window, .key .window { stroke: var(--ink-2); stroke-width: 1.4; }
+.dates .after, .key .after { fill: var(--ink); opacity: .72; }
+.dates .deadline, .key .deadline { stroke: var(--ink); stroke-width: 1.6; }
+.dates .next, .key .next { stroke: var(--ink); stroke-width: 1.2; stroke-dasharray: 1.6 1.6; }
+.dates .trade, .key .trade { fill: var(--ink); }
+.dates .notice, .key .notice { fill: var(--paper); stroke: var(--ink); stroke-width: 1.2; }
+.dates .filed { stroke: var(--ink); stroke-width: 1.2; }
+.dates .axis { stroke: var(--ink-2); stroke-width: 1; }
+.dates text { font-family: var(--mono); font-size: 10px; fill: var(--ink-2); }
+.dates text.days { fill: var(--ink); }
+svg.key { width: 1.1em; height: .8em; vertical-align: -.05em; overflow: visible; }
 /* the door: a tile map of states; equal squares on purpose */
 .tiles { display: grid; grid-template-columns: repeat(11, minmax(0, 1fr)); gap: 4px;
          max-width: 34rem; margin-top: .5rem; }
@@ -1320,9 +1338,9 @@ def falls_on_words(falls_on: str) -> str:
     return f"a {falls_on}" if falls_on in ("Saturday", "Sunday") else f"{falls_on}, a holiday"
 
 
-def finding_rows_table(finding: dict) -> str:
-    """The rows after the deadline, grouped where their dates agree, so a report of eighty
-    identical rows reads as one line with its count."""
+def finding_groups(finding: dict) -> list[tuple[tuple, int]]:
+    """A Finding's rows after the deadline, grouped where their dates agree, in the order the
+    table prints them and the figure draws them: one list, so the two cannot disagree."""
     groups: dict[tuple, int] = {}
     for row in finding["evidence"]["rows"]:
         key = (
@@ -1338,8 +1356,143 @@ def finding_rows_table(finding: dict) -> str:
             row["days_after"],
         )
         groups[key] = groups.get(key, 0) + 1
+    return sorted(groups.items(), key=lambda item: (item[0][3], item[0][0]))
+
+
+# The figure of a Finding's dates. The viewBox is about a phone's width, so a phone draws it
+# near one to one and its dates stay legible at 360px; a wider screen scales it up to the
+# column's width. The right margin holds the count of days after, the only number in a line.
+FIG_W, FIG_LEFT, FIG_RIGHT, FIG_TOP, FIG_ROW, FIG_AXIS = 360, 8, 40, 10, 18, 28
+KEY_MARKS = {
+    "trade": '<circle class="trade" cx="7" cy="5" r="2.7"/>',
+    "notice": '<path class="notice" d="M7 .4 11.6 5 7 9.6 2.4 5Z"/>',
+    "deadline": '<line class="deadline" x1="7" y1="0.5" x2="7" y2="9.5"/>',
+    "next": '<line class="next" x1="7" y1="0.5" x2="7" y2="9.5"/>',
+    "after": '<rect class="after" x="1" y="2" width="12" height="6"/>',
+}
+
+
+def key_mark(name: str) -> str:
+    """One of the figure's marks, drawn the same way in its caption, for a sighted reader;
+    the caption's words carry it for everyone else."""
+    return (
+        f'<svg class="key" viewBox="0 0 14 10" aria-hidden="true" focusable="false">'
+        f"{KEY_MARKS[name]}</svg>"
+    )
+
+
+def dates_figure(finding: dict) -> str:
+    """The dates a Finding rests on, on a line: each row of its table drawn to scale in days,
+    from the earliest date the rows print to the date the Clerk's index gives the report.
+    Derived from the Finding's own rows and nothing else, so it regenerates with them (RUBRIC
+    gate 4). No script, no font, no colour a theme does not set; the caption says what the
+    figure shows and what it does not."""
+    groups = finding_groups(finding)
+    filed = date.fromisoformat(finding["evidence"]["filed_at"])
+    marks = []
+    for key, _n in groups:
+        traded, notified, notification, deadline = key[0], key[1], key[2], key[3]
+        marks += [date.fromisoformat(traded), date.fromisoformat(deadline)]
+        if notified and notification == "applied":
+            marks.append(date.fromisoformat(notified))
+    start, end = min(marks + [filed]), max(marks + [filed])
+    span = max((end - start).days, 1)
+    inner = FIG_W - FIG_LEFT - FIG_RIGHT
+
+    def x(day: date) -> float:
+        return FIG_LEFT + (day - start).days / span * inner
+
+    def f(value: float) -> str:
+        return f"{value:.1f}".rstrip("0").rstrip(".")
+
+    rows_end = FIG_TOP + len(groups) * FIG_ROW
+    height = rows_end + FIG_AXIS
+    parts = []
+    for i, (key, _n) in enumerate(groups):
+        traded, notified, notification, deadline = key[0], key[1], key[2], key[3]
+        falls_on, next_day, days = key[5], key[6], key[9]
+        y = FIG_TOP + i * FIG_ROW + FIG_ROW / 2
+        t, d = x(date.fromisoformat(traded)), x(date.fromisoformat(deadline))
+        right = x(filed)
+        parts.append(f'<line class="window" x1="{f(t)}" y1="{f(y)}" x2="{f(d)}" y2="{f(y)}"/>')
+        parts.append(
+            f'<rect class="after" x="{f(d)}" y="{f(y - 3)}" width="{f(max(right - d, 2))}" '
+            'height="6"/>'
+        )
+        if falls_on and next_day:
+            b = x(date.fromisoformat(next_day))
+            parts.append(
+                f'<line class="next" x1="{f(b)}" y1="{f(y - 6)}" x2="{f(b)}" y2="{f(y + 6)}"/>'
+            )
+        parts.append(
+            f'<line class="deadline" x1="{f(d)}" y1="{f(y - 6)}" x2="{f(d)}" y2="{f(y + 6)}"/>'
+        )
+        # The diamond first and wider than the dot, so a notice on the day of the trade reads
+        # as a dot inside a diamond rather than hiding it.
+        if notified and notification == "applied":
+            n = x(date.fromisoformat(notified))
+            parts.append(
+                f'<path class="notice" d="M{f(n)} {f(y - 4.6)} {f(n + 4.6)} {f(y)} '
+                f'{f(n)} {f(y + 4.6)} {f(n - 4.6)} {f(y)}Z"/>'
+            )
+        parts.append(f'<circle class="trade" cx="{f(t)}" cy="{f(y)}" r="2.7"/>')
+        parts.append(
+            f'<text class="days" x="{f(FIG_W - FIG_RIGHT + 7)}" y="{f(y + 3.5)}">{days:,}</text>'
+        )
+    # The axis: the first of each month as a tick, the two ends as dates.
+    axis_y = rows_end + 5
+    ticks = []
+    month = date(start.year, start.month, 1)
+    while month <= end:
+        if month > start:
+            ticks.append(
+                f'<line class="axis" x1="{f(x(month))}" y1="{f(axis_y)}" x2="{f(x(month))}" '
+                f'y2="{f(axis_y + 4)}"/>'
+            )
+        month = date(month.year + month.month // 12, month.month % 12 + 1, 1)
+    right = x(filed)
+    parts.append(
+        f'<line class="filed" x1="{f(right)}" y1="{f(FIG_TOP - 4)}" x2="{f(right)}" '
+        f'y2="{f(axis_y + 4)}"/>'
+    )
+    parts.append(
+        f'<line class="axis" x1="{f(FIG_LEFT)}" y1="{f(axis_y)}" x2="{f(right)}" y2="{f(axis_y)}"/>'
+    )
+    parts += ticks
+    parts.append(
+        f'<text x="{f(FIG_LEFT)}" y="{f(axis_y + 16)}">{esc(start.isoformat())}</text>'
+        f'<text x="{f(right)}" y="{f(axis_y + 16)}" text-anchor="end">'
+        f"{esc(filed.isoformat())}</text>"
+    )
+    doc_id = finding["producing_filings"][0].rsplit(":", 1)[1]
+    days_across = (filed - start).days
+    caption = (
+        "The dates this Finding rests on, to scale in days, one line for each row of the table "
+        f"below and in the same order: the transaction (a dot {key_mark('trade')}), the date the "
+        f"report says the filer was notified (a diamond {key_mark('notice')}), the deadline the "
+        f"rule sets (a tick {key_mark('deadline')}, and a dotted tick {key_mark('next')} at the "
+        "first business day after a deadline that falls on a weekend or holiday), and the days "
+        f"from the deadline to the date the Clerk's index gives the report (a bar "
+        f"{key_mark('after')}, its count at the end of the line). The upright line is that date, "
+        f"{esc(filed.isoformat())}; the left edge is {esc(start.isoformat())}, {days_across:,} "
+        f"{plural(days_across, 'day', 'days')} earlier; a tick on the axis marks the first of "
+        "each month. The figure shows a span of days. It does not show why the span is what it "
+        "is, whether notice reached the filer when the report says, or anything the House "
+        "Committee on Ethics has determined."
+    )
+    return (
+        f'<figure class="dates">\n<svg viewBox="0 0 {FIG_W} {f(height)}" role="img" '
+        f'aria-labelledby="dates-{esc(doc_id)}">'
+        + "".join(parts)
+        + f'</svg>\n<figcaption id="dates-{esc(doc_id)}">{caption}</figcaption>\n</figure>'
+    )
+
+
+def finding_rows_table(finding: dict) -> str:
+    """The rows after the deadline, grouped where their dates agree, so a report of eighty
+    identical rows reads as one line with its count."""
     body = []
-    for key, n in sorted(groups.items(), key=lambda item: (item[0][3], item[0][0])):
+    for key, n in finding_groups(finding):
         traded, notified, notification, deadline, set_by, falls_on, next_day, late, gap, days = key
         notice = esc(notified) if notified else "not printed"
         if notification != "applied":
@@ -1365,7 +1518,7 @@ def finding_rows_table(finding: dict) -> str:
             f'<td class="idx">{esc(traded)}</td>'
             f'<td class="idx">{notice}</td>'
             f'<td class="idx">{due}</td>'
-            f"<td>{esc(SET_BY_WORDS.get(set_by, set_by))}</td>"
+            f'<td class="setby">{esc(SET_BY_WORDS.get(set_by, set_by))}</td>'
             f'<td class="idx">{days:,}</td>'
             "</tr>"
         )
@@ -1482,6 +1635,7 @@ def finding_block(
         f"<p>{esc(finding['description'])}</p>\n"
         f"{finding_changes(finding, changes)}"
         f"{correction_line(finding, findings or [])}"
+        f"{dates_figure(finding)}\n"
         f"{finding_rows_table(finding)}\n"
         f'<p class="quiet">Finding <code>{esc(finding["id"])}</code>, first produced from the '
         f"record as retrieved {esc(finding['fired_at'])}, from rows whose digest is "

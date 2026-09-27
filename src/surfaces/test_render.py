@@ -2021,6 +2021,51 @@ def test_a_quiet_page_puts_the_standards_below_the_record_and_removes_nothing():
     assert f'href="{render.STOCK_ACT}"' in requires and f'href="{render.USC_CH131}"' in requires
 
 
+def the_figure(page: str) -> str:
+    return between(page, '<figure class="dates">', "</figure>")
+
+
+def test_each_finding_draws_its_dates_from_its_own_rows_and_says_what_it_does_not_show():
+    h = sworn(HOLDERS[0])
+    report = read_report(h["id"], "2025-03-20", 1)
+    # Three rows after the deadline on one report: one due on a Saturday (notified 2025-01-16,
+    # due 2025-02-15), one due 2025-02-11, and one due a day before the report's date.
+    rows = [
+        dict(LATE[0]),
+        dict(
+            transaction(report["id"], 3, transaction_date="2025-01-16", notified_date="2025-01-16"),
+            filing_status="New",
+        ),
+        dict(
+            transaction(report["id"], 4, transaction_date="2025-02-17", notified_date="2025-02-17"),
+            filing_status="New",
+        ),
+    ]
+    (finding_,), page = signal_page(h, [report], rows)
+    figure = the_figure(page)
+    drawing = between(figure, "<svg", "</svg>")
+    table = between(page, "<tbody>", "</tbody>")
+    assert drawing.count('<rect class="after"') == table.count("<tr>") == 3, "a line per row"
+    assert render.dates_figure(finding_) == render.dates_figure(finding_), "it regenerates"
+    widths = [float(w) for w in re.findall(r'class="after"[^>]*width="([\d.]+)"', drawing)]
+    days = [int(d) for d in re.findall(r'<text class="days"[^>]*>(\d+)</text>', drawing)]
+    assert days == [37, 33, 1], "the count at the end of each line is the table's days after"
+    assert widths[0] > widths[1] > widths[2], "a longer span draws a longer bar, to scale"
+    assert drawing.count('<line class="next"') == 1, "the Saturday deadline's next business day"
+    label = re.search(r'aria-labelledby="(dates-\d+)"', figure).group(1)
+    assert f'<figcaption id="{label}">' in figure
+    caption = between(figure, "<figcaption", "</figcaption>")
+    assert "It does not show why the span is what it is" in caption
+    assert "anything the House Committee on Ethics has determined" in caption
+    assert "2025-03-20" in caption and "2025-01-10" in caption, "the scale's two ends, named"
+    words = re.sub(r"<[^>]+>", " ", drawing).split()
+    assert all(re.fullmatch(r"\d{4}-\d{2}-\d{2}|\d[\d,]*", w) for w in words), (
+        "the drawing carries dates and counts only; its words are in the caption, where a "
+        "translation reaches them (Seat F)"
+    )
+    assert verdict_words(figure) == []
+
+
 def test_the_practical_thing_is_where_a_reader_reaches_it():
     h = sworn(HOLDERS[0])
     _, page = signal_page(h, [read_report(h["id"], "2025-03-20", 1)], LATE)
