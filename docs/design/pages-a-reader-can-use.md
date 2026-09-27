@@ -364,8 +364,31 @@ who arrived for one person could not reach it until word 301.
   do, that nothing is honoured off the record and why that protects the subject too, what the register
   cannot do at all, and the private route for something that should not be public. Every line states
   what the bylaw states, and a test refuses a sentence that promises an outcome.
-- The answer is still four numbers where this reader holds two, and "transaction report" has no
-  glossary entry (Seat E).
+- ~~The answer is still four numbers where this reader holds two, and "transaction report" has no
+  glossary entry (Seat E).~~ **Both addressed, and the measurement changed what the first one meant.**
+  On the register as built, 326 of 439 pages carry an answer with no count at all: the "found nothing
+  to compare" sentence, whose only figures are the year and the statute number. So the density
+  question is about the other 113, and on those the quiet result restated the count the sentence
+  before it had just given ("compared 4 ... none of the 4 reports compared"). The repeat carried
+  nothing and is gone, which also makes the quiet result the same shape as the fired one, as COUNCIL
+  §5 mode 6 asks: *dates none of the reports it compared* beside *dates 3 reports it compared*. Never
+  a bare "none of them": a pronoun for the reports is what the drafts before this one printed as "1 of
+  it". The glossary now defines a transaction report, which is the term in the first sentence of every
+  page and the one a reader arriving from a friend is least likely to know; it is also the place to say
+  that the form lists trades and not holdings, so the register counts reports and trades and never
+  anyone's wealth.
+
+  Whether the remaining shape should be fewer numbers still is a design question and not a defect, and
+  it is left open deliberately: the obvious compression, *compared Z of the Y reports attributed*, puts
+  two integers in one phrase for a reader to divide, which is the finding Seat A made about the result
+  clause and which this pass removed from it. Two seats pull against each other here, as D and E did
+  over the frame, and the answer is not one an engineer should pick on taste.
+- **Found while fixing the above, and latent rather than live.** A report the register read that lists
+  no transaction row at all left both clauses of the nothing-compared sentence empty, and it rendered
+  as *It compared no row on any of them: That is a fact about what the register could read*: a colon
+  before a capital with nothing between. True of no report in the 2025 record, where every read report
+  lists at least one row, and reachable by an empty filing. It now says that it read no transaction row
+  from them.
 - The committed Council prompt defines three seats; four of the seven that read this are defined
   only in §5 above (Seats E and G). COUNCIL §8 makes the prompt's blob SHA the reproducibility
   guarantee, and a later reader holding it cannot reproduce four of these readings.
