@@ -16,6 +16,8 @@ metadata:
 
 **Read [feedback-pages-are-the-window.md](feedback-pages-are-the-window.md) before touching a page.** Jared stopped a full local CI run for this change: the pages are the window into the record, not the record. A check on a page stays if it keeps a sentence about a person true and goes if it only keeps the window arranged; the evidence for a page change is the render, the page gates, the render tests and a screenshot. 34 of the 67 measured guards sit on `render.py`, and sorting them by that question is his call, not a session's.
 
+**The logo is locked: read [feedback-the-mark-is-his.md](feedback-the-mark-is-his.md).** No change to the seal's or the masthead's look without Jared's distinct authorization for it. The figures, by contrast, are open for a design pass so they read as Oath's and not as a generic chart; the proposal there (a build stamp inside each figure) waits on his yes.
+
 **The other two open threads need things this session did not have either.**
 
 - **Network.** [NEXT.md E.0](../../NEXT.md) is thirteen rows of official information the register would need to follow a report past its deadline, twelve of them saying *nobody here has looked yet* because `ethics.house.gov`, `oce.house.gov`, `uscode.house.gov` and the federal dockets all return 000 through the cloud proxy. Every row carries a `check` naming exactly what to read. `wt:the-clerks-filing-date` goes first and is the highest-priority item in the project: the Clerk's index row carries eight fields and one date, nothing says whether it is the day the member filed or the day the Clerk posted, and **all 27 Findings rest on it.** It is the only open item that could make a sentence already published wrong about a person.

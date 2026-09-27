@@ -13,6 +13,7 @@ Standing feedback from Jared, read after the three above:
 
 - [Keep usage in mind](feedback-usage-stewardship.md). fan out agents only for research or review one hand cannot do, say the cost before proposing it, do the rest by hand. Given 2026-09-21, mid-session, after a nineteen-agent survey.
 - [Pages are the window, not the record](feedback-pages-are-the-window.md). the record carries the ceremony; the pages carry a light touch. A check on a page stays if it keeps a sentence about a person true, and goes if it only keeps the window arranged. Given 2026-09-27, stopping a full CI run for a landing edit.
+- [The mark is his](feedback-the-mark-is-his.md). **the logo's look does not change without Jared's distinct authorization for that change**; the seal and the masthead are both held. And the figures should do Oath justice rather than look like every other Claude-built chart. Given 2026-09-27.
 - [Signal to noise](feedback-signal-to-noise.md). Jared's theory of the whole thing and the direction that follows: raise the ratio of checkable statement to inference; label and shelve noise, never pass it off and never erase it; silence is signal. Given 2026-09-23, with the doctrine sentence proposed for his approval.
 
 Sibling projects that carry the shared discipline:
