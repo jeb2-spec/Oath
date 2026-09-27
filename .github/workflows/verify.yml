@@ -17,9 +17,24 @@
 
 name: verify
 
+# One run per commit, not two. `on: push` without a branch filter fired on every branch, and
+# `on: pull_request` fired again on the same commit, so every push to a branch with an open pull
+# request verified it twice: on 2026-09-27 that was 38 of 93 runs, 41% of them, about an hour of
+# runner time in a day. Pushes to main are verified as pushes (which is also what sets
+# OATH_PUBLISHED_REF to main as it stood before), and every other commit is verified once, as a
+# pull request. The trade is that a branch pushed with no pull request open is not verified until
+# one is, which is the moment anyone else could be affected by it.
 on:
   push:
+    branches: [main]
   pull_request:
+
+# A superseded pull request run is cancelled, because the only run that matters is the one on the
+# head a reviewer will read. A run on main is never cancelled: main's verification is the record
+# that the base branch is sound, and a cancelled run there would leave a commit nobody checked.
+concurrency:
+  group: verify-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
