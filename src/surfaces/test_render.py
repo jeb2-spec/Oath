@@ -1137,8 +1137,7 @@ def test_the_landing_counts_departures_and_changes_and_no_ones_rows():
     assert "except a party, which no page shows" in section
     assert "a refresh that failed published nothing" in section
     assert "When this build was made, the register read" in section
-    assert "when the maintainer published a correction" in section
-    assert "a change to the doctrine the seal covers, such as the shape of these pages" in section
+    assert "or when the maintainer published a correction" in section
     assert "every Monday at 09:17 UTC" in section
     assert "2 filled and 2 vacant" in section, "a Member the roster no longer lists fills no seat"
     assert "with the copy of the roster or the index the register kept" in section, (

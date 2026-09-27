@@ -3296,10 +3296,8 @@ def state_of_record(
             f"modified {esc(index_src.get('last_modified', 'unknown'))} and the register read it "
             f"{esc(index_src.get('retrieved_at', '')[:10])}; {roster_words}. It read its sources "
             "every Monday at 09:17 UTC and published a new build when a source had changed and "
-            "the maintainer merged it, when the maintainer published a correction, dated "
-            "beside the row it concerns, or when the maintainer published a change to the "
-            "doctrine the seal covers, such as the shape of these pages, with the rows "
-            "unchanged; a refresh that failed published nothing. A date here is "
+            "the maintainer merged it, or when the maintainer published a correction, dated "
+            "beside the row it concerns; a refresh that failed published nothing. A date here is "
             "when a source was read, not when the build was published. "
         )
     svg, first, last, total = rhythm_chart(filings)
