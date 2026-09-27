@@ -3224,3 +3224,92 @@ def test_a_report_the_register_read_that_lists_no_row_says_so(tmp_path=None):
     assert "It compared no row on any of them: it read no transaction row from them." in answer
     assert "them: That is a fact" not in answer, "no colon with nothing after it"
     assert "That is a fact about what the register could read, not about what was filed." in answer
+
+
+# ---- the annual report: a second Signal, spoken for only in its own voice ----------------------
+
+ANNUAL = {
+    "id": "sg:annual-report-after-extension-limit:v1",
+    "slug": "annual-report-after-extension-limit",
+    "version": 1,
+    "name": (
+        "Annual financial disclosure report dated after the latest date an extension could reach"
+    ),
+    "standard": {"id": "S.1", "citation": "5 U.S.C. § 13103(d), (g)(1)"},
+    "inputs": ["filing", "officeholder"],
+}
+
+
+def annual_outcome(filed: str, evaluated: int, reason: str | None, fid: str = "20000001"):
+    return {
+        "filing_id": f"fl:house-clerk:O:{fid}",
+        "officeholder_id": "oh:us:house:a000001",
+        "filed_at": filed,
+        "state": "evaluated",
+        "rows": 1,
+        "evaluated": evaluated,
+        "after": 0,
+        "not_evaluated": {reason: 1} if reason else {},
+        "finding_id": None,
+        "due": "2026-05-15",
+        "latest": "2026-08-13",
+    }
+
+
+def test_an_annual_report_inside_the_window_is_drawn_read_and_never_compared():
+    """An extension the register cannot see may cover a report dated inside the window, so it
+    is drawn as read and not decided. Drawn as compared it would say the report was checked and
+    found fine, the falsehood that flatters; drawn as after, the one that condemns."""
+    within = annual_outcome("2026-07-01", 0, render.ANNUAL_WITHIN)
+    on_time = annual_outcome("2026-05-01", 1, None, "20000002")
+    assert render.annual_state(within, set()) == "read"
+    assert render.annual_state(on_time, set()) == "compared"
+    assert 'class="amark read"' in render.annual_figure(within, "read")
+    chart = render.annual_chart([within, on_time], [], ANNUAL["id"], META)
+    assert 'class="acol read"' in chart and 'class="acol compared"' in chart
+    assert 'class="acol after"' not in chart
+
+
+def test_the_transaction_sections_never_speak_for_the_annual_report():
+    """Every sentence the transaction sections say is about trades and rows. Handed a run of the
+    annual Signal they would say it of reports that list none, so they are handed their own
+    Signal's runs alone, and a Signal no voice speaks for refuses the render."""
+    ptr = {"slug": "stock-act-ptr-after-deadline", "version": 1}
+    runs = [(ANNUAL, {}), (ptr, {})]
+    assert render.runs_in(runs, render.PTR_VOICE) == [(ptr, {})]
+    assert render.runs_in(runs, render.ANNUAL_VOICE) == [(ANNUAL, {})]
+    assert render.unvoiced([ANNUAL, ptr]) == []
+    assert render.unvoiced([{"slug": "another", "version": 1}]) == ["another version 1"]
+    section = render.annual_section(
+        [(ANNUAL, {})],
+        {ANNUAL["id"]: [annual_outcome("2026-07-01", 0, render.ANNUAL_WITHIN)]},
+        [],
+        [],
+        [{"id": "oh:us:house:a000001"}, {"id": "oh:us:house:a000002"}],
+        META,
+    )
+    assert section and not re.search(r"\btrades?\b", section)
+    assert "not evidence of wrongdoing" in section
+
+
+def test_a_page_with_no_annual_report_attributed_says_exactly_that():
+    """The fourth silence (the Council's reading, B-3 and four other seats): the register's
+    reading and matching, the rows set aside at the seat, the Clerk's own search, and never a
+    sentence that a report was not filed."""
+    text = " ".join(render.annual_answer(ANNUAL, [], [], [], held_all=2))
+    assert "2 rows of the index at this seat under this surname are set aside" in text
+    assert render.CLERK_SITE in text
+    assert "not about what was filed" in text
+    for verdict in ("did not file", "failed to file", "has not filed", "never filed"):
+        assert verdict not in text
+
+
+def test_a_header_only_signal_is_not_held_to_transaction_rows():
+    """The annual Signal counts a report's one date as the row it read, and holds no transaction
+    row to disagree with; the rows check stays whole for a Signal that reads transactions."""
+    outcome = annual_outcome("2026-05-01", 1, None)
+    by = {ANNUAL["id"]: {"oh:us:house:a000001": [outcome]}}
+    filing = {"id": outcome["filing_id"], "officeholder_id": "oh:us:house:a000001"}
+    assert render.answer_rests_on_these_rows(by, [filing], [], set()) == []
+    held = render.answer_rests_on_these_rows(by, [filing], [], {ANNUAL["id"]})
+    assert held and "read 1 row" in held[0]
