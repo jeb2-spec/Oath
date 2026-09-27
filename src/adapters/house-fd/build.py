@@ -1772,6 +1772,15 @@ def build(year: int, dry_run: bool = False, expect_not_listed: int = 0) -> int:
                 ),
             )
             derived = dict(filing, source=dict(filing["source"], content_hash=capture["sha256"]))
+            # A report that is not a transaction report gains what its own header prints about
+            # it (its type, year and date; on an extension, its length and due dates), because a
+            # Signal about an annual report reads the document's words and never the index's code
+            # (docs/design/the-annual-report-signal.md). The document's hash is the row's own
+            # source.content_hash, so every field read sits beside the bytes it was read from.
+            if filing["source_form_code"] != PTR_CODE:
+                facts = ptr.printed(text)
+                if facts:
+                    derived["printed"] = facts
             rows_read: list[dict] = []
             if status == "discrepancy":
                 discrepancy = (

@@ -91,8 +91,11 @@ jobs:
       - name: Fetch the roster and the filing index, recording each retrieval
         run: python src/adapters/house-fd/fetch.py --year "$YEAR" | tee fetch.log
 
-      - name: Capture the transaction reports behind the index, recording each retrieval
-        run: python src/adapters/house-fd/documents.py --year "$YEAR" --codes P | tee -a fetch.log
+      - name: Capture the documents behind the index, recording each retrieval
+        # The transaction reports, and the annual reports and extension forms, whose own headers
+        # the build reads to say what each is (filing.printed); the index's code only chooses
+        # what to fetch, and is interpreted nowhere (docs/design/the-annual-report-signal.md).
+        run: python src/adapters/house-fd/documents.py --year "$YEAR" --codes P,O,X | tee -a fetch.log
 
       - name: Did the source change
         id: diff

@@ -973,6 +973,7 @@ class StubReader:
 
     header = staticmethod(real_ptr.header)
     verify = staticmethod(real_ptr.verify)
+    printed = staticmethod(real_ptr.printed)
     rows = staticmethod(lambda tx: tx)
 
     @staticmethod
@@ -2164,3 +2165,42 @@ def test_reason_group_refuses_a_specific_rather_than_sealing_it():
     ):
         with pytest.raises(SystemExit, match="name a person or place them"):
             build.reason_group(named)
+
+
+def test_a_report_that_is_not_a_transaction_report_records_what_its_header_prints(
+    tmp_path, monkeypatch
+):
+    """An annual report's row gains its own Filing Type, Filing Year, Filing Date and signature
+    date, read from its bytes, so a Signal reads the document's words and never the code; a
+    transaction report's row gains nothing from this, and no published fact moves."""
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(build, "load_ptr", lambda: StubReader)
+    captures(
+        tmp_path,
+        roster_xml(119, [ADA], "20250103"),
+        index_xml([(ADA, "20000001", "P", "3/1/2025"), (ADA, "10000001", "O", "8/13/2026")]),
+        "2026-09-01T00:00:00Z",
+        "2026-09-01T00:00:01Z",
+    )
+    document(tmp_path, "20000001", ADA, [TX], "2026-09-01T00:00:02Z")
+    header = (
+        "Filing Type: Annual Report\nFiling Year: 2025\nFiling Date: 8/13/2026\n"
+        f"Digitally Signed: Hon. {ADA['first']} {ADA['last']} , 08/13/2026\n"
+    )
+    sha = document(tmp_path, "10000001", ADA, [], "2026-09-01T00:00:03Z", pad=header)
+    assert build.build(2025) == 0
+    rows = rows_of(tmp_path, "filings")
+    annual = json.loads(rows["fl:house-clerk:O:10000001"])
+    assert annual["source"]["content_hash"] == sha, "the fields sit beside the bytes they are from"
+    assert annual["printed"] == {
+        "filing_type": "Annual Report",
+        "status": "Member",
+        "filing_year": 2025,
+        "filing_date": "2026-08-13",
+        "signed_on": "2026-08-13",
+    }
+    assert annual["form_type"] == "other", "the code is still not interpreted"
+    assert "printed" not in json.loads(rows["fl:house-clerk:P:20000001"])
+    # A second build over the same bytes carries the row exactly as published.
+    assert build.build(2025) == 0
+    assert json.loads(rows_of(tmp_path, "filings")["fl:house-clerk:O:10000001"]) == annual
