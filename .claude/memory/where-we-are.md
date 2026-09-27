@@ -10,6 +10,22 @@ metadata:
 
 *Last updated: 2026-09-27, Opus 5 in a cloud session. The register is still build `0005-house-2025` (27 Findings, its proof confirmed at Bitcoin block 968733). PR #40 (S.1b) and #41 (P.1's design) are merged. PR #42 built P.1: the pages a reader can use, and the House at a glance on the landing, read by all seven seats. Another session is populating the record in parallel.*
 
+**Where the record ends, 2026-09-27, P.4.** Jared read the new landing and asked the question none of its figures answered: *the House ethics committee… seems like a black hole. Don't accept that this is normal. Accountability is critical… imagine where you and I would be if we did not in any way hold each other accountable and base trust in receipts.*
+
+He was right that it was missing, and the honest version turned out to be sharper than the rhetorical one.
+
+**What is sourced.** Past 30 days beyond the due date the Committee's memorandum of 30 January 2023 sets a minimum fee of $200 a report; its filing-deadlines page says the fee may be waived in exceptional circumstances. Both were already in STANDARDS.md S.2, read at the source by an earlier session. The register computes no fee for anyone.
+
+**What the build can determine, and nobody had looked at.** Of the 27 reports dated after the deadline: **18 are at or inside the 30th day past their own due date, seven of them by one day; 9 are past it, at 91 to 197 days; and there is nothing at all between 28 days and 91.** The two groups share no officeholder. That 62-day emptiness is a real structure in the record, it is arithmetic on sealed rows, and it means the 27 are two populations and not one.
+
+**The lesson that generalises: fairness is sharper than accusation.** Splitting the 27 protects the eighteen who were days late — seven of them by a weekend — *and* makes the nine impossible to wave away. One number would have been false about every report in it, in opposite directions depending on which report you are. A guard holds them apart now. This is *describe, never condemn* doing more work than condemnation could.
+
+**The clause the whole section rests on.** The second row of the figure is empty: zero rows about what followed, for any of the 27. An empty band under a figure of late reports reads as an accusation against the body that decides what follows, and the register has not earned that sentence — it reads the Clerk's filing index, a Committee decision is not among its sources, and whether one is published to read is a question it *has not gone and answered* (ethics.house.gov and oce.house.gov are both unreachable from the cloud sessions). ***The register holds no row* and *no record exists* are different sentences, and only the first is the register's to write.** A guard holds that clause in the caption.
+
+**And one craft lesson.** A draft drew the lower row as the upper row's shadow: the same 27 squares in the same places, hollow. It was the cleverer figure and the less legible one — 27 empty boxes read as 27 *things*, and the eye counts them instead of noticing there is nothing to count. An empty band is what emptiness looks like. Throwing away the clever version is part of the job, and the screenshot is what told me; asserting against the HTML never would have.
+
+NEXT.md E.1 sets out what a source would have to carry before a row about a Committee outcome could enter the register: a stable primary address, a row shape that can say *no published outcome*, an identifier that joins without inference, and a rule for the asymmetry — a published outcome is likeliest to exist for the worst cases, so outcomes-where-they-exist would show a pattern about publication and not about conduct.
+
 **Pages: the landing became a story in figures, 2026-09-27, P.3.** Jared set the frame and told me to throw away the script: *our data and the record is the record. Pages is how we are choosing to reflect that… imagery and data colliding to form a story and give insights… like a master finish carpenter… Less words, less describe me, describe this. Translate the record to something a child could understand.*
 
 The landing carried **6,942 reader-visible words**. It carries **1,837**. Nothing was cut: two thirds of it was the register describing itself and a directory of 439 names six screens below a map that already did that job, and both now have their own page — `seats.html` (the directory) and `record.html` (the state of the record, the dispute route in full, the glossary), each one click from the foot.
