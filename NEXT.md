@@ -153,6 +153,8 @@ silence as clearance, which is COUNCIL §5 mode 6 in a new shape.
 
 *Added 2026-09-27, from the maintainer reading the deployed pages: "I still think we need to slim it down, so it's less overwhelming, but not at the price of diluting the message or changing the tone."*
 
+**Landed the same day, items 1 to 3.** The thirty words about who decides are said in full once, under the deadline figure, and every later result closes on the nine-word frame alone. *The House at a glance* is on `record.html`; the link to the members in seat order, the statute and *what a signal is* moved into the deadline section. The captions' shared caveats are one *how to read the figures* line before the first of them. Measured by one counter before and after (it counts the header and foot, so its totals run above the table below): visible words **2,320 → 2,046**, captions **489 → 389**, visual blocks **7 → 6**, page height on a phone **8,768px → 7,804px**. Less than the estimate below, for two reasons worth knowing: what only the glance carried moved with the reader rather than being cut, and **item 4 was not taken**. The narrows list is the landing's statement of its own limits, and the one place a reader sees that the rule's scope accounts for 1 set-aside trade and the register for the other 1,155; limits as their own section is CLAUDE.md's rule, so it stays on the front door. The figures below are the ones this was measured against.
+
 The word count is no longer the problem. **2,197 words** is a third of what the page carried this morning. What is left is a different shape of heavy, and it measures:
 
 | | |
