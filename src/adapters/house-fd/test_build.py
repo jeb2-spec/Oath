@@ -782,7 +782,11 @@ def test_a_person_may_attribute_a_new_row_to_a_member_the_roster_no_longer_lists
         "oh:us:house:x000002",
         "of:us:house-xx02:2025",
     )
-    assert row["extraction_confidence"] == "manual"
+    assert row["notes"] == (
+        "Attributed by the maintainer's recorded decision of 2026-02-03, citing "
+        "https://example.com/the-document."
+    ), "what attributed the row is said on the row, with the decision's date and evidence"
+    assert row["extraction_confidence"] is None, "its document is not read: nothing says it is"
 
 
 def test_a_closed_year_is_carried_and_never_rebuilt_from_the_next_roster(register):
@@ -1000,6 +1004,119 @@ def reports(tmp_path, monkeypatch):
     return tmp_path
 
 
+def correct_row(root: Path, row: str, field: str, *how: str, doc_id: str = "20000001") -> int:
+    """tools/correct.py, as the maintainer runs it, citing the report's own document."""
+    (root / "tools").mkdir(exist_ok=True)
+    for name in ("SOURCES.md", "tools/check-aggregator-sole.py"):
+        (root / name).write_bytes((ROOT / name).read_bytes())
+    return tool("correct").main(
+        [
+            str(root),
+            "--row",
+            row,
+            "--field",
+            field,
+            *how,
+            "--because",
+            "The Clerk's copy of the report lists it so.",
+            "--evidence-url",
+            f"https://disclosures-clerk.house.gov/public_disc/ptr-pdfs/2025/{doc_id}.pdf",
+            "--evidence-file",
+            str(root / "data" / "cache" / "house-fd" / "docs" / f"{doc_id}.pdf"),
+            "--evidence-retrieved-at",
+            "2026-01-05T00:00:02Z",
+            "--decided-by",
+            "the maintainer",
+            "--decided-at",
+            "2026-01-06T12:00:00Z",
+        ]
+    )
+
+
+@pytest.mark.parametrize(
+    "field, now", [("asset", "Example Holdings, as corrected"), ("transaction_date", "2025-02-03")]
+)
+def test_a_correction_of_a_reports_own_row_answers_the_reading_it_was_made_against(
+    reports, field, now
+):
+    """The Council's fourth reading of S.1b (Seat C, C4-1; Seat A, A4-5): the maintainer
+    corrects a fact of a report's own row, citing its document; the next refresh reads the same
+    bytes, which give what the correction says the row carried, and it refused every week,
+    telling the maintainer to do what they had done. The correction answers that reading: the
+    build goes on, and the row stays as the correction left it."""
+    tx = "tx:house-clerk:20000001:001"
+    assert correct_row(reports, tx, field, "--now", now, "--kind", "register") == 0
+    for _ in range(2):
+        assert build.build(2025) == 0, "the next refresh, and the one after"
+        assert json.loads(rows_of(reports, "transactions")[tx])[field] == now
+
+
+def test_a_value_that_stands_answers_a_reading_of_the_very_bytes_it_was_decided_on(
+    reports, monkeypatch
+):
+    """The same, for a document whose header now disputes the attribution (Seat C, C4-1): the
+    refusal says to record that the attribution stands, and the build goes on; it refused
+    again. And a reading of a row's fact otherwise, from the bytes the value was decided on."""
+    monkeypatch.setattr(
+        StubReader, "verify", staticmethod(lambda *a, **k: ("contradiction", "a stand-in"))
+    )
+    with pytest.raises(SystemExit, match="refuses its attribution"):
+        build.build(2025)
+    filing = "fl:house-clerk:P:20000001"
+    assert correct_row(reports, filing, "officeholder_id", "--stands", "--kind", "register") == 0
+    assert build.build(2025) == 0, "the attribution is decided: the rows stay as published"
+    monkeypatch.setattr(StubReader, "verify", staticmethod(real_ptr.verify))
+    real_rows = StubReader.rows
+    monkeypatch.setattr(
+        StubReader, "rows", staticmethod(lambda tx: [dict(t, asset="Misread") for t in tx])
+    )
+    with pytest.raises(SystemExit, match="reads them otherwise"):
+        build.build(2025)
+    tx = "tx:house-clerk:20000001:001"
+    assert correct_row(reports, tx, "asset", "--stands", "--kind", "register") == 0
+    with pytest.raises(SystemExit, match="reads them otherwise"):
+        build.build(2025)  # the other row is still read otherwise; nothing decided it
+    other = "tx:house-clerk:20000001:002"
+    assert correct_row(reports, other, "asset", "--stands", "--kind", "register") == 0
+    assert build.build(2025) == 0, "each reading of these bytes is answered"
+    monkeypatch.setattr(StubReader, "rows", real_rows)
+
+
+def test_a_name_the_roster_restates_does_not_refuse_a_report_it_confirmed(tmp_path, monkeypatch):
+    """Seat C, C4-1 (iii): a report whose document printed another seat was published because
+    the printed name confirmed the officeholder. The roster later gives the name otherwise, a
+    change at the source, and the same bytes were checked against the new name, contradicted,
+    and refused with "the source did not change". The printed name is checked against the
+    name the register published them under as well."""
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(build, "load_ptr", lambda: StubReader)
+    rows = [(ADA, "20000001", "P", "3/1/2025")]
+    captures(
+        tmp_path,
+        roster_xml(119, [ADA], "20250103"),
+        index_xml(rows),
+        "2026-01-05T00:00:00Z",
+        "2026-01-05T00:00:01Z",
+    )
+    document(tmp_path, "20000001", dict(ADA, seat="XX09"), [TX], "2026-01-05T00:00:02Z")
+    assert build.build(2025) == 0
+    filing = json.loads(rows_of(tmp_path, "filings")["fl:house-clerk:P:20000001"])
+    assert "The document prints State/District XX09" in filing["notes"]
+    renamed = dict(ADA, first="Adaline")
+    captures(
+        tmp_path,
+        roster_xml(119, [renamed], "20250103"),
+        index_xml([(renamed, "20000001", "P", "3/1/2025")]),
+        "2026-01-12T00:00:00Z",
+        "2026-01-12T00:00:01Z",
+    )
+    assert build.build(2025) == 0, "the report the register confirmed stays confirmed"
+    recorded = changes_of(tmp_path)
+    assert recorded and {(c["change"], c["row_id"]) for c in recorded} == {
+        ("read otherwise", "oh:us:house:x000001")
+    }, "the roster's new name is recorded, as the source's, and nothing else"
+
+
 def test_the_same_bytes_read_otherwise_refuse_because_the_reader_changed(reports, monkeypatch):
     """C-1: a reader that yields fewer rows from the very bytes they were read from must not
     record the Clerk as dropping a trade."""
@@ -1133,7 +1250,7 @@ def test_other_bytes_that_read_otherwise_are_a_replacement_shown_beside_the_rows
 def test_other_bytes_that_list_a_row_more_are_a_replacement_never_an_accrual(reports):
     """Seat G on the third reading (R3-1): the rule that a row read after every published one
     accrues is for the very bytes the rows came from. Other bytes that list the published
-    trades and one more are a different file the Clerk serves: recorded, and kept."""
+    trades and one more are a different file the Clerk serves: recorded, and neither file kept."""
     before = {name: rows_of(reports, name) for name in ("filings", "transactions")}
     more = [TX, dict(TX, asset="Other Holdings"), dict(TX, asset="Third Holdings")]
     sha = document(reports, "20000001", ADA, more, "2026-02-02T00:00:00Z")
@@ -1354,10 +1471,11 @@ def test_a_departed_members_rows_keep_the_reason_they_were_set_aside_for(tmp_pat
     )
 
 
-def test_a_decided_rows_document_is_wanted_and_read_after_the_member_leaves(tmp_path, monkeypatch):
+def test_a_decided_rows_document_is_wanted_after_the_member_leaves(tmp_path, monkeypatch):
     """Seats D and E on the third reading: a report the maintainer's recorded decision
     attributes to a Member the roster no longer lists was never asked for, so its page called
-    it scanned paper. Its document is wanted, open year or closed, and read."""
+    it scanned paper. Its document is wanted, open year or closed; that it is read, and said as
+    a decision, is the test after this one."""
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(build, "load_ptr", lambda: StubReader)
     rows = [(ADA, "30000001"), (BEA, "30000002"), (BEA, "30000009", "P", "12/20/2025")]
@@ -1397,6 +1515,86 @@ def test_a_decided_rows_document_is_wanted_and_read_after_the_member_leaves(tmp_
     assert [d["doc_id"] for d in build.wanted_documents(2025)] == ["30000009"], (
         "a closed year wants the documents of decided rows alone"
     )
+
+
+def departed_with_a_decided_report(root: Path) -> None:
+    """Bea published, then not listed; the index then lists a transaction report under her name,
+    dated before the last roster read that listed her, and the maintainer decides it hers."""
+    captures(
+        root,
+        roster_xml(119, [ADA, BEA], "20250103"),
+        index_xml([(ADA, "30000001"), (BEA, "30000002")]),
+        "2026-01-05T00:00:00Z",
+        "2026-01-05T00:00:01Z",
+    )
+    assert build.build(2025) == 0
+    rows = [(ADA, "30000001"), (BEA, "30000002"), (BEA, "30000009", "P", "12/20/2025")]
+    captures(
+        root,
+        roster_xml(119, [ADA], "20250103"),
+        index_xml(rows),
+        "2026-02-02T00:00:00Z",
+        "2026-02-02T00:00:01Z",
+    )
+    decisions = root / "src" / "adapters" / "house-fd" / "adjudications.ndjson"
+    decisions.parent.mkdir(parents=True, exist_ok=True)
+    decisions.write_text(
+        json.dumps(
+            {
+                "doc_id": "30000009",
+                "officeholder_id": "oh:us:house:x000002",
+                "evidence_url": "https://disclosures-clerk.house.gov/public_disc/ptr-pdfs/2025/"
+                "30000009.pdf",
+                "decided_by": "the maintainer",
+                "decided_at": "2026-02-03",
+                "note": "the document prints her name, her seat and this Filing ID.",
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+
+DECIDED = (
+    "Attributed by the maintainer's recorded decision of 2026-02-03, citing "
+    "https://disclosures-clerk.house.gov/public_disc/ptr-pdfs/2025/30000009.pdf: the document "
+    "prints her name, her seat and this Filing ID."
+)
+
+
+@pytest.mark.parametrize("fetched_later", [False, True])
+def test_a_decided_report_is_read_and_still_says_it_was_decided(
+    tmp_path, monkeypatch, fetched_later
+):
+    """The Council's fourth reading of S.1b (Seats C, E and G; Seat D): a decided report's
+    document is read, and reading it marked the row "structured" over the decision's own mark,
+    so its page said the name join attributed it; one whose document arrived a build later kept
+    the decision's mark and was never counted as read, its rows written and not evaluated. What
+    attributed a row is said on the row, and whether its document was read is said apart:
+    read in the decision's build or a build later, the row says the decision, is read, and
+    carries its rows."""
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(build, "load_ptr", lambda: StubReader)
+    departed_with_a_decided_report(tmp_path)
+    if not fetched_later:
+        document(tmp_path, "30000009", BEA, [TX, dict(TX, asset="Other")], "2026-02-02T00:00:02Z")
+    assert build.build(2025) == 0
+    row = json.loads(rows_of(tmp_path, "filings")["fl:house-clerk:P:30000009"])
+    assert row["notes"] == DECIDED, "what attributed it, said on the row"
+    if fetched_later:
+        assert row["extraction_confidence"] is None and not row["source"]["content_hash"]
+        assert run_record(tmp_path)["documents"]["read"] == 0
+        document(tmp_path, "30000009", BEA, [TX, dict(TX, asset="Other")], "2026-02-09T00:00:02Z")
+        assert build.build(2025) == 0
+        row = json.loads(rows_of(tmp_path, "filings")["fl:house-clerk:P:30000009"])
+        assert row["notes"] == DECIDED, "the decision's words stay as published"
+    assert row["extraction_confidence"] == "structured", "read, like any other report"
+    assert row["source"]["content_hash"], "its document's fingerprint"
+    txs = [t for t in rows_of(tmp_path, "transactions") if t.startswith("tx:house-clerk:30000009")]
+    assert len(txs) == 2, "its rows, as the document lists them"
+    record = run_record(tmp_path)
+    assert record["documents"]["read"] == 1 and record["documents"]["unreadable"] == 0
+    assert record["counts"]["adjudicated"] == 1
 
 
 def test_an_entry_is_weighed_against_the_one_the_register_last_read(register, monkeypatch):

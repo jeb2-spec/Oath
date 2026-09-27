@@ -101,14 +101,14 @@
         "manual",
         null
       ],
-      "description": "How the content was extracted from the source. Rows built from OCR-low sources are flagged in downstream Findings."
+      "description": "How the content was extracted from the source: structured where the register read the document, null where it has not. It says nothing of how the row was attributed, which notes says. Rows built from OCR-low sources are flagged in downstream Findings."
     },
     "notes": {
       "type": [
         "string",
         "null"
       ],
-      "description": "What the document says about itself that the reader must see beside the row, in plain words: for example, a printed seat that differs from the roster. Null when the document and the index agree in full."
+      "description": "What attributed the row, where the name join did not, and what the document says about itself that the reader must see beside the row, in plain words: \"Attributed by the document's own header: ...\" or \"Attributed by the maintainer's recorded decision of <date>, citing <evidence>...\", and, for example, a printed seat that differs from the roster. Null when the name join attributed the row and the document and the index agree in full."
     },
     "index_row": {
       "type": "object",

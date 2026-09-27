@@ -301,6 +301,53 @@ def test_a_row_attributed_by_the_document_says_so_on_the_page_and_the_landing():
     assert "matched to their name" not in section
 
 
+def test_a_decided_report_says_decision_whether_or_not_its_document_was_read():
+    """The Council's fourth reading of S.1b (Seats C, E and G): a decided report whose document
+    the register read said "name", because the reading alone marked it. What attributed a row
+    is said on the row, and read from there."""
+    note = (
+        "Attributed by the maintainer's recorded decision of 2026-10-06, citing "
+        "https://disclosures-clerk.house.gov/public_disc/ptr-pdfs/2025/9.pdf."
+    )
+    read = dict(filing("oh:us:house:a000001", "2025-06-01", 9), notes=note)
+    read["extraction_confidence"] = "structured"
+    read["source"] = dict(read["source"], content_hash="0" * 64)
+    unread = dict(filing("oh:us:house:a000001", "2025-06-02", 10), notes=note)
+    for row in (read, unread):
+        assert render.how_attributed(row) == "decision", row["id"]
+    page = render.render_officeholder(HOLDERS[0], [FILINGS[0], read, unread], META, striker)
+    assert page.count('<td class="code">decision</td>') == 2
+    assert '<td class="code">name</td>' in page, "the row the name join attributed"
+    assert "3 rows of the Clerk's 2025 index attributed to this officeholder, 2 of them by " in (
+        plain(page)
+    )
+    assert "the maintainer's recorded decision, which cites its evidence" in page
+    section = render.state_of_record(
+        META, RUN, HOLDERS, [FILINGS[0], read, unread], OFFICES, 1, "https://x/rows"
+    )
+    assert "2 by the maintainer's recorded decision, which cites its evidence" in section
+    render.DECIDED.update({read["id"]: "2026-10-06"})
+    try:
+        assert render.finding_mark({}, read["id"]) == (
+            " (attributed by the maintainer's recorded decision of 2026-10-06)"
+        ), "the Signal page marks a Finding on a decided report, as it marks a moved one"
+    finally:
+        render.DECIDED.clear()
+
+
+def test_the_pages_read_a_decision_in_the_adapters_own_words():
+    """The adapter writes what attributed a row; the pages read it back. One wording, held."""
+    build = _load(ROOT / "src" / "adapters" / "house-fd" / "build.py", "house_fd_build_words")
+    note = build.decision_note(
+        {"decided_at": "2026-10-06T12:00:00Z", "evidence_url": "https://example.com/9.pdf"}
+    )
+    assert (build.BY_DECISION, build.BY_HEADER) == (render.BY_DECISION, render.BY_HEADER)
+    assert render.how_attributed({"id": "fl:x", "officeholder_id": "oh:x", "notes": note}) == (
+        "decision"
+    )
+    assert render.DECIDED_ON.match(note).group(1) == "2026-10-06"
+
+
 def test_rows_under_the_surname_at_another_seat_are_said_without_naming_the_seat():
     moved = [
         {

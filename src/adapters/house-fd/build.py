@@ -92,6 +92,13 @@ def congress_of(year: int) -> int:
 # financial-pdfs. Every other code is carried verbatim and interpreted nowhere.
 PTR_CODE = "P"
 
+# What attributed a row is said on the row, apart from whether its document was read: the
+# document's own header, or the maintainer's recorded decision. A decided row's document is
+# read like any other, and `extraction_confidence` says only that (the Council's fourth
+# reading of S.1b, Seats E and G: a decision's mark was lost when its document was read).
+BY_HEADER = "Attributed by the document's own header"
+BY_DECISION = "Attributed by the maintainer's recorded decision"
+
 # Dropped before comparing names: honorifics and generational suffixes, which the
 # two sources supply inconsistently.
 NOISE = {"jr", "sr", "ii", "iii", "iv", "v", "mr", "mrs", "ms", "miss", "dr", "hon"}
@@ -499,6 +506,17 @@ def load_adjudications(path: Path) -> tuple[dict[str, dict], str | None]:
     return decisions, hashlib.sha256(raw).hexdigest()
 
 
+def decision_note(decision: dict) -> str:
+    """What a decided row says of how it was attributed: the decision's date and its evidence,
+    and the maintainer's note where there is one. Its document, where it reads, is read as any
+    other's, so the row says both what attributed it and what it lists."""
+    note = (decision.get("note") or "").strip().rstrip(".")
+    return (
+        f"{BY_DECISION} of {str(decision['decided_at'])[:10]}, citing "
+        f"{decision['evidence_url']}" + (f": {note}" if note else "") + "."
+    )
+
+
 # ---- the published register, an input to every build --------------------------------------
 #
 # A row the register has published is a fact it recorded from a primary source, and it
@@ -735,7 +753,9 @@ class Observed:
 
     def add(self, row: dict, path: Path | None) -> None:
         """Record a change; `path` names bytes to keep, and None a filed document, which the
-        register never keeps (EVIDENCE.md §7; the Council's third reading of S.1b, Seat B)."""
+        register never keeps: a decision of the Council's third reading of S.1b (Seat B), which
+        NEXT.md D.4 carries into the doctrine, where EVIDENCE.md §7 and INVARIANTS.md §16 still
+        say the register may keep a filing's bytes."""
         self.new.append(row)
         self.past.setdefault(self.thread(row), []).append(row)
         if path is not None:
@@ -862,6 +882,45 @@ def decided(changes: list[dict], row_id: str, field: str) -> bool:
     )
 
 
+def fingerprint(value) -> str:
+    """The SHA-256 of a value as canonical JSON: the form in which tools/correct.py keeps what a
+    filer's own text was, and tools/check-removals.py matches it."""
+    return hashlib.sha256(
+        json.dumps(value, ensure_ascii=False, sort_keys=True).encode()
+    ).hexdigest()
+
+
+def as_corrected(read: list[dict], changes: list[dict], sha256: str) -> list[dict]:
+    """A document's rows as this build reads them, with each fact the maintainer's recorded
+    decision answered taken as the decision left it: a correction was made against a reading
+    of the bytes, and the next reading of them gives what the correction says the row carried
+    (its `was`, or the fingerprint of it), so that reading is no difference; a value that stands,
+    decided on these very bytes, answers any reading of them. Without this, the next refresh
+    after a correction of a report's own rows compared the reading with the corrected row and
+    refused every week (the Council's fourth reading of S.1b, Seats A and C)."""
+    answered: dict[tuple[str, str], list[dict]] = collections.defaultdict(list)
+    for c in changes:
+        if c["change"] == CORRECTED and c.get("rows") == "transactions" and c.get("field"):
+            answered[(c["row_id"], c["field"])].append(c)
+    out = []
+    for row in read:
+        row = dict(row)
+        for field in list(row):
+            for c in answered.get((row["id"], field), []):
+                hashed = "was_sha256" in c  # a filer's own text, kept as its fingerprint alone
+
+                def was(value, c=c, hashed=hashed) -> bool:
+                    return fingerprint(value) == c["was_sha256"] if hashed else value == c["was"]
+
+                if was(c["now"]):  # the published value stands
+                    if (c.get("capture") or {}).get("content_hash") == sha256:
+                        row[field] = c["now"]
+                elif was(row[field]):
+                    row[field] = c["now"]
+        out.append(row)
+    return out
+
+
 def accrue(published: dict, derived: dict) -> dict:
     """The published row with every fact it lacked filled from the derived one: a null, a
     missing key, the end of a longer list. No fact it carries moves."""
@@ -890,6 +949,14 @@ def given_and_surname(name: str) -> tuple[str, frozenset[str]]:
     return given, tokens(last)
 
 
+def name_tokens(holder: dict) -> frozenset[str]:
+    """The comparable tokens of the name a published officeholder row carries: the name the
+    register published them, and their filings, under."""
+    common = holder.get("common_name") or holder["legal_name"]
+    last, first = (common.split(",", 1) + [""])[:2] if "," in common else (common, "")
+    return tokens(last, first)
+
+
 def person_kept(holder: dict, office: dict) -> dict:
     """A published officeholder the roster no longer lists, in the roster's shape, so a
     person's adjudication can still attribute a row to them and their document be read."""
@@ -904,7 +971,7 @@ def person_kept(holder: dict, office: dict) -> dict:
         "sworn": sworn,
         "official_name": holder["legal_name"],
         "namelist": common,
-        "_tokens": tokens(last, first),
+        "_tokens": name_tokens(holder),
         "_kept": holder["id"],
         "_office": office["id"],
     }
@@ -1121,6 +1188,7 @@ def build(year: int, dry_run: bool = False, expect_not_listed: int = 0) -> int:
     # term at the end of one's list, and a fact one lacked. A roster that states one of their
     # facts otherwise is a change of its own, never an edit.
     holders_by_id = {h["id"]: h for h in published["officeholders"]}
+    published_holders = dict(holders_by_id)
     holder_of_bioguide, person_of_id = {}, {}
     for person in people:
         office = office_of_seat[person["seat"]]
@@ -1387,7 +1455,7 @@ def build(year: int, dry_run: bool = False, expect_not_listed: int = 0) -> int:
                     index_name = f"{row['first']} {row['last']} {row.get('suffix', '')}".strip()
                     roster_name = held["official_name"] or f"{held['first']} {held['last']}"
                     notes = (
-                        "Attributed by the document's own header: the Clerk's index writes the "
+                        f"{BY_HEADER}: the Clerk's index writes the "
                         f"filer as {index_name!r}; {clause}; the Clerk's roster names the holder "
                         f"of {held['seat']} {roster_name.strip()!r}."
                     )
@@ -1427,7 +1495,8 @@ def build(year: int, dry_run: bool = False, expect_not_listed: int = 0) -> int:
                 )
                 person = None
             else:
-                confidence, adjudicated_now = "manual", adjudicated_now + 1
+                adjudicated_now += 1
+                notes = decision_note(decision)
         if person is None and decision is None and not closed and kept_people:
             gone = departed_of(row, kept_people, held)
             if gone is not None:
@@ -1538,11 +1607,20 @@ def build(year: int, dry_run: bool = False, expect_not_listed: int = 0) -> int:
                 "content_hash": capture["sha256"],
             }
             read_documents[doc_id] = doc_source
+            # The printed name confirms the officeholder where it carries the name the register
+            # published them under, or the roster's name now: a name the roster restates later
+            # is not a reason to refuse a report the register read and published (the Council's
+            # fourth reading of S.1b, Seat C).
+            names = [person["_tokens"]]
+            if filing["officeholder_id"] in published_holders:
+                names.append(name_tokens(published_holders[filing["officeholder_id"]]))
             status, reason = ptr.verify(
                 text,
                 seat,
                 doc_id,
-                name_confirms=lambda printed, p=person: p["_tokens"] <= tokens(printed),
+                name_confirms=lambda printed, names=names: any(
+                    known <= tokens(printed) for known in names
+                ),
             )
             derived = dict(filing, source=dict(filing["source"], content_hash=capture["sha256"]))
             rows_read: list[dict] = []
@@ -1594,6 +1672,7 @@ def build(year: int, dry_run: bool = False, expect_not_listed: int = 0) -> int:
             was = filing
             before = sorted(published_tx.get(was["id"], []), key=lambda t: t["id"])
             first_read = was["source"].get("content_hash") is None
+            rows_read = as_corrected(rows_read, published["changes"], capture["sha256"])
             if not first_read and was["source"]["content_hash"] != capture["sha256"]:
                 # Other bytes: a different file, compared strictly, a row more included (the
                 # Council's third reading of S.1b, Seat G); what differs is recorded by row id
@@ -1605,7 +1684,6 @@ def build(year: int, dry_run: bool = False, expect_not_listed: int = 0) -> int:
                 documents_replaced += 1 if differs else 0
                 documents_same_reading += 0 if differs else 1
                 continue
-            differs = status == "contradiction" or reads_otherwise(before, rows_read, extend=True)
             if status == "contradiction" and not decided(
                 published["changes"], was["id"], "officeholder_id"
             ):
@@ -1616,13 +1694,22 @@ def build(year: int, dry_run: bool = False, expect_not_listed: int = 0) -> int:
                     "wrong, correct it with tools/correct.py, citing the document; if it "
                     "stands, record that with tools/correct.py --stands, and the build goes on."
                 )
+            if status == "contradiction" and not first_read:
+                # The very bytes the rows were published from, whose header disputes an
+                # attribution the maintainer has decided: the rows stay as published, and the
+                # build goes on, as the refusal above promises (the Council's fourth reading of
+                # S.1b, Seat C).
+                continue
+            differs = reads_otherwise(before, rows_read, extend=True)
             if before and differs and was.get("extraction_confidence") == "structured":
                 raise SystemExit(
                     f"refusing to build: the document behind {was['id']} holds the bytes its "
                     "rows were published from, and this build reads them otherwise. The source "
                     "did not change; the register's reading did, and a change to the "
-                    "register's code must not rewrite what it published. Revert it, or correct "
-                    "the rows with tools/correct.py, citing the evidence."
+                    "register's code must not rewrite what it published. Revert it; or, where "
+                    "the document lists otherwise than the published rows, correct them with "
+                    "tools/correct.py citing it, or record with --stands that a published value "
+                    "stands, and the build goes on."
                 )
             # Rows read after every published one from the very bytes the rows were published
             # from: the register's reading found them, the source did not change, and a reader

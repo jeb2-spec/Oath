@@ -93,9 +93,13 @@ STANDARD_LINKS = {
 }
 ASSET_LEGEND = "https://fd.house.gov/reference/asset-type-codes.aspx"
 LIMITATIONS_9 = REPO + "LIMITATIONS.md#9-private-citizens-are-out-of-scope"
+# Where the course carries what the sealed doctrine should say about a filed document the
+# register keeps no copy of: EVIDENCE §7 says the register may keep the bytes, and INVARIANTS
+# §16 plans a bundle that holds them, so the practice cites the decision, not a section that
+# says otherwise (the Council's fourth reading of S.1b, Seats A, C and G).
+NEXT_D4 = REPO + "NEXT.md"
 BYLAWS_5 = REPO + "BYLAWS.md#5-corrections"
 BYLAWS_6 = REPO + "BYLAWS.md#6-corrections-and-supersessions-facts-stay-change-is-shown"
-EVIDENCE_7 = REPO + "EVIDENCE.md"
 
 # The oath every member takes, verbatim. STANDARDS.md C.1; 5 U.S.C. § 3331, verified against
 # uscode.house.gov on 2026-09-22; U.S. Const. Art. VI § 3. The same words for everyone.
@@ -232,6 +236,7 @@ TILES = {
 
 HELD_REASON = re.compile(r"surname matches a sitting member \((.+?), ([A-Z]{2}\d{2})\) but")
 BY_HEADER = "Attributed by the document's own header"
+BY_DECISION = "Attributed by the maintainer's recorded decision"
 
 # Why a row at a member's own seat under the member's surname waits, read from the
 # reason the adapter wrote; the first marker found names the kind. Each kind has the clause
@@ -389,6 +394,11 @@ NAMES: dict[str, str] = {}
 # The whole ledger of Findings: a correction can move a report, and its Finding with it, from
 # one officeholder's page to another's, and each page names the other row of the chain.
 LEDGER: list[dict] = []
+# The day of the maintainer's recorded decision behind each report a decision attributed, by
+# filing id, so the Signal page marks a Finding on such a report as it marks a moved one (the
+# Council's fourth reading of S.1b, Seat D).
+DECIDED: dict[str, str] = {}
+DECIDED_ON = re.compile(r"Attributed by the maintainer's recorded decision of (\d{4}-\d{2}-\d{2})")
 # The repository at the commit the pages are rendered from, for a file the next build replaces
 # (the set-aside rows); main for everything that is kept for good (Seat G, third reading).
 REPO_AT = {"commit": REPO}
@@ -513,6 +523,19 @@ def recorded(change: dict) -> str:
 
 def built_note(change: dict) -> str:
     return f"; recorded in build {esc(change['build'])}" if change.get("build") else ""
+
+
+def earlier_builds(change: dict) -> str:
+    """Where a reader finds a filer's own text as filed, after a correction moved it. The
+    fingerprint the change row keeps is not the text, and saying only that would tell the
+    reader the text is gone: every sealed build stays in this repository's history, and the
+    builds before the one that sealed the correction carry the line (the Council's fourth
+    reading of S.1b, Seats B, E and G)."""
+    return (
+        f"the builds before <code>{esc(change['build'])}</code>"
+        if change.get("build")
+        else "every build sealed before this correction"
+    )
 
 
 def cited(change: dict, words: str | None = None) -> str:
@@ -1371,8 +1394,8 @@ def finding_changes(finding: dict, changes: dict[str, list[dict]] | None) -> str
 def finding_mark(changes: dict[str, list[dict]], filing_id: str) -> str:
     """A report's mark on the Signal page, carrying its own guard, from the latest reads only:
     a row lifted alone must not read as a story (Seats A and F). Each read is dated (Seat G), a
-    decision that answers it is said after it (Seats B, F and G), and a report moved here by
-    correction says so (Seat E)."""
+    decision that answers it is said after it (Seats B, F and G), a report moved here by
+    correction says so (Seat E), and so does one a recorded decision attributed (Seat D)."""
     history = changes.get(filing_id, [])
     state = latest_state(history)
     marks = []
@@ -1404,6 +1427,8 @@ def finding_mark(changes: dict[str, list[dict]], filing_id: str) -> str:
     ]
     if moves:
         out += f" (attributed here by the maintainer's correction of {when(moves[-1])})"
+    elif filing_id in DECIDED:
+        out += f" (attributed by the maintainer's recorded decision of {DECIDED[filing_id]})"
     return out
 
 
@@ -1632,12 +1657,16 @@ def how_to_read(person: bool) -> str:
             (
                 "The document",
                 Raw(
-                    "The Clerk's own copy, which the register links to. The register never keeps "
-                    "a copy of a filed document, because a document can carry the names of "
-                    "private people and a kept copy would outlast the Clerk's withdrawal or "
-                    f'redaction of it (<a href="{LIMITATIONS_9}">LIMITATIONS.md §9</a>). Where a '
-                    "later read found the Clerk serving a different file, the register records "
-                    "both files' fingerprints and which rows read otherwise, never what they say."
+                    "The Clerk's own copy, which the register links to and keeps no copy of. A "
+                    "document can carry the names of private people, and a kept copy would "
+                    "outlast the Clerk's withdrawal or redaction of it; a private name a filer "
+                    "wrote into a report's lines stays bound to that report and the Clerk's own "
+                    f'copy, and is on no other page (<a href="{LIMITATIONS_9}">LIMITATIONS.md '
+                    "§9</a>). Keeping no document is the register's own practice, decided at the "
+                    f'Council\'s third reading of this change (<a href="{NEXT_D4}">NEXT.md '
+                    "D.4</a> carries what the doctrine should say). Where a later read found the "
+                    "Clerk serving a different file, the register records both files' "
+                    "fingerprints and which rows read otherwise, never what they say."
                 ),
             ),
             (
@@ -1848,12 +1877,14 @@ def quiet_words(sworn: str | None = None) -> str:
 def how_attributed(filing: dict, changes: dict[str, list[dict]] | None = None) -> str:
     """By the name on the form, by the document's own header, by a person's decision, or by
     the maintainer's correction that moved it here from another officeholder (the Council's
-    third reading of S.1b, Seats B, F and G)."""
+    third reading of S.1b, Seats B, F and G). What attributed a row is read from the row's own
+    words, never from whether its document was read (the fourth reading, Seats C, E and G)."""
     if moved_here((changes or {}).get(filing["id"], []), filing["officeholder_id"]):
         return "correction"
-    if (filing.get("notes") or "").startswith(BY_HEADER):
+    notes = filing.get("notes") or ""
+    if notes.startswith(BY_HEADER):
         return "document"
-    if filing.get("extraction_confidence") == "manual":
+    if notes.startswith(BY_DECISION):
         return "decision"
     return "name"
 
@@ -1882,19 +1913,29 @@ def checks_section(
     signal_line: str = "",
     until: str = "",
     listings: str = "",
+    changes: dict[str, list[dict]] | None = None,
 ) -> str:
     """What the register can and cannot check here. Identical in shape for everyone."""
     roster_read = holder.get("source", {}).get("retrieved_at", "")[:10]
     n = len(filings)
     if n:
-        by_header = sum(1 for f in filings if how_attributed(f) == "document")
-        route = (
-            f", {by_header} of them by the document's own header: the index writes the name "
-            "in another form, and the Clerk's document prints Status Member at this seat with "
-            "this Filing ID"
-            if by_header
-            else ""
-        )
+        # Counted as the How column says it, a moved report as the correction that moved it,
+        # never as the header of a document that printed another seat (the Council's fourth
+        # reading of S.1b, Seat B), and a decided report as a decision (Seats C, E and G).
+        how = [how_attributed(f, changes) for f in filings]
+        clauses = []
+        if how.count("document"):
+            clauses.append(
+                f"{how.count('document')} of them by the document's own header: the index writes "
+                "the name in another form, and the Clerk's document prints Status Member at this "
+                "seat with this Filing ID"
+            )
+        if how.count("decision"):
+            clauses.append(
+                f"{how.count('decision')}{'' if clauses else ' of them'} by the maintainer's "
+                "recorded decision, which cites its evidence"
+            )
+        route = ", " + "; ".join(clauses) if clauses else ""
         index_line = (
             f"<b>in the register</b> · {n} {plural(n, 'row', 'rows')} of the Clerk's "
             f"{ERA['year']} index attributed to this officeholder{route}."
@@ -2052,7 +2093,7 @@ def change_notes(history: list[dict], holder_id: str = "") -> str:
                 f"one the register first read, and {differs_words(c)}; the Clerk does not say "
                 "why. The rows below are from the file first read. The register keeps neither "
                 "file, because a filed document can carry the names of private people "
-                f'(<a href="{LIMITATIONS_9}">LIMITATIONS.md §9</a>); the change row names each '
+                f'(<a href="#how-to-read">the document</a>); the change row names each '
                 "by its fingerprint"
             )
             words = "the Clerk's copy"
@@ -2093,9 +2134,10 @@ def change_notes(history: list[dict], holder_id: str = "") -> str:
             )
         elif "was_sha256" in c:
             what = (
-                f"Corrected by the maintainer on {when(c)}: {field}, the filer's own text; the "
-                "register keeps a fingerprint of what it said, never the text. "
-                f"{esc(c.get('because', ''))}"
+                f"Corrected by the maintainer on {when(c)}: {field}, the filer's own text. The "
+                "correction keeps a fingerprint of what it said, not the text; "
+                f"{earlier_builds(c)} carry the line as filed, and every sealed build stays in "
+                f"this repository's history. {esc(c.get('because', ''))}"
             )
         else:
             what = (
@@ -2630,7 +2672,7 @@ def render_officeholder(
     )
     body = (
         f'{head}\n<main id="main">\n{REQUIRES}\n'
-        f"{checks_section(holder, filings, held_here, check_line, until, listings)}\n"
+        f"{checks_section(holder, filings, held_here, check_line, until, listings, changes)}\n"
         f"{filings_section(filings, held_here, changes, until, moved_away, holder['id'], sworn)}\n"
         f"{transactions_section(filings, transactions or [], held_reports, changes)}\n"
         f"{section}\n"
@@ -2846,11 +2888,14 @@ def state_of_record(
     voting = sum(1 for o in offices if o.get("title") == REPRESENTATIVE)
     delegates = sum(1 for o in offices if o.get("title") == "Delegate")
     commissioners = sum(1 for o in offices if o.get("title") == "Resident Commissioner")
-    listed_ids = {h["id"] for h in holders} - set(not_listed(changes, "officeholders"))
-    with_row = len({f["officeholder_id"] for f in filings} & listed_ids)
+    # Over every officeholder the register holds, a Member the roster stopped listing among
+    # them, as the sealed sentence counts (the Council's fourth reading of S.1b, Seat E).
+    held_ids = {h["id"] for h in holders}
+    with_row = len({f["officeholder_id"] for f in filings} & held_ids)
     matched = len(filings)
     read, scanned = documents_read(filings)
-    by_header = sum(1 for f in filings if how_attributed(f) == "document")
+    how = [how_attributed(f, changes) for f in filings]
+    by_header, by_decision = how.count("document"), how.count("decision")
     if isinstance(at_seat_total, dict):
         held, shut, at_seat_total = (
             at_seat_total["waits"],
@@ -2910,11 +2955,18 @@ def state_of_record(
         f"<dt>{seats:,}</dt><dd>seats in the House in {esc(congress_words())}{nonvoting}; "
         f"{filled:,} filled and {seats - filled:,} vacant on the Clerk's roster read "
         f"{esc(ERA['roster_read'])}{bar(filled, seats)}</dd>\n"
-        f"<dt>{with_row:,}</dt><dd>of those {filled:,} officeholders have at least one row of "
-        f"the Clerk's {year} index attributed to them{bar(with_row, filled)}</dd>\n"
+        f"<dt>{with_row:,}</dt><dd>of the {len(held_ids):,} officeholders the register holds "
+        f"for {esc(congress_words())} have at least one row of the Clerk's {year} index "
+        f"attributed to them{bar(with_row, len(held_ids))}</dd>\n"
         f"<dt>{matched:,}</dt><dd>index rows the register holds, attributed and each linked to "
         f"the Clerk's own document; {by_header:,} of them by the document's own header where "
-        "the index wrote the name in another form</dd>\n"
+        "the index wrote the name in another form"
+        + (
+            f"; {by_decision:,} by the maintainer's recorded decision, which cites its evidence"
+            if by_decision
+            else ""
+        )
+        + "</dd>\n"
         f"<dt>{read:,}</dt><dd>of those {matched:,} documents read by the register so far, each "
         f"checked against the seat and filing ID printed inside it{scanned_clause(scanned)}; "
         f"the links open the Clerk's copies{bar(read, matched)}</dd>\n"
@@ -3585,6 +3637,10 @@ def main(argv: list[str] | None = None) -> int:
     signals, findings, signal_runs, outcomes_by = load_signals(root)
     LEDGER.clear()
     LEDGER.extend(findings)
+    DECIDED.clear()
+    DECIDED.update(
+        {f["id"]: m.group(1) for f in filings if (m := DECIDED_ON.match(f.get("notes") or ""))}
+    )
     filing_of = {f["id"]: f for f in filings}
     moved_away: dict[str, list[tuple[dict, dict]]] = {}
     for row_id, history in changes.items():
