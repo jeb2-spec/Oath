@@ -2301,7 +2301,11 @@ def test_the_landing_shows_the_house_at_a_glance_and_names_no_one():
         found,
     )
     glance = between(page, '<section class="glance" id="glance">', "</section>")
-    assert "lists 1 transaction report" in glance and "attributed to 1 member" in glance
+    assert "One square for each of the 1 transaction report" in glance
+    assert "attributes to 1 member" in glance
+    assert "index lists" not in glance, (
+        "the strip gave the chamber's total; this says what became of it"
+    )
     assert glance.count('class="sq s-after"') == 2, "one in the squares, one in the key"
     assert "officeholders/" not in glance, "no square and no sentence links to a person"
     assert 'href="signals/stock-act-ptr-after-deadline/v1.html">the 1 member, in seat order' in (
@@ -2317,7 +2321,6 @@ def test_the_landing_shows_the_house_at_a_glance_and_names_no_one():
     assert (
         page.index('id="find"')
         < page.index("How a stock trade becomes a public record")
-        < page.index("Every one of them is on this page")
         < page.index('id="glance"')
         < page.index('id="narrows"')
         < page.index("What every member swore")
@@ -2364,7 +2367,7 @@ def test_the_strip_teaches_the_marks_and_draws_the_process_never_a_person():
         assert render.KEY_MARKS[mark] in strip, mark
     assert "officeholders/" not in strip and verdict_words(strip) == []
     assert "it does not ask anyone to stop trading" in strip
-    assert "lists 2 of these reports. On 1 the register found no Filing ID line to read" in strip, (
+    assert "lists 2 of these reports. On 1 of them the register found no Filing ID line" in strip, (
         "never a physical fact about a document the register only failed to read (Seat G)"
     )
     assert page.index('id="how"') < page.index('id="glance"')

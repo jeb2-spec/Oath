@@ -3766,10 +3766,9 @@ def tile_map(offices: list[dict]) -> str:
     )
     return (
         f'<section class="finder" id="find">\n<h2>{esc(heading)}</h2>\n'
-        '<p class="quiet">Choose your state. Every square is the same size on purpose; the '
-        "number is its House seats, a fact about the office. Dashed: seats without a floor vote. "
-        f'Not sure of your district? <a href="{HOUSE_FINDER}">The '
-        "House's own finder</a> takes a ZIP code.</p>\n"
+        '<p class="quiet">Every square is the same size on purpose; the number is its House '
+        "seats. Dashed: seats with no floor vote. Not sure of your district? "
+        f'<a href="{HOUSE_FINDER}">The House\'s own finder</a> takes a ZIP code.</p>\n'
         f'<div class="tiles" role="navigation" aria-label="States">{"".join(tiles)}</div>\n'
         "</section>"
     )
@@ -4145,11 +4144,10 @@ def strip_section(unread: int, total: int, year: int) -> str:
             f"<p>{key_mark(mark)} {esc(words)}</p></li>"
         )
     paper = (
-        f" On {unread:,} the register found no Filing ID line to read, so it read nothing "
-        "from them: a limit of the register, not a fact about what was filed. Every one of them is "
-        "on this page, one square each; those are the outlines."
+        f" On {unread:,} of them the register found no Filing ID line, so it read nothing from "
+        "them: a limit of the register, not a fact about what was filed."
         if unread
-        else " Every one of them is on this page, one square each."
+        else ""
     )
     return (
         '<section class="howto" id="how">\n<h2><span class="tag">How a stock trade becomes a '
@@ -4439,10 +4437,11 @@ def notice_section(transactions: list[dict], filings: list[dict]) -> str:
     return (
         '<section class="noticeclock" id="notice">\n<h2><span class="tag">The one date the filer '
         "writes</span></h2>\n"
-        '<p class="glance">Every trade on these reports carries a notice date: the day the member '
-        "says they learned of it. It is the filer's own entry, and it is the only date that can "
-        "move the deadline, by at most 15 days. Past 45 days after the trade, the deadline no "
-        "longer waits for it.</p>\n"
+        f'<p class="glance">On {past["trades"]:,} of these trades the notice date the report '
+        "prints falls more than 45 days after the trade itself, so, as the dates are printed, the "
+        "deadline had passed before the member says they learned of it. The notice date is the "
+        "filer's own entry and the only date that can move a deadline, by at most 15 days; past "
+        "45 days after the trade it no longer waits for one.</p>\n"
         '<figure class="noticeclock">\n'
         + notice_chart(facts["days"])
         + f"\n<figcaption>All {total:,} trades on the transaction reports the register has read, "
@@ -4457,8 +4456,7 @@ def notice_section(transactions: list[dict], filings: list[dict]) -> str:
         "notices printed the same day as the trade or up to 45 days after it "
         f"({b['same']['trades']:,} the same day)</li>"
         f"<li>{swatch.format('past')} <b>{past['trades']:,}</b> printed more than 45 days after "
-        f"the trade, so, as the dates are printed, the deadline had already passed when the notice "
-        f"came: {trio(past)}."
+        f"the trade, the ones this section opens with: {trio(past)}."
         f"{spouse}</li>"
         f"<li>{swatch.format('before')} <b>{b['before']['trades']:,}</b> printed before the "
         f"trade itself, dates that cannot both be right: {trio(b['before'])}.</li></ul>\n"
@@ -4678,9 +4676,9 @@ def glance_section(
         n = len(states)
         first, last = states[0][0], states[-1][0]
         parts.append(
-            f'<p class="glance">The Clerk\'s {ERA["year"]} index lists {n:,} '
+            f'<p class="glance">One square for each of the {n:,} '
             f"{plural(n, one, many)} "
-            f"(reports of trades in stocks, bonds and other securities) attributed to {members:,} "
+            f"the Clerk's {ERA['year']} index attributes to {members:,} "
             f"{plural(members, 'member', 'members')}. The register compared {checked:,} of them "
             f"against {words['against']}, and the Clerk's index dates {counts['after']:,} of "
             "those after it, for at least one trade compared.</p>\n"
@@ -5310,7 +5308,10 @@ def render_index(
         '<section class="door" id="more">\n<h2>Where to go next</h2>\n'
         f'<div><p><a href="{SEATS_PAGE}">Every seat in the register</a></p><p>All '
         f"{len(offices)} seats, in seat order; each name is a Member's page.</p></div>\n"
-        f"<div><p>{example}</p><p>One page in full, first in seat order: every report the "
+        # The name goes in the card's body and never in its heading. A member's name set as a
+        # headline on the front door invites the question the frame exists to answer, and seat
+        # order is a reason a reader should read before they read the name, not after.
+        f"<div><p>Read one page in full</p><p>{example}, first in seat order: every report the "
         "register attributes to them, every trade, every date.</p></div>\n"
         f'<div><p><a href="{RECORD_PAGE}">How this register was built</a></p><p>What this build '
         "holds, what it could not read, and how to get a fact here corrected.</p></div>\n"
