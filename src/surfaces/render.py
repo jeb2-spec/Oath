@@ -94,6 +94,11 @@ STANDARD_LINKS = {
 }
 ASSET_LEGEND = "https://fd.house.gov/reference/asset-type-codes.aspx"
 LIMITATIONS_9 = REPO + "LIMITATIONS.md#9-private-citizens-are-out-of-scope"
+# The route BYLAWS §6 promises a subject, which no page named until now: the correction form and
+# the pull request, both of which already existed, and neither of which a person reading about
+# themselves could find (the Council's second reading of the built answer, Seat B).
+CORRECTION_FORM = "https://github.com/jeb2-spec/Oath/issues/new?template=correction.yml"
+SECURITY_MD = REPO + "SECURITY.md"
 # Where the course carries what the sealed doctrine should say about a filed document the
 # register keeps no copy of: EVIDENCE §7 says the register may keep the bytes, and INVARIANTS
 # §16 plans a bundle that holds them, so the practice cites the decision, not a section that
@@ -413,6 +418,15 @@ dl.narrows dd { margin: 0; }
   dl.narrows { grid-template-columns: 1fr; gap: .1rem; }
   dl.narrows dt { text-align: left; }
   dl.narrows dd { margin: 0 0 .5rem; }
+}
+/* the route a person named here takes to dispute a fact, in the page's own terms style */
+section.disputes dl { display: grid; grid-template-columns: minmax(12rem, 18rem) 1fr;
+                      gap: .45rem 1.1rem; margin: .6rem 0 0; }
+section.disputes dt { font-weight: 600; }
+section.disputes dd { margin: 0; }
+@media (max-width: 46rem) {
+  section.disputes dl { grid-template-columns: 1fr; gap: .1rem; }
+  section.disputes dd { margin: 0 0 .7rem; }
 }
 /* the reports as squares, the same on the landing and on a person's page */
 svg.squares { display: block; max-width: 100%; height: auto; margin: .3rem 0 .4rem; }
@@ -1950,6 +1964,86 @@ class Raw(str):
     """A glossary entry that carries its own links; every other entry is escaped."""
 
 
+def disputes_section(person: bool) -> str:
+    """How a person named here disputes a fact about themselves, on every page.
+
+    BYLAWS §6 promises a subject two routes and describes them in detail: a correction where a row
+    states a fact incorrectly, and a supersession where a later primary filing shows the condition
+    addressed. `.github/ISSUE_TEMPLATE/correction.yml` has asked for exactly what the bylaw requires
+    since the founding. Neither was named on any surface, so a person reading an adverse sentence
+    about themselves had no way to reach either, and the promise was one the pages broke (the
+    Council's second reading of the built answer, Seat B).
+
+    It is a section rather than a line in the glossary, because a person disputing a fact about
+    themselves should not have to find the route in a list of terms, and the answer links it.
+
+    Every line states what the bylaw states, and the register promises no outcome: a correction
+    needs a primary source, as every row here does, and the maintainer decides.
+    """
+    who = (
+        "Read as the officeholder this page names, or as anyone whose name a filer wrote into a "
+        "report's lines: there is a route, it is the same one for everybody, and it runs in the "
+        "open."
+        if person
+        else "The same route for everyone named in this register, and for anyone whose name a "
+        "filer wrote into a report's lines."
+    )
+    rows = [
+        (
+            f'<a href="{CORRECTION_FORM}">A row states a fact incorrectly</a>',
+            "Wrong person, wrong filing, wrong asset, wrong date, wrong amount. Name the row, say "
+            "what is wrong, and cite the primary source that shows it: a claim with no primary "
+            "source cannot enter the register, which is the rule that protects every other row "
+            "here too. The form asks for nothing else, and anyone may open it on a subject's "
+            f'behalf (<a href="{BYLAWS_6}">BYLAWS.md §6</a>).',
+        ),
+        (
+            "A later filing shows the condition addressed",
+            "Point to the later primary-source filing. A supersession row cites it and says in one "
+            "sentence what changed. The original stays, the supersession stays, and a reader sees "
+            "both: the register shows a change rather than replacing the record with it "
+            f'(<a href="{BYLAWS_6}">§6</a>).',
+        ),
+        (
+            "What a correction does not do",
+            "It does not delete the original, hide the condition that fired when it fired, or "
+            f'alter the signal. Facts stay and change is shown (<a href="{CHARTER}">the Charter\'s '
+            "fifth vow</a>). Where one moves a filer's own text, the register keeps a fingerprint "
+            "of what the line said and not the text, and the builds sealed before it still carry "
+            "the line, because every sealed build stays in this repository's history.",
+        ),
+        (
+            "Nothing is honoured off the record",
+            # Never "from any party": the word must not appear on an officeholder's page at all,
+            # whatever sense it carries, and a test pins that (the reading of P.1, Seat A).
+            "The maintainer acts on no private request from anyone, which cuts both ways and is "
+            "meant to: nothing is quietly removed, and nothing is quietly added. Every change is a "
+            f'row a reader can see, with its evidence and its date (<a href="{BYLAWS_6}">§6</a>).',
+        ),
+        (
+            "What the register cannot do",
+            "It cannot change what was filed. Only the filer can, by amending the report with the "
+            "Clerk, and the register then reads what the Clerk serves. It does not decide whether "
+            "a report was late: that is the House Committee on Ethics's, and the register sees "
+            "none of its decisions. Where the Clerk withdraws a filing, the row says so with the "
+            "date and keeps displaying, so a citation to it still resolves.",
+        ),
+        (
+            f'<a href="{SECURITY_MD}">Something that should not be public at all</a>',
+            "A private person's name, an address, an account number. Report it privately, by the "
+            "route SECURITY.md gives, rather than on the record.",
+        ),
+    ]
+    listed = "\n".join(f"<dt>{term}</dt><dd>{body}</dd>" for term, body in rows)
+    return (
+        '<section id="disputes" class="disputes">\n'
+        "<h2>If a fact here is wrong</h2>\n"
+        f"<p>{who}</p>\n"
+        f"<dl>\n{listed}\n</dl>\n"
+        "</section>"
+    )
+
+
 def how_to_read(person: bool) -> str:
     rows = [
         (
@@ -3364,6 +3458,7 @@ def answer_section(
             '<a href="#signals">Report by report</a>',
             '<a href="#transactions">The record</a>',
             '<a href="#requires">The oath and the rules</a>',
+            '<a href="#disputes">If a fact here is wrong</a>',
         ]
     )
     return (
@@ -3565,6 +3660,7 @@ def render_officeholder(
         f"{filings_section(filings, held_here, changes, until, moved_away, holder['id'], sworn)}\n"
         f"{transactions_section(filings, transactions or [], held_reports, changes, fired)}\n"
         f"{REQUIRES}\n"
+        f"{disputes_section(True)}\n"
         f"{how_to_read(True)}\n"
         "</main>\n"
         f"{footer(meta, home=False)}"
@@ -4891,7 +4987,8 @@ def render_index(
     body = (
         f'{head}\n<main id="main">\n{how}\n{glance}\n{notice}\n{door}\n'
         f"{tile_map(offices)}\n{oath}\n"
-        f"{record}\n{table}\n{how_to_read(False)}\n</main>\n{footer(meta, home=True)}"
+        f"{record}\n{table}\n{disputes_section(False)}\n{how_to_read(False)}\n"
+        f"</main>\n{footer(meta, home=True)}"
     )
     return page("Every seat in the register", body)
 
