@@ -331,19 +331,40 @@ section.answer p { max-width: 38rem; margin: 0 0 .6rem; }
 section.answer p.quiet { font-size: .95rem; }
 nav.jump { font-size: .9rem; margin: .2rem 0 .5rem; line-height: 1.7; }
 p.check { font-size: .85rem; color: var(--ink-2); }
+span.either { color: var(--ink-2); }
+p.rule { font-size: .9rem; color: var(--ink-2); max-width: 38rem; margin: 0 0 .5rem; }
+/* the house at a glance */
+p.glance { font-size: 1.12rem; line-height: 1.5; max-width: 38rem; margin: 0 0 .5rem; }
+figure.glance { margin: .5rem 0 .2rem; }
+figure.glance svg.squares { width: 100%; max-width: 30rem; }
+/* the reports as squares, the same on the landing and on a person's page */
+svg.squares { display: block; max-width: 100%; height: auto; margin: .3rem 0 .4rem; }
+.sq.s-after { fill: var(--ink); }
+.sq.s-checked { fill: var(--ink-2); fill-opacity: .38; }
+.sq.s-unchecked { fill: none; stroke: var(--ink-2); stroke-width: .8; stroke-dasharray: 1.5 1.5; }
+svg.squares a:focus-visible rect { stroke: var(--link); stroke-width: 2.5; }
+div.reportline { display: flex; flex-wrap: wrap; align-items: center; gap: .2rem 1rem;
+                 margin: 0 0 .7rem; }
+div.reportline svg.squares { margin: 0; }
+ul.squarekey { list-style: none; margin: .2rem 0 .6rem; padding: 0; font-size: .88rem;
+               color: var(--ink-2); }
+ul.squarekey.short { display: flex; flex-wrap: wrap; gap: .1rem 1rem; margin: 0; }
+ul.squarekey b { font-family: var(--mono); font-weight: normal; color: var(--ink); }
+ul.squarekey svg.key { width: .85em; height: .85em; vertical-align: -.08em; }
 /* a Finding's dates on a line, drawn from its rows; inked from the page's own tokens */
 figure.dates { margin: .9rem 0 .4rem; }
 figure.dates > svg { width: 100%; max-width: 34rem; height: auto; display: block; }
 figure.dates figcaption { max-width: 36rem; margin-top: .35rem; }
 .dates .window, .key .window { stroke: var(--ink-2); stroke-width: 1.4; }
-.dates .after, .key .after { fill: var(--ink); opacity: .72; }
+.dates .after, .key .after { fill: var(--ink-2); opacity: .55; }
 .dates .deadline, .key .deadline { stroke: var(--ink); stroke-width: 1.6; }
-.dates .next, .key .next { stroke: var(--ink); stroke-width: 1.2; stroke-dasharray: 1.6 1.6; }
+.dates .next, .key .next { fill: var(--paper); stroke: var(--ink); stroke-width: 1.3; }
 .dates .trade, .key .trade { fill: var(--ink); }
 .dates .notice, .key .notice { fill: var(--paper); stroke: var(--ink); stroke-width: 1.2; }
 .dates .filed { stroke: var(--ink); stroke-width: 1.2; }
 .dates .axis { stroke: var(--ink-2); stroke-width: 1; }
-.dates text { font-family: var(--mono); font-size: 10px; fill: var(--ink-2); }
+.dates text { font-family: var(--mono); font-size: 12px; fill: var(--ink-2); }
+figure.dates > svg { direction: ltr; }
 .dates text.days { fill: var(--ink); }
 svg.key { width: 1.1em; height: .8em; vertical-align: -.05em; overflow: visible; }
 details { margin: .2rem 0 .8rem; }
@@ -379,6 +400,7 @@ code { font-family: var(--mono); font-size: .88em; overflow-wrap: anywhere; }
   caption { position: sticky; left: 0; max-width: calc(100vw - 2rem); }
   .masthead { grid-template-columns: 1fr; }
   figure.seal { width: auto; display: flex; gap: .8rem; align-items: center; }
+  header .masthead figure.seal figcaption { display: none; }
   figure.seal svg { width: 64px; height: 64px; margin: 0; flex: none; }
   dl.terms, .record dl { grid-template-columns: 1fr; }
   .record dt { text-align: left; }
@@ -389,6 +411,7 @@ code { font-family: var(--mono); font-size: .88em; overflow-wrap: anywhere; }
   figure.seal { width: 28mm; } figure.seal svg { width: 28mm; height: 28mm; }
   table, figure { break-inside: avoid; }
   details::details-content { content-visibility: visible; display: block; }
+  nav.jump { display: none; }
 }
 """
 
@@ -1369,12 +1392,12 @@ def finding_groups(finding: dict) -> list[tuple[tuple, int]]:
 # The figure of a Finding's dates. The viewBox is about a phone's width, so a phone draws it
 # near one to one and its dates stay legible at 360px; a wider screen scales it up to the
 # column's width. The right margin holds the count of days after, the only number in a line.
-FIG_W, FIG_LEFT, FIG_RIGHT, FIG_TOP, FIG_ROW, FIG_AXIS = 360, 8, 40, 10, 18, 28
+FIG_W, FIG_LEFT, FIG_RIGHT, FIG_TOP, FIG_ROW, FIG_AXIS = 360, 8, 40, 10, 18, 32
 KEY_MARKS = {
     "trade": '<circle class="trade" cx="7" cy="5" r="2.7"/>',
     "notice": '<path class="notice" d="M7 .4 11.6 5 7 9.6 2.4 5Z"/>',
     "deadline": '<line class="deadline" x1="7" y1="0.5" x2="7" y2="9.5"/>',
-    "next": '<line class="next" x1="7" y1="0.5" x2="7" y2="9.5"/>',
+    "next": '<circle class="next" cx="7" cy="5" r="3.4"/>',
     "after": '<rect class="after" x="1" y="2" width="12" height="6"/>',
 }
 
@@ -1402,6 +1425,8 @@ def dates_figure(finding: dict) -> str:
         marks += [date.fromisoformat(traded), date.fromisoformat(deadline)]
         if notified and notification == "applied":
             marks.append(date.fromisoformat(notified))
+        if key[5] and key[6]:
+            marks.append(date.fromisoformat(key[6]))
     start, end = min(marks + [filed]), max(marks + [filed])
     span = max((end - start).days, 1)
     inner = FIG_W - FIG_LEFT - FIG_RIGHT
@@ -1414,7 +1439,7 @@ def dates_figure(finding: dict) -> str:
 
     rows_end = FIG_TOP + len(groups) * FIG_ROW
     height = rows_end + FIG_AXIS
-    parts = []
+    parts, rings, spoken = [], [], []
     for i, (key, _n) in enumerate(groups):
         traded, notified, notification, deadline = key[0], key[1], key[2], key[3]
         falls_on, next_day, days = key[5], key[6], key[9]
@@ -1427,10 +1452,9 @@ def dates_figure(finding: dict) -> str:
             'height="6"/>'
         )
         if falls_on and next_day:
-            b = x(date.fromisoformat(next_day))
-            parts.append(
-                f'<line class="next" x1="{f(b)}" y1="{f(y - 6)}" x2="{f(b)}" y2="{f(y + 6)}"/>'
-            )
+            # Drawn last, on top of the upright line, so it shows exactly where it decides.
+            rings.append((x(date.fromisoformat(next_day)), y))
+        spoken.append(f"{days:,}")
         parts.append(
             f'<line class="deadline" x1="{f(d)}" y1="{f(y - 6)}" x2="{f(d)}" y2="{f(y + 6)}"/>'
         )
@@ -1444,7 +1468,7 @@ def dates_figure(finding: dict) -> str:
             )
         parts.append(f'<circle class="trade" cx="{f(t)}" cy="{f(y)}" r="2.7"/>')
         parts.append(
-            f'<text class="days" x="{f(FIG_W - FIG_RIGHT + 7)}" y="{f(y + 3.5)}">{days:,}</text>'
+            f'<text class="days" x="{f(FIG_W - FIG_RIGHT + 12)}" y="{f(y + 4)}">{days:,}</text>'
         )
     # The axis: the first of each month as a tick, the two ends as dates.
     axis_y = rows_end + 5
@@ -1462,36 +1486,48 @@ def dates_figure(finding: dict) -> str:
         f'<line class="filed" x1="{f(right)}" y1="{f(FIG_TOP - 4)}" x2="{f(right)}" '
         f'y2="{f(axis_y + 4)}"/>'
     )
+    parts += [f'<circle class="next" cx="{f(rx)}" cy="{f(ry)}" r="3.6"/>' for rx, ry in rings]
     parts.append(
         f'<line class="axis" x1="{f(FIG_LEFT)}" y1="{f(axis_y)}" x2="{f(right)}" y2="{f(axis_y)}"/>'
     )
     parts += ticks
     parts.append(
-        f'<text x="{f(FIG_LEFT)}" y="{f(axis_y + 16)}">{esc(start.isoformat())}</text>'
-        f'<text x="{f(right)}" y="{f(axis_y + 16)}" text-anchor="end">'
+        f'<text x="{f(FIG_LEFT)}" y="{f(axis_y + 18)}">{esc(start.isoformat())}</text>'
+        f'<text x="{f(right)}" y="{f(axis_y + 18)}" text-anchor="end">'
         f"{esc(filed.isoformat())}</text>"
     )
-    doc_id = finding["producing_filings"][0].rsplit(":", 1)[1]
     days_across = (filed - start).days
     caption = (
         "The dates this Finding rests on, to scale in days, one line for each row of the table "
         f"below and in the same order: the transaction (a dot {key_mark('trade')}), the date the "
         f"report says the filer was notified (a diamond {key_mark('notice')}), the deadline the "
-        f"rule sets (a tick {key_mark('deadline')}, and a dotted tick {key_mark('next')} at the "
-        "first business day after a deadline that falls on a weekend or holiday), and the days "
+        f"rule sets (a tick {key_mark('deadline')}, and a ring {key_mark('next')} at the first "
+        "business day after a deadline that falls on a weekend or holiday), and the days "
         f"from the deadline to the date the Clerk's index gives the report (a bar "
         f"{key_mark('after')}, its count at the end of the line). The upright line is that date, "
         f"{esc(filed.isoformat())}; the left edge is {esc(start.isoformat())}, {days_across:,} "
         f"{plural(days_across, 'day', 'days')} earlier; a tick on the axis marks the first of "
-        "each month. The figure shows a span of days. It does not show why the span is what it "
+        "each month. "
+        + (
+            "Where a ring sits on the upright line, the report is dated on that first business "
+            "day. "
+            if any(abs(rx - x(filed)) < 0.05 for rx, _ in rings)
+            else ""
+        )
+        + "The figure shows a span of days. It does not show why the span is what it "
         "is, whether notice reached the filer when the report says, or anything the House "
         "Committee on Ethics has determined."
     )
+    label = (
+        f"{len(groups):,} {plural(len(groups), 'line', 'lines')}; days from the deadline to the "
+        f"report's date, {filed.isoformat()}: {', '.join(spoken)}"
+    )
+    cap = "dates-" + re.sub(r"[^a-z0-9]+", "-", finding["id"].lower()).strip("-")
     return (
-        f'<figure class="dates">\n<svg viewBox="0 0 {FIG_W} {f(height)}" role="img" '
-        f'aria-labelledby="dates-{esc(doc_id)}">'
+        f'<figure class="dates">\n<svg viewBox="0 0 {FIG_W} {f(height)}" direction="ltr" '
+        f'role="img" aria-label="{esc(label)}" aria-describedby="{cap}">'
         + "".join(parts)
-        + f'</svg>\n<figcaption id="dates-{esc(doc_id)}">{caption}</figcaption>\n</figure>'
+        + f'</svg>\n<figcaption id="{cap}">{caption}</figcaption>\n</figure>'
     )
 
 
@@ -2737,6 +2773,105 @@ def transactions_section(
     )
 
 
+# ---- the reports as squares: one visual language, from the chamber to the person -----------
+
+SQUARE, SQUARE_GAP, SQUARE_COLUMNS = 10, 2, 30
+SQUARE_WORDS = {
+    "after": (
+        "dated by the Clerk's index after the STOCK Act deadline for at least one trade checked"
+    ),
+    "checked": "checked, and none dated after the deadline",
+    "unchecked": (
+        "not checked: scanned paper the register does not read, or no trade on it that the rule "
+        "reaches (dated before the swearing-in, a kind of asset the rule does not cover, or "
+        "$1,000 or less)"
+    ),
+}
+
+
+def report_states(outcomes: list[dict], findings: list[dict], signal_id: str) -> list[tuple]:
+    """Each report the Signal read or tried to read, in the order the Clerk's index dates them,
+    as (filed_at, filing_id, state): `after` where a current Finding rests on it, `checked` where
+    a row was evaluated and none is after, `unchecked` otherwise. The same numbers the answer
+    states, one report at a time."""
+    fired = {f["producing_filings"][0] for f in fired_now(findings, signal_id)}
+    out = []
+    for o in outcomes:
+        state = "after" if o["filing_id"] in fired else "checked" if o["evaluated"] else "unchecked"
+        out.append((o.get("filed_at") or "", o["filing_id"], state))
+    return sorted(out)
+
+
+def squares(
+    states: list[tuple],
+    label: str,
+    link: bool = False,
+    columns: int = SQUARE_COLUMNS,
+    size: int = SQUARE,
+):
+    """One square per report, left to right in the order filed: filled dark, filled light, or
+    an outline. Inline SVG, inked from the page's tokens; on a person's page each square links
+    to its report. Its words are in `label`, read by a screen reader and a translation alike."""
+    step = size + SQUARE_GAP + (1 if size > SQUARE else 0)
+    cols = min(columns, max(len(states), 1))
+    rows = (len(states) + cols - 1) // cols
+    parts = []
+    for i, (filed, filing_id, state) in enumerate(states):
+        x, y = (i % cols) * step + 1, (i // cols) * step + 1
+        cell = f'<rect class="sq s-{state}" x="{x}" y="{y}" width="{size}" height="{size}"/>'
+        if link:
+            doc = filing_id.rsplit(":", 1)[1]
+            target = f"finding-{doc}" if state == "after" else f"report-{doc}"
+            if state == "after" or state == "checked":
+                cell = f'<a href="#{esc(target)}"><title>{esc(filed)}</title>{cell}</a>'
+            else:
+                cell = f"<g><title>{esc(filed)}</title>{cell}</g>"
+        parts.append(cell)
+    width, height = cols * step + 1, rows * step + 1
+    return (
+        f'<svg class="squares" viewBox="0 0 {width} {height}" width="{width}" height="{height}" '
+        f'role="img" aria-label="{esc(label)}">' + "".join(parts) + "</svg>"
+    )
+
+
+SHORT_WORDS = {
+    "after": "dated after the deadline",
+    "checked": "checked, none after",
+    "unchecked": "not checked",
+}
+
+
+def square_key(counts: dict[str, int] | None = None) -> str:
+    """The key beside the squares: each state drawn as it is drawn there, with its words, and on
+    the landing its count. Every state is named, even one with no report, so every key has the
+    same three lines on every page."""
+    lines = []
+    for state in ("after", "checked", "unchecked"):
+        swatch = (
+            '<svg class="key" viewBox="0 0 12 12" aria-hidden="true" focusable="false">'
+            f'<rect class="sq s-{state}" x="1" y="1" width="10" height="10"/></svg>'
+        )
+        words = (
+            f"<b>{counts.get(state, 0):,}</b> {esc(SQUARE_WORDS[state])}"
+            if counts is not None
+            else esc(SHORT_WORDS[state])
+        )
+        lines.append(f"<li>{swatch} {words}</li>")
+    return (
+        f'<ul class="squarekey{"" if counts is not None else " short"}">' + "".join(lines) + "</ul>"
+    )
+
+
+def square_label(states: list[tuple], noun: tuple[str, str]) -> str:
+    counts = {k: sum(1 for s in states if s[2] == k) for k in SQUARE_WORDS}
+    n = len(states)
+    return (
+        f"{n:,} {plural(n, *noun)}, one square each in the order filed: "
+        + "; ".join(f"{counts[k]:,} {SQUARE_WORDS[k]}" for k in SQUARE_WORDS)
+        + "."
+    )
+
+
 # What each Signal checks, in the words the answer at the top of a page uses. A Signal with no
 # entry here is named in the answer by its checklist line, never summarised in words written
 # for another Signal.
@@ -2744,12 +2879,40 @@ ANSWER_WORDS = {
     "stock-act-ptr-after-deadline": {
         "reports": ("transaction report", "transaction reports"),
         "against": f'the STOCK Act deadline (<a href="{USC_13105}">5 U.S.C. § 13105(l)</a>)',
+        "rule": (
+            "The rule: a member reports each trade over $1,000 within 30 days of being notified "
+            "of it, and no later than 45 days after it. The law requires trades reported; it does "
+            "not prohibit them."
+        ),
     },
 }
 EITHER_WAY = (
-    "Either way, this is not a determination: whether a report was filed on time is for the "
-    "House Committee on Ethics to decide, and the register sees none of its decisions."
+    "This is not a ruling by anyone: what the deadline means for a filer is for the House "
+    "Committee on Ethics to decide, and the register sees none of its decisions. " + FRAME
 )
+
+
+def finding_facts(findings: list[dict], signal_id: str) -> dict:
+    """What the current Findings' own rows say that decides them, for the answer: the least and
+    most days after the deadline; how many Findings rest only on deadlines that fell on a weekend
+    or holiday, with the report dated by the next business day; and how many print a notice date
+    after the 45-day limit had passed (the Council's reading of P.1, Seats A and B)."""
+    current = fired_now(findings, signal_id)
+    days = [r["days_after"] for f in current for r in f["evidence"]["rows"]]
+    weekend = notice = 0
+    for f in current:
+        rows, filed = f["evidence"]["rows"], f["evidence"]["filed_at"]
+        if rows and all(
+            r["deadline_falls_on"] and filed <= (r["first_business_day_after"] or "") for r in rows
+        ):
+            weekend += 1
+        if any(r["notified_after_limit"] for r in rows):
+            notice += 1
+    return {
+        "days": (min(days, default=0), max(days, default=0)),
+        "weekend": weekend,
+        "notice": notice,
+    }
 
 
 def answer_counts(
@@ -2762,7 +2925,8 @@ def answer_counts(
     fired = {f["producing_filings"][0] for f in fired_now(findings, signal_id)}
     read = sum(1 for o in outcomes if o["state"] == "evaluated")
     checked = {o["filing_id"] for o in outcomes if o["evaluated"]} | fired
-    return len(outcomes), read, len(checked), len(fired)
+    attributed = {o["filing_id"] for o in outcomes} | fired
+    return len(attributed), read, len(checked), len(fired)
 
 
 def answer_section(
@@ -2771,6 +2935,7 @@ def answer_section(
     outcomes: dict[str, list[dict]],
     meta: dict,
     held_reports: int = 0,
+    sworn: str | None = None,
 ) -> str:
     """What the register read and what it found, first, in sentences whose shape is the same
     for everyone: the register's own coverage before any result, the result in the same words
@@ -2780,7 +2945,15 @@ def answer_section(
     for signal in signals:
         words = ANSWER_WORDS.get(signal["slug"])
         if words is None:
-            paragraphs.append(signal_check_line([signal], findings, outcomes, held_reports))
+            # A Signal the answer has no words for is named, with its count, and framed; it is
+            # never summarised in words written for another Signal (Seat C).
+            k = len(fired_now(findings, signal["id"]))
+            paragraphs.append(
+                f"<p>{esc(signal['name'])}, version {signal['version']}: "
+                + (f"fired on {k:,} {plural(k, 'report', 'reports')}" if k else "did not fire")
+                + ', said <a href="#signals">below</a>. '
+                + f'<span class="either">{esc(FRAME)}</span></p>'
+            )
             continue
         one, many = words["reports"]
         n, read, checked, fired = answer_counts(
@@ -2790,14 +2963,13 @@ def answer_section(
         if not n:
             text = (
                 f"No {one} in the Clerk's {year} index is attributed to this officeholder, so the "
-                f"register checked none against {words['against']}. That is a fact about the "
-                "register's matching, not a statement that no report was due."
+                f"register checked none against {words['against']}. It says nothing about whether "
+                "this officeholder had anything to report."
             )
-            if held_reports:
+            if sworn and ERA.get("began") and sworn > ERA["began"]:
                 text += (
-                    f" {held_reports:,} {plural(held_reports, one, many)} at this seat under this "
-                    f"surname {plural(held_reports, 'is', 'are')} set aside for the maintainer to "
-                    "decide by hand, and not checked."
+                    f" The Clerk's roster records their swearing-in on {esc(sworn)}, after the "
+                    "Congress's terms began."
                 )
         else:
             text = (
@@ -2805,25 +2977,102 @@ def answer_section(
                 f"officeholder in the Clerk's {year} index and checked {checked:,} against "
                 f"{words['against']}. "
             )
+            unread, empty = n - read, read - min(read, checked)
             if not checked:
                 text += (
-                    "With none checked, the register says nothing here about when a report was "
-                    "filed: that is a fact about what it could read, not about what was filed."
-                )
-            elif fired:
-                text += (
-                    f"Of the {checked:,} checked, the Clerk's index dates {fired:,} after the "
-                    "deadline for at least one of the transactions checked."
+                    "It could check none of them: "
+                    + (
+                        "no trade on them is one the rule reaches. "
+                        if not unread
+                        else f"{plural(unread, 'it is', 'they are')} scanned paper or not yet "
+                        "fetched, which it does not read. "
+                        if not empty
+                        else f"{unread:,} {plural(unread, 'is', 'are')} scanned paper or not "
+                        f"yet fetched, and {empty:,} list no trade the rule reaches. "
+                    )
+                    + "That is a fact about what the register could read, not about what was "
+                    "filed."
                 )
             else:
+                if fired:
+                    facts = finding_facts(findings, signal["id"])
+                    low, high = facts["days"]
+                    span = (
+                        f"{low:,} {plural(low, 'day', 'days')}"
+                        if low == high
+                        else f"{low:,} to {high:,} days"
+                    )
+                    text += (
+                        f"The Clerk's index dates {fired:,} of the {checked:,} "
+                        f"{plural(checked, 'report', 'reports')} checked after the deadline, by "
+                        f"{span}, for at least one trade on {plural(fired, 'it', 'each')}."
+                    )
+                    for count, clause in (
+                        (
+                            facts["weekend"],
+                            "the deadline fell on a weekend or holiday and the report is dated by "
+                            "the next business day; the 2025 form says such a deadline does not "
+                            "move",
+                        ),
+                        (
+                            facts["notice"],
+                            "the notice date printed is more than 45 days after the trade, so the "
+                            "45-day limit had passed before that notice",
+                        ),
+                    ):
+                        if count:
+                            who = (
+                                "that report"
+                                if fired == 1
+                                else f"all {fired:,}"
+                                if count == fired
+                                else f"{count:,} of the {fired:,}"
+                            )
+                            text += f" For {who}, {clause}."
+                else:
+                    text += (
+                        f"The Clerk's index dates none of the {checked:,} "
+                        f"{plural(checked, 'report', 'reports')} checked after the deadline."
+                    )
+                missing = []
+                if unread:
+                    missing.append(f"{unread:,} scanned paper or not yet fetched")
+                if empty:
+                    missing.append(f"{empty:,} with no trade the rule reaches")
+                if missing:
+                    text += f" Not checked: {'; '.join(missing)}."
+            gone = len(withdrawn_now(findings, signal["id"]))
+            if gone:
                 text += (
-                    f"Of the {checked:,} checked, the Clerk's index dates none after the "
-                    "deadline for any of the transactions checked."
+                    f" {gone:,} {plural(gone, 'Finding', 'Findings')} once published here "
+                    f"{plural(gone, 'was', 'were')} withdrawn by the maintainer's correction, "
+                    "said below with the signal."
                 )
-            if checked < n:
-                text += " Why the others were not checked is said with the signal, below."
-        paragraphs.append(f"<p>{text}</p>")
-        paragraphs.append(f'<p class="quiet">{esc(EITHER_WAY)}</p>')
+            if held_reports:
+                text += (
+                    f" {held_reports:,} more {plural(held_reports, one, many)} at this seat under "
+                    f"this surname {plural(held_reports, 'is', 'are')} set aside, not attributed "
+                    "to this officeholder and not checked."
+                )
+        if not n and held_reports:
+            text += (
+                f" {held_reports:,} {plural(held_reports, one, many)} at this seat under this "
+                f"surname {plural(held_reports, 'is', 'are')} set aside, not attributed to this "
+                "officeholder and not checked."
+            )
+        # The result and the sentence that frames it are one paragraph, with the frame inside
+        # it, so no crop of the answer carries the one without the other (Seat D).
+        paragraphs.append(f'<p>{text} <span class="either">{esc(EITHER_WAY)}</span></p>')
+        if n:
+            states = report_states(outcomes.get(signal["id"], []), findings, signal["id"])
+            paragraphs.append(
+                '<div class="reportline">'
+                + squares(states, square_label(states, words["reports"]), link=True, size=16)
+                + square_key()
+                + "</div>"
+            )
+        if words.get("rule"):
+            paragraphs.append(f'<p class="rule">{words["rule"]}</p>')
     if not signals:
         paragraphs.append(
             "<p>No signal is defined in this build, so none can fire, for anyone.</p>"
@@ -2831,18 +3080,20 @@ def answer_section(
     # The same three links on every page, in the same words, whatever the signal found.
     jumps = " · ".join(
         [
-            '<a href="#signals">What the signal read, report by report</a>',
-            '<a href="#transactions">Every transaction, as filed</a>',
-            '<a href="#requires">What this office requires</a>',
+            '<a href="#signals">Report by report</a>',
+            '<a href="#transactions">The record</a>',
+            '<a href="#requires">The oath and the rules</a>',
         ]
     )
     return (
         '<section id="answer" class="answer">\n<h2>What the register found</h2>\n'
         + "\n".join(paragraphs)
         + f'\n<nav class="jump" aria-label="On this page">{jumps}</nav>\n'
-        f'<p class="check">Check it yourself: every report below links to the Clerk\'s own copy, '
+        '<p class="check">Check it yourself: every report on this page links to the Clerk\'s '
+        "own copy, "
         "and every Finding prints the command that regenerates it. This page is rendered from "
-        f"build <code>{esc(build_label(meta))}</code>; <code>python tools/verify.py</code> checks "
+        f'build <code translate="no">{esc(build_label(meta))}</code>; <code translate="no">python '
+        "tools/verify.py</code> checks "
         'that its rows are unchanged since it was sealed (<a href="#verify">more</a>).</p>\n'
         "</section>"
     )
@@ -3008,7 +3259,7 @@ def render_officeholder(
         f'<p class="frame">{esc(FRAME)}</p>\n'
         '<div class="masthead">\n<div>\n'
         '<p class="kicker">Oath · the register</p>\n'
-        f"<h1>{esc(holder['legal_name'])}</h1>\n"
+        f'<h1 translate="no">{esc(holder["legal_name"])}</h1>\n'
         f'<p class="office">{office_line}</p>\n'
         f"{history}"
         "</div>\n"
@@ -3027,7 +3278,7 @@ def render_officeholder(
     fired = {f["producing_filings"][0] for f in fired_now(findings)}
     body = (
         f'{head}\n<main id="main">\n'
-        f"{answer_section(signals, findings, outcomes, meta, held_reports)}\n"
+        f"{answer_section(signals, findings, outcomes, meta, held_reports, sworn)}\n"
         f"{checks_section(holder, filings, held_here, check_line, until, listings, changes)}\n"
         f"{section}\n"
         f"{filings_section(filings, held_here, changes, until, moved_away, holder['id'], sworn)}\n"
@@ -3076,11 +3327,9 @@ def tile_map(offices: list[dict]) -> str:
     )
     return (
         f'<section class="finder" id="find">\n<h2>{esc(heading)}</h2>\n'
-        '<p class="quiet">Choose your state to go to its delegation. Each square is one state, '
-        "placed roughly where it sits, and every square is the same size on purpose. The small "
-        "number is how many House seats the state has, which is a fact about the office and not "
-        "about anyone in it. Dashed squares hold seats without a floor vote: the delegates and "
-        f'the Resident Commissioner. Not sure of your district? <a href="{HOUSE_FINDER}">The '
+        '<p class="quiet">Choose your state. Every square is the same size on purpose; the '
+        "number is its House seats, a fact about the office. Dashed: seats without a floor vote. "
+        f'Not sure of your district? <a href="{HOUSE_FINDER}">The '
         "House's own finder</a> takes a ZIP code.</p>\n"
         f'<div class="tiles" role="navigation" aria-label="States">{"".join(tiles)}</div>\n'
         "</section>"
@@ -3318,6 +3567,8 @@ def state_of_record(
         )
     return (
         '<section class="record" id="record">\n<h2>The state of the record</h2>\n'
+        "<details>\n<summary>Every count this build holds, what the register reads, and what it "
+        "cannot see</summary>\n"
         f'<p class="quiet">What the register holds at build <code>{esc(build_label(meta))}</code>. '
         "Every number here counts rows the register holds or seats of the chamber; none is a "
         "measure of anyone, and nothing here is sorted by anything the register computes about "
@@ -3373,7 +3624,61 @@ def state_of_record(
             else ""
         )
         + f'<p class="quiet">{fresh}The seal fixes exactly this reading.</p>\n'
-        f"{chart}</section>"
+        f"{chart}</details>\n</section>"
+    )
+
+
+def glance_section(
+    signal_runs: list[tuple[dict, dict]],
+    outcomes_all: dict[str, list[dict]],
+    findings: list[dict],
+) -> str:
+    """The House at a glance: one square for every report a Signal read or tried to read, across
+    the whole chamber, in the order filed, and the same three states a person's page draws. No
+    square names anyone and no square links to anyone; the members a Finding rests on are one
+    click away, in seat order, on the Signal's own page (Invariant §13)."""
+    parts = []
+    for signal, _summary in signal_runs:
+        words = ANSWER_WORDS.get(signal["slug"])
+        outcomes = outcomes_all.get(signal["id"], [])
+        if words is None or not outcomes:
+            continue
+        one, many = words["reports"]
+        states = report_states(outcomes, findings, signal["id"])
+        counts = {k: sum(1 for st in states if st[2] == k) for k in SQUARE_WORDS}
+        members = len({o["officeholder_id"] for o in outcomes})
+        named = len({f["officeholder_id"] for f in fired_now(findings, signal["id"])})
+        checked = counts["after"] + counts["checked"]
+        n = len(states)
+        first, last = states[0][0], states[-1][0]
+        parts.append(
+            f'<p class="glance">The Clerk\'s {ERA["year"]} index lists {n:,} '
+            f"{plural(n, one, many)} "
+            f"(reports of trades in stocks, bonds and other securities) attributed to {members:,} "
+            f"{plural(members, 'member', 'members')}. The register checked {checked:,} of them "
+            f"against {words['against']}, and the Clerk's index dates {counts['after']:,} of "
+            "those after it, for at least one trade checked.</p>\n"
+            f'<figure class="glance">\n'
+            + squares(states, square_label(states, words["reports"]))
+            + f"\n<figcaption>One square per report, in the order the Clerk's index dates them, "
+            f"{esc(first)} to {esc(last)}. No square names anyone, and nothing here is sorted by "
+            "anything about a person.</figcaption>\n</figure>\n"
+            + square_key(counts)
+            + f"<p>The {counts['after']:,} dark squares are {counts['after']:,} reports by "
+            f"{named:,} "
+            f"{plural(named, 'member', 'members')}. Each is on that member's page, with the dates "
+            f'it rests on drawn: <a href="{signal_page_path(signal)}">the {named:,} '
+            f"{plural(named, 'member', 'members')}, in seat order</a>. Or find your own "
+            'representative <a href="#find">on the map</a>.</p>\n'
+            f'<p class="quiet">{esc(EITHER_WAY)}</p>\n'
+        )
+    lede = signals_lede(signal_runs).replace('<p class="lede">', "<p>", 1)
+    return (
+        '<section class="glance" id="glance">\n<h2>The House at a glance</h2>\n'
+        + "".join(parts)
+        + "<details>\n<summary>What a signal is, and what it does not say</summary>\n"
+        + lede
+        + "</details>\n</section>"
     )
 
 
@@ -3672,6 +3977,8 @@ def render_index(
     signal_runs: list[tuple[dict, dict]] | None = None,
     reach: dict[str, dict[str, int]] | None = None,
     changes: dict[str, list[dict]] | None = None,
+    outcomes_all: dict[str, list[dict]] | None = None,
+    findings: list[dict] | None = None,
 ) -> str:
     ERA.update(era_of(run, holders))
     # A seat shows who the roster lists. Whom it no longer lists is kept, with every row the
@@ -3777,14 +4084,10 @@ def render_index(
         '<p class="kicker">A public register</p>\n'
         "<h1>Oath</h1>\n"
         f"{ended}"
-        f'<p class="lede">Every seat of the U.S. House in {esc(congress_words(terms=True))} '
-        f"is listed here, with each row of the Clerk's {ERA['year']} filing index the register "
-        "could match to the name on the Clerk's roster, linked to the Clerk's own copy. The "
-        "register draws no conclusion about anyone. It shows what the index lists, when, and "
-        "where to read it yourself.</p>\n"
-        f"{signals_lede(signal_runs or [])}"
-        f'<blockquote class="oath"><p>{esc(OATH)}</p><footer>{OATH_CITE} Every member took it. '
-        "The register sets the record beside it.</footer></blockquote>\n"
+        f'<p class="lede">Every member of the U.S. House in {esc(congress_words(terms=True))} '
+        "swore an oath. This register sets beside it what they filed: each row of the Clerk's "
+        f"{ERA['year']} filing index the register could match to the name on the Clerk's roster, "
+        "linked to the Clerk's own copy. It draws no conclusion about anyone.</p>\n"
         "</div>\n"
         + seal_figure(
             mark,
@@ -3879,9 +4182,15 @@ def render_index(
         changes,
         len(holder_by_seat),
     )
+    oath = (
+        '<section class="sworn">\n<h2>What every member swore</h2>\n'
+        f'<blockquote class="oath"><p>{esc(OATH)}</p><footer>{OATH_CITE} Every member took it. '
+        "The register sets the record beside it.</footer></blockquote>\n</section>"
+    )
+    glance = glance_section(signal_runs or [], outcomes_all or {}, findings or [])
     body = (
-        f'{head}\n<main id="main">\n{door}\n{tile_map(offices)}\n{record}\n{table}\n'
-        f"{how_to_read(False)}\n</main>\n{footer(meta, home=True)}"
+        f'{head}\n<main id="main">\n{glance}\n{door}\n{tile_map(offices)}\n{oath}\n'
+        f"{record}\n{table}\n{how_to_read(False)}\n</main>\n{footer(meta, home=True)}"
     )
     return page("Every seat in the register", body)
 
@@ -4090,6 +4399,11 @@ def main(argv: list[str] | None = None) -> int:
             signal_runs,
             reach,
             changes,
+            {
+                sid: [o for group in by_oh.values() for o in group]
+                for sid, by_oh in outcomes_by.items()
+            },
+            findings,
         ),
         encoding="utf-8",
         newline="\n",
