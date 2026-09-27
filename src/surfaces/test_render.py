@@ -2313,3 +2313,37 @@ def test_the_strip_teaches_the_marks_and_draws_the_process_never_a_person():
     assert page.index('id="how"') < page.index('id="glance"')
     person = render.render_officeholder(HOLDERS[0], FILINGS[:1], META, striker, 0, [])
     assert 'class="comic"' not in person, "a person's name is never lettered as a comic"
+
+
+def test_the_notice_clock_counts_trades_reports_and_members_and_names_no_one():
+    """The one date the filer writes: every trade by the days from the trade to its printed
+    notice. A count of trades alone would let one report look like many, so each band says its
+    reports and members too; a notice printed before the trade is said as dates that cannot both
+    be right; the chart carries dates and counts, never a name."""
+    report = read_report(HOLDERS[0]["id"], "2025-06-20", 1)
+    rows = [
+        dict(
+            transaction(report["id"], 1, transaction_date="2025-01-10", notified_date="2025-06-20"),
+            owner="spouse",
+        ),
+        dict(
+            transaction(report["id"], 2, transaction_date="2025-06-01", notified_date="2025-06-01")
+        ),
+        dict(
+            transaction(report["id"], 3, transaction_date="2025-06-05", notified_date="2025-06-02")
+        ),
+    ]
+    section = render.notice_section(rows, [report])
+    assert "3 trades on the transaction reports" in section
+    assert "<b>1</b> printed more than 45 days after the trade" in section
+    assert (
+        "1 trade on 1 report by 1 member. For 1 of these trades the filer marked the asset as a "
+        "spouse's, and 1 is on a report dated the same day as the notice it prints." in section
+    )
+    assert "<b>1</b> printed before the trade itself, dates that cannot both be right" in section
+    assert "(1 the same day)" in section
+    assert "officeholders/" not in section and verdict_words(section) == []
+    drawing = between(section, "<svg", "</svg>")
+    words = re.sub(r"<[^>]+>", " ", drawing).replace("&lt;", "<").split()
+    assert all(re.fullmatch(r"<0|\d+\+?", w) for w in words), words
+    assert render.notice_section([], []) == ""
