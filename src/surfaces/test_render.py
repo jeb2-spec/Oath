@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import html
 import importlib.util
+import re
 from pathlib import Path
 
 import pytest
@@ -472,7 +473,7 @@ def test_transactions_are_listed_as_filed_grouped_by_report_and_interpreted_not_
         ),
     ]
     page = render.render_officeholder(HOLDERS[0], [read, later], META, striker, 0, rows)
-    section = page[page.index('<section id="transactions">') : page.index("<h2>Signals that fired")]
+    section = page[page.index('<section id="transactions">') : page.index('<section id="requires"')]
     assert "Transactions reported" in section
     assert "House Committee on Ethics</a>" in section and "the form and" in section
     assert (
@@ -1898,3 +1899,135 @@ def test_a_read_that_gives_the_published_value_again_is_said_and_counted_as_that
     assert "A later read of the Clerk's index shows" not in page, (
         "and the caption counts what it says (Seat A)"
     )
+
+
+# ---- P.1, the pages a reader can use (docs/design/pages-a-reader-can-use.md) --------------
+#
+# One test per change, each failing without it: the answer first and the same shape whatever
+# the signal found (§2.1); a quiet page with the standards below the record and nothing
+# removed (§2.2); a Finding's dates drawn from its own rows (§2.3); a long report folded and a
+# report a Finding rests on open (§2.4); the practical thing where a reader reaches it (§2.5).
+
+ON_TIME = [LATE[1]]
+
+
+def signal_page(h: dict, reports: list[dict], rows: list[dict], held_reports: int = 0):
+    found, _, by_holder = evaluated([h], reports, rows)
+    return found, render.render_officeholder(
+        h,
+        reports,
+        META,
+        striker,
+        0,
+        rows,
+        held_reports,
+        [SIGNAL],
+        found,
+        {SIGNAL["id"]: by_holder.get(h["id"], [])},
+    )
+
+
+def answer_of(page: str) -> str:
+    return between(page, '<section id="answer"', "</section>")
+
+
+def shape(text: str) -> str:
+    """An answer with its counts, and the quantifier English makes them take, folded away:
+    what is left is the shape a reader meets, which must not depend on whether a signal fired
+    (COUNCIL §5, mode 6; the design note §2.1)."""
+    text = text.replace("at least one of", "Q of").replace("any of", "Q of")
+    return re.sub(r"\b(\d[\d,]*|none)\b", "N", text)
+
+
+def test_the_answer_comes_first_and_reads_the_same_whether_or_not_the_signal_fired():
+    h = sworn(HOLDERS[0])
+    report = read_report(h["id"], "2025-03-20", 1)
+    found, fired = signal_page(h, [report], LATE)
+    assert found, "the fixture fires"
+    _, quiet = signal_page(h, [report], ON_TIME)
+    for page in (fired, quiet):
+        main = page[page.index('<main id="main">') :]
+        order = [
+            main.index('<section id="answer"'),
+            main.index('<section class="checks">'),
+            main.index('<section id="signals">'),
+            main.index('<section id="transactions">'),
+            main.index('<section id="requires"'),
+            main.index("<h2>How to read this page</h2>"),
+        ]
+        assert order == sorted(order), "answer, checks, signal, record, standards, terms"
+        answer = answer_of(page)
+        assert "The register read 1 of 1 transaction report attributed to this officeholder" in (
+            answer
+        ), "the register's own coverage is the first number a reader meets"
+        assert render.esc(render.EITHER_WAY) in answer
+        assert f'href="{render.USC_13105}"' in answer, "the standard is cited and linked"
+        assert verdict_words(answer) == [] and frame.check_page(page) is None
+    assert "the Clerk's index dates 1 after the deadline for at least one" in answer_of(fired)
+    assert "the Clerk's index dates none after the deadline for any" in answer_of(quiet)
+    assert shape(answer_of(fired)) == shape(answer_of(quiet)), (
+        "the same sentences, links and order on both pages; only the counts differ"
+    )
+
+
+def test_the_answers_counts_are_the_signals_own_and_agree_with_the_page():
+    h = sworn(HOLDERS[0])
+    scanned = read_report(h["id"], "2025-02-01", 1, read=False)
+    before = read_report(h["id"], "2025-01-10", 2)
+    late = read_report(h["id"], "2025-03-20", 3)
+    rows = [
+        dict(
+            transaction(before["id"], 1, transaction_date="2024-12-02", notified_date="2024-12-03"),
+            filing_status="New",
+        ),
+    ] + [dict(r, id=r["id"].replace(":1:", ":3:"), filing_id=late["id"]) for r in LATE]
+    found, page = signal_page(h, [scanned, before, late], rows)
+    answer = answer_of(page)
+    assert "The register read 2 of 3 transaction reports" in answer, "the scanned one is unread"
+    assert "and checked 1 against" in answer, "a report whose rows all predate the oath is read"
+    assert "the Clerk's index dates 1 after the deadline" in answer
+    assert "Why the others were not checked is said with the signal, below." in answer
+    assert page.count('<article class="finding"') == len(found) == 1
+    assert "It evaluated 2 rows on 1 report attributed to this officeholder" in page
+
+
+def test_an_answer_with_nothing_checked_never_reads_as_a_clean_result():
+    h = sworn(HOLDERS[0])
+    _, unread = signal_page(h, [read_report(h["id"], "2025-03-20", 1, read=False)], [])
+    answer = answer_of(unread)
+    assert "The register read 0 of 1 transaction report" in answer and "checked 0" in answer
+    assert "With none checked, the register says nothing here about when a report was filed" in (
+        answer
+    )
+    assert "dates none" not in answer, "nothing checked is not a clean result"
+    _, nothing = signal_page(sworn(HOLDERS[2]), [], [], held_reports=2)
+    answer = answer_of(nothing)
+    assert "No transaction report in the Clerk's 2025 index is attributed to this officeholder" in (
+        answer
+    )
+    assert "not a statement that no report was due" in answer
+    assert "2 transaction reports at this seat under this surname are set aside" in answer
+    assert "dates none" not in answer
+
+
+def test_a_quiet_page_puts_the_standards_below_the_record_and_removes_nothing():
+    h = sworn(HOLDERS[0])
+    _, page = signal_page(h, [read_report(h["id"], "2025-03-20", 1)], ON_TIME)
+    assert render.REQUIRES in page, "the standards are whole, word for word"
+    requires = between(page, '<section id="requires"', "</section>")
+    assert "a report listed on this page is a filing made under that requirement" in requires
+    assert "listed below" not in requires, "the standards now sit below the reports"
+    assert page.index(render.OATH) > page.index('<section id="transactions">')
+    assert f'href="{render.STOCK_ACT}"' in requires and f'href="{render.USC_CH131}"' in requires
+
+
+def test_the_practical_thing_is_where_a_reader_reaches_it():
+    h = sworn(HOLDERS[0])
+    _, page = signal_page(h, [read_report(h["id"], "2025-03-20", 1)], LATE)
+    answer = answer_of(page)
+    assert "<code>python tools/verify.py</code>" in answer
+    assert f"build <code>{render.esc(render.build_label(META))}</code>" in answer
+    for target in ("verify", "signals", "transactions", "requires"):
+        assert f'href="#{target}"' in answer and f'id="{target}"' in page, target
+    footer = page[page.index("<footer>") :]
+    assert '<p id="verify">Cite the build, not the page.' in footer, "and it stays at the foot"

@@ -315,12 +315,19 @@ h3 a { font-weight: 400; }
 nav.reports { font-size: .85rem; color: var(--ink-2); line-height: 1.7; }
 span.note { display: block; font-size: .82rem; color: var(--ink-2); }
 td.amt { white-space: nowrap; }
-dl.terms { display: grid; grid-template-columns: max-content 1fr; gap: .35rem 1rem; margin: 0; }
+dl.terms { display: grid; grid-template-columns: fit-content(15rem) minmax(0, 1fr);
+           gap: .35rem 1rem; margin: 0; }
 dl.terms dt, dl.terms dd { margin: 0; }
 dl.terms dt { color: var(--ink); }
 dl.terms dd { color: var(--ink-2); }
 dl.terms dd b { font-weight: normal; color: var(--ink); font-variant-caps: all-small-caps;
                 letter-spacing: .05em; }
+/* the answer first: the same shape on every page, whatever the signal found */
+section.answer { border-top: 0; margin-top: 0; padding-top: 0; }
+section.answer p { max-width: 38rem; margin: 0 0 .6rem; }
+section.answer p.quiet { font-size: .95rem; }
+nav.jump { font-size: .9rem; margin: .2rem 0 .5rem; line-height: 1.7; }
+p.check { font-size: .85rem; color: var(--ink-2); }
 /* the door: a tile map of states; equal squares on purpose */
 .tiles { display: grid; grid-template-columns: repeat(11, minmax(0, 1fr)); gap: 4px;
          max-width: 34rem; margin-top: .5rem; }
@@ -350,7 +357,8 @@ code { font-family: var(--mono); font-size: .88em; overflow-wrap: anywhere; }
   table { display: block; max-width: 100%; overflow-x: auto; }
   caption { position: sticky; left: 0; max-width: calc(100vw - 2rem); }
   .masthead { grid-template-columns: 1fr; }
-  figure.seal { width: 88px; } figure.seal svg { width: 88px; height: 88px; }
+  figure.seal { width: auto; display: flex; gap: .8rem; align-items: center; }
+  figure.seal svg { width: 64px; height: 64px; margin: 0; flex: none; }
   dl.terms, .record dl { grid-template-columns: 1fr; }
   .record dt { text-align: left; }
 }
@@ -942,7 +950,8 @@ def footer(meta: dict, home: bool, to_root: str = "../") -> str:
         f"<p>Build <code>{esc(build_label(meta))}</code>, from the sources as read up to "
         f"<code>{esc(meta.get('built_at'))}</code>; its anchor, a timestamp proof, fixes when it "
         f"provably existed. {anchor_line}</p>\n"
-        "<p>Cite the build, not the page. Verify it: <code>python tools/verify.py</code>. "
+        '<p id="verify">Cite the build, not the page. Verify it: '
+        "<code>python tools/verify.py</code>. "
         "The digest proves the rows these pages are rendered from are unchanged since sealing; "
         "it does not prove the Clerk's index is right. All dates the register read something "
         "are UTC; the dates the Clerk gives are the Clerk's.</p>\n"
@@ -955,7 +964,7 @@ def seal_figure(svg: str, caption: str) -> str:
 
 
 REQUIRES = (
-    '<section class="requires">\n<h2>What this office requires</h2>\n'
+    '<section id="requires" class="requires">\n<h2>What this office requires</h2>\n'
     '<p class="quiet">The same for every member of the House. Each line cites the rule it '
     "comes from and links to it.</p>\n"
     f'<blockquote class="oath"><p>{esc(OATH)}</p><footer>{OATH_CITE}</footer></blockquote>\n'
@@ -973,7 +982,7 @@ REQUIRES = (
     "The Committee's instructions keep some assets off these reports, among them widely held "
     "investment funds, real property and the Thrift Savings Plan, though some reports list them "
     f'(<a href="{PTR_FORM}">its form and instructions</a>). The Act does not '
-    "prohibit the transactions it requires reported; a report listed below is a filing made "
+    "prohibit the transactions it requires reported; a report listed on this page is a filing made "
     "under that requirement, as the Clerk records it.</dd>\n"
     "</dl>\n</section>"
 )
@@ -2552,6 +2561,117 @@ def transactions_section(
     )
 
 
+# What each Signal checks, in the words the answer at the top of a page uses. A Signal with no
+# entry here is named in the answer by its checklist line, never summarised in words written
+# for another Signal.
+ANSWER_WORDS = {
+    "stock-act-ptr-after-deadline": {
+        "reports": ("transaction report", "transaction reports"),
+        "against": f'the STOCK Act deadline (<a href="{USC_13105}">5 U.S.C. § 13105(l)</a>)',
+    },
+}
+EITHER_WAY = (
+    "Either way, this is not a determination: whether a report was filed on time is for the "
+    "House Committee on Ethics to decide, and the register sees none of its decisions."
+)
+
+
+def answer_counts(
+    outcomes: list[dict], findings: list[dict], signal_id: str
+) -> tuple[int, int, int, int]:
+    """The four numbers the answer states, from the Signal's own run record and the Findings
+    the page shows: reports attributed, reports read, reports checked (a row evaluated on
+    them), and reports a current Finding rests on. A report a Finding rests on counts as
+    checked, so the last number is never more than the one before it."""
+    fired = {f["producing_filings"][0] for f in fired_now(findings, signal_id)}
+    read = sum(1 for o in outcomes if o["state"] == "evaluated")
+    checked = {o["filing_id"] for o in outcomes if o["evaluated"]} | fired
+    return len(outcomes), read, len(checked), len(fired)
+
+
+def answer_section(
+    signals: list[dict],
+    findings: list[dict],
+    outcomes: dict[str, list[dict]],
+    meta: dict,
+    held_reports: int = 0,
+) -> str:
+    """What the register read and what it found, first, in sentences whose shape is the same
+    for everyone: the register's own coverage before any result, the result in the same words
+    whether a Signal fired or not, and the same sentence after it on every page. The frame stays
+    above it, in the header (INVARIANTS §7). docs/design/pages-a-reader-can-use.md §2.1."""
+    paragraphs = []
+    for signal in signals:
+        words = ANSWER_WORDS.get(signal["slug"])
+        if words is None:
+            paragraphs.append(signal_check_line([signal], findings, outcomes, held_reports))
+            continue
+        one, many = words["reports"]
+        n, read, checked, fired = answer_counts(
+            outcomes.get(signal["id"], []), findings, signal["id"]
+        )
+        year = ERA["year"]
+        if not n:
+            text = (
+                f"No {one} in the Clerk's {year} index is attributed to this officeholder, so the "
+                f"register checked none against {words['against']}. That is a fact about the "
+                "register's matching, not a statement that no report was due."
+            )
+            if held_reports:
+                text += (
+                    f" {held_reports:,} {plural(held_reports, one, many)} at this seat under this "
+                    f"surname {plural(held_reports, 'is', 'are')} set aside for the maintainer to "
+                    "decide by hand, and not checked."
+                )
+        else:
+            text = (
+                f"The register read {read:,} of {n:,} {plural(n, one, many)} attributed to this "
+                f"officeholder in the Clerk's {year} index and checked {checked:,} against "
+                f"{words['against']}. "
+            )
+            if not checked:
+                text += (
+                    "With none checked, the register says nothing here about when a report was "
+                    "filed: that is a fact about what it could read, not about what was filed."
+                )
+            elif fired:
+                text += (
+                    f"Of the {checked:,} checked, the Clerk's index dates {fired:,} after the "
+                    "deadline for at least one of the transactions checked."
+                )
+            else:
+                text += (
+                    f"Of the {checked:,} checked, the Clerk's index dates none after the "
+                    "deadline for any of the transactions checked."
+                )
+            if checked < n:
+                text += " Why the others were not checked is said with the signal, below."
+        paragraphs.append(f"<p>{text}</p>")
+        paragraphs.append(f'<p class="quiet">{esc(EITHER_WAY)}</p>')
+    if not signals:
+        paragraphs.append(
+            "<p>No signal is defined in this build, so none can fire, for anyone.</p>"
+        )
+    # The same three links on every page, in the same words, whatever the signal found.
+    jumps = " · ".join(
+        [
+            '<a href="#signals">What the signal read, report by report</a>',
+            '<a href="#transactions">Every transaction, as filed</a>',
+            '<a href="#requires">What this office requires</a>',
+        ]
+    )
+    return (
+        '<section id="answer" class="answer">\n<h2>What the register found</h2>\n'
+        + "\n".join(paragraphs)
+        + f'\n<nav class="jump" aria-label="On this page">{jumps}</nav>\n'
+        f'<p class="check">Check it yourself: every report below links to the Clerk\'s own copy, '
+        "and every Finding prints the command that regenerates it. This page is rendered from "
+        f"build <code>{esc(build_label(meta))}</code>; <code>python tools/verify.py</code> checks "
+        'that its rows are unchanged since it was sealed (<a href="#verify">more</a>).</p>\n'
+        "</section>"
+    )
+
+
 def render_officeholder(
     holder: dict,
     filings: list[dict],
@@ -2724,12 +2844,18 @@ def render_officeholder(
         )
         + "\n</div>\n</header>"
     )
+    # The order a reader who arrives with a question meets it: the answer, what the register can
+    # check, what the signal found, then the record it read, then the standards and the terms,
+    # every one still whole (docs/design/pages-a-reader-can-use.md §2.2). The same order on every
+    # page, whether a signal fired or not.
     body = (
-        f'{head}\n<main id="main">\n{REQUIRES}\n'
+        f'{head}\n<main id="main">\n'
+        f"{answer_section(signals, findings, outcomes, meta, held_reports)}\n"
         f"{checks_section(holder, filings, held_here, check_line, until, listings, changes)}\n"
+        f"{section}\n"
         f"{filings_section(filings, held_here, changes, until, moved_away, holder['id'], sworn)}\n"
         f"{transactions_section(filings, transactions or [], held_reports, changes)}\n"
-        f"{section}\n"
+        f"{REQUIRES}\n"
         f"{how_to_read(True)}\n"
         "</main>\n"
         f"{footer(meta, home=False)}"
