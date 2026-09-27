@@ -8,7 +8,20 @@ metadata:
 
 # Where we are
 
-*Last updated: 2026-09-27, Opus 5 in a cloud session. The register is still build `0005-house-2025` (27 Findings, its proof confirmed at Bitcoin block 968733). PR #40 (S.1b) and #41 (P.1's design) are merged. PR #42 built P.1: the pages a reader can use, and the House at a glance on the landing, read by all seven seats. Another session is populating the record in parallel.*
+*Last updated: 2026-09-27, Opus 5 in a cloud session, at the end of the pages work. **Main is `a18fe91`, PR #59 merged, and the register is live at <https://jeb2-spec.github.io/Oath/>.** Still build `0005-house-2025` (27 Findings, proof confirmed at Bitcoin block 968733); nothing in PR #59 touched a sealed row, so the digest and the anchor are unchanged.*
+
+## The next session starts here
+
+**One task, and it is [NEXT.md P.6](../../NEXT.md): slim the landing without diluting the message or changing the tone.** That is the maintainer's direction, given after he read the deployed pages, and it is the whole of the open work that does not need network.
+
+The measurements are in P.6 and they are not a vibe: 2,197 words, seven visual blocks back to back, captions at 21% of the page, and four consecutive sections of about 330 words each that make up 62% of it. The largest cut costs nothing — `EITHER_WAY` is printed four times — but it is not a free delete, because the repetition exists to answer Seat D's crop finding, and P.6 says how the second reading already resolved that trade-off. **Read the finding before acting on the paragraph.**
+
+Three things do not move at any word count: the two-population split of the 27 late reports, the both-halves-or-neither bar, and the empty second row with the clause that says the emptiness is this register's and not the Committee's. Those are the message.
+
+**The other two open threads need things this session did not have.**
+
+- **Network.** [NEXT.md E.0](../../NEXT.md) is thirteen rows of official information the register would need to follow a report past its deadline, twelve of them saying *nobody here has looked yet* because `ethics.house.gov`, `oce.house.gov`, `uscode.house.gov` and the federal dockets all return 000 through the cloud proxy. Every row carries a `check` naming exactly what to read. `wt:the-clerks-filing-date` goes first and is the highest-priority item in the project: the Clerk's index row carries eight fields and one date, nothing says whether it is the day the member filed or the day the Clerk posted, and **all 27 Findings rest on it.** It is the only open item that could make a sentence already published wrong about a person.
+- **A re-seal.** The Monday refresh (09:17 UTC) re-reads the source, re-seals and re-anchors. Two things should ride it: the ECOSYSTEM §1.4 correction in [NEXT.md D.4](../../NEXT.md), whose replacement words are written out there, and the maintainer's answer to E.0's question of whether `docs/wanted/wanted.ndjson` should join the sealed set.
 
 **The wanted register, 2026-09-27, P.5.** Jared, after the black-hole figure shipped: *keep a register on oath, in pages or otherwise, outlining exactly what pieces of official information public or not would be needed to close the loop and effectively eliminate the black hole. I mean it.*
 

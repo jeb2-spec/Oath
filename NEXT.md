@@ -149,6 +149,37 @@ legend; and a decision about whether a signal that reaches 24 of 441 members sho
 a page that fires on a fifth of a chamber and is silent on the rest invites the reader to read the
 silence as clearance, which is COUNCIL §5 mode 6 in a new shape.
 
+### P.6 Slim the landing, at no cost to what it says
+
+*Added 2026-09-27, from the maintainer reading the deployed pages: "I still think we need to slim it down, so it's less overwhelming, but not at the price of diluting the message or changing the tone."*
+
+The word count is no longer the problem. **2,197 words** is a third of what the page carried this morning. What is left is a different shape of heavy, and it measures:
+
+| | |
+| --- | --- |
+| Visual blocks, back to back | **7** (the map, the strip, and five `<figure>`s) |
+| Captions | **469 words, 21% of the page** |
+| Four consecutive data sections | glance 335, notice 325, narrows 339, ends 360 = **1,359 words, 62% of the page** |
+
+A reader meets four sections of about 330 words each, in a row, each with its own figure, caption and key. That run is the wall. None of them is bad and the fix is not to make any of them worse.
+
+**The largest cut available costs nothing at all.** `EITHER_WAY` — forty words, *"This is not a ruling by anyone: what the deadline means for a filer is for the House Committee on Ethics to decide, and the register sees none of its decisions. Presence in the register is not evidence of wrongdoing."* — is printed **four times** on the landing, under the deadline figure, the glance, the notice clock and the ends figure. *"One report can list hundreds of trades"* appears twice.
+
+Four repetitions do not make the point four times; they make the page sound like it is apologising, which is a change of tone nobody chose. But deleting them outright is not free either: the repetition exists because of Seat D's finding that a **crop** of one figure must not travel without the frame.
+
+The second reading already settled the shape of that trade-off, in its own words: *the sentence that must never travel alone is the shortest one*. So the move is to keep the nine-word frame under each figure and say the thirty words about who decides **once**. Check the finding before acting on this paragraph rather than trusting it.
+
+In order of value, and each to be weighed on its own:
+
+1. **The frame, once in full.** Nine words under each figure, the thirty about who decides said once. ~120 words, and it removes three repetitions of a paragraph, which is worth more than the count.
+2. **Move *The House at a glance* to `record.html`.** ~335 words and one figure. The deadline figure now answers *did they follow the rule* better than 463 squares do, and report-by-report detail is apparatus. **Check first:** the glance carries the only link to the Signal's own page and the *what a signal is, and what it does not say* panel; both must land somewhere a reader still meets.
+3. **Captions to two sentences each**, with the standing caveats (it counts trades not people; a tall bar can be one report) said once in a short *how to read these figures* line rather than in every caption.
+4. **The narrows list.** Four dense reasons under the figure; the figure plus a two-line caption on the landing, the reasons on `record.html`.
+
+Taking 1 and 2 lands the page near **1,750 words and six visual blocks**; with 3, near **1,500 and six**. Those are checkable numbers, not a target to hit by cutting something load-bearing.
+
+**What does not move, at any word count.** The two-population split of the 27 reports. The both-halves-or-neither bar and its guard. The empty second row of *Where the record ends* and the clause that says the emptiness is this register's and not the Committee's. Those three are the message; the slimming is everything around them.
+
 ### E.0 The wanted register, and the work of reading it
 
 *Added 2026-09-27, at the maintainer's direction: keep a register of exactly what pieces of official information, public or not, would close the loop.*
