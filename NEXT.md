@@ -135,10 +135,13 @@ cite. On the 2025 rows the codes come to 463 `P`, 422 `O`, 276 `X`, 24 `A`, 6 `C
 and every non-`P` row is written `form_type: other`. Reading `A` as *annual report* is a plausible
 inference and it is not in the primary record, so a signal resting on it would rest on a guess about
 a form, published against named people. Twenty-four rows would also not be *every member*, which is
-the whole reason the direction names this signal.
+the whole reason the direction names this signal. *(Superseded 2026-09-27: `A` is the amendment, and
+the annual reports are `O`, 422 rows against 441 seats; below.)*
 
 **The one thing it waits on:** the Clerk's own definition of the form codes, read at its source and
-entered in [SOURCES.md](SOURCES.md) with a row per code.
+entered in [SOURCES.md](SOURCES.md) with a row per code. Until then, a form-code signal is not
+definable under Vow IV, and saying so is cheaper than discovering it after the Council reads it.
+*(Settled 2026-09-27 without the legend, from the documents, as the next paragraph says.)*
 
 **Read at the source, 2026-09-27, and the premise above was wrong in the way it feared.** The
 Clerk publishes no legend for the codes, and the documents do not need one: each prints its own
@@ -158,28 +161,42 @@ holiday is due the next business day.
 
 **What the Signal must do before it may say anything about a person, learnt from one header.**
 A 2025 annual report sampled that day prints *Filing Date: 08/13/2026*, which is exactly 90 days
-after 15 May 2026. Read alone it is 90 days late; read with its extension it may be on time. So
+after 15 May 2026, and its posted extension prints a New Due Date of 13 August 2026. So
 extension requests (the `X` documents, which print *Extension Length* and *Report Type Due*) are
 joined to the report they extend before any row is evaluated, and a report whose extension the
 register cannot read is not evaluated at all. The join is by officeholder, year and report type,
 because an extension request carries no filing ID of the report it extends; that join is an
 inference about a named person, and the Council reads it before the Signal ships.
+*Superseded the same day by the Council's reading, below: the join could not see what the adapter
+set aside, and no sentence now rests on it.*
 
-**Next:** the definition document, its known-answer cases, and a Council reading of both, before any
-code. [docs/design/the-annual-report-signal.md](docs/design/the-annual-report-signal.md) is the draft.
+**The Council read the draft the same day, all seven seats, and it changed shape**
+([docs/council/2026-09-27-the-annual-report-draft.md](docs/council/2026-09-27-the-annual-report-draft.md)).
+Five seats found independently that the extension join sees only what the adapter attributes: of 12
+annual reports dated after 15 May with no extension tied to their Member, 8 have one at their own seat,
+set aside by the name match, and two seats read those forms by eye and found the Committee's *Days
+granted* box filled in. The first draft would have said *after the deadline* about them. The second
+draft ([docs/design/the-annual-report-signal.md](docs/design/the-annual-report-signal.md)) fires only
+where a report is dated after the latest date any extension the statute allows could reach, which is
+true whatever the register holds; on the build of 2026-09-22 that is 5 of 422 annual-coded rows before
+their headers are read, and 252 sit in the window it does not evaluate. The join is display only.
+
+**Next:** the adapter reads and records the headers of the annual and extension documents (the
+draft's *What it needs*, item 1), then the Signal, its known-answer cases and its pages, then the
+Council's reading of the built Signal, then first publication on the regular cadence.
 
 **One sentence of the first Signal's own definition is now stale, and it stays until a version says
 so.** `stock-act-ptr-after-deadline` v1 says *the register has not compared the index date with the
 date signed on each report*. Since 2026-09-27 it has, on all 409 reports whose text it can read, and
 they agree (`wt:the-clerks-filing-date`). The definition is frozen with the version by its hash, so
-the sentence is not edited: v2 of that Signal says what was found, and v1 stays readable as it was. Until then, a form-code signal is not
-definable under Vow IV, and saying so is cheaper than discovering it after the Council reads it.
+the sentence is not edited: v2 of that Signal says what was found, and v1 stays readable as it was.
 
 **What can be done before that, and needs no network:** the signal's definition document and its
 known-answer cases against the statute, if 5 U.S.C. § 13103 can be read at its source; the register's
 own annual-report *header* read (24 rows carry `A` and their headers are captured), which would say
 what the form itself calls itself and might settle the codes from the documents rather than from a
-legend; and a decision about whether a signal that reaches 24 of 441 members should ship at all, since
+legend; and a decision about whether a signal that reaches 24 of 441 members should ship at all *(moot
+2026-09-27: it reaches the annual reports, under `O`)*, since
 a page that fires on a fifth of a chamber and is silent on the rest invites the reader to read the
 silence as clearance, which is COUNCIL §5 mode 6 in a new shape.
 
