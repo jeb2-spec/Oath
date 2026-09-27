@@ -50,7 +50,7 @@
     "term_end": {
       "type": ["string", "null"],
       "format": "date",
-      "description": "Null for a currently-held Office."
+      "description": "The day the seat's term ends: noon on 3 January after the Congress it belongs to (U.S. Const. amend. XX, section 1). Filled when the register reads a roster of the next Congress; null until then. It is the seat's term, never the day a person left the seat: a person the roster no longer lists is shown by a change row."
     }
   }
 }

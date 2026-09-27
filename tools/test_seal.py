@@ -154,9 +154,14 @@ def test_held_rows_are_counted_by_why_they_wait():
 def test_who_a_signal_cannot_reach_is_counted_by_officeholder():
     seal = load()
 
-    def o(who, state, before=0):
+    def o(who, state, before=0, report="fl:read"):
         swore = {"dated before this Congress's swearing-in": before} if before else {}
-        return {"officeholder_id": who, "state": state, "not_evaluated": swore}
+        return {
+            "officeholder_id": who,
+            "filing_id": report,
+            "state": state,
+            "not_evaluated": swore,
+        }
 
     outcomes = [
         o("a", "not read"),
@@ -165,7 +170,26 @@ def test_who_a_signal_cannot_reach_is_counted_by_officeholder():
         o("b", "evaluated", before=2),
         o("c", "evaluated"),
     ]
-    assert seal.reach(outcomes) == {"paper_only": 1, "some_paper": 1, "before_swearing_in": 1}
+    assert seal.reach(outcomes) == {
+        "paper_only": 1,
+        "some_paper": 1,
+        "not_fetched": 0,
+        "before_swearing_in": 1,
+    }
+    # A report the register has not fetched is not scanned paper, and never counted as it (the
+    # Council's fourth reading of S.1b, Seat F): d's one report is unfetched, so d is neither
+    # "all scanned paper" nor "some".
+    filings = [
+        {"id": "fl:read", "source": {"content_hash": "0" * 64}},
+        {"id": "fl:unfetched", "source": {"content_hash": None}},
+    ]
+    with_unfetched = [*outcomes, o("d", "not read", report="fl:unfetched")]
+    assert seal.reach(with_unfetched, filings) == {
+        "paper_only": 1,
+        "some_paper": 1,
+        "not_fetched": 1,
+        "before_swearing_in": 1,
+    }
 
 
 def test_the_seal_points_at_the_anchor_and_never_seals_its_state():
@@ -176,3 +200,172 @@ def test_the_seal_points_at_the_anchor_and_never_seals_its_state():
     assert pointer["manifest"] == "data/anchors/0006-house-2025.manifest"
     assert pointer["ledger"] == "ANCHORS.md"
     assert "state" not in pointer and "block" not in pointer
+
+
+def copy_register(tmp_path: Path) -> Path:
+    import shutil
+
+    shutil.copytree(
+        ROOT / "data", tmp_path / "data", ignore=shutil.ignore_patterns("cache", "anchors")
+    )
+    return tmp_path
+
+
+def the_run(root: Path) -> tuple[Path, dict]:
+    import json
+
+    (path,) = (root / "data" / "adapter-runs").glob("house-fd-2025-*.ndjson")
+    return path, json.loads(path.read_text("utf-8"))
+
+
+def test_changes_are_counted_by_kind_and_never_by_anyone_s_rows(tmp_path):
+    """NEXT.md S.1b and the Council's reading of it: a build whose register records changes
+    seals a sentence that says so, in totals by kind; a count of one Member's filings or
+    transactions beside their leaving is never in it."""
+    import json
+
+    seal = load()
+    verify = seal.load_verify(HERE)
+    root = copy_register(tmp_path)
+    path, run = the_run(root)
+
+    def change(kind: str, n: int, **more) -> dict:
+        at = f"2026-10-0{n}T09:17:00Z"
+        return {
+            "id": f"ch:{kind}:{n}",
+            "row_id": f"fl:x:{n}",
+            "change": kind,
+            "capture": {"retrieved_at": at},
+            **more,
+        }
+
+    decision = {
+        "decided_at": "2026-10-06T12:00:00Z",
+        "decided_by": "the maintainer",
+        "because": "b",
+    }
+    rows = [
+        change("not listed", 1),
+        change("read otherwise", 2),
+        change("read otherwise", 3),
+        *(change("corrected", n, **decision) for n in (4, 5, 6)),
+    ]
+    (root / "data" / "changes.ndjson").write_text(
+        "".join(json.dumps(r) + "\n" for r in rows), encoding="utf-8"
+    )
+    run["changes"] = {"not listed": 1}  # a run record a correction never rewrote (Seat C, N-8)
+    path.write_text(json.dumps(run) + "\n", encoding="utf-8")
+    meta = json.loads((ROOT / "data" / "meta.json").read_text("utf-8"))
+    meta["rows"] = verify.row_counts(root)
+    text = seal.derive_state(root, meta)
+    assert seal.state_text_lacks({**meta, "state": text}, run) == ""
+    assert (
+        "3 changes later reads showed are recorded, each a row of its own citing the read, of "
+        "these kinds: a row a later read no longer lists and a fact a later read states "
+        "otherwise; 1 decision the maintainer recorded, correcting a published fact or recording "
+        "that it stands, each citing the evidence."
+    ) in text, "counted from the changes themselves, decisions as decisions"
+    assert "1 no longer" not in text and "2 stated" not in text, (
+        "no count by kind, which, small, is a count about one person (Seat C, N-9)"
+    )
+    assert text.startswith(
+        "The register holds 441 offices, 439 officeholders, 1,197 filings and 7,346 "
+        "transactions. A row it has published stays, gaining only facts it lacked;"
+    ), "the register's totals, never one person's, and the rule it holds them by"
+    assert "carried" not in text and "derive again" not in text
+
+
+def test_the_congress_is_named_with_its_terms_and_nothing_leans_on_the_present(tmp_path):
+    """A later reader needs the Congress's dates, not its number, and no "sitting" or "this
+    Congress" (the Council's reading of S.1b, Seat G)."""
+    import json
+
+    seal = load()
+    verify = seal.load_verify(HERE)
+    root = copy_register(tmp_path)
+    meta = json.loads((ROOT / "data" / "meta.json").read_text("utf-8"))
+    meta["rows"] = verify.row_counts(root)
+    text = seal.derive_state(root, meta)
+    assert (
+        "seats of the 119th Congress (terms from noon, 3 January 2025, to noon, 3 January 2027)"
+    ) in text
+    assert "the swearing-in the roster records for the 119th Congress" in text
+    assert "this Congress" not in text and "sitting members" not in text, (
+        "only the adapter's own reasons, quoted, say sitting, beside the roster's date"
+    )
+    assert seal.congress_named(2027).startswith("120th Congress (terms from noon, 3 January 2027")
+
+
+def test_a_change_row_is_stamped_with_the_build_that_first_seals_it(tmp_path):
+    import json
+
+    seal = load()
+    data = tmp_path / "data"
+    data.mkdir()
+    first = {"id": "ch:1", "build": "0005-house-2025"}
+    second = {"id": "ch:2"}
+    (data / "changes.ndjson").write_text(
+        "".join(
+            json.dumps(r, sort_keys=True, separators=(",", ":")) + "\n" for r in (first, second)
+        ),
+        encoding="utf-8",
+    )
+    before = (data / "changes.ndjson").read_text("utf-8").splitlines()[0]
+    assert seal.stamp_changes(tmp_path, "0006-house-2025") == 1
+    lines = (data / "changes.ndjson").read_text("utf-8").splitlines()
+    assert lines[0] == before, "a stamped row is never touched again"
+    assert json.loads(lines[1])["build"] == "0006-house-2025"
+    assert seal.stamp_changes(tmp_path, "0007-house-2025") == 0
+
+
+def test_a_closed_year_seals_a_sentence_that_says_the_register_closed_it(tmp_path):
+    import json
+
+    seal = load()
+    verify = seal.load_verify(HERE)
+    root = copy_register(tmp_path)
+    path, run = the_run(root)
+    reason = (
+        "filing year 2025 is of the 119th Congress, whose terms ended at noon on 2027-01-03, and "
+        "the roster this build read lists the 120th"
+    )
+    run["congress"] = {
+        "filing_year": 119,
+        "roster": 120,
+        "closed": True,
+        "closed_by": {"retrieved_at": "2027-01-11T09:17:05Z", "congress": 120},
+    }
+    run["counts"] = dict.fromkeys(("seats", "filled", "vacant", "filings", "quiet"), 0)
+    run["counts"]["rejected"] = 2
+    run["documents"] = {"read": 0, "transactions": 0}
+    run["rejected_by_reason"] = {reason: 2}
+    path.write_text(json.dumps(run) + "\n", encoding="utf-8")
+    meta = json.loads((ROOT / "data" / "meta.json").read_text("utf-8"))
+    meta["rows"] = verify.row_counts(root)
+    text = seal.derive_state(root, meta)
+    assert seal.state_text_lacks({**meta, "state": text}, run) == ""
+    assert (
+        "The register has closed filing year 2025 (the reports the Clerk's index lists under "
+        "2025): they belong to the 119th Congress (terms from noon, 3 January 2025, to noon, 3 "
+        "January 2027), whose terms ended under the Twentieth Amendment, section 1, and the "
+        "Clerk's roster read 2027-01-11 listed the 120th."
+    ) in text, "dated by the read that closed the year, never by the roster read now"
+    assert "the roster the register reads" not in text and " now" not in text
+    assert "gives the 119th Congress's offices the day their terms ended" in text
+    assert "0 seats" not in text and f"2 because {reason}" in text
+
+
+def test_a_state_that_lacks_the_changes_is_refused():
+    """Seat G on the third reading (R3-4): the check read no change, so a sentence that left
+    the maintainer's corrections out sealed."""
+    seal = load()
+    changes = [
+        {"id": "a", "change": "not listed"},
+        {"id": "b", "change": "corrected", "decided_at": "t", "decided_by": "m", "because": "x"},
+        {"id": "c", "change": "corrected", "decided_at": "t", "decided_by": "m", "because": "x"},
+    ]
+    lacking = seal.state_text_lacks({"state": "Nothing about changes.", "rows": {}}, None, changes)
+    assert "changes later reads showed 1" in lacking and "the maintainer's decisions 1" in lacking
+    assert (
+        seal.state_text_lacks({"state": "1 change; 1 decision.", "rows": {}}, None, changes) == ""
+    )

@@ -45,7 +45,7 @@ To decide one: open an issue with the *Adjudicate a held row* template, or go st
 {"doc_id":"20032062","officeholder_id":"oh:us:house:a000055","evidence_url":"https://disclosures-clerk.house.gov/...","decided_by":"your name or handle","decided_at":"2026-09-22","note":"the index writes the legal name; the roster the common one"}
 ```
 
-The evidence is the primary source that ties the document to the person, usually the document itself, which names its filer. The next build applies the decision, marks the filing's `extraction_confidence` as `manual`, and carries the hash of the adjudication file in the run record, so anyone can see which decisions shaped which build. A decision without its evidence is refused at build time.
+The evidence is the primary source that ties the document to the person, usually the document itself, which names its filer. The next build applies the decision, says on the filing's row that the maintainer's recorded decision attributed it, citing the evidence, reads its document like any other, and carries the hash of the adjudication file in the run record, so anyone can see which decisions shaped which build. A decision without its evidence is refused at build time.
 
 The first batch of adjudications goes to the [Council](COUNCIL.md) before it merges, because attributing a document to a person by human judgement is a new way of naming an officeholder.
 
@@ -68,7 +68,7 @@ Branch protection is also free only for public repositories on a personal accoun
 
 Two paths, both documented in [BYLAWS.md §6](BYLAWS.md):
 
-- **Fact correction** (wrong person, wrong filing, wrong amount): open a PR that adds a supersession row citing the primary source that reveals the correction. Both rows stay in the register.
+- **Fact correction** (wrong person, wrong filing, wrong date, wrong amount): open a PR that adds a correction citing the primary source that reveals it. For a row of the register itself (an officeholder, a filing, a transaction) that is `tools/correct.py`, which the maintainer runs: it writes a `corrected` row to `data/changes.ndjson` naming the fact, what it was and what it is, keeps the evidence's bytes with the time they were fetched (a filed document it cites by its hash and never keeps, and a filer's own text by the hash of what it said), and moves the fact, and moves an attribution whole, with the filing's office and its transactions; for a Finding it is `src/signals/run.py --correct`, which adds a row that supersedes it. Both stay in the register, beside what they correct.
 - **Demonstrated change** (a later primary-source filing shows the subject's conduct has changed such that the Finding's condition no longer applies): open a PR that adds a supersession row citing the primary source that shows the change. Both rows stay.
 
 Off-the-record requests are not honored. Every change is a row in the register a reader can see. The *Correct a row* issue template is the front door.

@@ -101,14 +101,35 @@
         "manual",
         null
       ],
-      "description": "How the content was extracted from the source. Rows built from OCR-low sources are flagged in downstream Findings."
+      "description": "How the content was extracted from the source: structured where the register read the document, null where it has not. It says nothing of how the row was attributed, which notes says. Rows built from OCR-low sources are flagged in downstream Findings."
     },
     "notes": {
       "type": [
         "string",
         "null"
       ],
-      "description": "What the document says about itself that the reader must see beside the row, in plain words: for example, a printed seat that differs from the roster. Null when the document and the index agree in full."
+      "description": "What attributed the row, where the name join did not, and what the document says about itself that the reader must see beside the row, in plain words: \"Attributed by the document's own header: ...\" or \"Attributed by the maintainer's recorded decision of <date>, citing <evidence>...\", and, for example, a printed seat that differs from the roster. Null when the name join attributed the row and the document and the index agree in full."
+    },
+    "index_row": {
+      "type": "object",
+      "required": ["last", "first", "suffix", "filing_type", "state_dst", "year", "filing_date", "doc_id"],
+      "additionalProperties": false,
+      "description": "The row of the Clerk's filing index the filing was read from, as the adapter's parser reads it, under the adapter's names for the index's fields, so a later reader sees what the index said. Every row first published by the adapter that writes this field carries the row it was read from. A row the register published before gains the row of the first later index that states the facts it carries (its date, its form code and its DocID); that row's other fields (the filer's name as written, the state-district) are the later index's, and may differ from the row it was first read from.",
+      "properties": {
+        "last": { "type": "string" },
+        "first": { "type": "string" },
+        "suffix": { "type": "string" },
+        "filing_type": { "type": "string" },
+        "state_dst": { "type": "string" },
+        "year": { "type": "string" },
+        "filing_date": { "type": "string" },
+        "doc_id": { "type": "string" }
+      }
+    },
+    "index_entry_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "The SHA-256 of the filing's own <Member> entry in the bytes of the Clerk's index it was read from, found without the XML parser. A later index whose entry for the DocID has the same hash said nothing new about the filing, so a fact read otherwise from it is the register's own reading, and the build refuses rather than record it as the source's (COUNCIL.md §5, mode 10). A row the register published before the adapter wrote this field gains it from the first later entry that states the facts it carries; that is a later read's entry, whose bytes the register keeps only where a change row cites them, so a later reader may hold the hash and not the bytes. The build weighs an entry against the one the register last read for the row (the run record's entries_read), not only this one."
     },
     "evidence_bundle": {
       "type": "object",

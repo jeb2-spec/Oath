@@ -6,9 +6,10 @@
 # reference runtime in pyproject.toml, so the job runs on the floor and not on
 # whatever is newest.
 #
-# Two gates compare this tree with the published record: a published Finding never
-# changes or disappears (Invariants 12 and 14), and a published Signal version never
-# changes (Invariant 11). On a pull request the published record is its base, main as
+# Three gates compare this tree with the published record: a published Finding never
+# changes or disappears (Invariants 12 and 14), a published row of the record never
+# disappears and its facts only accrue (Invariant 14), and a published Signal version
+# never changes (Invariant 11). On a pull request the published record is its base, main as
 # it stands. On a push to main it is main as it stood before the push, because by then
 # main is the pushed commit and a gate comparing it with itself would prove nothing (the
 # Council's reading of the first Signal, 2026-09-26). A gate that cannot read the record
@@ -53,7 +54,7 @@ jobs:
           python-version: "3.11"
 
       - name: Install the Python dev toolchain named in pyproject.toml
-        run: python -m pip install "ruff>=0.16,<0.17" "pytest>=8" "pypdf>=6,<7"
+        run: python -m pip install "ruff>=0.16,<0.17" "pytest>=8" "pypdf==6.19.0"
 
       - name: Ruff, check and format
         run: |
@@ -80,6 +81,9 @@ jobs:
 
       - name: check-supersessions, a published Finding stays and a correction chains (Invariants 12, 14)
         run: python tools/check-supersessions.py
+
+      - name: check-removals, a published row stays and its facts only accrue (Invariant 14)
+        run: python tools/check-removals.py
 
       - name: check-aggregator-sole, every Finding rests on a primary source (Invariant 5)
         run: python tools/check-aggregator-sole.py

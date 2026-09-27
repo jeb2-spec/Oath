@@ -6,7 +6,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Facts stay. A correction adds a row that supersedes the wrong one, citing the primary source that shows the error, and both rows remain visible (BYLAWS.md §6). Off-the-record requests are not honoured; every change is a row a reader can see.
+        Facts stay. A correction is a row of its own that names what was wrong, what it was and what it is, citing the primary source that shows the error, and both stay visible: the corrected row keeps what it was beside it, and a Finding is superseded by a new row, never edited (BYLAWS.md §6). Off-the-record requests are not honoured; every change is a row a reader can see.
 
         Presence in the register is not evidence of wrongdoing.
   - type: input

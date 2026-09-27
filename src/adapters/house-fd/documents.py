@@ -9,13 +9,14 @@ captures, so a build is reproducible by anyone holding the same bytes.
 Which documents: the build is asked (`build.wanted_documents`), from the two captures
 alone: the document behind every index row the name join attributes whose code is in
 `--codes` (default P, the transaction reports, which the Clerk serves from its own
-ptr-pdfs path), and, unless `--no-held`, the document behind every row held at a
-member's own seat under the member's surname, whatever its code, because the header
-of that document is what decides the row in `build.py`. This stage reads no row of the
-register, so it is pure with respect to it and a build is never a cycle behind its
-source. `--seats NC` limits a run to one delegation, which is how the extractor was
-piloted. Documents already on disk are adopted, not fetched again: their retrieval
-time comes from the Date header the Clerk sent with them.
+ptr-pdfs path); unless `--no-held`, the document behind every row held at a member's
+own seat under the member's surname, whatever its code, because the header of that
+document is what decides the row in `build.py`; and the document behind every row the
+maintainer's recorded decision names, whatever its code, in an open year or a closed one.
+This stage reads no row of the register, so it is pure with respect to it and a build is
+never a cycle behind its source. `--seats NC` limits a run to one delegation, which is
+how the extractor was piloted. Documents already on disk are adopted, not fetched again:
+their retrieval time comes from the Date header the Clerk sent with them.
 
 Politeness: one request at a time, a pause between requests, a user agent that names
 the project and how to reach whoever runs it.
@@ -124,7 +125,9 @@ def main(argv: list[str] | None = None) -> int:
     for doc in build.wanted_documents(args.year):
         if states and doc["seat"][:2] not in states:
             continue
-        if doc["why"] == "attributed":
+        if doc["why"] == "decided":
+            pass  # the maintainer's recorded decision names the row: wanted, whatever its code
+        elif doc["why"] == "attributed":
             if doc["code"] not in codes:
                 continue
         elif not args.held:

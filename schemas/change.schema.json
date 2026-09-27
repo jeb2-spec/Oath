@@ -1,0 +1,198 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://oath.jeb2-spec.dev/schemas/change/v0.json",
+  "title": "Change",
+  "description": "What a later capture of a primary source showed about a row the register had already published, or a correction a person made to one, citing the evidence. The published row stays exactly as published, unless a person's correction moves one of its facts; then this row keeps what the fact was (CHARTER Vow V; INVARIANTS §14). The adapter (src/adapters/house-fd/build.py) writes one where a capture later than the one a row was read from shows it otherwise; tools/correct.py writes a person's correction. Either way the bytes of the capture it cites are kept in data/captures/sha256/, named by their SHA-256, so the change can be checked from the repository alone once the source serves something else, except a filed document (a PDF), which is never kept: a filed document can carry the names of private people, and a kept copy would outlast the Clerk's withdrawal or redaction of it (a decision of the Council's third reading of S.1b; NEXT.md D.4 carries it into the doctrine, where EVIDENCE.md §7 and INVARIANTS.md §16 still say the register may keep a filing's bytes), so a document is cited by its URL, the time it was read and its SHA-256, and a replaced one records which of its rows read otherwise, never what they say. A change row never changes and is never removed: data/changes.ndjson only grows at its end. It carries the frame, because a change row names a person's row and may be read without the page.",
+  "type": "object",
+  "required": [
+    "id",
+    "row_id",
+    "rows",
+    "change",
+    "capture",
+    "frame"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^ch:(not-listed|listed-again|read-otherwise|replaced|corrected):.+:\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$",
+      "description": "ch:<change>:<row id>[:<field>]:<the capture's retrieved_at>. One change per row, kind, field and capture."
+    },
+    "row_id": {
+      "type": "string",
+      "description": "The id of the published row the change is about."
+    },
+    "rows": {
+      "type": "string",
+      "enum": [
+        "officeholders",
+        "filings",
+        "transactions"
+      ],
+      "description": "Which of the register's files holds that row."
+    },
+    "change": {
+      "type": "string",
+      "enum": [
+        "not listed",
+        "listed again",
+        "read otherwise",
+        "replaced",
+        "corrected"
+      ],
+      "description": "not listed: the capture does not list the row (the Clerk's roster no longer lists the officeholder, or the index the filing); the source does not say why. listed again: a later capture lists a row an earlier one did not. read otherwise: the capture, as the register reads it, gives one of the row's facts another value (`field`, `was`, `now`); the row keeps the value it was published with. replaced: the source serves other bytes for a filing's document, and they read otherwise (`differs`); the rows read from the first bytes are kept as published, and neither file is kept. corrected: a person moved one of the row's facts, or recorded that it stands, or recorded how many rows a report's own bytes list (`field` transactions), citing the evidence (`because`, `kind`, `decided_by`, `decided_at`)."
+    },
+    "field": {
+      "type": "string",
+      "description": "The fact the change is about, as a path into the row (filed_at, officeholder_id, source.content_hash). On read otherwise, replaced and corrected. On a correction of a filing, `transactions` is the number of rows the report's bytes list, which the maintainer's decision accepts where a later reading of the very bytes the rows were published from finds more; the adapter adds no such row without it."
+    },
+    "was": {
+      "description": "The value the published row carries for the field; for a correction, the value it carried before. A correction of a transaction's asset or notes carries `was_sha256` instead."
+    },
+    "was_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "On a correction of a transaction's asset or notes, the text the filer wrote: the SHA-256 of the value it carried, hashed as canonical JSON (json.dumps with sort_keys=True, ensure_ascii=False, the default separators), in place of the value. So a line a filer has the Clerk remove, a private person's name among them, is not in the register's changes; the build that published the line carries it still, as every sealed build stays in the repository's history (LIMITATIONS.md §9; the Council's third reading of S.1b, Seat B, and its fourth, Seats B, E and G). A correction's `now` is the text as corrected, in plain."
+    },
+    "differs": {
+      "type": "array",
+      "description": "On replaced: which rows of the document read otherwise than the rows published from it, by id and field name, never by value. Empty when a later file reads as the rows published.",
+      "items": {
+        "type": "object",
+        "required": [
+          "row"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "row": {
+            "type": "string",
+            "description": "A transaction's id, or the filing's, for its header."
+          },
+          "fields": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The facts a published row carries that this file gives another value."
+          },
+          "only_in": {
+            "type": "string",
+            "enum": [
+              "the file first read",
+              "this file"
+            ],
+            "description": "A row one file lists and the other does not."
+          },
+          "header": {
+            "type": "string",
+            "description": "What the document's own header prints that refuses the row's attribution (a Filing ID, a seat, a filer status)."
+          }
+        }
+      }
+    },
+    "now": {
+      "description": "The value the capture gives, or the value a correction sets. Equal to `was` when the source reads as published again, or when a person records that the published value stands."
+    },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "source",
+        "register"
+      ],
+      "description": "A correction's kind: the source now states the fact otherwise (source), or the register read or joined it wrongly (register)."
+    },
+    "because": {
+      "type": "string",
+      "description": "A correction's reason, in one sentence, naming what the evidence shows."
+    },
+    "decided_by": {
+      "type": "string",
+      "description": "Who made the correction, by role."
+    },
+    "decided_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the correction was made, UTC."
+    },
+    "before": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the register last built from a capture of the same source before this one, UTC. The change fell between the two reads; the register does not know when, or why."
+    },
+    "before_content_hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "The SHA-256 of the bytes of that earlier read. The register keeps them in data/captures/sha256/ only where a change row or a closed year cites them."
+    },
+    "entry_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "On read otherwise: the SHA-256 of the row's own entry in the capture, found without the XML parser. A change is recorded only where the row's entry changed since the register last read it; a later capture whose entry has this same hash says nothing new about the row."
+    },
+    "capture": {
+      "type": "object",
+      "required": [
+        "url",
+        "retrieved_at",
+        "content_hash"
+      ],
+      "additionalProperties": false,
+      "description": "The capture that shows the change, or the evidence a correction cites: where it was read, when (UTC), and the SHA-256 of the bytes, which the register keeps at data/captures/sha256/<content_hash> with the capture's own extension, unless they are a filed document (a PDF), which it never keeps.",
+      "properties": {
+        "url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "retrieved_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "content_hash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "build": {
+      "type": "string",
+      "pattern": "^\\d{4}-[a-z0-9-]+$",
+      "description": "The build the row was first sealed in, as tools/seal.py stamps it."
+    },
+    "frame": {
+      "type": "string",
+      "const": "Presence in the register is not evidence of wrongdoing.",
+      "description": "The register's frame, on the row, because the row can travel without the page."
+    }
+  },
+  "examples": [
+    {
+      "id": "ch:not-listed:oh:us:example:example:2027-01-11T09:17:00Z",
+      "row_id": "oh:us:example:example",
+      "rows": "officeholders",
+      "change": "not listed",
+      "capture": {
+        "url": "https://example.com/MemberData.xml",
+        "retrieved_at": "2027-01-11T09:17:00Z",
+        "content_hash": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "build": "0007-example-2026",
+      "frame": "Presence in the register is not evidence of wrongdoing."
+    },
+    {
+      "id": "ch:read-otherwise:fl:example:X:1:filed_at:2027-01-11T09:17:01Z",
+      "row_id": "fl:example:X:1",
+      "rows": "filings",
+      "change": "read otherwise",
+      "field": "filed_at",
+      "was": "2026-05-15",
+      "now": "2026-05-16",
+      "capture": {
+        "url": "https://example.com/2026FD.zip",
+        "retrieved_at": "2027-01-11T09:17:01Z",
+        "content_hash": "1111111111111111111111111111111111111111111111111111111111111111"
+      },
+      "frame": "Presence in the register is not evidence of wrongdoing."
+    }
+  ]
+}

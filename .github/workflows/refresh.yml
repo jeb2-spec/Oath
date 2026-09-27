@@ -24,6 +24,19 @@
 # pending proof, and anchor.yml completes the proof once Bitcoin holds it. A stamp the
 # calendars cannot take is owed, not a failure of the refresh; anchor.yml retries it.
 #
+# The adapter reads the published rows before it builds and writes every one back byte for
+# byte; a row only gains a fact it lacked. What a later capture shows otherwise (a Member the
+# roster no longer lists, a filing the index stops listing or dates otherwise, a document
+# served in other bytes that read otherwise) is a row of its own in data/changes.ndjson,
+# citing the read; where that read was of the roster or a year's index the build keeps its bytes
+# in data/captures/sha256/ and this job commits them, and a filed document it cites by its
+# fingerprint alone and never keeps, because a kept copy would outlast the Clerk's redaction of
+# it (the Council's third reading of S.1b); a
+# filing year whose Congress has ended is carried as published (NEXT.md S.1b). A fact moves
+# only by a person's correction, a change row of its own that tools/correct.py writes with
+# the evidence. check-removals holds the build to all of it, and its report is in the pull
+# request, beside the change rows the build log lists.
+#
 # Every step runs in bash with pipefail, so a step that tees its log still fails
 # when the program before the pipe does.
 
@@ -73,7 +86,7 @@ jobs:
           python-version: "3.11"
 
       - name: Install the Python dev toolchain named in pyproject.toml, and the OpenTimestamps client
-        run: python -m pip install "ruff>=0.16,<0.17" "pytest>=8" "pypdf>=6,<7" "opentimestamps-client>=0.7,<0.8"
+        run: python -m pip install "ruff>=0.16,<0.17" "pytest>=8" "pypdf==6.19.0" "opentimestamps-client>=0.7,<0.8"
 
       - name: Fetch the roster and the filing index, recording each retrieval
         run: python src/adapters/house-fd/fetch.py --year "$YEAR" | tee fetch.log
@@ -145,6 +158,7 @@ jobs:
           python tools/rebuild.py
           python tools/check-signal-versions.py
           python tools/check-supersessions.py
+          python tools/check-removals.py | tee removals.log
           python tools/check-aggregator-sole.py
           python tools/anchor.py
           python src/surfaces/render.py
@@ -203,11 +217,15 @@ jobs:
             cat build.log
             echo
             cat signals.log
+            echo
+            cat removals.log
             echo '```'
+            echo
+            echo "Every row the register had published is in this build as published, or gains only a fact it lacked; the change rows the build log lists are what the new captures show, each citing a capture this pull request adds under data/captures/sha256/. Read them before merging: a change row is permanent."
             echo
             echo "## Gates"
             echo
-            echo "Ruff, pytest, verify, tamper-test, validate-schemas, rebuild, check-signal-versions, check-supersessions, check-aggregator-sole, anchor, render, lint-frame-presence, lint-no-ranking, check-mark, lint-verdict-language, check-crossrefs, Biome, tsc and Vitest all passed in this workflow run before the push. A pull request opened by the workflow token does not trigger verify.yml; merging it runs verify.yml on main."
+            echo "Ruff, pytest, verify, tamper-test, validate-schemas, rebuild, check-signal-versions, check-supersessions, check-removals, check-aggregator-sole, anchor, render, lint-frame-presence, lint-no-ranking, check-mark, lint-verdict-language, check-crossrefs, Biome, tsc and Vitest all passed in this workflow run before the push. A pull request opened by the workflow token does not trigger verify.yml; merging it runs verify.yml on main."
             echo
             echo "## Conflict of interest disclosure"
             echo
@@ -236,7 +254,17 @@ jobs:
             echo
             echo '    python src/signals/run.py --at <built_at> --correct <finding-id> --kind source --because "<what changed, and the URL that shows it>"'
             echo
+            echo "If the correction moves a fact of a published row (a filing's date, its attribution), write that first, with the same evidence, and the gate lets exactly that move through:"
+            echo
+            echo '    python tools/correct.py --row <row-id> --field <fact> --now <value> --kind source --because "<what the evidence shows>" --evidence-url <URL at a primary source> --evidence-file <a copy of it> --evidence-retrieved-at <when those bytes were fetched, UTC> --decided-by "the maintainer"'
+            echo
+            echo "Moving a filing's officeholder moves its office and each of its transactions with it, each a correction row of its own."
+            echo
             echo "The next refresh then goes through."
+            echo
+            echo "If the failing step is **Build the rows from the recorded capture**, the adapter refused, and the log names the row and why. Either the join would attribute a published filing to another officeholder, or a filing's document refuses its published attribution: the maintainer decides with tools/correct.py, moving the attribution or recording with --stands that it stands, citing the evidence. Or the source's bytes for a row are unchanged and this build reads them otherwise, or no longer lists a row whose entry the bytes still carry: nothing about the source changed, the register's reading did, and a change to the register's code must not be recorded as the source's; revert it, or, for a fact, correct the row with tools/correct.py. Or a report's own bytes read with rows after every published one: the reader found them, and the maintainer decides whether the report lists them (tools/correct.py --field transactions --now <rows> --json --kind register, citing the document), or reverts the reader. Or the read would record more than ten rows of one file as no longer listed at once: check the source; if it no longer lists them, confirm the count with build.py --expect-not-listed <n>. If the failing step is **Every gate** and the gate is check-removals, a published row would have disappeared, a published fact moved without a correction naming it, or a correction lacks its reason, its decider or primary-source evidence; the log names each."
+            echo
+            echo "If the failing step is **Seal the new build**, the sentence the seal derived does not carry one of the build's own figures, and the log names which. That is a defect in tools/seal.py, not in the record: fix the sentence's derivation and run the refresh again. The seal stamps no change row with a build it did not seal, so nothing needs undoing."
             echo
             echo "Any other step is an ordinary failure to read, build or gate, and the log says which."
             echo

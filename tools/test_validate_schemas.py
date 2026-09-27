@@ -206,7 +206,7 @@ def test_main_on_the_repository_is_green(capsys):
     """Green on the real register. It stopped being empty when the House index landed."""
     assert vs.main([str(ROOT)]) == 0
     out = capsys.readouterr().out
-    assert "OK    7 schemas valid" in out
+    assert "OK    8 schemas valid" in out
     assert "rows across" in out and "NDJSON files validated" in out
 
 
@@ -234,3 +234,54 @@ def test_a_repeated_id_within_a_file_is_refused(tmp_path):
     problems, rows, files = vs.check_rows(tmp_path, schemas)
     assert rows == 2 and files == 1
     assert any("already appears at line 1; an id is a key" in p for p in problems), problems
+
+
+def test_the_rows_must_agree_with_one_another(tmp_path):
+    """The Council's third reading of S.1b (Seat C, N-5): the check that the rows agree could
+    be deleted without a test failing. Each disagreement it exists to find, found."""
+    data = tmp_path / "data"
+    data.mkdir()
+
+    def write(name: str, *rows: dict) -> None:
+        (data / f"{name}.ndjson").write_text("".join(json.dumps(r) + "\n" for r in rows), "utf-8")
+
+    holder = {"id": "oh:1", "offices": [{"id": "of:1"}]}
+    write("officeholders", holder)
+    write(
+        "filings",
+        {"id": "fl:1", "officeholder_id": "oh:1", "office_id": "of:1"},
+        {"id": "fl:2", "officeholder_id": "oh:9", "office_id": "of:1"},
+        {"id": "fl:3", "officeholder_id": "oh:1", "office_id": "of:9"},
+    )
+    write(
+        "transactions",
+        {"id": "tx:1", "filing_id": "fl:1", "officeholder_id": "oh:1"},
+        {"id": "tx:2", "filing_id": "fl:9", "officeholder_id": "oh:1"},
+        {"id": "tx:3", "filing_id": "fl:1", "officeholder_id": "oh:2"},
+    )
+    write(
+        "changes",
+        {"id": "ch:1", "row_id": "fl:1", "rows": "filings"},
+        {"id": "ch:2", "row_id": "fl:9", "rows": "filings"},
+    )
+    found = vs.joins(tmp_path)
+    for says in (
+        "fl:2 names oh:9, whom the register does not hold",
+        "fl:3 is at of:9, an office oh:1 does not hold",
+        "tx:2 names the filing fl:9",
+        "tx:3 names oh:2, and its filing names oh:1",
+        "ch:2 is about fl:9",
+    ):
+        assert any(says in line for line in found), says
+    assert len(found) == 5, found
+
+
+def test_validation_reports_rows_that_disagree(tmp_path):
+    """The check runs with every validation, not only when asked for by name."""
+    data = tmp_path / "data"
+    data.mkdir()
+    (data / "filings.ndjson").write_text(
+        json.dumps({"id": "fl:9", "officeholder_id": "oh:9", "office_id": "of:9"}) + "\n", "utf-8"
+    )
+    problems, _, _ = vs.check_rows(tmp_path, SCHEMAS)
+    assert any("fl:9 names oh:9, whom the register does not hold" in p for p in problems)
