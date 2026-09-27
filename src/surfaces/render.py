@@ -374,6 +374,17 @@ p.punch { font: 700 1.02rem/1.45 var(--letter); max-width: 40rem; margin: .8rem 
   ol.strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   h1.comic { font-size: 3rem; }
 }
+/* the notice clock */
+section.noticeclock { border-top: 0; }
+figure.noticeclock { margin: .6rem 0 .3rem; }
+svg.noticeclock { width: 100%; max-width: 36rem; height: auto; display: block; }
+.nb.within { fill: url(#benday); stroke: var(--ink-2); stroke-width: .4; }
+.nb.past { fill: var(--ink); }
+.nb.before { fill: none; stroke: var(--ink); stroke-width: .8; stroke-dasharray: 1.4 1.2; }
+.nl { stroke: var(--ink); stroke-width: 1; }
+.nl.thirty { stroke-dasharray: 3 2; }
+.na { stroke: var(--ink); stroke-width: 1.2; }
+svg.noticeclock text { font: 700 9px var(--letter); fill: var(--ink-2); }
 /* the house at a glance */
 p.glance { font-size: 1.12rem; line-height: 1.5; max-width: 38rem; margin: 0 0 .5rem; }
 figure.glance { margin: .5rem 0 .2rem; }
@@ -3695,8 +3706,9 @@ PANELS = (
     ),
     (
         "Notice arrives",
-        "The report prints the date the member was notified of the trade. On every figure, the "
-        "notice is a diamond.",
+        "The report prints the date the member was notified of the trade. It is the filer's own "
+        "entry, and it can move the deadline by at most 15 days. On every figure, the notice is "
+        "a diamond.",
         "notice",
         '<rect class="ht" x="36" y="30" width="100" height="58" rx="3"/>'
         '<rect class="paper ln" x="28" y="22" width="100" height="58" rx="3"/>'
@@ -3758,6 +3770,152 @@ def strip_section(unread: int, total: int, year: int) -> str:
         "The law asks for the report; it does not ask "
         f"anyone to stop trading. The Clerk's {year} index lists {total:,} of these reports."
         f"{paper}</p>\n</section>"
+    )
+
+
+# ---- the notice clock: the one date the filer writes ----------------------------------------
+
+
+def notice_bands(transactions: list[dict], filings: list[dict]) -> dict:
+    """Every trade the register has read, by the days from the trade to the notice date its report
+    prints, and for each band the trades, the reports and the members it holds: one report can
+    list hundreds of trades, so a count of trades alone would let one report look like many."""
+    filed = {f["id"]: f.get("filed_at") for f in filings}
+    days: dict[object, int] = {}
+    bands: dict[str, dict] = {
+        k: {"trades": 0, "reports": set(), "members": set()}
+        for k in ("before", "same", "within", "past")
+    }
+    spouse = same_day = 0
+    for t in transactions:
+        if not (t.get("transaction_date") and t.get("notified_date")):
+            continue
+        gap = (
+            date.fromisoformat(t["notified_date"]) - date.fromisoformat(t["transaction_date"])
+        ).days
+        key = "<0" if gap < 0 else gap if gap <= 60 else "61+"
+        days[key] = days.get(key, 0) + 1
+        band = "before" if gap < 0 else "same" if gap == 0 else "within" if gap <= 45 else "past"
+        b = bands[band]
+        b["trades"] += 1
+        b["reports"].add(t["filing_id"])
+        b["members"].add(t["officeholder_id"])
+        if band == "past":
+            spouse += t.get("owner") == "spouse"
+            same_day += filed.get(t["filing_id"]) == t["notified_date"]
+    out = {
+        k: {"trades": v["trades"], "reports": len(v["reports"]), "members": len(v["members"])}
+        for k, v in bands.items()
+    }
+    return {"days": days, "bands": out, "spouse": spouse, "same_day": same_day}
+
+
+def notice_chart(days: dict) -> str:
+    """One bar a day, from the day of the trade to 60 days after it, a bar for notices printed
+    before the trade at the left and one for 61 days or more at the right, drawn to one linear
+    scale; upright lines at 30 and 45 days. Dates and counts only; its words are in the caption."""
+    keys = ["<0"] + list(range(61)) + ["61+"]
+    top = max(days.values(), default=1) or 1
+    base, height, step = 128, 110, 5.0
+
+    def x(k) -> float:
+        if k == "<0":
+            return 4
+        if k == "61+":
+            return 16 + 61 * step + 8
+        return 16 + k * step
+
+    parts = []
+    for k in keys:
+        n = days.get(k, 0)
+        h = round(n / top * height, 1)
+        band = "before" if k == "<0" else "past" if (k == "61+" or k > 45) else "within"
+        if n:
+            parts.append(
+                f'<rect class="nb {band}" x="{x(k):.1f}" y="{base - max(h, 0.8):.1f}" width="4" '
+                f'height="{max(h, 0.8):.1f}"/>'
+            )
+    for mark, cls in ((30, "thirty"), (45, "fortyfive")):
+        xm = x(mark) + 2 + step / 2
+        parts.append(f'<line class="nl {cls}" x1="{xm:.1f}" y1="12" x2="{xm:.1f}" y2="{base}"/>')
+        parts.append(f'<text x="{xm:.1f}" y="9" text-anchor="middle">{mark}</text>')
+    parts.append(f'<line class="na" x1="2" y1="{base}" x2="358" y2="{base}"/>')
+    for k, label in (("<0", "&lt;0"), (0, "0"), (30, ""), ("61+", "61+")):
+        if label:
+            parts.append(
+                f'<text x="{x(k) + 2:.1f}" y="{base + 13}" text-anchor="middle">{label}</text>'
+            )
+    return (
+        f'<svg class="noticeclock" viewBox="0 0 360 {base + 18}" direction="ltr" '
+        'aria-hidden="true" focusable="false">' + "".join(parts) + "</svg>"
+    )
+
+
+def notice_section(transactions: list[dict], filings: list[dict]) -> str:
+    """The one date the filer writes: the notice date, which alone can move a deadline, and by no
+    more than 15 days. Every trade the register has read, drawn by the days from the trade to its
+    printed notice; the key says trades, reports and members for each band. It names no one, and
+    it says what the register cannot see: why a notice came when it did."""
+    facts = notice_bands(transactions, filings)
+    b = facts["bands"]
+    total = sum(v["trades"] for v in b.values())
+    if not total:
+        return ""
+
+    def trio(v: dict) -> str:
+        return (
+            f"{v['trades']:,} {plural(v['trades'], 'trade', 'trades')} on {v['reports']:,} "
+            f"{plural(v['reports'], 'report', 'reports')} by {v['members']:,} "
+            f"{plural(v['members'], 'member', 'members')}"
+        )
+
+    swatch = (
+        '<svg class="key" viewBox="0 0 12 12" aria-hidden="true" focusable="false">'
+        '<rect class="nb {0}" x="1" y="1" width="10" height="10"/></svg>'
+    )
+    past = b["past"]
+    spouse = ""
+    if past["trades"]:
+        spouse = (
+            f" For {facts['spouse']:,} of these trades the filer marked the asset as a spouse's"
+        )
+        if facts["same_day"]:
+            n = facts["same_day"]
+            spouse += (
+                f", and {n:,} {plural(n, 'is on a report', 'are on reports')} dated the same day "
+                f"as the notice {plural(n, 'it prints', 'they print')}"
+            )
+        spouse += "."
+    return (
+        '<section class="noticeclock" id="notice">\n<h2><span class="tag">The one date the filer '
+        "writes</span></h2>\n"
+        '<p class="glance">Every trade on these reports carries a notice date: the day the member '
+        "says they learned of it. It is the filer's own entry, and it is the only date that can "
+        "move the deadline, by at most 15 days. Past 45 days after the trade, the deadline no "
+        "longer waits for it.</p>\n"
+        '<figure class="noticeclock">\n'
+        + notice_chart(facts["days"])
+        + f"\n<figcaption>All {total:,} trades on the transaction reports the register has read, "
+        "by the days from the trade to the notice date the report prints: one bar a day, the "
+        "last collecting every trade 61 days or more after, and one at the left for notices "
+        "printed before the trade. The upright lines are 30 and 45 days after the trade. It "
+        "counts trades, not reports or people: one report can list hundreds of trades, so a tall "
+        "bar can be a single report. The dates are the reports' own, as printed; a date typed "
+        "wrong on a form is drawn where it was typed. It names no one.</figcaption>\n</figure>\n"
+        '<ul class="squarekey">'
+        f"<li>{swatch.format('within')} <b>{b['same']['trades'] + b['within']['trades']:,}</b> "
+        "notices printed the same day as the trade or up to 45 days after it "
+        f"({b['same']['trades']:,} the same day)</li>"
+        f"<li>{swatch.format('past')} <b>{past['trades']:,}</b> printed more than 45 days after "
+        f"the trade, so, as the dates are printed, the deadline had already passed when the notice "
+        f"came: {trio(past)}."
+        f"{spouse}</li>"
+        f"<li>{swatch.format('before')} <b>{b['before']['trades']:,}</b> printed before the "
+        f"trade itself, dates that cannot both be right: {trio(b['before'])}.</li></ul>\n"
+        "<p>The register cannot see why a notice came when it did, and the report does not say. "
+        "It can show where the dates fall against the rule; every member's page lists each trade "
+        f'with both of its dates, as filed. <span class="either">{esc(FRAME)}</span></p>\n'
+        "</section>"
     )
 
 
@@ -4322,6 +4480,7 @@ def render_index(
         "The register sets the record beside it.</footer></blockquote>\n</section>"
     )
     glance = glance_section(signal_runs or [], outcomes_all or {}, findings or [])
+    notice = notice_section(transactions or [], filings)
     everything = [o for group in (outcomes_all or {}).values() for o in group]
     by_id = {f["id"]: f for f in filings}
     how = (
@@ -4339,7 +4498,8 @@ def render_index(
         else ""
     )
     body = (
-        f'{head}\n<main id="main">\n{how}\n{glance}\n{door}\n{tile_map(offices)}\n{oath}\n'
+        f'{head}\n<main id="main">\n{how}\n{glance}\n{notice}\n{door}\n'
+        f"{tile_map(offices)}\n{oath}\n"
         f"{record}\n{table}\n{how_to_read(False)}\n</main>\n{footer(meta, home=True)}"
     )
     return page("Every seat in the register", body)
