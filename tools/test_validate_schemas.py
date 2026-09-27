@@ -212,7 +212,10 @@ def test_main_on_the_repository_is_green(capsys):
     said = re.search(r"OK    (\d+) schemas valid; ([\d,]+) rows across (\d+) NDJSON", out)
     assert said, out
     assert int(said.group(1)) == len(SCHEMAS) >= 9
-    assert int(said.group(3)) == len(list((ROOT / "data").glob("*.ndjson")))
+    counted = len(list((ROOT / "data").glob("*.ndjson"))) + len(
+        list((ROOT / "data" / vs.RUN_RECORDS).glob("*.ndjson"))
+    )
+    assert int(said.group(3)) == counted, "the run records are counted too"
     assert "rows across" in out and "NDJSON files validated" in out
 
 
@@ -337,3 +340,111 @@ def test_a_hyphenated_schema_name_is_a_valid_id():
     assert vs.ID_RULE.match("https://oath.jeb2-spec.dev/schemas/change/v0.json")
     assert not vs.ID_RULE.match("https://oath.jeb2-spec.dev/schemas/Doctrine_Amendment/v0.json")
     assert not vs.ID_RULE.match("https://oath.jeb2-spec.dev/schemas/-leading/v0.json")
+
+
+def run_record(tmp_path: Path, run: dict, *outcomes: dict) -> Path:
+    root = tmp_path / "repo"
+    (root / "data" / vs.RUN_RECORDS).mkdir(parents=True, exist_ok=True)
+    (root / "data" / vs.RUN_RECORDS / "a-signal-v1.ndjson").write_text(
+        "".join(json.dumps(r, sort_keys=True) + "\n" for r in (run, *outcomes)), encoding="utf-8"
+    )
+    return root
+
+
+RUN = dict(SCHEMAS["signal-run.schema.json"]["examples"][0])
+OUTCOMES = [dict(o) for o in SCHEMAS["signal-outcome.schema.json"]["examples"]]
+
+
+def test_the_run_record_has_a_schema_and_its_rows_are_validated(tmp_path):
+    """Every page's answer is counted from the run record, and one of the answer's four numbers is
+    recoverable from nothing else in the register. The file lived one directory below the glob, so
+    it had no schema and nothing validated it: a malformed row would have put a wrong number on
+    four hundred and thirty-nine pages with no gate to say which (the second reading, Seat G)."""
+    assert (
+        vs.validate(RUN, SCHEMAS["signal-run.schema.json"], SCHEMAS, "signal-run.schema.json") == []
+    )
+    for outcome in OUTCOMES:
+        assert (
+            vs.validate(
+                outcome,
+                SCHEMAS["signal-outcome.schema.json"],
+                SCHEMAS,
+                "signal-outcome.schema.json",
+            )
+            == []
+        )
+    # An outcome with a field the register does not write, or a count below zero, is refused.
+    bad = vs.validate(
+        dict(OUTCOMES[0], rows=-1, mystery="x"),
+        SCHEMAS["signal-outcome.schema.json"],
+        SCHEMAS,
+        "signal-outcome.schema.json",
+    )
+    joined = "\n".join(bad)
+    assert "$.rows: -1 is below the minimum 0" in bad
+    assert "mystery" in joined
+
+    # And the rows are reached by the tool on a real tree, which is the part that was missing.
+    root = run_record(tmp_path, RUN, *OUTCOMES)
+    problems, rows, files = vs.check_rows(root, SCHEMAS)
+    assert files == 1 and rows == 1 + len(OUTCOMES), (files, rows)
+    assert [p for p in problems if "signal-runs" in p] == []
+    broken = run_record(tmp_path / "b", RUN, dict(OUTCOMES[0], state="mystery"))
+    assert any("$.state:" in p and "signal-runs" in p for p in vs.check_rows(broken, SCHEMAS)[0])
+
+
+def test_a_run_whose_summary_does_not_add_up_is_refused(tmp_path):
+    """The summary is what the landing states and the outcomes are what each page states. Nothing
+    derives one from the other at render time, so a summary that does not add up is two surfaces
+    disagreeing about one run, and only a gate here can say so."""
+    root = run_record(tmp_path, dict(RUN, reports=99), *OUTCOMES)
+    problems = [p for p in vs.check_rows(root, SCHEMAS)[0] if "signal-runs" in p]
+    assert any(
+        f"the run says reports is 99 and its own outcomes come to {len(OUTCOMES)}" in p
+        for p in problems
+    )
+
+    for field, wrong in (
+        ("reports_with_a_finding", 7),
+        ("officeholders_with_a_finding", 7),
+        ("rows_evaluated", 7),
+        ("rows_after", 7),
+    ):
+        root = run_record(tmp_path / field, dict(RUN, **{field: wrong}), *OUTCOMES)
+        said = [p for p in vs.check_rows(root, SCHEMAS)[0] if "signal-runs" in p]
+        assert any(f"the run says {field} is 7" in p for p in said), field
+
+    # The states and the set-aside reasons are compared whole, not by their totals: a reason the
+    # run names and its outcomes do not is a reason a reader would meet on a landing and nowhere.
+    root = run_record(
+        tmp_path / "reasons",
+        dict(RUN, rows_not_evaluated={"asset coded ZZ": 1}),
+        *OUTCOMES,
+    )
+    said = [p for p in vs.check_rows(root, SCHEMAS)[0] if "signal-runs" in p]
+    assert any("rows_not_evaluated" in p and "asset coded ZZ" in p for p in said)
+    root = run_record(tmp_path / "states", dict(RUN, reports_by_state={"evaluated": 3}), *OUTCOMES)
+    said = [p for p in vs.check_rows(root, SCHEMAS)[0] if "signal-runs" in p]
+    assert any("reports_by_state" in p for p in said)
+
+
+def test_two_outcomes_for_one_report_are_refused(tmp_path):
+    """Two rows for one report are two answers to one question, and every count the pages state
+    would take whichever the loop reached last."""
+    root = run_record(tmp_path, RUN, OUTCOMES[0], dict(OUTCOMES[0]))
+    said = [p for p in vs.check_rows(root, SCHEMAS)[0] if "signal-runs" in p]
+    assert any("already has an outcome at line 2" in p and "a report has one" in p for p in said)
+
+
+def test_a_finding_rests_on_one_report_and_the_schema_says_so():
+    """Thirteen places in this repository read producing_filings[0] as though the list held one, and
+    the schema permitted many, so those thirteen were correct by luck: a Finding over two reports
+    would have had the second silently ignored on every surface (the second reading, Seat C)."""
+    schema = SCHEMAS["finding.schema.json"]
+    assert schema["properties"]["producing_filings"]["maxItems"] == 1
+    finding = json.loads((ROOT / "data" / "findings.ndjson").read_text("utf-8").splitlines()[0])
+    assert vs.validate(finding, schema, SCHEMAS, "finding.schema.json") == []
+    two = dict(finding, producing_filings=finding["producing_filings"] + ["fl:house-clerk:P:1"])
+    errors = vs.validate(two, schema, SCHEMAS, "finding.schema.json")
+    assert "$.producing_filings: holds 2 items, and this field takes at most 1" in errors
+    assert vs.validate(dict(finding, producing_filings=[]), schema, SCHEMAS, "finding.schema.json")
