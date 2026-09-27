@@ -373,6 +373,9 @@ def derive_state(root: Path, meta: dict) -> str:
     for record in records:
         summary, outcomes = record[0], record[1:]
         signal = signals.get(summary["signal_id"], {})
+        if signal.get("slug") == ANNUAL_SLUG:
+            sentences.append(annual_state(signal, summary, outcomes, filings, holders))
+            continue
         by_state = summary.get("reports_by_state", {})
         skipped = sum(summary.get("rows_not_evaluated", {}).values())
         cannot = reach(outcomes, filings)
@@ -406,6 +409,51 @@ def derive_state(root: Path, meta: dict) -> str:
         "register is not evidence of wrongdoing."
     )
     return " ".join(sentences)
+
+
+# The Signal that reads one date per report, not rows on it. The sentence written for the
+# transaction-report Signal would say of it "after the deadline the rule sets" and count the
+# transaction reports set aside as outside it, which is true of neither (the Council's second
+# reading of the annual Signal, Seat G).
+ANNUAL_SLUG = "annual-report-after-extension-limit"
+ANNUAL_WITHIN = "after the original due date, within the time an extension may cover"
+ANNUAL_DAY_AFTER = (
+    "the day after the latest date, and the register has not established the time zone of the "
+    "printed date"
+)
+
+
+def annual_state(
+    signal: dict, summary: dict, outcomes: list[dict], filings: list[dict], holders: list[dict]
+) -> str:
+    """The annual Signal's sentence in the build's state, from its run record and the rows."""
+    waiting = sum(
+        1 for o in outcomes if {ANNUAL_WITHIN, ANNUAL_DAY_AFTER} & set(o.get("not_evaluated", {}))
+    )
+    compared = summary["rows_evaluated"]
+    other = summary["reports"] - compared - waiting
+    attributed = {o["officeholder_id"] for o in outcomes}
+    without = sum(1 for h in holders if h["id"] not in attributed)
+    headless = sum(
+        1
+        for f in filings
+        if f.get("source_form_code") != "P"
+        and (f.get("source") or {}).get("content_hash")
+        and not f.get("printed")
+    )
+    return (
+        f"The Signal {signal.get('name', summary['signal_id'])} ({summary['signal_id']}) read "
+        f"{summary['reports']:,} annual reports by their own header and compared "
+        f"{compared:,} of them: {summary['rows_after']:,} are dated after the latest date any "
+        "extension the statute allows outside a combat zone could reach, on "
+        f"{summary['reports_with_a_finding']:,} reports attributed to "
+        f"{summary['officeholders_with_a_finding']:,} officeholders. {waiting:,} are within the "
+        "time an extension may cover, or the day after it, and the register does not decide "
+        f"whether an extension covers them; {other:,} were not compared, each with a reason. "
+        f"It cannot reach {plural(headless, 'document', 'documents')} attributed to members whose "
+        "header it could not read, among them any report filed on paper, and it attributes no "
+        f"annual report to {plural(without, 'officeholder', 'officeholders')}."
+    )
 
 
 def congress_named(year: int) -> str:

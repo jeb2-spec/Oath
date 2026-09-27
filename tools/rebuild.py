@@ -63,6 +63,15 @@ def one(root: Path, run, finding_id: str) -> int:
     ]
     findings, _ = module.evaluate(holders, filings, transactions)
     again = next((f for f in findings if f["id"] == base), None)
+    # What the Finding was regenerated from, in the Signal's own inputs: a Signal that reads only
+    # a report's header regenerates from the filing and officeholder rows, and saying "0 rows"
+    # told a later reader it came from nothing (the second reading of the annual Signal, Seat G).
+    what = (
+        f"{len(transactions)} rows of"
+        if transactions
+        else f"{len(filings)} filing and {len(holders)} officeholder "
+        f"{'row' if len(filings) + len(holders) == 1 else 'rows'} of"
+    )
     if again is None:
         print(f"FAIL  the rows {finding_id} names no longer produce it")
         if sealed.get("superseded_by"):
@@ -78,10 +87,13 @@ def one(root: Path, run, finding_id: str) -> int:
         regenerated.update(id=sealed["id"], notes=sealed.get("notes"))
     print(json.dumps(regenerated, indent=2, sort_keys=True, ensure_ascii=False))
     if run.comparable(again) != run.comparable(sealed):
-        print(f"\nFAIL  regenerated from {len(transactions)} rows; it differs from the sealed row")
+        print(
+            f"\nFAIL  regenerated from the {what} {', '.join(sealed['producing_filings'])}; it "
+            "differs from the sealed row"
+        )
         return 1
     print(
-        f"\nOK    regenerated from the {len(transactions)} rows of "
+        f"\nOK    regenerated from the {what} "
         f"{', '.join(sealed['producing_filings'])}; "
         "identical to the sealed row."
     )

@@ -2,8 +2,9 @@
 
 *Draft, second version, 2026-09-27, after the Council's reading of the first
 ([docs/council/2026-09-27-the-annual-report-draft.md](../council/2026-09-27-the-annual-report-draft.md)).
-This is not a Signal. Nothing here is in `data/signals.ndjson`, no code implements it, and no
-Finding rests on it. The built Signal goes to the Council again before it publishes.*
+This is not a Signal. Nothing here is in `data/signals.ndjson`, and no Finding rests on it. The
+built Signal ([its definition](annual-report-after-extension-limit.md), both implementations under
+`src/signals/`, its known answers and its pages) goes to the Council again before it publishes.*
 
 ## Abstract
 
@@ -132,8 +133,10 @@ rows, by seat and surname. No Finding rests on it, and nothing on the page says 
 
 The Signal first publishes on the register's regular Monday cadence after the Council's reading of the
 built Signal closes and the maintainer merges it, whatever the calendar. The general election falls on
-3 November 2026; the rule, not the date, decides, and the Signal's page shows the day its definition
-was merged. Holding it back for the election would be a timing choice too.
+3 November 2026; the rule, not the date, decides. The Signal's page shows the day the Council's
+reading of the built Signal closed, links its record, and says the rule; the build that first carries
+it is the first whose run record holds it. Holding it back for the election would be a timing choice
+too.
 
 ## Known-answer cases to write before any code
 

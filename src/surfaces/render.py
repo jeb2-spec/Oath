@@ -45,7 +45,7 @@ import posixpath
 import re
 import sys
 import unicodedata
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
 FRAME = "Presence in the register is not evidence of wrongdoing."
@@ -57,6 +57,9 @@ SEATS_PAGE = "seats.html"
 RECORD_TITLE = "How this register was built"
 RECORD_PAGE = "record.html"
 CLERK_SITE = "https://disclosures-clerk.house.gov/FinancialDisclosure"
+# Where the Clerk serves each document the index lists by DocID, codes other than P
+# (SOURCES.md F.1).
+CLERK_BASE = "https://disclosures-clerk.house.gov/"
 HOUSE_FINDER = "https://www.house.gov/representatives/find-your-representative"
 REPO = "https://github.com/jeb2-spec/Oath/blob/main/"
 CHARTER = REPO + "CHARTER.md"
@@ -451,6 +454,25 @@ svg.deadline text.don { font-size: 10px; fill: var(--ink); }
 svg.deadline text.doff { font-size: 10px; fill: var(--paper); }
 figure svg text.stamp { font: 600 6px var(--mono); letter-spacing: .02em; fill: var(--ink-2); }
 .stampwave { fill: none; stroke: var(--ink-2); stroke-width: .35; }
+/* the annual report: the report's date beside the due date and the latest date the law allows */
+section.annual { border-top: 0; }
+figure.annual, figure.annualchart { margin: .6rem 0 .3rem; }
+figure.annual > svg, svg.annualchart { width: 100%; max-width: 36rem; height: auto;
+  display: block; }
+figure.annual figcaption { max-width: 36rem; margin-top: .35rem; }
+.abracket { fill: none; stroke: var(--ink); stroke-width: 1.2; }
+.aline { stroke: var(--ink); stroke-width: 1.6; }
+.aaxis { stroke: var(--ink); stroke-width: 2.2; stroke-linecap: round; }
+.atick { stroke: var(--ink-2); stroke-width: .8; }
+.amark { stroke: var(--ink); stroke-width: 1.4; }
+.amark.after, .acol.after { fill: var(--ink); }
+.amark.compared, .acol.compared { fill: url(#benday50); }
+.amark.read, .acol.read { fill: url(#benday); }
+.acol.compared, .acol.read { stroke: var(--ink); stroke-width: .3; }
+figure svg text.alaw, figure svg text.afiled, svg.annualchart text.amonth {
+  font: 700 8px var(--letter); fill: var(--ink-2); }
+figure svg text.afiled { fill: var(--ink); }
+ul.notices { margin: .2rem 0 .7rem; padding-left: 1.1rem; font-size: .9rem; }
 span.printed { color: var(--ink); }
 /* the notice clock */
 section.noticeclock { border-top: 0; }
@@ -1928,6 +1950,7 @@ def signals_section(
     sworn: str | None = None,
     all_signals: list[dict] | None = None,
     changes: dict[str, list[dict]] | None = None,
+    held_notices: list[dict] | None = None,
 ) -> str:
     """Signals that fired and Signals that did not, for one officeholder, grouped by Signal
     and never by severity (ECOSYSTEM.md §1.3; METHODOLOGY.md §10). Every defined Signal is
@@ -1938,7 +1961,7 @@ def signals_section(
         fid for fid, f in filings_by_id.items() if (f.get("source") or {}).get("content_hash")
     }
 
-    def blocks_for(signal_id: str) -> tuple[str, str]:
+    def blocks_for(signal_id: str, block=finding_block) -> tuple[str, str]:
         mine = sorted(
             fired_now(findings, signal_id), key=lambda f: (f["evidence"]["filed_at"], f["id"])
         )
@@ -1947,25 +1970,34 @@ def signals_section(
             for f in sorted(withdrawn_now(findings, signal_id), key=lambda f: f["id"])
         ) + moved_findings_line(findings, signal_id)
         found = "\n".join(
-            finding_block(f, filings_by_id.get(f["producing_filings"][0]), findings, changes)
-            for f in mine
+            block(f, filings_by_id.get(f["producing_filings"][0]), findings, changes) for f in mine
         )
         return withdrawn, found
 
     for signal in signals:
-        withdrawn, found = blocks_for(signal["id"])
+        annual = voice(signal) == ANNUAL_VOICE
+        block = annual_finding_block if annual else finding_block
+        withdrawn, found = blocks_for(signal["id"], block)
+        mine = outcomes.get(signal["id"], [])
+        quiet_words = (
+            annual_quiet(mine, findings, signal["id"])
+            if annual
+            else which_quiet(mine, held_reports, sworn, fetched)
+        )
+        notices = annual_notices(list(filings_by_id.values()), held_notices) if annual else ""
         head = (
             f'<h3 id="signal-{esc(signal["slug"])}">{esc(signal["name"])}, version '
             f"{signal['version']}</h3>\n"
             f'<p class="quiet">{standard_links(signal)}. '
             f'<a href="{to_root}{signal_page_path(signal)}">What it reads, how, and what it does '
             "not say</a>. "
-            f"{esc(which_quiet(outcomes.get(signal['id'], []), held_reports, sworn, fetched))}"
+            f"{esc(quiet_words)}"
             "</p>\n"
+            f"{notices}"
         )
         earlier = ""
         for old in older_versions(signal, all_signals or [], findings):
-            old_withdrawn, old_found = blocks_for(old["id"])
+            old_withdrawn, old_found = blocks_for(old["id"], block)
             earlier += (
                 f'<h4 class="version">Version {old["version"]}, which version '
                 f"{signal['version']} replaced</h4>\n"
@@ -2017,6 +2049,7 @@ def signal_check_line(
     findings: list[dict],
     outcomes: dict[str, list[dict]] | None = None,
     held_reports: int = 0,
+    sworn: str | None = None,
 ) -> str:
     """The checklist's line for Signals on one officeholder's page, naming which silence."""
     if not signals:
@@ -2028,7 +2061,11 @@ def signal_check_line(
             f'fired on {n:,} {plural(n, "report", "reports")}, <a href="#signals">below</a>'
             if n
             else "did not fire: "
-            + which_silence((outcomes or {}).get(signal["id"], []), held_reports)
+            + (
+                annual_silence((outcomes or {}).get(signal["id"], []), sworn)
+                if voice(signal) == ANNUAL_VOICE
+                else which_silence((outcomes or {}).get(signal["id"], []), held_reports)
+            )
         )
         parts.append(f"{esc(signal['name'])}, version {signal['version']}: {state}")
     n = len(signals)
@@ -2472,6 +2509,20 @@ def how_attributed(filing: dict, changes: dict[str, list[dict]] | None = None) -
     return "name"
 
 
+def headers_read(filings: list[dict]) -> int:
+    """Documents fetched and not read as a transaction report whose own header the register did
+    read, and recorded (filing.printed): an annual report or an extension form says what it is,
+    and a page that counted it as unread would say a Finding rests on a document it never read
+    (the Council's second reading of the annual Signal, Seat A)."""
+    return sum(
+        1
+        for f in filings
+        if f.get("printed")
+        and f.get("source", {}).get("content_hash")
+        and f.get("extraction_confidence") != "structured"
+    )
+
+
 def documents_read(filings: list[dict]) -> tuple[int, int]:
     """How many of these filings' documents the register read, and how many it fetched but did
     not read: ones whose extracted text carries no Filing ID line, or a form whose schedules
@@ -2526,14 +2577,22 @@ def checks_section(
         )
         read, scanned = documents_read(filings)
         pending = n - read - scanned
+        header = headers_read(filings)
+        scanned -= header
         if read == n:
             documents = (
                 "<b>read</b> · the register read each document, recorded its hash, and confirmed "
                 "the seat and filing ID printed inside it against the roster; the transactions "
                 "the reports list are below, as filed."
             )
-        elif read or scanned:
+        elif read or scanned or header:
             parts = [f"<b>partly read</b> · {read} of {n} documents read and hashed"]
+            if header:
+                its, prints = plural(header, "its", "their"), plural(header, "prints", "print")
+                parts.append(
+                    f"{header} fetched and hashed, and read for what {its} own header {prints} "
+                    f"{plural(header, 'it is', 'they are')}"
+                )
             if scanned:
                 parts.append(
                     f"{scanned} fetched and hashed, not read: no Filing ID line in the text "
@@ -2860,7 +2919,7 @@ def filings_section(
         f'the register files as a transaction report (<a href="{SOURCES_F1}">SOURCES.md F.1</a>).'
         + (
             " Where the register read a document's own header, the row gives what the header "
-            "prints it is, in its words."
+            "prints it is, in its words; a filing year is the calendar year the report covers."
             if any(f.get("printed") for f in filings)
             else ""
         )
@@ -3428,6 +3487,8 @@ def answer_section(
     meta: dict,
     held_reports: int = 0,
     sworn: str | None = None,
+    filings: list[dict] | None = None,
+    held_all: int = 0,
 ) -> str:
     """What the register read and what it found, first, in sentences whose shape is the same
     for everyone: the register's own coverage before any result, the result in the same words
@@ -3435,6 +3496,17 @@ def answer_section(
     above it, in the header (INVARIANTS §7). docs/design/pages-a-reader-can-use.md §2.1."""
     paragraphs = []
     for signal in signals:
+        if voice(signal) == ANNUAL_VOICE:
+            paragraphs += annual_answer(
+                signal,
+                outcomes.get(signal["id"], []),
+                findings,
+                filings or [],
+                held_all,
+                sworn,
+                meta,
+            )
+            continue
         words = ANSWER_WORDS.get((signal["slug"], signal["version"]))
         if words is None:
             # A Signal the answer has no words for used to be named with its firing count alone:
@@ -3644,6 +3716,7 @@ def render_officeholder(
     changes: dict[str, list[dict]] | None = None,
     rejected_url: str = REPO + "data/rejected/house-fd/",
     moved_away: list[tuple[dict, dict]] | None = None,
+    held_notices: list[dict] | None = None,
 ) -> str:
     signals, findings, outcomes = signals or [], findings or [], outcomes or {}
     changes = changes or {}
@@ -3772,7 +3845,14 @@ def render_officeholder(
             )
         )
     history = f'<p class="office">{" ".join(lines)}</p>\n' if lines else ""
-    check_line = signal_check_line(signals, findings, outcomes, held_reports)
+    # Every row set aside at this seat under this surname, whatever its code, for the annual
+    # report's sentence where none is attributed: the index's code is not read to choose them.
+    held_all = (
+        sum(n for kind, n in held_here.items() if kind != "elsewhere")
+        if isinstance(held_here, dict)
+        else int(held_here or 0)
+    )
+    check_line = signal_check_line(signals, findings, outcomes, held_reports, sworn)
     section = signals_section(
         signals,
         findings,
@@ -3783,6 +3863,7 @@ def render_officeholder(
         sworn,
         all_signals or signals,
         changes,
+        held_notices,
     )
     head = (
         '<header class="frame">\n'
@@ -3806,9 +3887,12 @@ def render_officeholder(
     # every one still whole (docs/design/pages-a-reader-can-use.md §2.2). The same order on every
     # page, whether a signal fired or not.
     fired = {f["producing_filings"][0] for f in fired_now(findings)}
+    answer = answer_section(
+        signals, findings, outcomes, meta, held_reports, sworn, filings, held_all
+    )
     body = (
         f'{head}\n<main id="main">\n'
-        f"{answer_section(signals, findings, outcomes, meta, held_reports, sworn)}\n"
+        f"{answer}\n"
         f"{checks_section(holder, filings, held_here, check_line, until, listings, changes)}\n"
         f"{section}\n"
         f"{filings_section(filings, held_here, changes, until, moved_away, holder['id'], sworn)}\n"
@@ -3925,6 +4009,18 @@ def bar(part: int, whole: int) -> str:
     return f'<span class="bar"><i style="width:{pct}%"></i></span>'
 
 
+def headers_clause(header: int) -> str:
+    """The documents read for what their own header prints they are, apart from the unread."""
+    if not header:
+        return ""
+    return (
+        f"; {header:,} more fetched and hashed, and read for what "
+        f"{plural(header, 'its', 'their')} own header {plural(header, 'prints', 'print')} "
+        f"{plural(header, 'it is', 'they are')}: an annual report, an amendment or an extension "
+        "form, with its dates"
+    )
+
+
 def unreadable_clause(scanned: int) -> str:
     """The landing's aside for documents fetched but not read, or nothing."""
     if not scanned:
@@ -3948,6 +4044,8 @@ def state_of_record(
     reach: dict[str, dict[str, int]] | None = None,
     changes: dict[str, list[dict]] | None = None,
     seated: int | None = None,
+    outcomes_all: dict[str, list[dict]] | None = None,
+    findings: list[dict] | None = None,
 ) -> str:
     """Numbers about the register and the chamber as a whole: each counts rows the register
     holds or seats of the chamber, and none is sorted by anything the register computes about a
@@ -3956,6 +4054,11 @@ def state_of_record(
     transactions = transactions or []
     signal_lines = ""
     for signal, summary in signal_runs or []:
+        if voice(signal) == ANNUAL_VOICE:
+            signal_lines += annual_record_line(
+                signal, summary, (outcomes_all or {}).get(signal["id"], []), findings or []
+            )
+            continue
         by_state = summary.get("reports_by_state", {})
         read_reports = by_state.get("evaluated", 0)
         skipped = sum(summary.get("rows_not_evaluated", {}).values())
@@ -4044,6 +4147,8 @@ def state_of_record(
     with_row = len({f["officeholder_id"] for f in filings} & held_ids)
     matched = len(filings)
     read, scanned = documents_read(filings)
+    header = headers_read(filings)
+    scanned -= header
     how = [how_attributed(f, changes) for f in filings]
     by_header, by_decision = how.count("document"), how.count("decision")
     if isinstance(at_seat_total, dict):
@@ -4075,7 +4180,8 @@ def state_of_record(
             f"modified {esc(index_src.get('last_modified', 'unknown'))} and the register read it "
             f"{esc(index_src.get('retrieved_at', '')[:10])}; {roster_words}. It read its sources "
             "every Monday at 09:17 UTC and published a new build when a source had changed and "
-            "the maintainer merged it, or when the maintainer published a correction, dated "
+            "the maintainer merged it, when the maintainer merged a Signal's first definition, "
+            "or when the maintainer published a correction, dated "
             "beside the row it concerns; a refresh that failed published nothing. A date here is "
             "when a source was read, not when the build was published. "
         )
@@ -4120,7 +4226,8 @@ def state_of_record(
         )
         + "</dd>\n"
         f"<dt>{read:,}</dt><dd>of those {matched:,} documents read by the register so far, each "
-        f"checked against the seat and filing ID printed inside it{unreadable_clause(scanned)}; "
+        f"checked against the seat and filing ID printed inside it{headers_clause(header)}"
+        f"{unreadable_clause(scanned)}; "
         f"the links open the Clerk's copies{bar(read, matched)}</dd>\n"
         f"<dt>{len(transactions):,}</dt><dd>rows the read reports list, as filed{marked_note}, "
         "each on its officeholder's page grouped by report; no page sums the amounts, averages "
@@ -4587,7 +4694,10 @@ def deadline_chart(on_time: int, late: list[int], meta: dict | None = None) -> s
 
 
 def deadline_section(
-    signal_runs: list[tuple[dict, dict]], findings: list[dict], meta: dict | None = None
+    signal_runs: list[tuple[dict, dict]],
+    findings: list[dict],
+    meta: dict | None = None,
+    all_runs: list[tuple[dict, dict]] | None = None,
 ) -> str:
     """The one figure the page is for: the deadline, and how many trades fell on each side of it.
 
@@ -4653,7 +4763,9 @@ def deadline_section(
     # signal it is the sentence that says which silence the landing is.
     what = (
         "<details>\n<summary>What a signal is, and what it does not say</summary>\n"
-        + signals_lede(signal_runs).replace('<p class="lede">', "<p>", 1)
+        + signals_lede(signal_runs if all_runs is None else all_runs).replace(
+            '<p class="lede">', "<p>", 1
+        )
         + "</details>\n"
     )
     if not parts:
@@ -5192,6 +5304,7 @@ def render_signal_page(
     outcomes: list[dict] | None = None,
     reach: dict[str, int] | None = None,
     changes: dict[str, list[dict]] | None = None,
+    filings: list[dict] | None = None,
 ) -> str:
     """A signal's page (ECOSYSTEM.md §1.2; PIPELINE.md Stage 5): its definition in its own words,
     what it did in this build, who it cannot reach, and every report on which it fired, in
@@ -5245,9 +5358,15 @@ def render_signal_page(
         "An officeholder with more than one such report is listed once, with each report's date. "
         "Nothing here is a ranking and no number stands beside a name; each report is on its "
         "officeholder's page with its dates, its arithmetic, and what the signal does not say. "
-        "Who cannot appear here, and why, is counted above: an officeholder none of whose "
-        "transaction reports the register could read cannot, whatever the reports show. What "
-        "the register "
+        "Who cannot appear here, and why, is counted above: "
+        + (
+            "an officeholder whose annual report prints no header the register could read "
+            "cannot, whatever the report shows. "
+            if voice(signal) == ANNUAL_VOICE
+            else "an officeholder none of whose transaction reports the register could read "
+            "cannot, whatever the reports show. "
+        )
+        + "What the register "
         "cannot read does not fall evenly across officeholders, so a count of Findings, or its "
         "absence, says nothing about any group of them. A name marked is one a roster the "
         f"register read for {esc(congress_words())} did not list, on the date the mark gives; "
@@ -5331,6 +5450,8 @@ def render_signal_page(
         )
         + "</dl>\n</section>"
     )
+    if voice(signal) == ANNUAL_VOICE:
+        record = annual_signal_record(summary, outcomes, findings, signal, filings or [], holders)
     body = (
         f'{head}\n<main id="main">\n'
         f"<section>\n<h2>What it describes</h2>\n{md_blocks(signal['description'])}\n"
@@ -5359,6 +5480,937 @@ def render_signal_page(
         f"</main>\n{footer(meta, home=False, to_root='../../')}"
     )
     return page(signal["name"], body)
+
+
+# ---- the annual report: one date per report, against the latest date the law allows ---------
+
+# Which of the page's voices speaks for a Signal. Every sentence, count and figure above this
+# section was written for the Signal that compares rows on transaction reports: it says trades
+# and rows, and spoken for a Signal about an annual report it would say them of reports that list
+# none. So a Signal is spoken for only by the voice written for it; the transaction sections are
+# handed that Signal's runs alone, and a Signal no voice speaks for stops the render, as one with
+# no answer words always has (answer_section).
+PTR_VOICE = ("stock-act-ptr-after-deadline", 1)
+ANNUAL_VOICE = ("annual-report-after-extension-limit", 1)
+VOICES = (PTR_VOICE, ANNUAL_VOICE)
+USC_13103 = (
+    "https://uscode.house.gov/view.xhtml?req=granuleid:USC-prelim-title5-section13103"
+    "&num=0&edition=prelim"
+)
+ETHICS_GUIDE_2025 = "https://ethics.house.gov/wp-content/uploads/2026/07/7-8-2026-2025-Published-Instruction-Guide.pdf"
+STANDARD_LINKS["S.1"] = (
+    ("5 U.S.C. § 13103(d), (g)", USC_13103),
+    ("the Committee on Ethics' 2025 Instruction Guide", ETHICS_GUIDE_2025),
+    ("STANDARDS.md S.1", STANDARDS_S1),
+)
+ANSWER_WORDS[ANNUAL_VOICE] = {
+    "reports": ("annual report", "annual reports"),
+    "against": (
+        "the latest date any extension the statute allows outside a combat zone could reach "
+        f'(<a href="{USC_13103}">5 U.S.C. § 13103(d), (g)(1)</a>)'
+    ),
+    # "A Member, Delegate or Resident Commissioner": the reader this reaches in a territory is on
+    # a Delegate's page, and § 13101 counts them (the Council's second reading, Seat F).
+    "rule": (
+        "The rule: a Member, Delegate or Resident Commissioner (5 U.S.C. § 13101) who serves "
+        "more than 60 days in a year files an annual financial disclosure report for it by 15 "
+        "May of the next year, or the next business day, and outside a combat zone extensions "
+        "may add at most 90 days in total. This Signal reads only the report's date, not what "
+        "the report lists."
+    ),
+}
+# The Signal's own reasons, as its implementation writes them into the run record.
+ANNUAL_WITHIN = "after the original due date, within the time an extension may cover"
+ANNUAL_DAY_AFTER = (
+    "the day after the latest date, and the register has not established the time zone of the "
+    "printed date"
+)
+ANNUAL_DATES_DISAGREE = "the index date, the printed filing date and the signature date disagree"
+ANNUAL_NO_DATE = "a date the register cannot read"
+# Why the register did not compare a report, in its own voice: what it did not do, never what
+# the rule does not reach (the Council's second reading of the built answer, Seat B). "The
+# original due date" is the Committee's own term: "its due date" came back from every language
+# the Council tried as a deadline already missed (the second reading, Seats A, B, D and F).
+ANNUAL_REASON_WORDS = {
+    ANNUAL_WITHIN: (
+        "it is dated after its original due date and on or before the latest date an extension "
+        "could reach, so an extension may cover it, and the register does not decide whether one "
+        "does"
+    ),
+    ANNUAL_DAY_AFTER: (
+        "it is dated the day after the latest date an extension could reach, which the register "
+        "does not evaluate, because it has not established the time zone of the printed date"
+    ),
+    "prints no filing year": "its header prints no filing year the register could read",
+    "a filing year whose instructions the register has not read": (
+        "it is for a filing year whose instructions the register has not read"
+    ),
+    ANNUAL_NO_DATE: (
+        "one of its dates could not be read: the date the Clerk's index gives it, the Filing "
+        "Date it prints, or the date its signature line gives"
+    ),
+    ANNUAL_DATES_DISAGREE: (
+        "the date the Clerk's index gives it, the Filing Date it prints and the date its "
+        "signature line gives are not the same day"
+    ),
+    "the roster records no swearing-in": (
+        "the Clerk's roster records no swearing-in for this officeholder"
+    ),
+    "60 days or fewer of service in the filing year, by the swearing-in recorded": (
+        "by the swearing-in the roster records, this officeholder served 60 days or fewer of "
+        "the year, so the register does not compare the report"
+    ),
+    "a later annual report for a filing year for which the register reads an earlier one": (
+        "the index lists an earlier annual report of this officeholder for the same filing year, "
+        "and the register compares the earliest"
+    ),
+}
+# When the Council read each Signal before it was first defined, and where the reading is
+# recorded, for the Signal's own page (the Council's second reading, Seats D and G).
+COUNCIL_READ = {
+    ANNUAL_VOICE: (
+        "2026-09-27",
+        REPO + "docs/council/2026-09-27-the-annual-report-signal-built.md",
+    ),
+}
+
+
+def voice(signal: dict) -> tuple[str, int]:
+    return (signal["slug"], signal["version"])
+
+
+def runs_in(signal_runs: list[tuple[dict, dict]], key: tuple[str, int]) -> list[tuple[dict, dict]]:
+    """The runs of the Signals one voice speaks for, in the order given."""
+    return [(s, r) for s, r in signal_runs if voice(s) == key]
+
+
+def unvoiced(signals: list[dict]) -> list[str]:
+    """Signals no voice on these pages speaks for; the render refuses them."""
+    return [f"{s['slug']} version {s['version']}" for s in signals if voice(s) not in VOICES]
+
+
+def annual_reason(reason: str) -> str:
+    return ANNUAL_REASON_WORDS.get(
+        reason, f"the register did not evaluate it, recorded as {reason}"
+    )
+
+
+def annual_state(outcome: dict, fired: set[str]) -> str:
+    """One annual report in the drawing language of every figure here: `after` where a current
+    Finding rests on it (ink), `compared` where its date was compared and is not after (dense
+    dots), and `read` where the register read it and did not decide (pale dots)."""
+    if outcome["filing_id"] in fired:
+        return "after"
+    return "compared" if outcome["evaluated"] else "read"
+
+
+def one_day(outcome: dict) -> bool:
+    """Whether the report has one date to draw: its three dates were read and agree."""
+    return not {ANNUAL_DATES_DISAGREE, ANNUAL_NO_DATE} & set(outcome["not_evaluated"])
+
+
+def served_briefly(sworn: str | None, year: int) -> bool:
+    """Whether the swearing-in the roster records leaves 60 days or fewer of the filing year:
+    for such an officeholder the Signal compares no report of that year, and a page that said it
+    could not tell whether they filed one would imply a report owed that the rule does not ask
+    for (the Council's second reading, Seats A, B, D, E and F)."""
+    try:
+        day = date.fromisoformat(sworn or "")
+    except ValueError:
+        return False
+    served = (date(year, 12, 31) - max(day, date(year, 1, 1))).days + 1
+    return served <= 60
+
+
+def annual_sentence(
+    outcome: dict, finding: dict | None, subject: str, filing: dict | None = None
+) -> str:
+    """What the register did with one annual report, from the run record and the Finding alone:
+    the dates are the Signal's, sealed, and never recomputed here."""
+    d, due, latest = (esc(outcome.get(k) or "") for k in ("filed_at", "original_due", "latest"))
+    if finding:
+        ev = finding["evidence"]
+        return (
+            f"The Clerk's index dates {subject} {d}, {ev['days_after_latest']:,} days after "
+            f"{esc(ev['latest'])}, the latest date any extension the statute allows outside a "
+            "combat zone could reach."
+        )
+    if outcome["evaluated"]:
+        return f"The Clerk's index dates {subject} {d}, on or before its original due date, {due}."
+    reason = next(iter(outcome["not_evaluated"]), "")
+    if reason == ANNUAL_WITHIN:
+        return (
+            f"The Clerk's index dates {subject} {d}, after its original due date, {due}, and on "
+            f"or before {latest}, the latest date any extension could reach, so an extension may "
+            "cover it; the register does not decide whether one does."
+        )
+    if reason == ANNUAL_DAY_AFTER:
+        return (
+            f"The Clerk's index dates {subject} {d}, the day after {latest}, the latest date any "
+            "extension could reach; the register does not evaluate that day, because it has not "
+            "established the time zone of the printed date."
+        )
+    if reason == ANNUAL_DATES_DISAGREE and filing:
+        # Every date the record gives, and none chosen as the report's own: the figure that
+        # drew one gave the report a date it does not print (Seats A, E and F).
+        p = filing.get("printed") or {}
+        return (
+            f"The Clerk's index dates {subject} {d}; the report prints "
+            f"{esc(p.get('filing_date') or 'no date')} as its Filing Date and "
+            f"{esc(p.get('signed_on') or 'no date')} on its signature line. These are not all "
+            "the same day, so the register does not compare the report."
+        )
+    return (
+        f"The Clerk's index dates {subject} {d}; the register did not compare it: "
+        f"{annual_reason(reason)}."
+    )
+
+
+def headless(filings: list[dict]) -> int:
+    """Documents attributed here that the register fetched and whose header printed nothing it
+    could read. The Signal cannot tell whether any of them is an annual report, because it reads
+    which reports are annual from each report's own header and never from the index's code."""
+    return sum(
+        1
+        for f in filings
+        if f.get("source_form_code") != "P"
+        and (f.get("source") or {}).get("content_hash")
+        and not f.get("printed")
+    )
+
+
+def annual_answer(
+    signal: dict,
+    outcomes: list[dict],
+    findings: list[dict],
+    filings: list[dict],
+    held_all: int = 0,
+    sworn: str | None = None,
+    meta: dict | None = None,
+) -> list[str]:
+    """The answer's paragraphs for the annual report, in a shape that is the same for everyone:
+    what the register read, then each report's date against the two dates the law sets, then the
+    same two sentences as every result. A page with no annual report attributed says exactly that,
+    and never that none was filed (the Council's reading, B-3, D-2, E-2, C-6, F-5)."""
+    words = ANSWER_WORDS[ANNUAL_VOICE]
+    year = ERA["year"]
+    fired = {f["producing_filings"][0]: f for f in fired_now(findings, signal["id"])}
+    by_id = {f["id"]: f for f in filings}
+    unread = headless(filings)
+    read_on = esc(((meta or {}).get("built_at") or "")[:10])
+    if not outcomes and served_briefly(sworn, year):
+        text = (
+            f"By the swearing-in the Clerk's roster records, {esc(sworn)}, this officeholder "
+            f"served 60 days or fewer of {year}, and the rule asks for an annual report only for "
+            "a year of more than 60 days' service, so this Signal compares no annual report of "
+            f"theirs for {year} against {words['against']}."
+        )
+    elif not outcomes:
+        text = (
+            "The register found no annual report to compare here, which is a fact about its own "
+            "reading and matching and not about what was filed: it attributes to this "
+            f"officeholder no document in the Clerk's {year} index whose own header prints it as "
+            f"a member's annual report, so it compared none against {words['against']}."
+            + (
+                f" {unread:,} {plural(unread, 'document', 'documents')} attributed here "
+                f"{plural(unread, 'prints', 'print')} no header it could read, so it cannot tell "
+                f"whether {plural(unread, 'it is', 'any is')} one."
+                if unread
+                else ""
+            )
+            + (
+                f" {held_all:,} {plural(held_all, 'row', 'rows')} of the index at this seat under "
+                f"this surname {plural(held_all, 'is', 'are')} set aside, not attributed to this "
+                "officeholder."
+                if held_all
+                else ""
+            )
+            # Dated, and with the reason a later search may find nothing: the Clerk keeps a
+            # Member's reports only until six years after they leave (Seat G).
+            + f' On {read_on}, <a href="{CLERK_SITE}">the Clerk\'s own search</a> listed the '
+            "reports the Clerk then held. The Clerk keeps a Member's reports until six years "
+            "after the Member leaves (5 U.S.C. § 13107(d)), so a later search may find none, "
+            "whatever was filed."
+        )
+    else:
+        n = len(outcomes)
+        ordered = sorted(outcomes, key=lambda o: (o["filed_at"], o["filing_id"]))
+        text = (
+            f"The register read {n:,} {plural(n, 'annual report', 'annual reports')} in the "
+            f"Clerk's {year} index that it attributes to this officeholder, "
+            f"{'by its' if n == 1 else 'each by its'} own header, and read "
+            f"{'its dates' if n == 1 else 'the dates of each'} against its original due date "
+            f"and {words['against']}. "
+            + " ".join(
+                annual_sentence(
+                    o,
+                    fired.get(o["filing_id"]),
+                    "it" if n == 1 else "one",
+                    by_id.get(o["filing_id"]),
+                )
+                for o in ordered
+            )
+        )
+        # The check a reader can take without a terminal (the second reading, Seat E).
+        url = ((by_id.get(ordered[0]["filing_id"]) or {}).get("source") or {}).get("url")
+        if n == 1 and url:
+            text += (
+                f' To check it, open <a href="{esc(url)}">the Clerk\'s copy</a> and read its '
+                "Filing Date and the date on its signature line."
+            )
+    paragraphs = [
+        f'<p>{text} <span class="either">{esc(FRAME)}</span></p>',
+        f'<p class="either">{esc(NOT_A_RULING)}</p>',
+    ]
+    for o in sorted(outcomes, key=lambda o: (o["filed_at"], o["filing_id"])):
+        if o.get("original_due") and o.get("latest") and one_day(o):
+            paragraphs.append(annual_figure(o, annual_state(o, set(fired))))
+    paragraphs.append(f'<p class="rule">{words["rule"]}</p>')
+    return paragraphs
+
+
+def annual_quiet(outcomes: list[dict], findings: list[dict], signal_id: str) -> str:
+    """Which silence, for the Signal's block on a person's page, in a few words."""
+    if not outcomes:
+        return (
+            "No annual report is attributed to this officeholder in the register by its own "
+            "header, so there was nothing to compare. That is a fact about the register's reading "
+            "and matching."
+        )
+    fired = {f["producing_filings"][0] for f in fired_now(findings, signal_id)}
+
+    def what(o: dict) -> str:
+        state = annual_state(o, fired)
+        if state == "after":
+            return "a Finding rests on it, shown below"
+        if state == "compared":
+            return "it is dated on or before its original due date"
+        return annual_reason(next(iter(o["not_evaluated"]), ""))
+
+    if len(outcomes) == 1:
+        return (
+            f"It read the one annual report attributed to this officeholder: {what(outcomes[0])}."
+        )
+    counts: dict[str, int] = {}
+    for o in outcomes:
+        counts[what(o)] = counts.get(what(o), 0) + 1
+    return f"It read {len(outcomes):,} annual reports attributed to this officeholder. " + " ".join(
+        f"Of {c:,}, {key}." for key, c in sorted(counts.items(), key=lambda i: (-i[1], i[0]))
+    )
+
+
+def annual_silence(outcomes: list[dict], sworn: str | None = None) -> str:
+    """The checklist's few words for the annual Signal where it did not fire."""
+    if not outcomes and served_briefly(sworn, ERA["year"]):
+        return (
+            f"60 days or fewer of {ERA['year']} by the swearing-in recorded, so no report compared"
+        )
+    if not outcomes:
+        return "no annual report is attributed by its own header, which says nothing about filing"
+    if all(o["evaluated"] for o in outcomes):
+        return (
+            "the report is dated on or before its original due date"
+            if len(outcomes) == 1
+            else "every report is dated on or before its original due date"
+        )
+    if any(ANNUAL_WITHIN in o["not_evaluated"] for o in outcomes):
+        return (
+            "within the time an extension may cover; the register does not decide whether one does"
+        )
+    return "not compared, for the reason below"
+
+
+EXTENSION_CODE = "X"
+
+
+def held_rows_by_holder(
+    rejected: list[dict], holders: list[dict], code: str = EXTENSION_CODE
+) -> dict[str, list[dict]]:
+    """Set-aside rows of one index code at a holder's seat under the holder's surname, by
+    officeholder, split by given name as the filings line is: the rows a page lists as set aside,
+    beside the ones it attributes, so what a page shows does not turn on how a name was spelled
+    (the Council's second reading of the annual Signal, Seats A, B and D)."""
+    at = holders_by_seat(holders)
+    out: dict[str, list[dict]] = {}
+    for row in rejected:
+        source = row.get("source_row", {})
+        if source.get("filing_type") != code:
+            continue
+        for holder in theirs(at.get(source.get("state_dst", "").strip(), []), source):
+            out.setdefault(holder["id"], []).append(row)
+    return out
+
+
+def annual_notices(filings: list[dict], held: list[dict] | None = None) -> str:
+    """Every row the Clerk's index lists at this seat under this surname with the code its
+    extension forms carry, attributed or set aside, read or not, in the same words on every page:
+    shown beside the report and deciding nothing. A list of only the notices the register could
+    attribute and read made two pages with the same dates read differently according to how a
+    name was spelled and whether a form was on paper (the Council's second reading, Seats A, B and
+    D); a sentence resting on the join would rest on what the register failed to hold (its first
+    reading)."""
+    mine = sorted(
+        (f for f in filings if f.get("source_form_code") == EXTENSION_CODE),
+        key=lambda f: (f["filed_at"], f["id"]),
+    )
+    aside = sorted(
+        held or [],
+        key=lambda r: (iso_of(r["source_row"].get("filing_date", "")), r["source_row"]["doc_id"]),
+    )
+    items = []
+    for f in mine:
+        p = f.get("printed") or {}
+        if p.get("extension_length_days") or p.get("new_due_date"):
+            said = [
+                f"a length of {p['extension_length_days']:,} days"
+                if p.get("extension_length_days")
+                else "",
+                f"a new due date of {p['new_due_date']}" if p.get("new_due_date") else "",
+                f"for the {p['report_type_due']}" if p.get("report_type_due") else "",
+            ]
+            what = "its header prints " + ", ".join(w for w in said if w)
+        else:
+            what = "its header could not be read, so what it grants is not listed here"
+        items.append(
+            "<li>Attributed to this officeholder; the Clerk's index dates it "
+            f"{esc(f['filed_at'])}; {esc(what)} · "
+            f'<a href="{esc(f["source"]["url"])}">the Clerk\'s copy</a></li>'
+        )
+    for r in aside:
+        src = r["source_row"]
+        url = f"{CLERK_BASE}public_disc/financial-pdfs/{src.get('year', '')}/{src['doc_id']}.pdf"
+        items.append(
+            "<li>Set aside under this surname, not attributed to this officeholder, and the "
+            "register does not say whose it is; the Clerk's index dates it "
+            f"{esc(iso_of(src.get('filing_date', '')) or src.get('filing_date', ''))} · "
+            f'<a href="{esc(url)}">the Clerk\'s copy</a></li>'
+        )
+    n, k = len(mine), len(aside)
+    lead = (
+        f'<p class="quiet">The Clerk\'s index lists its extension forms under the code '
+        f"{EXTENSION_CODE}; every document so coded that the register has read is one. At this "
+        f"seat under this surname it lists {n:,} attributed to this officeholder and {k:,} set "
+        "aside. The register lists them as the index does; no sentence on this page rests on any "
+        "of them, and nothing here says whether an extension covers a report.</p>\n"
+    )
+    return lead + (f'<ul class="notices">{"".join(items)}</ul>\n' if items else "")
+
+
+ANNUAL_W, ANNUAL_L, ANNUAL_R = 360, 10, 10
+
+
+def annual_figure(outcome: dict, state: str) -> str:
+    """One annual report on a line of days, beside the two dates the law sets for it: its due
+    date and the latest date any extension could reach, with the span between them screened as the
+    time an extension may cover. Drawn from the run record alone, the same shape on every page
+    whatever the Signal found; the mark carries the page's one drawing language (ink after, the
+    half screen compared, the light screen read and not decided)."""
+    filed = date.fromisoformat(outcome["filed_at"])
+    due = date.fromisoformat(outcome["original_due"])
+    latest = date.fromisoformat(outcome["latest"])
+    start = min(filed, due) - timedelta(days=14)
+    end = max(filed, latest) + timedelta(days=14)
+    span = max((end - start).days, 1)
+    inner = ANNUAL_W - ANNUAL_L - ANNUAL_R
+
+    def x(day: date) -> float:
+        return ANNUAL_L + (day - start).days / span * inner
+
+    def f(v: float) -> str:
+        return f"{v:.1f}".rstrip("0").rstrip(".")
+
+    band_y, band_h, axis_y = 16, 14, 34
+    parts = [
+        BENDAY,
+        # The time an extension may cover, bracketed and never filled: the report's own mark is
+        # drawn in the light screen when the register did not decide, and a screened ground
+        # would swallow it.
+        f'<path class="abracket" d="M{f(x(due))} {band_y + 2} V{band_y - 2} H{f(x(latest))} '
+        f'V{band_y + 2}"/>',
+        f'<line class="aline" x1="{f(x(due))}" y1="{band_y - 3}" x2="{f(x(due))}" '
+        f'y2="{axis_y + 3}"/>',
+        f'<line class="aline" x1="{f(x(latest))}" y1="{band_y - 3}" x2="{f(x(latest))}" '
+        f'y2="{axis_y + 3}"/>',
+        law_tag(x(latest), 1, "90", 20),
+        f'<line class="aaxis" x1="{ANNUAL_L}" y1="{axis_y}" x2="{ANNUAL_W - ANNUAL_R}" '
+        f'y2="{axis_y}"/>',
+    ]
+    month = date(start.year, start.month, 1)
+    while month <= end:
+        if month > start:
+            parts.append(
+                f'<line class="atick" x1="{f(x(month))}" y1="{axis_y}" x2="{f(x(month))}" '
+                f'y2="{axis_y + 4}"/>'
+            )
+        month = date(month.year + month.month // 12, month.month % 12 + 1, 1)
+    parts.append(
+        f'<circle class="amark {state}" cx="{f(x(filed))}" cy="{band_y + band_h / 2}" r="5"/>'
+    )
+    # The law's two dates under the axis, the report's own under them, so no label sits on
+    # another whatever the report's date (a report two days after the latest date included).
+    for day, y, cls in ((due, axis_y + 13, "alaw"), (latest, axis_y + 13, "alaw")):
+        parts.append(
+            f'<text class="{cls}" x="{f(x(day))}" y="{y}" text-anchor="middle">'
+            f"{esc(day.isoformat())}</text>"
+        )
+    anchor = (
+        "start" if x(filed) < ANNUAL_W * 0.2 else "end" if x(filed) > ANNUAL_W * 0.8 else "middle"
+    )
+    # The report's own date, unless it is one of the law's two, which are printed already.
+    if filed not in (due, latest):
+        parts.append(
+            f'<text class="afiled" x="{f(x(filed))}" y="{axis_y + 26}" text-anchor="{anchor}">'
+            f"{esc(filed.isoformat())}</text>"
+        )
+    height = axis_y + 31
+    words = {
+        "after": "after the latest date",
+        "compared": "on or before its original due date",
+        "read": "read, and the register does not decide whether an extension covers it",
+    }[state]
+    label = (
+        f"The date the Clerk's index gives the report, {filed.isoformat()}, {words}; original due "
+        f"date {due.isoformat()}; the latest date any extension could reach, {latest.isoformat()}."
+    )
+    cap = "annual-" + re.sub(r"[^a-z0-9]+", "-", outcome["filing_id"].lower()).strip("-")
+    # The marks are named by how they look, not as "screened", which came back from translation
+    # as "examined" (the Council's second reading, Seat F).
+    caption = (
+        "The date the Clerk's index gives the report (the dot, with its date below) and the two "
+        f"dates the law sets for it: its original due date, {esc(due.isoformat())}, and, marked "
+        f"90, the latest date any extension could reach, {esc(latest.isoformat())}. The bracket "
+        "between them is the time an extension may cover. The dot is solid ink where the report "
+        "is dated after the latest date, densely dotted where it is dated on or before its "
+        "original due date, and pale dotted where the register read it and does not decide "
+        "whether an extension covers it. A tick marks the first of each month. The figure shows "
+        "dates. It does not show whether an extension was granted, or anything the House "
+        "Committee on Ethics has determined."
+    )
+    return (
+        f'<figure class="annual">\n<svg viewBox="0 0 {ANNUAL_W} {height}" direction="ltr" '
+        f'role="img" aria-label="{esc(label)}" aria-describedby="{cap}">'
+        + "".join(parts)
+        + f'</svg>\n<figcaption id="{cap}">{caption}</figcaption>\n</figure>'
+    )
+
+
+def annual_finding_block(
+    finding: dict,
+    report: dict | None,
+    findings: list[dict] | None = None,
+    changes: dict[str, list[dict]] | None = None,
+) -> str:
+    doc_id = finding["producing_filings"][0].rsplit(":", 1)[1]
+    copy = (
+        f' · <a href="{esc(report["source"]["url"])}">the Clerk\'s copy</a>'
+        if report and report.get("source", {}).get("url")
+        else ""
+    )
+    return (
+        f'<article class="finding" id="finding-{esc(doc_id)}">\n'
+        f"<h4>Annual report the Clerk's index dates {esc(finding['evidence']['filed_at'])}"
+        f"{copy}</h4>\n"
+        f"<p>{esc(finding['description'])}</p>\n"
+        f"{finding_changes(finding, changes)}"
+        f"{correction_line(finding, findings or [])}"
+        f'<p class="quiet">Finding <code>{esc(finding["id"])}</code>, first produced from the '
+        f"record as retrieved {esc(finding['fired_at'])}, from rows whose digest is "
+        f"<code>{esc(finding['build_hash'][:12])}</code>. Regenerate it from the rows it names: "
+        f"<code>python tools/rebuild.py {esc(finding['id'])}</code></p>\n"
+        "</article>"
+    )
+
+
+def annual_counts(outcomes: list[dict], findings: list[dict], signal_id: str) -> dict[str, int]:
+    """The chamber's annual reports by what the Signal did with each, from its run record."""
+    fired = {f["producing_filings"][0] for f in fired_now(findings, signal_id)}
+    counts = {"after": 0, "compared": 0, "within": 0, "day after": 0, "other": 0}
+    for o in outcomes:
+        state = annual_state(o, fired)
+        if state != "read":
+            counts[state] += 1
+        elif ANNUAL_WITHIN in o["not_evaluated"]:
+            counts["within"] += 1
+        elif ANNUAL_DAY_AFTER in o["not_evaluated"]:
+            counts["day after"] += 1
+        else:
+            counts["other"] += 1
+    return counts
+
+
+ANNUAL_KEY = (
+    ("compared", "compared", "dated on or before the original due date"),
+    (
+        "within",
+        "read",
+        "dated after the original due date and within the time an extension may cover; the "
+        "register does not decide whether one does",
+    ),
+    (
+        "day after",
+        "read",
+        "dated the day after the latest date, which the register does not evaluate, because it "
+        "has not established the time zone of the printed date",
+    ),
+    ("other", "read", "not compared, each for a reason its officeholder's page gives"),
+    (
+        "after",
+        "after",
+        "dated after the latest date any extension the statute allows outside a combat zone "
+        "could reach",
+    ),
+)
+
+
+def annual_bins(due: date, latest: date, first: date, last: date) -> list[tuple[date, date]]:
+    """Weeks of days, as (first day, last day), whose edges fall on the two dates the law sets:
+    seven-day weeks ending on the due date before it, seven-day weeks from the day after it to
+    the latest date (the last one shorter where ninety days do not divide by seven), and weeks
+    from the day after the latest date on. So no column holds a report on both sides of a line
+    the law draws, and a column is wide enough for its screen to read."""
+    bins = []
+    end = due
+    while end >= first:
+        bins.insert(0, (end - timedelta(days=6), end))
+        end -= timedelta(days=7)
+    day = due + timedelta(days=1)
+    while day <= latest:
+        bins.append((day, min(day + timedelta(days=6), latest)))
+        day += timedelta(days=7)
+    day = latest + timedelta(days=1)
+    while day <= last:
+        bins.append((day, day + timedelta(days=6)))
+        day += timedelta(days=7)
+    return bins
+
+
+def annual_drawn(outcomes: list[dict]) -> list[dict]:
+    """The reports one chamber figure can draw: those of the earliest filing year whose two dates
+    the Signal wrote, all of which share them."""
+    dated = [o for o in outcomes if o.get("original_due") and o.get("latest") and one_day(o)]
+    if not dated:
+        return []
+    due = min(o["original_due"] for o in dated)
+    return [o for o in dated if o["original_due"] == due]
+
+
+def annual_chart(
+    outcomes: list[dict], findings: list[dict], signal_id: str, meta: dict | None
+) -> str:
+    """Every annual report the Signal read, one column a week by the date the Clerk's index gives
+    it, each column stacked by what the Signal did with its reports, between the two lines the
+    law draws: the due date and the latest date any extension could reach. The weeks break on
+    those two dates. The span between them is bracketed and never filled, because the reports in
+    it are drawn in the light screen and a screened ground would swallow them."""
+    fired = {f["producing_filings"][0] for f in fired_now(findings, signal_id)}
+    drawn = annual_drawn(outcomes)
+    if not drawn:
+        return ""
+    due = date.fromisoformat(drawn[0]["original_due"])
+    latest = date.fromisoformat(drawn[0]["latest"])
+    days = sorted(date.fromisoformat(o["filed_at"]) for o in drawn)
+    bins = annual_bins(
+        due,
+        latest,
+        min(days[0], due - timedelta(days=27)),
+        max(days[-1], latest + timedelta(days=14)),
+    )
+    start, end = bins[0][0], bins[-1][1]
+    span = (end - start).days + 1
+    w, left, right, top, base = 360, 8, 8, 30, 132
+    step = (w - left - right) / span
+    counts_in: list[dict[str, int]] = [{} for _ in bins]
+    for o in drawn:
+        day = date.fromisoformat(o["filed_at"])
+        i = next(k for k, (a, b) in enumerate(bins) if a <= day <= b)
+        state = annual_state(o, fired)
+        counts_in[i][state] = counts_in[i].get(state, 0) + 1
+    tallest = max((sum(c.values()) for c in counts_in), default=1)
+    unit = (base - top - 4) / max(tallest, 1)
+
+    def x(day: date) -> float:
+        return left + (day - start).days * step
+
+    def f(v: float) -> str:
+        return f"{v:.1f}".rstrip("0").rstrip(".")
+
+    parts = []
+    for (a, b), states in zip(bins, counts_in, strict=True):
+        x0, x1 = x(a) + 0.6, x(b + timedelta(days=1)) - 0.6
+        # Stacked from just above the axis's own ink, and never under four units tall, so a
+        # column of one report is a mark and not a thickening of the axis (Seat E).
+        y = base - 1.6
+        for state in ("compared", "read", "after"):
+            n = states.get(state, 0)
+            if not n:
+                continue
+            h = max(n * unit, 4)
+            parts.append(
+                f'<rect class="acol {state}" x="{f(x0)}" y="{f(y - h)}" width="{f(x1 - x0)}" '
+                f'height="{f(h)}"/>'
+            )
+            y -= h
+    # The two lines the law draws, at the end of the due date and of the latest date, and the
+    # bracket between them for the time an extension may cover.
+    xd, xl = x(due + timedelta(days=1)), x(latest + timedelta(days=1))
+    for cx in (xd, xl):
+        parts.append(
+            f'<line class="aline" x1="{f(cx)}" y1="{top - 12}" x2="{f(cx)}" y2="{base + 3}"/>'
+        )
+    parts.append(f'<path class="abracket" d="M{f(xd)} {top - 2} V{top - 6} H{f(xl)} V{top - 2}"/>')
+    parts.append(law_tag(xd, 2, f"{due.day} {due.strftime('%b')}", 34))
+    parts.append(law_tag(xl, 2, "+90", 22))
+    parts.append(f'<line class="aaxis" x1="{left}" y1="{base}" x2="{w - right}" y2="{base}"/>')
+    month = date(start.year, start.month, 1)
+    while month <= end:
+        if month > start:
+            mx = x(month)
+            parts.append(
+                f'<line class="atick" x1="{f(mx)}" y1="{base}" x2="{f(mx)}" y2="{base + 4}"/>'
+            )
+            parts.append(
+                f'<text class="amonth" x="{f(mx + 2)}" y="{base + 12}">'
+                f"{esc(month.strftime('%b'))}</text>"
+            )
+        month = date(month.year + month.month // 12, month.month % 12 + 1, 1)
+    height = base + 30
+    stamp = figure_stamp(meta, left, w - right, base + 23)
+    counts = annual_counts(drawn, findings, signal_id)
+    label = (
+        f"{len(drawn):,} annual reports, one column a week from {start.isoformat()} to "
+        f"{end.isoformat()}: "
+        + "; ".join(f"{counts[k]:,} {words}" for k, _cls, words in ANNUAL_KEY)
+        + "."
+    )
+    return (
+        f'<svg class="annualchart" viewBox="0 0 {w} {height}" role="img" '
+        f'aria-label="{esc(label)}" direction="ltr">' + "".join(parts) + stamp + "</svg>"
+    )
+
+
+def annual_key(counts: dict[str, int]) -> str:
+    lines = []
+    for key, cls, words in ANNUAL_KEY:
+        swatch = (
+            '<svg class="key" viewBox="0 0 12 12" aria-hidden="true" focusable="false">'
+            f'<rect class="acol {cls}" x="1" y="1" width="10" height="10"/></svg>'
+        )
+        lines.append(f"<li>{swatch} <b>{counts.get(key, 0):,}</b> {esc(words)}</li>")
+    return '<ul class="squarekey">' + "".join(lines) + "</ul>\n"
+
+
+def annual_reach(outcomes: list[dict], filings: list[dict], holders: list[dict]) -> dict:
+    """Whom the annual Signal cannot reach, counted apart so no quiet is told as another: the
+    officeholders with no annual report attributed who served the year and those the roster's
+    swearing-in leaves 60 days or fewer of it (the Council's second reading, Seats A, B, D, E and
+    F), and the documents with no readable header, split by whether the index gives them the code
+    every annual report read so far carries."""
+    year = ERA["year"]
+    attributed = {o["officeholder_id"] for o in outcomes}
+    quiet = [h for h in holders if h["id"] not in attributed]
+    brief = sum(1 for h in quiet if served_briefly(h.get("sworn_at"), year))
+    blind = [
+        f
+        for f in filings
+        if f.get("source_form_code") != "P"
+        and (f.get("source") or {}).get("content_hash")
+        and not f.get("printed")
+    ]
+    coded = sum(1 for f in blind if f.get("source_form_code") == "O")
+    unfetched = sum(
+        1
+        for f in filings
+        if f.get("source_form_code") != "P" and not (f.get("source") or {}).get("content_hash")
+    )
+    return {
+        "without": len(quiet) - brief,
+        "brief": brief,
+        "headless": len(blind),
+        "headless_o": coded,
+        "unfetched": unfetched,
+    }
+
+
+NAME_MATCH_WORDS = (
+    "It cannot see a report the index sets aside under a sitting member's surname because the "
+    "given names differ or the index prints another seat: such a row waits for the maintainer to "
+    "decide by hand, citing the evidence, and a report among them is on no page's result until "
+    "then."
+)
+
+
+def annual_section(
+    signal_runs: list[tuple[dict, dict]],
+    outcomes_all: dict[str, list[dict]],
+    findings: list[dict],
+    filings: list[dict],
+    holders: list[dict],
+    meta: dict | None = None,
+) -> str:
+    """The annual report, for the chamber: the one figure that says where every annual report the
+    register read falls against the two dates the law sets, and what the register did not decide.
+    The window is drawn as read and not decided, never as compared, because an extension the
+    register cannot see may cover every report in it; drawing them as checked would be the
+    falsehood that flatters, and drawing them as after would be the one that condemns."""
+    parts = []
+    year = ERA["year"]
+    for signal, _summary in signal_runs:
+        outcomes = outcomes_all.get(signal["id"], [])
+        chart = annual_chart(outcomes, findings, signal["id"], meta)
+        if not chart:
+            continue
+        drawn = annual_drawn(outcomes)
+        counts = annual_counts(drawn, findings, signal["id"])
+        undrawn = len(outcomes) - len(drawn)
+        named = len({f["officeholder_id"] for f in fired_now(findings, signal["id"])})
+        r = annual_reach(outcomes, filings, holders)
+        parts.append(
+            '<figure class="annualchart">\n'
+            + chart
+            + "\n<figcaption>Every annual report the register read by its own header, one column "
+            "a week by the date the Clerk's index gives it, stacked by what the Signal did with "
+            "its reports; the weeks break on the two lines the law draws. The line marked 15 May "
+            "is the original due date, and the line marked +90 the latest date any extension the "
+            "statute allows could reach; the bracket between them is the time an extension may "
+            "cover. It counts reports and not people, and nothing in it is ordered by anything "
+            "about a person.</figcaption>\n</figure>\n"
+            + annual_key(counts)
+            + (
+                f'<p class="quiet">{undrawn:,} more {plural(undrawn, "report", "reports")}, of '
+                "another filing year, or whose dates disagree or could not be read, "
+                f"{plural(undrawn, 'is', 'are')} not drawn; each is on its officeholder's "
+                "page.</p>\n"
+                if undrawn
+                else ""
+            )
+            + (
+                f"<p>The {counts['after']:,} {plural(counts['after'], 'report', 'reports')} "
+                f"after the latest date {plural(counts['after'], 'is', 'are')} by {named:,} "
+                f"{plural(named, 'member', 'members')}. Each is on that member's page, with its "
+                f'dates drawn: <a href="{signal_page_path(signal)}">the {named:,} '
+                f"{plural(named, 'member', 'members')}, in seat order</a>.</p>\n"
+                if counts["after"] and named
+                else ""
+            )
+            + f'<p class="quiet">For {r["without"] + r["brief"]:,} of the {len(holders):,} '
+            "officeholders the register holds, it attributes no annual report by the report's own "
+            "header, and each of their pages says which quiet it is: for "
+            f"{r['brief']:,} of them, the swearing-in the roster records leaves 60 days or fewer "
+            f"of {year}, for which the rule asks no annual report; for the other "
+            f"{r['without']:,}, the page gives the rows set aside at the seat and a link to the "
+            "Clerk's own search, and this Signal says nothing about whether they filed one."
+            + (
+                f" {r['headless']:,} more {plural(r['headless'], 'document', 'documents')} "
+                f"attributed to members {plural(r['headless'], 'prints', 'print')} no header the "
+                f"register could read, among them any report filed on paper; {r['headless_o']:,} "
+                f"of them carry the index code O, which every annual report whose header it read "
+                "carries. This Signal cannot reach them."
+                if r["headless"]
+                else ""
+            )
+            + f" {esc(FRAME)}</p>\n"
+        )
+    if not parts:
+        return ""
+    return (
+        '<section class="annual" id="annual">\n'
+        '<h2><span class="tag">The annual report, against the latest date an extension could '
+        "reach</span></h2>\n" + "".join(parts) + "</section>"
+    )
+
+
+def annual_record_line(
+    signal: dict, summary: dict, outcomes: list[dict], findings: list[dict]
+) -> str:
+    """The annual Signal's line in the landing's numbers about the register."""
+    counts = annual_counts(outcomes, findings, signal["id"])
+    read = summary.get("reports", 0)
+    fired = summary["reports_with_a_finding"]
+    waiting = counts["within"] + counts["day after"]
+    return (
+        f"<dt>{fired:,}</dt><dd>of the {read:,} annual reports read by their own header, on which "
+        f'the signal <a href="{signal_page_path(signal)}">{esc(signal["name"])}</a>, version '
+        f"{signal['version']}, fired: dated after the latest date any extension the statute allows "
+        f"could reach, on reports attributed to {summary['officeholders_with_a_finding']:,} "
+        f"officeholders. {counts['compared']:,} {plural(counts['compared'], 'is', 'are')} dated "
+        f"on or before the original due date; {waiting:,} {plural(waiting, 'is', 'are')} within "
+        "the time an extension may cover, or the day after it, and the register does not decide "
+        f"whether an extension covers {plural(waiting, 'it', 'them')}; {counts['other']:,} "
+        f"{plural(counts['other'], 'was', 'were')} not compared, "
+        f"{plural(counts['other'], 'with its reason', 'each with a reason')}. A count about the "
+        f"register; no page ranks anyone by it{bar(fired, read)}</dd>\n"
+    )
+
+
+def annual_signal_record(
+    summary: dict,
+    outcomes: list[dict],
+    findings: list[dict],
+    signal: dict,
+    filings: list[dict],
+    holders: list[dict],
+) -> str:
+    """What the annual Signal did in this build, and whom it cannot reach, for its own page."""
+    counts = annual_counts(outcomes, findings, signal["id"])
+    reasons: dict[str, int] = {}
+    for o in outcomes:
+        for reason, n in o["not_evaluated"].items():
+            if reason not in (ANNUAL_WITHIN, ANNUAL_DAY_AFTER):
+                reasons[reason] = reasons.get(reason, 0) + n
+    other = "; ".join(
+        f"{n:,} where {annual_reason(r)}"
+        for r, n in sorted(reasons.items(), key=lambda i: (-i[1], i[0]))
+    )
+    r = annual_reach(outcomes, filings, holders)
+    year = ERA["year"]
+    withdrawn = len(withdrawn_now(findings, signal["id"]))
+    read = COUNCIL_READ.get(voice(signal))
+    return (
+        '<section class="record">\n<h2>What it did in this build</h2>\n<dl>\n'
+        + (
+            f"<dt>{esc(read[0])}</dt><dd>the day the Council's seven seats closed their reading of "
+            f'this version, built, before it was first defined: <a href="{esc(read[1])}">the '
+            "record</a>. It publishes in the first sealed build after that reading, on the "
+            "register's regular Monday cadence, whatever the calendar</dd>\n"
+            if read
+            else ""
+        )
+        + f"<dt>{summary.get('reports', 0):,}</dt><dd>annual reports read by their own header, "
+        f"and fired on {summary['reports_with_a_finding']:,} of them"
+        f"{bar(summary['reports_with_a_finding'], summary.get('reports', 0))}</dd>\n"
+        f"<dt>{counts['compared']:,}</dt><dd>dated on or before the original due date</dd>\n"
+        f"<dt>{counts['within']:,}</dt><dd>dated after the original due date and within the time "
+        "an extension may cover; the register does not decide whether one does</dd>\n"
+        f"<dt>{counts['day after']:,}</dt><dd>dated the day after the latest date, which it does "
+        "not evaluate, because it has not established the time zone of the printed date</dd>\n"
+        f"<dt>{counts['other']:,}</dt><dd>not compared: {esc(other) or 'none'}</dd>\n"
+        f"<dt>{r['headless']:,}</dt><dd>documents attributed to members that the register "
+        "fetched and whose header printed nothing it could read, among them any report filed on "
+        f"paper ({r['headless_o']:,} carry the index code O, which every annual report whose "
+        "header it read carries): the Signal reads which reports are annual from each report's "
+        "own header, so it cannot reach these</dd>\n"
+        f"<dt>{r['unfetched']:,}</dt><dd>documents attributed to members that the register has "
+        "not fetched: it fetches those the index lists under the codes P, O and X, which is a "
+        "choice of what to fetch, and reads which of them are annual reports from each one's own "
+        "header</dd>\n"
+        f"<dt>{r['without']:,}</dt><dd>officeholders who served more than 60 days of {year} by "
+        "the roster's swearing-in, to whom the register attributes no annual report by the "
+        "report's own header; each of their pages says so, with the rows set aside at the seat "
+        "and a link to the Clerk's own search, and this Signal says nothing about whether they "
+        "filed one</dd>\n"
+        f"<dt>{r['brief']:,}</dt><dd>officeholders whose swearing-in the roster records leaves "
+        f"60 days or fewer of {year}, for which the rule asks no annual report; each of their "
+        "pages says so</dd>\n"
+        f"<dt>{summary['officeholders_with_a_finding']:,}</dt><dd>officeholders the reports it "
+        "fired on are attributed to. A count about the register; no page ranks anyone by it</dd>\n"
+        + (
+            f"<dt>{withdrawn:,}</dt><dd>Findings it once produced and a correction withdrew; each "
+            "stays in the ledger with its reason, and on its officeholder's page</dd>\n"
+            if withdrawn
+            else ""
+        )
+        + f'</dl>\n<p class="quiet">{esc(NAME_MATCH_WORDS)}</p>\n</section>'
+    )
 
 
 # ---- the directory and the apparatus: each its own page ---------------------------------
@@ -5596,8 +6648,12 @@ def render_record(
         reach,
         changes,
         len(at_seat),
+        outcomes_all,
+        findings,
     )
-    glance = glance_section(signal_runs or [], outcomes_all or {}, findings or [], "index.html")
+    glance = glance_section(
+        runs_in(signal_runs or [], PTR_VOICE), outcomes_all or {}, findings or [], "index.html"
+    )
     body = (
         f'{inner_head("Oath · the apparatus", RECORD_TITLE, lede)}\n<main id="main">\n'
         f"{record}\n{glance}\n{disputes_section(False)}\n{how_to_read(False)}\n"
@@ -5875,13 +6931,29 @@ def render_index(
         '<p class="kicker">A public register</p>\n'
         '<h1 class="comic" data-text="Oath">Oath</h1>\n'
         f"{ended}"
-        '<p class="lede">Every member of the U.S. House swore an oath. The law adds a deadline: '
-        "report a stock trade within 45 days, sooner if you learned of it sooner.</p>\n"
-        f'<p class="quiet">This page sets the second beside the first for '
-        f"{esc(congress_words(terms=True))}: each row of the Clerk's {ERA['year']} filing index "
-        "the register could match to a name on the Clerk's roster, read against that deadline and "
-        "linked to the Clerk's own copy. It draws no conclusion about anyone.</p>\n"
-        "</div>\n"
+        + (
+            # Both deadlines once the annual report is read against its own, in the same words
+            # and the same place: the lede said one, and 399 rows of the page were read against
+            # the other (the second reading of the annual Signal, Seat E). The mark is unchanged.
+            '<p class="lede">Every member of the U.S. House swore an oath. The law adds '
+            "deadlines: report a stock trade within 45 days, sooner if you learned of it sooner, "
+            "and file each year's financial disclosure report by 15 May of the next.</p>\n"
+            f'<p class="quiet">This page sets the second beside the first for '
+            f"{esc(congress_words(terms=True))}: each row of the Clerk's {ERA['year']} filing "
+            "index the register could match to a name on the Clerk's roster, read against the "
+            "deadline the law sets for it and linked to the Clerk's own copy. It draws no "
+            "conclusion about anyone.</p>\n"
+            if runs_in(signal_runs or [], ANNUAL_VOICE)
+            else '<p class="lede">Every member of the U.S. House swore an oath. The law adds a '
+            "deadline: report a stock trade within 45 days, sooner if you learned of it "
+            "sooner.</p>\n"
+            f'<p class="quiet">This page sets the second beside the first for '
+            f"{esc(congress_words(terms=True))}: each row of the Clerk's {ERA['year']} filing "
+            "index the register could match to a name on the Clerk's roster, read against that "
+            "deadline and linked to the Clerk's own copy. It draws no conclusion about "
+            "anyone.</p>\n"
+        )
+        + "</div>\n"
         + seal_figure(
             mark,
             "Struck from this build's own digest, so the mark changes when the record changes. "
@@ -5918,11 +6990,22 @@ def render_index(
         f'<blockquote class="oath"><p>{esc(OATH)}</p><footer>{OATH_CITE} Every member took it. '
         "The register sets the record beside it.</footer></blockquote>\n</section>"
     )
-    deadline = deadline_section(signal_runs or [], findings or [], meta)
-    ends = ends_section(signal_runs or [], findings or [], meta)
-    narrows = narrows_section(signal_runs or [], outcomes_all or {}, findings or [], meta)
+    # The transaction sections are handed the transaction Signal's runs alone, and the annual
+    # report its own, so no sentence written for one is said of the other (VOICES).
+    ptr_runs = runs_in(signal_runs or [], PTR_VOICE)
+    deadline = deadline_section(ptr_runs, findings or [], meta, signal_runs or [])
+    ends = ends_section(ptr_runs, findings or [], meta)
+    narrows = narrows_section(ptr_runs, outcomes_all or {}, findings or [], meta)
     notice = notice_section(transactions or [], filings, meta)
-    everything = [o for group in (outcomes_all or {}).values() for o in group]
+    annual = annual_section(
+        runs_in(signal_runs or [], ANNUAL_VOICE),
+        outcomes_all or {},
+        findings or [],
+        filings,
+        [h for h in holders if h["id"] not in off_roster],
+        meta,
+    )
+    everything = [o for s, _ in ptr_runs for o in (outcomes_all or {}).get(s["id"], [])]
     by_id = {f["id"]: f for f in filings}
     how = (
         strip_section(
@@ -5955,7 +7038,7 @@ def render_index(
     )
     body = (
         f'{head}\n<main id="main">\n{screens}\n{tile_map(offices)}\n{how}\n{deadline}\n'
-        f"{notice}\n{narrows}\n{ends}\n{oath}\n"
+        f"{notice}\n{annual + chr(10) if annual else ''}{narrows}\n{ends}\n{oath}\n"
         f"{disputes_section(False, brief=True)}\n{door}\n"
         f"</main>\n{footer(meta, home=True)}"
     )
@@ -5996,6 +7079,7 @@ def answer_rests_on_these_rows(
     outcomes_by: dict[str, dict[str, list[dict]]],
     filings: list[dict],
     transactions: list[dict],
+    reads_transactions: set[str] | None = None,
 ) -> list[str]:
     """Where a Signal's run record and the register's rows disagree about a report.
 
@@ -6019,6 +7103,7 @@ def answer_rests_on_these_rows(
     reading of the built answer, Seat G).
     """
     holder_of = {f["id"]: f["officeholder_id"] for f in filings}
+    filed_of = {f["id"]: f.get("filed_at") for f in filings}
     rows_of: dict[str, int] = {}
     for t in transactions:
         rows_of[t["filing_id"]] = rows_of.get(t["filing_id"], 0) + 1
@@ -6038,6 +7123,17 @@ def answer_rests_on_these_rows(
                     f"{signal_id} attributes {report} to {said} and data/filings.ndjson attributes "
                     f"it to {holder_of[report]}"
                 )
+            # A Signal that reads only a report's header counts its one date as the row it read,
+            # and holds no transaction row to disagree with (signal-outcome.schema.json, rows);
+            # that one row is held to the register's instead, so a correction of the date moves
+            # the answer or stops the render (the second reading of the annual Signal, Seat C).
+            if reads_transactions is not None and signal_id not in reads_transactions:
+                if outcome.get("filed_at") != filed_of.get(report):
+                    problems.append(
+                        f"{signal_id} read {report} as dated {outcome.get('filed_at')} and "
+                        f"data/filings.ndjson dates it {filed_of.get(report)}"
+                    )
+                continue
             counted, held = outcome.get("rows") or 0, rows_of.get(report, 0)
             if counted != held:
                 problems.append(
@@ -6129,6 +7225,7 @@ def main(argv: list[str] | None = None) -> int:
     }
     held_here = held_by_holder(rejected, holders, until)
     held_reports = held_reports_by_holder(rejected, holders)
+    held_notices = held_rows_by_holder(rejected, holders)
     # The set-aside file is named for the build's captures and replaced by the next build, so
     # a page links it at the commit the pages are rendered from, where one is given (Seat G).
     rejected_url = (
@@ -6140,6 +7237,14 @@ def main(argv: list[str] | None = None) -> int:
     for f in filings:
         by_holder.setdefault(f["officeholder_id"], []).append(f)
     signals, findings, signal_runs, outcomes_by = load_signals(root)
+    silent = unvoiced(signals)
+    if silent:
+        raise SystemExit(
+            "refusing to render: no voice on these pages speaks for "
+            f"{', '.join(silent)}, and the sentences written for another Signal would say its "
+            "results in words that are not true of it. Add its voice in src/surfaces/render.py "
+            "(VOICES), with its own answer, silence and figure."
+        )
     LEDGER.clear()
     LEDGER.extend(findings)
     DECIDED.clear()
@@ -6166,7 +7271,12 @@ def main(argv: list[str] | None = None) -> int:
     findings_by: dict[str, list[dict]] = {}
     for f in findings:
         findings_by.setdefault(f["officeholder_id"], []).append(f)
-    adrift = answer_rests_on_these_rows(outcomes_by, filings, transactions)
+    adrift = answer_rests_on_these_rows(
+        outcomes_by,
+        filings,
+        transactions,
+        {s["id"] for s in signals if "transaction" in s.get("inputs", [])},
+    )
     if adrift:
         raise SystemExit(
             "refusing to render: a Signal's run record and the register's rows disagree about "
@@ -6219,6 +7329,7 @@ def main(argv: list[str] | None = None) -> int:
                 changes,
                 rejected_url,
                 moved_away.get(h["id"], []),
+                held_notices.get(h["id"], []),
             ),
             encoding="utf-8",
             newline="\n",
@@ -6287,6 +7398,7 @@ def main(argv: list[str] | None = None) -> int:
                 outcomes_all,
                 reach[signal["id"]],
                 changes,
+                filings,
             ),
             encoding="utf-8",
             newline="\n",
