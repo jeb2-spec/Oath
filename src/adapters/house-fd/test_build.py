@@ -1262,19 +1262,27 @@ def test_other_bytes_that_list_a_row_more_are_a_replacement_never_an_accrual(rep
     assert not kept(reports)
 
 
-def test_other_bytes_that_read_the_same_change_nothing(reports):
+def test_other_bytes_that_read_the_same_move_no_row_and_are_recorded(reports):
+    """Other bytes move no published row, whatever they read. That the Clerk served them at all
+    is a row of its own: a reader who finds that file has one saying the register saw it, and a
+    row of two fingerprints keeps nothing private (the Council's fourth reading, Seats B, C and
+    G). The file the register first read, served again, ends the replacement."""
     before = {name: rows_of(reports, name) for name in ("filings", "transactions")}
-    document(
-        reports,
-        "20000001",
-        ADA,
-        [TX, dict(TX, asset="Other Holdings")],
-        "2026-02-02T00:00:00Z",
-        pad="\n",
-    )
+    rows = [TX, dict(TX, asset="Other Holdings")]
+    document(reports, "20000001", ADA, rows, "2026-02-02T00:00:00Z", pad="\n")
     assert build.build(2025) == 0
     assert {name: rows_of(reports, name) for name in before} == before
-    assert not changes_of(reports)
+    (recorded,) = changes_of(reports)
+    assert (recorded["change"], recorded["differs"]) == ("replaced", [])
+    assert recorded["was"] != recorded["now"], "the file first read, and the file served now"
+    document(reports, "20000001", ADA, rows, "2026-02-09T00:00:00Z")
+    assert build.build(2025) == 0
+    assert {name: rows_of(reports, name) for name in before} == before
+    ends = changes_of(reports)[-1]
+    assert ends["change"] == "replaced" and ends["was"] == ends["now"], (
+        "the file the register first read is served again, so the replacement ends"
+    )
+    assert ends["now"] == recorded["was"]
 
 
 def test_a_document_first_read_later_adds_its_facts_and_rows(tmp_path, monkeypatch):
@@ -1599,6 +1607,21 @@ def test_a_decided_report_is_read_and_still_says_it_was_decided(
     record = run_record(tmp_path)
     assert record["documents"]["read"] == 1 and record["documents"]["unreadable"] == 0
     assert record["counts"]["adjudicated"] == 1
+
+
+def test_a_confirmed_mass_not_listing_and_each_documents_read_are_recorded(register, monkeypatch):
+    """The Council's fourth reading of S.1b (Seats C and G): the guard stopped a read that would
+    record many rows as no longer listed, a person let it through with a flag, and nothing in the
+    tree said who confirmed what. And no row dated the register's read of a document, which a
+    replacement is measured from."""
+    monkeypatch.setattr(build, "MANY_NOT_LISTED", 1)
+    later(register, [ADA, BEA], [], "2026-02-02T00:00:00Z")
+    with pytest.raises(SystemExit, match="rows of filings as no longer listed"):
+        build.build(2025)
+    assert build.build(2025, expect_not_listed=2) == 0
+    record = run_record(register)
+    assert record["confirmed_not_listed"] == {"filings": {"rows": 2, "confirmed": 2}}
+    assert "read_at" in record["documents"]
 
 
 def test_the_reasons_the_seal_quotes_keep_their_clause_and_isolate_no_one():

@@ -2106,6 +2106,14 @@ def change_notes(history: list[dict], holder_id: str = "") -> str:
         elif c["change"] == "listed again":
             what = f"Listed again in the Clerk's index read {when(c)}"
             words = "the copy of that index the register kept, a ZIP archive"
+        elif c["change"] == "read otherwise" and c["was"] == c["now"]:
+            # The source states again what the register published. Written as a disagreement
+            # awaiting the maintainer, it read as a dispute over a value the two agree on (the
+            # Council's fourth reading of S.1b, Seats A, B and F).
+            what = (
+                f"The Clerk's index read {when(c)} again gives {field} as the register published it"
+            )
+            words = "the copy of that index the register kept, a ZIP archive"
         elif c["change"] == "read otherwise":
             later = [
                 d
@@ -2244,8 +2252,16 @@ def filings_section(
     n = len(rows)
 
     def with_kind(*kinds: str) -> int:
+        # A read that gives back the value the row carries is not one that shows the row
+        # otherwise, and the caption counts what it says (the Council's fourth reading, Seat A).
         return sum(
-            1 for f in filings if any(c["change"] in kinds for c in changes.get(f["id"], []))
+            1
+            for f in filings
+            if any(
+                c["change"] in kinds
+                and not (c["change"] == "read otherwise" and c["was"] == c["now"])
+                for c in changes.get(f["id"], [])
+            )
         )
 
     reads, files, decided = (

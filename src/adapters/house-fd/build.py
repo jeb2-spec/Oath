@@ -878,17 +878,22 @@ class Observed:
 
     def replaced(self, row_id: str, was: str, capture: dict, differs: list[dict]) -> None:
         """The Clerk serves other bytes for a published filing's document. Recorded when they
-        read otherwise than the rows published from it, or when a recorded replacement ends,
-        with which rows read otherwise and in which facts, by id and field name and never by
-        value. The bytes are not kept: a filed document can carry the names of private people,
-        and a kept copy would outlast the Clerk's withdrawal or redaction of it (EVIDENCE.md
-        §7; the Council's third reading of S.1b, Seat B). Each file is named by its SHA-256."""
+        read otherwise than the rows published from it, when the file the register first read is
+        served again, and when the Clerk serves a third; with which rows read otherwise and in
+        which facts, by id and field name and never by value. The bytes are not kept: a filed
+        document can carry the names of private people, and a kept copy would outlast the Clerk's
+        withdrawal or redaction of it, a decision of the Council's third reading of S.1b (Seat B)
+        that NEXT.md D.4 carries into the doctrine. Each file is named by its SHA-256."""
         last = self.last((row_id, REPLACED, "source.content_hash"))
         if last and capture["retrieved_at"] <= last["capture"]["retrieved_at"]:
             return
         seen = last["now"] if last else was
-        if capture["content_hash"] == seen or not (differs or last):
+        if capture["content_hash"] == seen:
             return
+        # Every file the Clerk serves for a published report that is not the one last seen is a
+        # row of its own, whether or not its rows read otherwise: a reader who finds that file
+        # elsewhere has a row saying the register saw it, and a row of two fingerprints keeps
+        # nothing private (the Council's fourth reading of S.1b, Seats B, C and G).
         self.add(
             change_row(
                 row_id,
@@ -1715,6 +1720,11 @@ def build(year: int, dry_run: bool = False, expect_not_listed: int = 0) -> int:
                 documents_replaced += 1 if differs else 0
                 documents_same_reading += 0 if differs else 1
                 continue
+            if not first_read:
+                # The file the register first read, served again: a recorded replacement ends,
+                # and the page said a different file was the latest state for good (the
+                # Council's fourth reading of S.1b, Seats B and C).
+                seen.replaced(was["id"], was["source"]["content_hash"], doc_source, [])
             if status == "contradiction" and not decided(
                 published["changes"], was["id"], "officeholder_id"
             ):
@@ -1775,7 +1785,13 @@ def build(year: int, dry_run: bool = False, expect_not_listed: int = 0) -> int:
     new_changes = sorted(seen.new, key=lambda c: c["id"])
     changes = published["changes"] + new_changes
     gone = collections.Counter(c["rows"] for c in new_changes if c["change"] == NOT_LISTED)
+    confirmed = {}
     for rows_kind, n in sorted(gone.items()):
+        if n > MANY_NOT_LISTED and expect_not_listed >= n:
+            # The guard stopped this read, and a person let it through: every other decision in
+            # the register is a row with a reason, and this one left no trace (the Council's
+            # fourth reading of S.1b, Seats C and G).
+            confirmed[rows_kind] = {"rows": n, "confirmed": expect_not_listed}
         if n > MANY_NOT_LISTED and n > expect_not_listed:
             raise Refusal(
                 f"refusing to build: this read would record {n:,} rows of {rows_kind} as no "
@@ -1850,6 +1866,10 @@ def build(year: int, dry_run: bool = False, expect_not_listed: int = 0) -> int:
         ),
         "refused": documents_refused,
         "transactions": sum(1 for t in transactions if t["filing_id"] in mine_ids),
+        # When the register read each document. A filing's source carries the document's URL and
+        # fingerprint but the index's time, so nothing dated the read a replacement is measured
+        # from (the Council's fourth reading of S.1b, Seat G).
+        "read_at": {doc: source["retrieved_at"] for doc, source in sorted(read_documents.items())},
         **({"reader": ptr.reader_version()} if hasattr(ptr, "reader_version") else {}),
     }
 
@@ -1933,6 +1953,7 @@ def build(year: int, dry_run: bool = False, expect_not_listed: int = 0) -> int:
         ],
         "adjudications_sha256": adjudications_hash,
         "documents": documents_count,
+        **({"confirmed_not_listed": confirmed} if confirmed else {}),
         "congress": {
             "filing_year": ours,
             "roster": congress,
