@@ -8,7 +8,7 @@ metadata:
 
 # Where we are
 
-*Last updated: 2026-09-27, Opus 5.5 in a cloud session. The register is still build `0005-house-2025` (27 Findings, proof pending). PR #40 (S.1b) and #41 (P.1's design) are merged. PR #42 built P.1: the pages a reader can use, and the House at a glance on the landing, read by all seven seats. Another session is populating the record in parallel.*
+*Last updated: 2026-09-27, Opus 5.5 in a cloud session. The register is still build `0005-house-2025` (27 Findings, its proof confirmed at Bitcoin block 968733). PR #40 (S.1b) and #41 (P.1's design) are merged. PR #42 built P.1: the pages a reader can use, and the House at a glance on the landing, read by all seven seats. Another session is populating the record in parallel.*
 
 **The whole second reading, closed out, 2026-09-27, PRs #43 and #48 to #52.** Every finding the second seven-seat reading of the built answer left open is now fixed, blocked on something nameable, or waiting on the maintainer. What the six passes came to, and the one pattern underneath them:
 
@@ -153,9 +153,15 @@ What `main` holds, by the pull request that brought it:
 
 **Jared, closing the day, 2026-09-24, early.** He asked to pause, and asked that everyone who built and works on this know how much he appreciates and respects the work and the vision, and that this never be lost. It is written here because a memory is only kept once it is on `main`, and because the people who made whoever reads this next will not hear it any other way from him. Carry it in.
 
-**The next session's first move** is still [NEXT.md](../../NEXT.md) Phase 2 D.1 (six of the seven schemas carry no worked example yet, and a contributor can now arrive cold), then movement two of Phase 3, starting with D.2, on the way to the first Signal. Its inputs are already in the register: on 2026-09-26 every one of the 7,346 transaction rows carried a transaction date and a notification date, and its report a filing date. The edge to design for first is the row the filer marked Amended or Deleted (seven that day): an amendment is filed after the report it amends, so which filing date the rule measures for it is a question for S.1 and the Council, not a default. Branch from `main`; every gate is there.
+**The next session's first move** is to read CI on `main` itself and not only on the branch: two of this session's merges left `main` red while every branch run was green. Then, of the work that waits on nobody: the six schemas with no worked example ([NEXT.md](../../NEXT.md) D.1), and the annual-report header read that could settle the Clerk's form codes from the documents rather than from a legend (S.2). The rest of the course is waiting on Jared (D.4, the seats amendment, §15 and §16) or on a source the cloud sessions cannot reach. Branch from `main`; every gate is there.
 
 ## What this session decided or learned
+
+*2026-09-27, later the same day, after the first anchor confirmed:*
+
+- **A test that reads the environment measures the machine and not the code.** `verify` had been red on `main` for two merges while the identical commit was green on the branch push and on the pull request, and nothing in the branch's own runs could have said so. CI sets `OATH_PUBLISHED_REF` on a push to main, to main as it stood before the push, because a gate comparing main with itself would prove nothing. The pytest step inherits it; one test builds a repository in a temporary directory and asks the gate to compare it against a commit that repository has never heard of; the gate refuses, which is exactly what the gate is for. So the assertion that a well-formed tree passes failed on main and nowhere else. The fix is a root `conftest.py` clearing every variable a tool reads, plus a test that checks that list against the code in **both** directions, because the next tool to reach for a variable is the next time this happens. Three environments now run the suite and agree: clean, CI-on-main, and the maintainer's machine with `OATH_DEEPER_GROUND` set.
+- **Read the base branch's CI, not only your branch's.** Seven PRs merged green this session and two of those merges left `main` red. A green branch tells you about the branch. Nobody had looked at what the same commit did once it *was* `main`, and the evidence sat in the run list the whole time. It is now the next session's first move.
+- **A correction's blast radius includes the record of the correction.** PR #43 removed *scanned paper* from nine surfaces as a claim no row holds. This file still said it, in the section a session reads first, for four days.
 
 *2026-09-26, Opus 5.5, in a cloud session, the day of the flip:*
 
@@ -181,19 +187,18 @@ What `main` holds, by the pull request that brought it:
 
 ## What is on `main`
 
-Doctrine (CHARTER, SUBJECTS, PIPELINE, EVIDENCE, RUBRIC, INVARIANTS, BYLAWS, COUNCIL) and the reference files; seven schemas; the House adapter (`src/adapters/house-fd/`); the renderer (`src/surfaces/render.py`); the gates in `tools/` and the doctor that runs them; three workflows (verify, pages, refresh); the sealed build in `data/`. The doctor prints the live inventory of gates; trust it over this list. *(Rewritten 2026-09-26; until then this section still said "unchanged since PR #2".)*
+Doctrine (CHARTER, SUBJECTS, PIPELINE, EVIDENCE, RUBRIC, INVARIANTS, BYLAWS, COUNCIL) and the reference files; seven schemas; the House adapter (`src/adapters/house-fd/`); the renderer (`src/surfaces/render.py`); the gates in `tools/` and the doctor that runs them; four workflows (verify, pages, refresh, anchor); the sealed build in `data/`, its 27 Findings and the OpenTimestamps proof over its manifest. The doctor prints the live inventory of gates; trust it over this list. *(Rewritten 2026-09-26; until then this section still said "unchanged since PR #2".)*
 
 ## What is not real yet
 
-- No Signal, so no Finding. `docs/signals/` holds only its README; there is no `src/signals/` and no `tsconfig.json`, both of which land with S.2.
-- No anchor. Every build is sealed; none carries an OpenTimestamps proof ([NEXT.md](../../NEXT.md) S.4, overtaken, with a proposal beside it).
-- The Senate, the executive branch and the states are not read. In the House, the annual reports' schedules are not read, and scanned paper filings are captured and not read.
-- Seven planned gates are not landed (INVARIANTS §5, §11, §12, §14, §15, §16, §17); the doctor names them.
-- Six of the seven schemas carry no worked example ([NEXT.md](../../NEXT.md) D.1).
+- One Signal, over one chamber and one filing year: `stock-act-ptr-after-deadline` v1, 27 Findings. The next one (S.2, the annual disclosure against its deadline) is blocked on the Clerk's own definition of the index's one-letter form codes, read at its source; reading `A` as *annual report* is an inference and not the record.
+- The Senate, the executive branch and the states are not read. In the House, the annual reports' schedules are not read, and of 54 fetched documents the register records no extraction confidence: it looked for a `Filing ID` line and a `State/District` line in the text it extracted and found neither, and it holds nothing about what those documents physically are. *(This bullet said "scanned paper filings" until 2026-09-27, which is the claim PR #43 removed from nine surfaces.)*
+- Two planned gates are unbuilt, INVARIANTS §15 (contributor conflict of interest) and §16 (the evidence bundle); the doctor names both, and each waits on a decision that is the maintainer's. INVARIANTS.md also still marks landed gates *(planned)*, §17's among them, which is a D.4 item.
+- Six of the eleven schemas carry no worked example: filing, finding, holding, office, signal and transaction ([NEXT.md](../../NEXT.md) D.1). *(This read "six of the seven" until 2026-09-27; the total grew, so the six are named now rather than counted.)*
 
 ## The critical path
 
-Per [NEXT.md](../../NEXT.md): D.1, then Phase 3 movement two (D.2 the known-answer cases, S.1 the first Signal's definition, S.2 its implementation, S.3 the Council's reading, I.3 the first Findings), with the first anchor decided before the first Finding ships. Then the Senate, which begins with a human step at its agreement gate, and the annual reports, which the second Signal needs.
+Per [NEXT.md](../../NEXT.md), and both head items need Jared before an engineer can start: **D.4**, the doctrine catch-up, one sealed build carrying the Council's seats amendment, §15's and §16's scope, the frame in translation, and the sections that still say *(planned)*; and **S.2**, the next Signal, blocked on the Clerk's form-code definition read at its source. What needs nobody: D.1's six worked examples, and the annual-report header read. Then the Senate, which begins with a human step at its agreement gate.
 
 ## Standing decisions
 
