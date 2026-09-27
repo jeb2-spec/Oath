@@ -2166,6 +2166,20 @@ def how_to_read(person: bool) -> str:
         ]
     rows += [
         (
+            "A transaction report",
+            Raw(
+                "The form a member files within 30 days of being notified of a purchase, sale or "
+                "exchange over $1,000 in a stock, bond or other security, in their own account or "
+                "a spouse's or dependent child's, and no later than 45 days after the transaction "
+                f'(<a href="{USC_13105}">5 U.S.C. § 13105(l)</a>). The Clerk calls it a Periodic '
+                "Transaction Report and publishes it as filed. It lists the trades and not the "
+                "holdings, so the register counts reports and trades and never anyone's wealth: no "
+                "page here sums an amount, averages one, or sets one beside another person's. The "
+                "annual report, which does list holdings, is a different form, and this register "
+                "reads its header and not its schedules."
+            ),
+        ),
+        (
             "Set aside",
             "A row of the Clerk's index that neither the name on the form nor the Clerk's "
             "document could attribute to an officeholder. It waits for the maintainer to decide "
@@ -3349,12 +3363,20 @@ def answer_section(
             unread, empty = n - read, read - checked
             if not checked:
                 why = unchecked_words(outcomes.get(signal["id"], []))
+                # A report the register read that lists no transaction row at all leaves both
+                # clauses empty, and the sentence then read "It compared no row on any of them:
+                # That is a fact about what the register could read": a colon before a capital,
+                # with nothing between. True of no report in the 2025 record, and reachable by an
+                # empty filing, which is why it is said rather than left to the first one.
+                none_read = not unread and not why
                 text += (
                     "It compared no row on any of them: "
                     + (
                         f"{unread:,} {plural(unread, 'is', 'are')} in a form it does not read"
                         + (", and of the rows on the rest, " if why else ". ")
                         if unread
+                        else "it read no transaction row from them. "
+                        if none_read
                         else ("of the rows on them, " if why else "")
                     )
                     + (f"{why}. " if why else "")
@@ -3401,8 +3423,8 @@ def answer_section(
                             text += f" For {who}, {clause}."
                 else:
                     text += (
-                        f"The Clerk's index dates none of the {checked:,} "
-                        f"{plural(checked, 'report', 'reports')} compared after the deadline."
+                        "The Clerk's index dates none of the reports it compared after the "
+                        "deadline."
                     )
                 missing = []
                 if unread:

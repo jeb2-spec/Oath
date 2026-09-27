@@ -2001,7 +2001,7 @@ def test_the_answer_comes_first_and_reads_the_same_whether_or_not_the_signal_fir
         "in one phrase form a rate a reader divides (the second reading, Seat A)"
     )
     assert "of the 1 report compared" not in answer_of(fired)
-    assert "The Clerk's index dates none of the 1 report compared after the deadline." in (
+    assert "The Clerk's index dates none of the reports it compared after the deadline." in (
         answer_of(quiet)
     )
     for page in (fired, quiet):
@@ -2794,3 +2794,53 @@ def test_every_page_tells_a_person_how_to_dispute_a_fact_about_themselves():
     assert f'href="{render.CORRECTION_FORM}"' in landing
     assert "The same route for everyone named in this register" in html.unescape(landing)
     assert ranking.check_index(index) == [] and frame.check_page(index) is None
+
+
+def test_the_term_every_page_uses_most_is_defined_and_says_what_is_never_counted():
+    """ "Transaction report" is in the first sentence of every page and the glossary defined every
+    other term and not that one, which is the term a reader arriving from a friend is least likely
+    to know (the Council's second reading of the built answer, Seat E).
+
+    It is also the one place to say what the register counts and what it never counts, because the
+    form lists trades and not holdings: a reader who assumes otherwise reads every number here as a
+    number about somebody's wealth.
+    """
+    holder_ = sworn(HOLDERS[0])
+    report = read_report(holder_["id"], "2025-03-20", 1)
+    _, page = signal_page(holder_, [report], LATE)
+    terms = between(page, "<h2>How to read this page</h2>", "</section>")
+    entry = html.unescape(between(terms, "<dt>A transaction report</dt><dd>", "</dd>"))
+    assert "within 30 days of being notified" in entry and "45 days after" in entry
+    assert "a spouse's or dependent child's" in entry
+    assert "Periodic Transaction Report" in entry, "the Clerk's own name for it"
+    assert "It lists the trades and not the holdings" in entry
+    assert "never anyone's wealth" in entry and "sums an amount" in entry
+    assert "The annual report, which does list holdings, is a different form" in entry
+    assert render.USC_13105 in between(terms, "<dt>A transaction report</dt><dd>", "</dd>")
+    assert verdict_words(entry) == []
+
+    # And the quiet result no longer restates the count the sentence before it just gave, which
+    # also makes the quiet and the fired results the same shape (COUNCIL §5 mode 6). LATE[1] is a
+    # trade the index dates within its own deadline, so the register compares a row and finds none
+    # after it, which is the quiet page 19 real officeholders have.
+    quiet = answer_of(signal_page(holder_, [report], [LATE[1]])[1])
+    said = html.unescape(re.sub(r"<[^>]+>", "", quiet))
+    assert "dates none of the reports it compared after the deadline" in said
+    assert "none of the 1 report compared" not in said
+    assert "none of them" not in said, "never a pronoun for the reports"
+    first_two = ". ".join(said.split(". ")[:2])
+    assert len(re.findall(r"\b\d[\d,]*\b", first_two)) <= 6, first_two
+
+
+def test_a_report_the_register_read_that_lists_no_row_says_so(tmp_path=None):
+    """A read report with no transaction row left both clauses of the nothing-compared sentence
+    empty, and it rendered as "It compared no row on any of them: That is a fact about what the
+    register could read": a colon before a capital, with nothing between. True of no report in the
+    2025 record, and reachable by an empty filing, which is why it is said rather than left to the
+    first one."""
+    holder_ = sworn(HOLDERS[0])
+    report = read_report(holder_["id"], "2025-03-20", 1)
+    answer = html.unescape(re.sub(r"<[^>]+>", "", answer_of(signal_page(holder_, [report], [])[1])))
+    assert "It compared no row on any of them: it read no transaction row from them." in answer
+    assert "them: That is a fact" not in answer, "no colon with nothing after it"
+    assert "That is a fact about what the register could read, not about what was filed." in answer
