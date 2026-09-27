@@ -396,6 +396,28 @@ p.punch { font: 700 1.02rem/1.45 var(--letter); max-width: 40rem; margin: .8rem 
   ol.strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   h1.comic { font-size: 3rem; }
 }
+/* closing the loop: the chain, and the pieces that would mend it */
+figure.loop { margin: .6rem 0 .3rem; }
+svg.loop { width: 100%; max-width: 34rem; height: auto; display: block; }
+.link.held { fill: var(--ink); fill-opacity: .16; stroke: var(--ink); stroke-width: 2.2; }
+.link.open { fill: none; stroke: var(--ink-2); stroke-width: 1.4; stroke-dasharray: 4 3; }
+.lbrace { stroke: var(--ink-2); stroke-width: 1; }
+svg.loop text { font: 700 9px var(--letter); fill: var(--ink-2); }
+svg.loop text.lct { font-size: 8px; }
+nav.parts ul { list-style: none; margin: .6rem 0 0; padding: 0; display: flex;
+  flex-wrap: wrap; gap: .3rem 1.1rem; font-size: .9rem; }
+div.want { margin: 1.1rem 0 0; padding-top: .7rem; border-top: 1px solid var(--rule); }
+div.want h3 { margin: 0 0 .25rem; font: 700 1.06rem/1.35 var(--letter); }
+p.tags { margin: 0 0 .5rem; display: flex; flex-wrap: wrap; gap: .35rem .5rem;
+  align-items: baseline; font-size: .82rem; }
+span.tag2 { border: 1px solid var(--rule); padding: .04rem .38rem; color: var(--ink-2); }
+div.want dl { margin: 0; display: grid; grid-template-columns: minmax(8rem, 12rem) 1fr;
+  gap: .18rem .9rem; font-size: .94rem; }
+div.want dt { font: 700 .78rem/1.5 var(--letter); letter-spacing: .04em;
+  text-transform: uppercase; color: var(--ink-2); }
+div.want dd { margin: 0; }
+@media (max-width: 34rem) { div.want dl { grid-template-columns: 1fr; }
+  div.want dd { margin: 0 0 .4rem; } }
 /* where the record ends */
 section.ends { border-top: 0; }
 figure.ends { margin: .6rem 0 .3rem; }
@@ -4331,9 +4353,9 @@ def ends_section(signal_runs: list[tuple[dict, dict]], findings: list[dict]) -> 
             f"{n:,}</li></ul>\n"
             f"<p>The Clerk's index dates these reports between {esc(filed[0])} and "
             f"{esc(filed[-1])}. What followed each is the Committee's to say, on "
-            f'<a href="{ETHICS_FD}">its own page</a>. Closing this gap needs a source the '
-            f'register does not read yet; <a href="{NEXT_ENDS}">NEXT.md E.1</a> says what such a '
-            "source would have to carry before a row of it could enter the register.</p>\n"
+            f'<a href="{ETHICS_FD}">its own page</a>. Every piece of official information that '
+            f"would let the register carry on past this point is listed, one row each, in "
+            f'<a href="{WANTED_PAGE}">what would close the loop</a>.</p>\n'
             f'<p class="quiet">{esc(EITHER_WAY)}</p>\n'
             "</section>"
         )
@@ -5415,6 +5437,221 @@ def render_record(
     return page(RECORD_TITLE, body)
 
 
+# ---- closing the loop: what the register would need ------------------------------------------
+
+WANTED_ROWS = "docs/wanted/wanted.ndjson"
+WANTED_PAGE = "closing-the-loop.html"
+WANTED_TITLE = "What would close the loop"
+# The chain, left to right, and which of its links this register can read. The first four are
+# dates in the Clerk's index; the last three are what follows a report, and the register holds
+# no row about any of them. The break between them is the figure.
+# One word a link: at seven links across 360 units a label has 44 units, and "the deadline"
+# needs 46. The article goes, not the link.
+LOOP = (
+    ("trade", True, None),
+    ("notice", True, None),
+    ("report", True, None),
+    ("deadline", True, "the-date"),
+    ("fee", False, "the-fee"),
+    ("review", False, "the-review"),
+    ("court", False, "the-courts"),
+)
+# Each part of the loop, in the order a reader meets it, and the heading it is published under.
+# tools/check-wanted.py writes the same keys on its own and refuses a row whose key is not here.
+WANTED_GROUPS = (
+    ("the-date", "The date every sentence here rests on"),
+    ("the-fee", "The fee the rule itself sets"),
+    ("the-review", "Whether anyone looked"),
+    ("the-courts", "What happens outside the chamber"),
+    ("the-shut-door", "The door that may not open"),
+)
+PUBLICNESS = {
+    "published": "published",
+    "obtainable": "obtainable",
+    "not public": "not public",
+    "unknown": "nobody here has looked yet",
+}
+
+
+def load_wanted(root: Path) -> list[dict]:
+    """The wanted register, or nothing. It is not sealed with the build, so a checkout may not
+    carry it and the page it feeds is simply not written."""
+    path = root / WANTED_ROWS
+    return read_ndjson(path) if path.is_file() else []
+
+
+def loop_chain(rows: list[dict]) -> str:
+    """The loop as a chain of seven links, broken where this register stops.
+
+    The first four links are dates the Clerk's index carries and the register reads. The last
+    three are what follows a report, and the register holds no row about any of them, so they are
+    drawn open, in the same outline this page uses everywhere for *nothing here*. The break is the
+    figure: a chain is the one picture where a missing link needs no caption."""
+    w, link_w, link_h, overlap = 360, 52.0, 24.0, 8.0
+    gap, top = 16.0, 30.0
+    counts: dict[str, int] = {}
+    for r in rows:
+        counts[r["closes"]] = counts.get(r["closes"], 0) + 1
+    span = len(LOOP) * link_w - (len(LOOP) - 1) * overlap + gap
+    x = (w - span) / 2
+    parts = []
+    for i, (label, held, key) in enumerate(LOOP):
+        if i and LOOP[i - 1][1] is not held:
+            x += gap
+        parts.append(
+            f'<rect class="link {"held" if held else "open"}" x="{x:.1f}" y="{top}" '
+            f'width="{link_w}" height="{link_h}" rx="{link_h / 2:.1f}"/>'
+        )
+        mid = x + link_w / 2
+        parts.append(
+            f'<text x="{mid:.1f}" y="{top + link_h + 12}" text-anchor="middle">{label}</text>'
+        )
+        if key and not held:
+            n = counts.get(key, 0)
+            parts.append(
+                f'<text class="lct" x="{mid:.1f}" y="{top + link_h + 24}" text-anchor="middle">'
+                f"{n} wanted</text>"
+            )
+        x += link_w - overlap
+    held_to = (w - span) / 2 + 4 * link_w - 3 * overlap
+    parts.append(
+        f'<line class="lbrace" x1="{(w - span) / 2:.1f}" y1="{top - 8}" x2="{held_to:.1f}" '
+        f'y2="{top - 8}"/>'
+    )
+    parts.append(
+        f'<text x="{((w - span) / 2 + held_to) / 2:.1f}" y="{top - 12}" text-anchor="middle">'
+        "what this register reads</text>"
+    )
+    parts.append(f'<text x="{w - 6}" y="{top - 12}" text-anchor="end">what follows a report</text>')
+    return (
+        f'<svg class="loop" viewBox="0 0 {w} {top + link_h + 32:.0f}" direction="ltr" '
+        'aria-hidden="true" focusable="false">' + "".join(parts) + "</svg>"
+    )
+
+
+def wanted_row(row: dict) -> str:
+    """One wanted piece, in the shape a reader reads it: the question, what the register can say
+    without it, what it could say with it, and then the apparatus."""
+    lines = [
+        ("Today", row["today"]),
+        ("With it", row["with_it"]),
+        ("Who holds it", row["holder"]),
+        ("How it would be got", row["route"]),
+    ]
+    if row.get("joins_on"):
+        lines.append(
+            (
+                "What it would join on",
+                f"{row['joins_on']}, which every report here carries.",
+            )
+        )
+    else:
+        lines.append(
+            (
+                "What it would join on",
+                "Nothing known. A record naming a member and a period does not name a report, "
+                "and joining one to the other would be an inference published against a named "
+                "person, which this register does not do.",
+            )
+        )
+    if not row["verified"]:
+        lines.append(("What to read to settle it", row["check"]))
+    body = "\n".join(f"<dt>{esc(term)}</dt><dd>{esc(text)}</dd>" for term, text in lines)
+    seen = "read at its source" if row["verified"] else "not read at any source by this project"
+    links = "".join(
+        f' <a href="{esc(c["url"])}">{esc(c["what"])}</a>;'
+        if c.get("url")
+        else f" {esc(c['what'])};"
+        for c in row.get("candidates") or []
+    ).rstrip(";")
+    where = (
+        f'<p class="quiet">Where it might be: {links}. {esc(seen.capitalize())}.</p>\n'
+        if links
+        else f'<p class="quiet">{esc(seen.capitalize())}.</p>\n'
+    )
+    return (
+        f'<div class="want" id="{esc(row["id"])}">\n'
+        f"<h3>{esc(row['question'])}</h3>\n"
+        f'<p class="tags"><span class="tag2">{esc(PUBLICNESS[row["publicness"]])}</span>'
+        f'<span class="tag2">one row per {esc(row["unit"].replace("-", " "))}</span>'
+        f"<code>{esc(row['id'])}</code></p>\n"
+        f"<dl>\n{body}\n</dl>\n{where}</div>"
+    )
+
+
+def render_closing(rows: list[dict], run: dict, holders: list[dict], meta: dict) -> str:
+    """The register of what this register does not have.
+
+    Every other page here says what the record holds. This one says, piece by piece, what would
+    have to exist and be readable before the register could follow a report past its deadline to
+    whatever followed it. It is a register and not an essay because the difference matters: a row
+    has an id, a row says what to read to settle it, a row can close, and a row is never deleted.
+
+    It asks for nothing. Naming what is missing is not the same as claiming it is being kept back,
+    and twelve of these rows say plainly that nobody here has looked yet."""
+    ERA.update(era_of(run, holders))
+    open_rows = [r for r in rows if not r.get("closed")]
+    verified = sum(1 for r in rows if r["verified"])
+    lede = (
+        '<p class="lede">The register can follow a trade to the day the Clerk\'s index dates the '
+        "report that carries it, and read that against the deadline. Then it stops. This is every "
+        "piece of official information it would need to carry on, one row each, with what it "
+        "could say if it had it and what to read to find out whether it exists.</p>\n"
+    )
+    groups, nav = [], []
+    for key, heading in WANTED_GROUPS:
+        here = [r for r in rows if r.get("closes") == key]
+        if here:
+            nav.append(f'<li><a href="#{esc(key)}">{esc(heading)}</a> ({len(here)})</li>')
+    for key, heading in WANTED_GROUPS:
+        here = [r for r in rows if r.get("closes") == key]
+        if not here:
+            continue
+        groups.append(
+            f'<section class="wants" id="{esc(key)}">\n<h2>{esc(heading)}</h2>\n'
+            + "\n".join(wanted_row(r) for r in here)
+            + "\n</section>"
+        )
+    figure = (
+        '<section class="loop">\n<h2><span class="tag">The loop, and where it breaks</span></h2>\n'
+        '<figure class="loop">\n'
+        + loop_chain(rows)
+        + "\n<figcaption>The seven stages of a reported trade. The register reads the first four, "
+        "because the Clerk publishes them: the trade, the notice the filer prints, the report, and "
+        "the deadline the rule sets. It holds no row about any of the last three. They are drawn "
+        "open because on these pages an outline means the register has nothing, and the count "
+        "under each is the number of pieces below that would fill it; "
+        f"{sum(1 for r in rows if r.get('closes') == 'the-shut-door')} more are about why the "
+        "break is there at all. The break is not a claim that anything is being kept back; it is "
+        "where this project's own reading stops.</figcaption>\n</figure>\n</section>"
+    )
+    counted = (
+        f"<section>\n<h2>How to read this list</h2>\n"
+        f"<p>{len(rows):,} {plural(len(rows), 'piece', 'pieces')}, {len(open_rows):,} still open. "
+        f"{verified:,} of them {plural(verified, 'has', 'have')} been read at a source by this "
+        f"project; the rest say <em>nobody here has looked yet</em>, which is the honest state and "
+        "not a finding about anyone. A row saying a thing is published, obtainable or not public "
+        "when nobody here has read it is refused by "
+        f'<a href="{REPO}tools/check-wanted.py">the gate that keeps this file</a>, because '
+        "believing a thing is public is not knowing it.</p>\n"
+        f'<p>The rows are data: <a href="{REPO}{WANTED_ROWS}">{esc(WANTED_ROWS)}</a>, one JSON '
+        f'object a line, under <a href="{REPO}schemas/wanted.schema.json">a schema</a>. A piece '
+        "that stops being wanted is marked closed and stays; nothing here is deleted. If you know "
+        "the answer to one of these, or where to read it, "
+        f'<a href="{CORRECTION_FORM}">the same route that corrects a fact</a> opens a row.</p>\n'
+        "</section>"
+    )
+    body = (
+        f'{inner_head("Oath · what is missing", WANTED_TITLE, lede)}\n<main id="main">\n'
+        f"{figure}\n"
+        + (f'<nav class="parts"><ul>{"".join(nav)}</ul></nav>\n' if nav else "")
+        + "\n".join(groups)
+        + f"\n{counted}\n"
+        f"</main>\n{footer(meta, home=False, to_root='')}"
+    )
+    return page(WANTED_TITLE, body)
+
+
 def render_index(
     holders: list[dict],
     offices: list[dict],
@@ -5830,6 +6067,11 @@ def main(argv: list[str] | None = None) -> int:
     (out / SEATS_PAGE).write_text(
         render_seats(holders, offices, run, meta, changes), encoding="utf-8", newline="\n"
     )
+    wanted = load_wanted(root)
+    if wanted:
+        (out / WANTED_PAGE).write_text(
+            render_closing(wanted, run, holders, meta), encoding="utf-8", newline="\n"
+        )
     (out / RECORD_PAGE).write_text(
         render_record(
             meta,
@@ -5883,6 +6125,7 @@ def main(argv: list[str] | None = None) -> int:
     shown = out.relative_to(root).as_posix() if out.is_relative_to(root) else str(out)
     print(
         f"rendered {len(holders)} pages, the index, {SEATS_PAGE}, {RECORD_PAGE}, "
+        f"{WANTED_PAGE + ', ' if wanted else ''}"
         f"{len(signal_runs)} signal "
         f"{plural(len(signal_runs), 'page', 'pages')} and mark.svg to {shown}"
     )

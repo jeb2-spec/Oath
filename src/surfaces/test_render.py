@@ -2565,6 +2565,116 @@ def test_the_late_reports_are_never_drawn_as_one_number():
     assert render.ends_section([(SIGNAL, summary)], []) == ""
 
 
+WANT = {
+    "id": "wt:a-thing",
+    "closes": "the-fee",
+    "question": "Was the fee assessed on this report?",
+    "today": "Nothing; the register holds no row about it.",
+    "with_it": "The report could say whether the rule's own consequence followed.",
+    "unit": "report",
+    "joins_on": None,
+    "holder": "House Committee on Ethics",
+    "publicness": "unknown",
+    "route": "Unknown; no route this project has established.",
+    "candidates": [{"what": "The Committee's pages", "url": "https://example.invalid/"}],
+    "verified": False,
+    "check": "Read what the Committee publishes about late filing fees, with the date read.",
+    "added": "2026-09-27",
+}
+
+
+def wants(**over) -> dict:
+    return {**WANT, **over}
+
+
+def test_the_loop_is_drawn_as_a_chain_with_the_links_the_register_does_not_hold_open():
+    """A chain is the one picture where a missing link needs no caption."""
+    svg = between(render.loop_chain([wants()]), '<svg class="loop"', "</svg>")
+    assert svg.count('class="link held"') == 4, "the four stages the Clerk publishes"
+    assert svg.count('class="link open"') == 3, "and the three that follow a report"
+    assert "NaN" not in svg
+    for word in ("trade", "notice", "report", "deadline", "fee", "review", "court"):
+        assert f">{word}</text>" in svg, word
+    assert ">1 wanted</text>" in svg, "each open link counts the pieces that would fill it"
+
+
+def test_the_wanted_page_says_nobody_has_looked_rather_than_guessing():
+    """The rule the whole register turns on, carried onto the page: a row nobody here has read
+    at a source says so in those words, and never that a thing is published or withheld."""
+    page = render.render_closing([wants()], RUN, HOLDERS, META)
+    assert frame.check_page(page) is None
+    assert ranking.check_register(page) == []
+    assert "What would close the loop · Oath" in page
+    said = " ".join(html.unescape(re.sub(r"<[^>]+>", " ", page)).split())
+    assert "nobody here has looked yet" in said
+    assert "Not read at any source by this project" in said
+    assert "What to read to settle it" in page and WANT["check"] in said
+    assert "believing a thing is public is not knowing it" in said.lower()
+    # It asks for nothing and accuses nobody.
+    assert verdict_words(page) == []
+    for never in ("refuses to", "will not release", "covering up", "stonewall"):
+        assert never not in said.lower(), never
+    assert "officeholders/" not in page, "it names and links no one"
+
+
+def test_a_row_that_has_been_read_at_a_source_says_so_and_needs_no_check():
+    read = wants(id="wt:read", publicness="published", verified=True)
+    read.pop("check")
+    page = render.render_closing([read], RUN, HOLDERS, META)
+    # The row's own block, not the page: the section that explains the convention says the
+    # phrase too, and a test reading the whole page would pass on the explanation.
+    block = between(page, '<div class="want" id="wt:read">', "</div>")
+    said = " ".join(html.unescape(re.sub(r"<[^>]+>", " ", block)).split())
+    assert "Read at its source" in said and "published" in said
+    assert "nobody here has looked yet" not in said
+    assert "What to read to settle it" not in said
+
+
+def test_a_piece_with_no_identifier_to_join_on_says_why_that_matters():
+    """A record naming a member and a period does not name a report. Joining them would be an
+    inference published against a named person, and the page says so rather than leaving a blank."""
+    said = " ".join(
+        html.unescape(
+            re.sub(
+                r"<[^>]+>", " ", render.render_closing([wants(joins_on=None)], RUN, HOLDERS, META)
+            )
+        ).split()
+    )
+    assert "an inference published against a named person, which this register does not do" in said
+    joined = " ".join(
+        html.unescape(
+            re.sub(
+                r"<[^>]+>",
+                " ",
+                render.render_closing([wants(joins_on="filing_id")], RUN, HOLDERS, META),
+            )
+        ).split()
+    )
+    assert "filing_id, which every report here carries" in joined
+
+
+def test_the_pages_headings_and_the_gates_keys_are_written_down_twice_and_agree():
+    """The renderer has a heading per part of the loop and the gate refuses a row whose part it
+    has no heading for. Each writes the keys on its own, so this is the test that they agree."""
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "check_wanted", Path(render.__file__).parents[2] / "tools" / "check-wanted.py"
+    )
+    gate = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(gate)
+    assert tuple(key for key, _heading in render.WANTED_GROUPS) == gate.GROUPS
+    assert set(render.PUBLICNESS) == set(gate.KNOWN)
+
+
+def test_where_the_record_ends_hands_the_reader_the_list():
+    findings = [finding_late_by([120], "2025-06-01", 1)]
+    summary = signal_run.run_record(SIGNAL["id"], "c" * 64, [])[0]
+    section = render.ends_section([(SIGNAL, summary)], findings)
+    assert f'href="{render.WANTED_PAGE}"' in section
+    assert "what would close the loop" in section
+
+
 def test_the_notice_clock_counts_trades_reports_and_members_and_names_no_one():
     """The one date the filer writes: every trade by the days from the trade to its printed
     notice. A count of trades alone would let one report look like many, so each band says its

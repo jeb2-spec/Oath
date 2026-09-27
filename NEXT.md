@@ -149,6 +149,24 @@ legend; and a decision about whether a signal that reaches 24 of 441 members sho
 a page that fires on a fifth of a chamber and is silent on the rest invites the reader to read the
 silence as clearance, which is COUNCIL §5 mode 6 in a new shape.
 
+### E.0 The wanted register, and the work of reading it
+
+*Added 2026-09-27, at the maintainer's direction: keep a register of exactly what pieces of official information, public or not, would close the loop.*
+
+[docs/wanted/wanted.ndjson](docs/wanted/wanted.ndjson) is that register: thirteen rows across the five parts of the loop, each with the question it answers, what the register can say without it, what it could say with it, who holds it, what it would join on, and what to read to settle it. [schemas/wanted.schema.json](schemas/wanted.schema.json) is its shape and [tools/check-wanted.py](tools/check-wanted.py) is its gate. It renders to `closing-the-loop.html`, linked from *Where the record ends*.
+
+**The gate's central rule is the whole point.** A row may say a record is published, obtainable or not public **only when somebody here has read a candidate at its source**. Every other row says *unknown*, and twelve of thirteen do, because that is what is true from a session whose network policy reaches none of the relevant hosts. Believing a thing is public is not knowing it, and a list of absent records is the easiest document in this project to lie in: every row is about something nobody has seen, a confident sentence costs nothing to write, and no reader can check it. The *not public* claim is the one that would read as an accusation, and it needs a reading like any other. Two guards hold both rules.
+
+**The work, then, is reading.** Every unverified row carries a `check` naming exactly what to read and where. None of it needs new code and all of it needs a session that can reach `ethics.house.gov`, `oce.house.gov`, `uscode.house.gov` and the federal dockets; from the cloud sessions all four return 000 through the agent proxy. In rough order of what it buys:
+
+1. **`wt:the-clerks-filing-date`** first, and before any of the others, because it is the only row that could make a sentence already published here wrong about a person. The Clerk's index row carries eight fields and one date, and nothing says whether `FilingDate` is the day the member filed or the day the Clerk posted. All 27 Findings rest on it.
+2. **`wt:whether-foia-reaches-congress`**, because its answer decides whether the rest of the list is work or advocacy, and the page says which.
+3. **`wt:the-fees-in-aggregate`** and **`wt:the-counts-by-stage`**, the two rows whose unit is `chamber-year`: they name nobody, so they are the cheapest things on the list to ask for and answer most of what a reader wants.
+4. **`wt:the-filers-own-amendment`**, which needs no source at all: 5 Amended and 2 Deleted rows are already in the sealed build and no page follows one back to the report it amends. LIMITATIONS 7 promises a superseded Finding where an amendment invalidates one, and no code does it yet.
+5. The rest, in any order.
+
+**Two open questions for the maintainer.** Whether `wanted.ndjson` should join the sealed set, so the list of what is missing becomes tamper-evident like every other row here — it is out today because a work list that re-seals on every addition costs a new build and a new anchor to admit the project does not know something, and that price would be paid in fewer admissions. And whether a row that has been read and found not to exist should close, or stay open marked *read, and there is none*, which is a different and more useful fact.
+
 ### E.1 The Committee's own record, the source the register does not read
 
 *Added 2026-09-27, from the maintainer's reading of the landing: what happens after a report is dated late, and why does the trail go cold there?*
