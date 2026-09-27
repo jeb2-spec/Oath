@@ -2016,8 +2016,12 @@ def test_the_answer_comes_first_and_reads_the_same_whether_or_not_the_signal_fir
         )
         assert "on time" not in answer_of(page), "no timeliness word beside a result (Seat D)"
 
-    # Everything but the result's own sentence is the same on both pages, in the same order.
+    # Everything but the result's own sentence is the same on both pages, in the same order. The
+    # year figure is the result drawn: one on each page, in the same place, and only the days past
+    # a deadline differ inside it, the way only a square's state differed in the strip it replaced.
     def frame_of(answer: str) -> str:
+        assert answer.count('<figure class="year">') == 1, "one drawing of the year per page"
+        answer = re.sub(r'<figure class="year">.*?</figure>', "FIGURE", answer, flags=re.S)
         return re.sub(r"The Clerk's index dates [^.]*\.", "RESULT.", answer)
 
     assert shape(frame_of(answer_of(fired))) == shape(frame_of(answer_of(quiet))), (
