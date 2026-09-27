@@ -98,7 +98,11 @@ LIMITATIONS_9 = REPO + "LIMITATIONS.md#9-private-citizens-are-out-of-scope"
 # register keeps no copy of: EVIDENCE §7 says the register may keep the bytes, and INVARIANTS
 # §16 plans a bundle that holds them, so the practice cites the decision, not a section that
 # says otherwise (the Council's fourth reading of S.1b, Seats A, C and G).
-NEXT_D4 = REPO + "NEXT.md"
+# The anchor, not the file: a private person reading about a name in a report needs the
+# paragraph, and NEXT.md is long enough that the top of it is not an answer (the Council's
+# fifth reading of S.1b, Seats C and F).
+NEXT_D4 = REPO + "NEXT.md#d4-doctrine-catch-up"
+CHANGES_DATA = REPO + "data/changes.ndjson"
 BYLAWS_5 = REPO + "BYLAWS.md#5-corrections"
 BYLAWS_6 = REPO + "BYLAWS.md#6-corrections-and-supersessions-facts-stay-change-is-shown"
 
@@ -336,7 +340,10 @@ section.answer p { max-width: 38rem; margin: 0 0 .6rem; }
 section.answer p.quiet { font-size: .95rem; }
 nav.jump { font-size: .9rem; margin: .2rem 0 .5rem; line-height: 1.7; }
 p.check { font-size: .85rem; color: var(--ink-2); }
-span.either { color: var(--ink-2); }
+/* The frame and the sentence that carries it are not fine print: reduced contrast at the
+   end of a paragraph is how every writing system marks an aside, and a reader scanning a
+   translated page discounts it (the second reading of the built answer, Seat F). */
+p.either, span.either { color: var(--ink); }
 p.rule { font-size: .9rem; color: var(--ink-2); max-width: 38rem; margin: 0 0 .5rem; }
 /* the comic layer: the institution's and the process's, never a person's */
 h1.comic { font: 900 3.6rem/1 var(--letter); text-transform: uppercase; letter-spacing: .03em;
@@ -394,7 +401,7 @@ figure.glance svg.squares { width: 100%; max-width: 30rem; }
 /* the reports as squares, the same on the landing and on a person's page */
 svg.squares { display: block; max-width: 100%; height: auto; margin: .3rem 0 .4rem; }
 .sq.s-after { fill: var(--ink); }
-.sq.s-checked { fill: url(#benday); }
+.sq.s-checked { fill: url(#benday50); }
 .sq.s-unchecked { fill: none; stroke: var(--ink-2); stroke-width: .8; stroke-dasharray: 1.5 1.5; }
 svg.squares a:focus-visible rect { stroke: var(--link); stroke-width: 2.5; }
 div.reportline { display: flex; flex-wrap: wrap; align-items: center; gap: .2rem 1rem;
@@ -517,6 +524,23 @@ def ordinal(n: int) -> str:
     return f"{n}{suffix}"
 
 
+def year_of(run: dict) -> int:
+    """The filing year the adapter's run record states. A sentence about a year is not renderable
+    without one: a build with no run record, or one whose record does not state its year, published
+    four hundred and thirty-nine pages each asserting a fact about a specific year's Clerk index,
+    sourced to a Python default argument (the Council's second reading of the built answer, Seat
+    G)."""
+    year = run.get("year")
+    if not isinstance(year, int):
+        raise SystemExit(
+            "refusing to render: no adapter run record states the filing year, and every page "
+            "names it. The year is what dates the answer's claim about the Clerk's index, so a "
+            "page cannot be rendered without it. Build the rows first "
+            "(src/adapters/house-fd/build.py), or say which run record to read."
+        )
+    return year
+
+
 def era_of(run: dict, holders: list[dict]) -> dict:
     """The Congress of the register's rows and the reads behind them, from the rows and the
     adapter's run record; nothing typed."""
@@ -543,7 +567,8 @@ def era_of(run: dict, holders: list[dict]) -> dict:
         "last_roster_read": last[:10],
         "closed_by": ((congress.get("closed_by") or {}).get("retrieved_at") or "")[:10],
         "first_read": min((r for r in reads if r), default="")[:10],
-        "year": run.get("year", 2025),
+        # The one durable anchor in every page's answer, so it must not default.
+        "year": year_of(run),
     }
 
 
@@ -633,15 +658,33 @@ def built_note(change: dict) -> str:
     return f"; recorded in build {esc(change['build'])}" if change.get("build") else ""
 
 
-def earlier_builds(change: dict) -> str:
+def earlier_builds(change: dict, history: list[dict] = ()) -> str:
     """Where a reader finds a filer's own text as filed, after a correction moved it. The
     fingerprint the change row keeps is not the text, and saying only that would tell the
     reader the text is gone: every sealed build stays in this repository's history, and the
     builds before the one that sealed the correction carry the line (the Council's fourth
-    reading of S.1b, Seats B, E and G)."""
+    reading of S.1b, Seats B, E and G).
+
+    The build named is the one that sealed the FIRST correction of this fact, not this one.
+    Where a filer's own text was corrected twice, the builds before the second carry the
+    maintainer's first wording and not the line as filed, so naming this correction's build
+    sent a reader to builds that do not hold what the sentence promises (the Council's fifth
+    reading of S.1b, Seats C and F)."""
+    first = min(
+        (
+            c
+            for c in (history or ())
+            if c["change"] == "corrected"
+            and c.get("field") == change.get("field")
+            and "was_sha256" in c
+            and c.get("build")
+        ),
+        key=lambda c: (c.get("decided_at") or "", c.get("build") or ""),
+        default=change,
+    )
     return (
-        f"the builds before <code>{esc(change['build'])}</code>"
-        if change.get("build")
+        f"the builds before <code>{esc(first['build'])}</code>"
+        if first.get("build")
         else "every build sealed before this correction"
     )
 
@@ -1062,7 +1105,12 @@ def footer(meta: dict, home: bool, to_root: str = "../") -> str:
 
 
 def seal_figure(svg: str, caption: str) -> str:
-    return f'<figure class="seal">\n{svg}<figcaption>{esc(caption)}</figcaption>\n</figure>'
+    """The mark with its caption. The mark carries its own title and description, because it is
+    also served on its own as mark.svg; inside a captioned figure those make a screen reader say
+    the same three sentences twice, so here the caption is the one voice and the drawing is
+    presentational (the Council's fifth reading of S.1b, Seat E)."""
+    quiet = svg.replace('role="img" aria-labelledby="t d"', 'role="presentation"', 1)
+    return f'<figure class="seal">\n{quiet}<figcaption>{esc(caption)}</figcaption>\n</figure>'
 
 
 REQUIRES = (
@@ -1381,9 +1429,9 @@ def which_quiet(
     if unread:
         n = len(unread)
         parts.append(
-            f"{n:,} {plural(n, 'report is', 'reports are')} fetched and not read: scanned "
-            "paper, whose transaction dates are printed in the document, and the register reads "
-            "no scanned document."
+            f"{n:,} {plural(n, 'report is', 'reports are')} fetched and not read: the "
+            "register found no Filing ID line in the text it extracted, and reads nothing "
+            "from such a document, so the transactions printed in it are not listed here."
         )
     if unfetched:
         n = len(unfetched)
@@ -1410,7 +1458,7 @@ def which_silence(outcomes: list[dict], held_reports: int = 0) -> str:
             "after the deadline"
         )
     if outcomes and all(o["state"] == "not read" for o in outcomes):
-        return "the reports attributed were not read: scanned paper, or not fetched"
+        return "the reports attributed were not read: no Filing ID line to read, or not fetched"
     if outcomes:
         return "it could evaluate no row, for the reasons below"
     if held_reports:
@@ -1683,7 +1731,19 @@ def finding_mark(changes: dict[str, list[dict]], filing_id: str) -> str:
     if "not listed" in state:
         marks.append(f"the index read {when(state['not listed'])} no longer lists it")
     if "replaced" in state:
-        marks.append(f"the Clerk's copy read {when(state['replaced'])} was a different file")
+        # A different file whose rows read as the published ones is not a file that reads
+        # otherwise. This mark is lifted alone and set beside a Finding, where a bare "was a
+        # different file" read as the document having changed under it (the Council's fifth
+        # reading of S.1b, Seats C, D and F).
+        replaced = state["replaced"]
+        marks.append(
+            f"the Clerk's copy read {when(replaced)} was a different file, which "
+            + (
+                "reads as the rows the register published"
+                if not replaced.get("differs")
+                else "reads otherwise"
+            )
+        )
     reads = [c for k, c in state.items() if k.startswith("read otherwise:")]
     settled = None
     if reads:
@@ -1948,7 +2008,11 @@ def how_to_read(person: bool) -> str:
                     f'Council\'s third reading of this change (<a href="{NEXT_D4}">NEXT.md '
                     "D.4</a> carries what the doctrine should say). Where a later read found the "
                     "Clerk serving a different file, the register records both files' "
-                    "fingerprints and which rows read otherwise, never what they say."
+                    "fingerprints and which rows read otherwise, never what they say. A "
+                    "fingerprint proves that a copy a reader holds is or is not the file the "
+                    "register read; it does not reproduce either file, and nobody who lacks a "
+                    "copy can recover one from it. Both are in "
+                    f'<a href="{CHANGES_DATA}">the changes, as data</a>.'
                 ),
             ),
             (
@@ -2057,7 +2121,13 @@ HELD_CLAUSES = {
     "no_filing_id": "whose {docs} {carry} no Filing ID line (scanned paper, or a form that "
     "prints none) and cannot confirm the filer",
     "status": "whose {docs} {print} a filer status other than Member",
-    "before_sworn": "dated by the index before the swearing-in the roster records for the Congress",
+    # The roster records a swearing-in for each member, and for one sworn in mid-term it is not
+    # the day the Congress convened. Saying "for the Congress" read, on the page of a member
+    # sworn eleven months in, as a date the row is plainly after (the Council's fifth reading
+    # of S.1b, Seat F). One shape for everyone: the date is the officeholder's own, whichever
+    # it is.
+    "before_sworn": "dated by the index before the swearing-in the roster records for this "
+    "officeholder",
     "not_captured": "whose {docs} the register has not fetched",
     "other": "whose {docs} {print} another seat or another Filing ID, or were set aside for "
     "another recorded reason",
@@ -2067,8 +2137,12 @@ HELD_CLAUSES = {
     "closed_open": "first read by the register when or after it closed the year, and dated "
     "within the Congress's terms, whose {docs} the register has not read: the maintainer's "
     "recorded decision can attribute {it}",
-    "left_other_name": "under another given name, whose {docs} the register has not read: the "
-    "name join attributes no row to a member the roster does not list",
+    # The row carries the name; the person did not. "Under another given name" on a named
+    # person's page read as that person having filed under one (the Council's fifth reading of
+    # S.1b, Seat F).
+    "left_other_name": "that {carry} a given name other than this officeholder's, whose "
+    "{docs} the register has not read: the name join attributes no row to a member the roster "
+    "does not list",
     "left_closed": "dated after {until}, the last roster read the register built from that "
     "listed them, which no decision attributes to them: the register cannot show them in office "
     "then",
@@ -2181,10 +2255,10 @@ def how_attributed(filing: dict, changes: dict[str, list[dict]] | None = None) -
 
 
 def documents_read(filings: list[dict]) -> tuple[int, int]:
-    """How many of these filings' documents the register read, and how many it fetched
-    but did not read: scanned paper, or a form whose schedules the register does not
-    yet read. A read document carries a content hash and a structured extraction; an
-    unread one carries the hash alone.
+    """How many of these filings' documents the register read, and how many it fetched but did
+    not read: ones whose extracted text carries no Filing ID line, or a form whose schedules
+    the register does not yet read. A read document carries a content hash and a structured
+    extraction; an unread one carries the hash alone.
     """
     read = scanned = 0
     for filing in filings:
@@ -2244,8 +2318,8 @@ def checks_section(
             parts = [f"<b>partly read</b> · {read} of {n} documents read and hashed"]
             if scanned:
                 parts.append(
-                    f"{scanned} fetched and hashed, not read: scanned paper, or a form the "
-                    "register does not yet read"
+                    f"{scanned} fetched and hashed, not read: no Filing ID line in the text "
+                    "the register extracted, or a form it does not yet read"
                 )
             if pending:
                 parts.append(f"{pending} not fetched")
@@ -2441,7 +2515,8 @@ def change_notes(history: list[dict], holder_id: str = "") -> str:
             what = (
                 f"Corrected by the maintainer on {when(c)}: {field}, the filer's own text. The "
                 "correction keeps a fingerprint of what it said, not the text; "
-                f"{earlier_builds(c)} carry the line as filed, and every sealed build stays in "
+                f"{earlier_builds(c, history)} carry the line as filed, and every sealed build "
+                f"stays in "
                 f"this repository's history. {esc(c.get('because', ''))}"
             )
         else:
@@ -2542,14 +2617,16 @@ def filings_section(
         "Rows coded P are served from the Clerk's transaction-report path, which is the one code "
         f'the register files as a transaction report (<a href="{SOURCES_F1}">SOURCES.md F.1</a>).'
         + (
-            f" A later read of the Clerk's index shows {reads} of them otherwise; each note "
-            "says what and when, and links the copy of the index the register kept."
+            f" A later read of the Clerk's index showed {reads} of them otherwise; each note "
+            "says what and when, whether a later read gave the published value back, and what "
+            "the maintainer decided, and links the copy of the index the register kept."
             if reads
             else ""
         )
         + (
             f" For {files} of them a later read found the Clerk serving a different file; each "
-            "note says which rows read otherwise, and the register keeps neither file."
+            "note says whether its rows read as the ones the register published or otherwise, "
+            "and in which facts, and the register keeps neither file."
             if files
             else ""
         )
@@ -2856,17 +2933,30 @@ SQUARE, SQUARE_GAP, SQUARE_COLUMNS = 10, 2, 30
 # Defined once in the squares' drawing; every other drawing on the page refers to it by id.
 BENDAY = (
     '<defs><pattern id="benday" width="2.6" height="2.6" patternUnits="userSpaceOnUse">'
-    '<circle cx="1.3" cy="1.3" r=".85" fill="var(--ink-2)"/></pattern></defs>'
+    '<circle cx="1.3" cy="1.3" r=".85" fill="var(--ink-2)"/></pattern>'
+    # The same screen at 50% coverage in the page's own ink, for the one square whose
+    # halftone carries meaning rather than depth. At r=.85 in ink-2 the square that holds
+    # the reassuring answer measured 1.64:1 against the paper in light mode and 1.89:1 in
+    # dark, against 15.69:1 for the square that holds the adverse one, so the grid's whole
+    # visual weight ran one way; WCAG 2.1 SC 1.4.11 asks 3:1 of a graphic a reader needs,
+    # and these squares are also links. A 50% screen in --ink measures 3.27:1 and 4.48:1
+    # (the second reading of the built answer, Seat E). The comic panels and the notice
+    # clock keep the lighter screen, where the halftone is depth and carries nothing.
+    '<pattern id="benday50" width="2.6" height="2.6" patternUnits="userSpaceOnUse">'
+    '<circle cx="1.3" cy="1.3" r="1.04" fill="var(--ink)"/></pattern></defs>'
 )
 SQUARE_WORDS = {
     "after": (
-        "dated by the Clerk's index after the STOCK Act deadline for at least one trade checked"
+        "dated by the Clerk's index after the STOCK Act deadline for at least one trade compared"
     ),
-    "checked": "checked, and none dated after the deadline",
+    "checked": "compared against the deadline, and none dated after it",
+    # Never "no trade the rule reaches": of 1,156 rows the register set aside on the 2025
+    # record, one was out of the rule's reach by amount and the rest are the register's own
+    # limits (the Council's second reading of the built answer, Seat B).
     "unchecked": (
-        "not checked: scanned paper the register does not read, or no trade on it that the rule "
-        "reaches (dated before the swearing-in, a kind of asset the rule does not cover, or "
-        "$1,000 or less)"
+        "no row on it compared: the register did not read it, or it compared none of its "
+        "rows, which is a limit of the register except where the rule itself does not "
+        "reach a row"
     ),
 }
 
@@ -2918,8 +3008,8 @@ def squares(
 
 SHORT_WORDS = {
     "after": "dated after the deadline",
-    "checked": "checked, none after",
-    "unchecked": "not checked",
+    "checked": "compared, none after",
+    "unchecked": "no row compared",
 }
 
 
@@ -2957,8 +3047,12 @@ def square_label(states: list[tuple], noun: tuple[str, str]) -> str:
 # What each Signal checks, in the words the answer at the top of a page uses. A Signal with no
 # entry here is named in the answer by its checklist line, never summarised in words written
 # for another Signal.
+# What each Signal compares, in the words the answer at the top of a page uses, keyed by slug
+# AND version: a version's criteria and the words that describe them move together, or a v2
+# publishes v1's account of the rule, which is INVARIANTS §11's silent redefinition moved into the
+# sentence a reader actually meets (the second reading of the built answer, Seats C and G).
 ANSWER_WORDS = {
-    "stock-act-ptr-after-deadline": {
+    ("stock-act-ptr-after-deadline", 1): {
         "reports": ("transaction report", "transaction reports"),
         "against": f'the STOCK Act deadline (<a href="{USC_13105}">5 U.S.C. § 13105(l)</a>)',
         "rule": (
@@ -2968,10 +3062,17 @@ ANSWER_WORDS = {
         ),
     },
 }
-EITHER_WAY = (
+# The two sentences after every result, split where the Council's two findings actually point.
+# Seat D: the frame must sit inside the result's own paragraph, so no crop of the answer carries
+# the result without it. Seat E: that paragraph ran eighty to a hundred and fifty words and on no
+# page of four hundred and thirty-nine did it fit a phone's first screen. Both hold. The sentence
+# that must never travel alone is the shortest one, so the frame stays in the paragraph and the
+# thirty words about who decides go to the next, adjacent and inseparable under the same seal.
+NOT_A_RULING = (
     "This is not a ruling by anyone: what the deadline means for a filer is for the House "
-    "Committee on Ethics to decide, and the register sees none of its decisions. " + FRAME
+    "Committee on Ethics to decide, and the register sees none of its decisions."
 )
+EITHER_WAY = NOT_A_RULING + " " + FRAME
 
 
 def finding_facts(findings: list[dict], signal_id: str) -> dict:
@@ -2995,6 +3096,58 @@ def finding_facts(findings: list[dict], signal_id: str) -> dict:
         "weekend": weekend,
         "notice": notice,
     }
+
+
+# Why the register compared no row on a report it read, in its own words rather than the rule's.
+# The answer said "no trade the rule reaches" of every such report, and on seventeen pages not one
+# skipped row was skipped on a ground about the rule's reach: they were dated before the swearing-in
+# the roster records, or the report marks them amended, or the transaction is dated after the report
+# itself. On the whole 2025 record, of 1,156 rows the register set aside, exactly one was out of the
+# rule's reach by amount. The Signal's own criteria say a returning Member's earlier trades "were
+# under the same rule" and that the register has not read the instructions that would settle where
+# government securities belong. So the register says what it did not do, never what the law does not
+# cover: a sentence that flatters a person falsely is the same defect as one that condemns them
+# falsely (the Council's second reading of the built answer, Seat B).
+UNCHECKED_WORDS = {
+    "dated before this Congress's swearing-in": (
+        "the register did not compare, being dated before the swearing-in the roster records, "
+        "which does not say whether this officeholder served before it"
+    ),
+    "marked Amended": "the report marks as amended",
+    "marked Deleted": "the report marks as deleted",
+    "transaction dated after the report": "dated after the report that lists them",
+    "coded as a stock, named as an ETF": "whose printed name and printed code disagree",
+    "$1,000 or less": "at or under the $1,000 the rule sets",
+}
+AN_ASSET_KIND = "a kind of asset the register does not evaluate"
+
+
+def unchecked_reason(reason: str) -> str:
+    """One recorded reason a row was not evaluated, in the register's own voice. An asset code the
+    Signal does not evaluate is the register's own limit and is grouped as one; a reason this
+    version has no words for is given as the run record writes it, and attributed to the register,
+    never to the rule: saying the rule does not reach a row it may well reach is the falsehood that
+    flatters."""
+    if reason.startswith("asset coded"):
+        return AN_ASSET_KIND
+    return UNCHECKED_WORDS.get(reason, f"the register did not evaluate, recorded as {reason}")
+
+
+def unchecked_words(outcomes: list[dict]) -> str:
+    """Why rows on the reports the register read were not compared, grouped as the reader needs and
+    in the register's own voice, commonest first."""
+    counts: dict[str, int] = {}
+    for o in outcomes:
+        for reason, n in (o.get("not_evaluated") or {}).items():
+            key = unchecked_reason(reason)
+            counts[key] = counts.get(key, 0) + n
+    said = []
+    for key, n in sorted(counts.items(), key=lambda i: (-i[1], i[0])):
+        if key.startswith("the register did not compare"):
+            said.append(f"{n:,} {key.removeprefix('the register did not compare, being ')}")
+        else:
+            said.append(f"{n:,} {key}")
+    return "; ".join(said)
 
 
 def answer_counts(
@@ -3025,28 +3178,37 @@ def answer_section(
     above it, in the header (INVARIANTS §7). docs/design/pages-a-reader-can-use.md §2.1."""
     paragraphs = []
     for signal in signals:
-        words = ANSWER_WORDS.get(signal["slug"])
+        words = ANSWER_WORDS.get((signal["slug"], signal["version"]))
         if words is None:
-            # A Signal the answer has no words for is named, with its count, and framed; it is
-            # never summarised in words written for another Signal (Seat C).
-            k = len(fired_now(findings, signal["id"]))
-            paragraphs.append(
-                f"<p>{esc(signal['name'])}, version {signal['version']}: "
-                + (f"fired on {k:,} {plural(k, 'report', 'reports')}" if k else "did not fire")
-                + ', said <a href="#signals">below</a>. '
-                + f'<span class="either">{esc(FRAME)}</span></p>'
+            # A Signal the answer has no words for used to be named with its firing count alone:
+            # no coverage number, no standard, and a shape that differed according to whether it
+            # fired, which is a verdict by placement (COUNCIL §5 mode 6). A page that cannot
+            # state a Signal's coverage and its standard does not state its firing count either
+            # (the second reading of the built answer, Seats C and G).
+            raise SystemExit(
+                "refusing to render: the answer has no words for signal "
+                f"{signal['slug']} version {signal['version']}, so it could state its firing "
+                "count but not its coverage or its standard. Add an entry to ANSWER_WORDS in "
+                "src/surfaces/render.py keyed by (slug, version), with `reports`, `against` and "
+                "`rule`; a version's own words move with its criteria (INVARIANTS §11)."
             )
-            continue
         one, many = words["reports"]
         n, read, checked, fired = answer_counts(
             outcomes.get(signal["id"], []), findings, signal["id"]
         )
         year = ERA["year"]
         if not n:
+            # The limit before the count, because on a phone the sentence that prevents the
+            # wrong conclusion was the one below the fold; and the register attributes, where
+            # saying the index does put the Clerk's name behind the register's own undecided
+            # matching (the Council's second reading of the built answer, Seats B and E). The
+            # last sentence is what makes a quiet page honest and it does not come out.
             text = (
-                f"No {one} in the Clerk's {year} index is attributed to this officeholder, so the "
-                f"register checked none against {words['against']}. It says nothing about whether "
-                "this officeholder had anything to report."
+                "The register found nothing to compare here, which is a fact about its own "
+                f"matching and not about what was filed: it attributes no {one} in the Clerk's "
+                f"{year} index to this officeholder, so it compared none against "
+                f"{words['against']}. It says nothing about whether this officeholder made any "
+                "trade the rule requires reported."
             )
             if sworn and ERA.get("began") and sworn > ERA["began"]:
                 text += (
@@ -3055,23 +3217,36 @@ def answer_section(
                 )
         else:
             text = (
-                f"The register read {read:,} of {n:,} {plural(n, one, many)} attributed to this "
-                f"officeholder in the Clerk's {year} index and checked {checked:,} against "
+                f"The register read {read:,} of {n:,} {plural(n, one, many)} it attributes "
+                f"to this officeholder from the Clerk's {year} index and compared {checked:,} "
+                f"against "
                 f"{words['against']}. "
             )
-            unread, empty = n - read, read - min(read, checked)
+            # min() clamped a discrepancy where an assertion belongs. A Finding whose
+            # report this build's run record marks unread made the answer say, in one paragraph,
+            # that the register read none of the reports, compared one, found that one after the
+            # deadline, and could not read it (the Council's second reading, Seat C).
+            if checked > read or read > n:
+                raise SystemExit(
+                    f"refusing to render: the answer would say the register read {read} of {n} "
+                    f"reports and compared {checked}, which cannot all be true. A Finding rests "
+                    "on a report this build's run record did not read, or on one the record does "
+                    "not hold. Re-run the Signal (src/signals/run.py) so the record covers every "
+                    "report a current Finding names, or supersede the Finding "
+                    "(src/signals/run.py --correct), citing the evidence."
+                )
+            unread, empty = n - read, read - checked
             if not checked:
+                why = unchecked_words(outcomes.get(signal["id"], []))
                 text += (
-                    "It could check none of them: "
+                    "It compared no row on any of them: "
                     + (
-                        "no trade on them is one the rule reaches. "
-                        if not unread
-                        else f"{plural(unread, 'it is', 'they are')} scanned paper or not yet "
-                        "fetched, which it does not read. "
-                        if not empty
-                        else f"{unread:,} {plural(unread, 'is', 'are')} scanned paper or not "
-                        f"yet fetched, and {empty:,} list no trade the rule reaches. "
+                        f"{unread:,} {plural(unread, 'is', 'are')} in a form it does not read"
+                        + (", and of the rows on the rest, " if why else ". ")
+                        if unread
+                        else ("of the rows on them, " if why else "")
                     )
+                    + (f"{why}. " if why else "")
                     + "That is a fact about what the register could read, not about what was "
                     "filed."
                 )
@@ -3086,7 +3261,7 @@ def answer_section(
                     )
                     text += (
                         f"The Clerk's index dates {fired:,} of the {checked:,} "
-                        f"{plural(checked, 'report', 'reports')} checked after the deadline, by "
+                        f"{plural(checked, 'report', 'reports')} compared after the deadline, by "
                         f"{span}, for at least one trade on {plural(fired, 'it', 'each')}."
                     )
                     for count, clause in (
@@ -3114,15 +3289,15 @@ def answer_section(
                 else:
                     text += (
                         f"The Clerk's index dates none of the {checked:,} "
-                        f"{plural(checked, 'report', 'reports')} checked after the deadline."
+                        f"{plural(checked, 'report', 'reports')} compared after the deadline."
                     )
                 missing = []
                 if unread:
-                    missing.append(f"{unread:,} scanned paper or not yet fetched")
+                    missing.append(f"{unread:,} in a form it does not read")
                 if empty:
-                    missing.append(f"{empty:,} with no trade the rule reaches")
+                    missing.append(f"{empty:,} on which it compared no row")
                 if missing:
-                    text += f" Not checked: {'; '.join(missing)}."
+                    text += f" No row compared: {'; '.join(missing)}."
             gone = len(withdrawn_now(findings, signal["id"]))
             if gone:
                 text += (
@@ -3134,17 +3309,22 @@ def answer_section(
                 text += (
                     f" {held_reports:,} more {plural(held_reports, one, many)} at this seat under "
                     f"this surname {plural(held_reports, 'is', 'are')} set aside, not attributed "
-                    "to this officeholder and not checked."
+                    "to this officeholder, and no row on them compared."
                 )
         if not n and held_reports:
             text += (
                 f" {held_reports:,} {plural(held_reports, one, many)} at this seat under this "
                 f"surname {plural(held_reports, 'is', 'are')} set aside, not attributed to this "
-                "officeholder and not checked."
+                "officeholder, and no row on them compared."
             )
-        # The result and the sentence that frames it are one paragraph, with the frame inside
-        # it, so no crop of the answer carries the one without the other (Seat D).
-        paragraphs.append(f'<p>{text} <span class="either">{esc(EITHER_WAY)}</span></p>')
+        # The result and its coverage are one short paragraph and the sentence that frames
+        # them is the next, adjacent and inseparable in the source and under the seal (Seat D).
+        # They were one paragraph of eighty to a hundred and fifty words, of which forty were a
+        # sentence the reader had already met at word four, and on no page of four hundred and
+        # thirty-nine did it fit a phone's first screen: a reader on a phone saw the coverage
+        # clause cut mid-sentence and nothing else (the second reading, Seat E).
+        paragraphs.append(f'<p>{text} <span class="either">{esc(FRAME)}</span></p>')
+        paragraphs.append(f'<p class="either">{esc(NOT_A_RULING)}</p>')
         if n:
             states = report_states(outcomes.get(signal["id"], []), findings, signal["id"])
             paragraphs.append(
@@ -3477,13 +3657,13 @@ def bar(part: int, whole: int) -> str:
     return f'<span class="bar"><i style="width:{pct}%"></i></span>'
 
 
-def scanned_clause(scanned: int) -> str:
+def unreadable_clause(scanned: int) -> str:
     """The landing's aside for documents fetched but not read, or nothing."""
     if not scanned:
         return ""
     return (
-        f"; {scanned} more fetched and hashed, not read: scanned paper, or a form the "
-        "register does not yet read"
+        f"; {scanned} more fetched and hashed, not read: no Filing ID line in the text the "
+        "register extracted, or a form it does not yet read"
     )
 
 
@@ -3608,7 +3788,7 @@ def state_of_record(
         held = run.get("rejected_by_reason", {}).get("surname matches a sitting member", 0)
         shut = 0
     sources = {s["name"]: s for s in run.get("sources", [])}
-    year = run.get("year", 2025)
+    year = year_of(run)
     index_src = sources.get(f"{year}FD.zip", {})
     roster_src = sources.get("MemberData.xml", {})
     fresh = ""
@@ -3672,7 +3852,7 @@ def state_of_record(
         )
         + "</dd>\n"
         f"<dt>{read:,}</dt><dd>of those {matched:,} documents read by the register so far, each "
-        f"checked against the seat and filing ID printed inside it{scanned_clause(scanned)}; "
+        f"checked against the seat and filing ID printed inside it{unreadable_clause(scanned)}; "
         f"the links open the Clerk's copies{bar(read, matched)}</dd>\n"
         f"<dt>{len(transactions):,}</dt><dd>rows the read reports list, as filed{marked_note}, "
         "each on its officeholder's page grouped by report; no page sums the amounts, averages "
@@ -3772,7 +3952,13 @@ PANELS = (
 def strip_section(unread: int, total: int, year: int) -> str:
     """How a stock trade becomes a public record, in four panels, each teaching one mark of the
     figures the Findings carry; then the one wry fact the record itself supplies, about the
-    machinery and not about anyone: how many of the chamber's reports arrived as scanned paper."""
+    machinery and not about anyone: on how many of the chamber's reports the register found no
+    Filing ID line, and so read nothing.
+
+    Never "arrived as scanned paper". The register records that it found no Filing ID line and
+    no State/District line in the text it extracted (src/adapters/house-fd/ptr.py, verify);
+    that a document is a picture of its pages is a cause consistent with that, and no row and
+    no run record holds it (the fifth reading of S.1b, Seat G)."""
     panels = []
     for n, (head, words, mark, art) in enumerate(PANELS, 1):
         panels.append(
@@ -3781,8 +3967,9 @@ def strip_section(unread: int, total: int, year: int) -> str:
             f"<p>{key_mark(mark)} {esc(words)}</p></li>"
         )
     paper = (
-        f" {unread:,} of them arrived as scanned paper: pictures of pages, which the register "
-        "cannot read. Every one is below, one square each; those are the outlines."
+        f" On {unread:,} the register found no Filing ID line to read, so it read nothing "
+        "from them: a limit of the register, not a fact about what was filed. Every one is "
+        "below, one square each; those are the outlines."
         if unread
         else " Every one is below, one square each."
     )
@@ -3954,7 +4141,7 @@ def glance_section(
     click away, in seat order, on the Signal's own page (Invariant §13)."""
     parts = []
     for signal, _summary in signal_runs:
-        words = ANSWER_WORDS.get(signal["slug"])
+        words = ANSWER_WORDS.get((signal["slug"], signal["version"]))
         outcomes = outcomes_all.get(signal["id"], [])
         if words is None or not outcomes:
             continue
@@ -3970,9 +4157,9 @@ def glance_section(
             f'<p class="glance">The Clerk\'s {ERA["year"]} index lists {n:,} '
             f"{plural(n, one, many)} "
             f"(reports of trades in stocks, bonds and other securities) attributed to {members:,} "
-            f"{plural(members, 'member', 'members')}. The register checked {checked:,} of them "
+            f"{plural(members, 'member', 'members')}. The register compared {checked:,} of them "
             f"against {words['against']}, and the Clerk's index dates {counts['after']:,} of "
-            "those after it, for at least one trade checked.</p>\n"
+            "those after it, for at least one trade compared.</p>\n"
             f'<figure class="glance">\n'
             + squares(states, square_label(states, words["reports"]))
             + f"\n<figcaption>One square per report, in the order the Clerk's index dates them, "
@@ -4063,8 +4250,8 @@ def coverage(
             elif mine or any(carries_surname(h, source.get("last") or "") for h in holders):
                 held += 1
     return {
-        "paper_only": sum(1 for s in states.values() if s == {"not read"}),
-        "some_paper": sum(1 for s in states.values() if "not read" in s and s != {"not read"}),
+        "unread_only": sum(1 for s in states.values() if s == {"not read"}),
+        "some_unread": sum(1 for s in states.values() if "not read" in s and s != {"not read"}),
         "not_fetched": unfetched,
         "before_swearing_in": len(before),
         "set_aside_held": held,
@@ -4075,14 +4262,14 @@ def coverage(
 
 def coverage_sentence(c: dict[str, int]) -> str:
     """Who cannot appear among those on which a signal fired, and why, in counts."""
-    paper, some, before = c["paper_only"], c["some_paper"], c["before_swearing_in"]
+    unread, partly, before = c["unread_only"], c["some_unread"], c["before_swearing_in"]
     held, other = c["set_aside_held"], c["set_aside_other"]
     shut, unfetched = c.get("set_aside_shut", 0), c.get("not_fetched", 0)
     aside = held + other + shut
     return (
-        f"It cannot reach {paper:,} {plural(paper, 'officeholder', 'officeholders')} whose "
-        "transaction reports are all scanned paper, which it does not read, or some of the "
-        f"reports of {some:,} more"
+        f"It cannot reach {unread:,} {plural(unread, 'officeholder', 'officeholders')} none of "
+        "whose transaction reports it could read, or some of the reports of "
+        f"{partly:,} more"
         + (
             f"; it has not read {unfetched:,} "
             f"{plural(unfetched, 'report', 'reports')} the register has not fetched"
@@ -4170,8 +4357,9 @@ def render_signal_page(
         "An officeholder with more than one such report is listed once, with each report's date. "
         "Nothing here is a ranking and no number stands beside a name; each report is on its "
         "officeholder's page with its dates, its arithmetic, and what the signal does not say. "
-        "Who cannot appear here, and why, is counted above: an officeholder whose transaction "
-        "reports are all scanned paper cannot, whatever the reports show. What the register "
+        "Who cannot appear here, and why, is counted above: an officeholder none of whose "
+        "transaction reports the register could read cannot, whatever the reports show. What "
+        "the register "
         "cannot read does not fall evenly across officeholders, so a count of Findings, or its "
         "absence, says nothing about any group of them. A name marked is one a roster the "
         f"register read for {esc(congress_words())} did not list, on the date the mark gives; "
@@ -4196,9 +4384,10 @@ def render_signal_page(
     )
     c = reach or {}
     reach_rows = (
-        f"<dt>{c['paper_only']:,}</dt><dd>officeholders whose transaction reports are all "
-        "scanned paper, which it does not read, so they cannot appear below whatever the reports "
-        f"show; {c['some_paper']:,} more have some</dd>\n"
+        f"<dt>{c['unread_only']:,}</dt><dd>officeholders none of whose transaction reports "
+        "the register could read, so they cannot appear below whatever the reports show: in "
+        "each it looked for the Filing ID line the Clerk's system prints and found none; "
+        f"{c['some_unread']:,} more have some</dd>\n"
         f"<dt>{c['before_swearing_in']:,}</dt><dd>officeholders with rows dated before the "
         f"swearing-in the roster records for {congress_words()}, which it does not evaluate: "
         "the roster records that date, not the start of anyone's service, and the register "
@@ -4208,8 +4397,9 @@ def render_signal_page(
         f"it does not see: {c['set_aside_held']:,} under the surname of an officeholder the "
         "register holds, for the maintainer to decide by hand, "
         + (
-            f"{c['set_aside_shut']:,} under such a surname and dated when the register cannot "
-            "show that officeholder in office, which no decision attributes, "
+            f"{c['set_aside_shut']:,} under such a surname and dated outside the days the "
+            "register can show an officeholder of that seat in office, which no decision "
+            "attributes, "
             if c.get("set_aside_shut")
             else ""
         )
@@ -4230,9 +4420,12 @@ def render_signal_page(
         "deadline</dd>\n"
         f"<dt>{skipped_n:,}</dt><dd>rows not evaluated: "
         f"{esc(reason_clause(skipped)) or 'none'}</dd>\n"
-        f"<dt>{by_state.get('not read', 0) - c.get('not_fetched', 0):,}</dt><dd>reports fetched "
-        "and not read: scanned paper, whose transaction dates are printed in the document, and "
-        "the register reads no scanned document</dd>\n"
+        f"<dt>{by_state.get('not read', 0) - c.get('not_fetched', 0):,}</dt><dd>reports "
+        "fetched, hashed and not read: the register looked in the text it extracted for the "
+        "Filing ID line and the State/District line the Clerk's system prints on a filed "
+        "report, and did not find both, so it read no transaction from them. A picture of "
+        "the pages, or a form that prints neither line, would both read this way, and the "
+        "register does not record which</dd>\n"
         + (
             f"<dt>{c['not_fetched']:,}</dt><dd>reports not read because the register has not "
             "fetched them</dd>\n"

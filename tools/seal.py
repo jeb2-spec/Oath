@@ -190,8 +190,9 @@ def reach(outcomes: list[dict], filings: list[dict] | None = None) -> dict[str, 
     """Who a Signal's run could not reach, in counts of officeholders: those whose reports are
     all fetched and not read, those with some, and those with rows dated before this
     Congress's swearing-in, which it does not evaluate. A report the register has not fetched
-    is counted apart and never called scanned paper, as the pages count it (the Council's
-    fourth reading of S.1b, Seat F)."""
+    is counted apart, and neither is called scanned paper anywhere: what the register records is
+    that the text it extracted carries no Filing ID line (the Council's fourth reading of S.1b,
+    Seat F, and its fifth, Seat G)."""
     fetched = {f["id"]: bool((f.get("source") or {}).get("content_hash")) for f in filings or []}
     states: dict[str, set[str]] = {}
     before: set[str] = set()
@@ -205,8 +206,8 @@ def reach(outcomes: list[dict], filings: list[dict] | None = None) -> dict[str, 
         if o["not_evaluated"].get("dated before this Congress's swearing-in"):
             before.add(o["officeholder_id"])
     return {
-        "paper_only": sum(1 for s in states.values() if s == {"not read"}),
-        "some_paper": sum(1 for s in states.values() if "not read" in s and s != {"not read"}),
+        "unread_only": sum(1 for s in states.values() if s == {"not read"}),
+        "some_unread": sum(1 for s in states.values() if "not read" in s and s != {"not read"}),
         "not_fetched": unfetched,
         "before_swearing_in": len(before),
     }
@@ -311,8 +312,9 @@ def derive_state(root: Path, meta: dict) -> str:
             f"{documents.get('read', 0):,} were read from the Clerk's documents and "
             f"{documents.get('transactions', 0):,} transactions "
             "written, each checked against the seat and Filing ID printed in its report; "
-            f"{documents.get('unreadable', 0):,} are scanned paper filings the register fetched, "
-            "hashed and does not read"
+            f"{documents.get('unreadable', 0):,} the register fetched and hashed and did not "
+            "read: in each, the text it extracted carries no Filing ID line, or no "
+            "State/District line, and it reads nothing from such a document"
         )
         if documents.get("seat_discrepancies"):
             sentence += (
@@ -383,9 +385,9 @@ def derive_state(root: Path, meta: dict) -> str:
             f"attributed to {summary['officeholders_with_a_finding']:,} officeholders; "
             f"{skipped:,} rows were not evaluated, each with a reason, and "
             f"{by_state.get('not read', 0):,} reports were not read. It cannot reach "
-            f"{plural(cannot['paper_only'], 'officeholder', 'officeholders')} whose transaction "
-            f"reports are all scanned paper, or some of the reports of "
-            f"{cannot['some_paper']:,} more"
+            f"{plural(cannot['unread_only'], 'officeholder', 'officeholders')} none of whose "
+            "transaction reports it could read, or some of the reports of "
+            f"{cannot['some_unread']:,} more"
             + (
                 f"; it has not read {plural(cannot['not_fetched'], 'report', 'reports')} the "
                 "register has not fetched"

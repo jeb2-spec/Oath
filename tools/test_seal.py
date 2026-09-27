@@ -189,8 +189,8 @@ def test_who_a_signal_cannot_reach_is_counted_by_officeholder():
         o("c", "evaluated"),
     ]
     assert seal.reach(outcomes) == {
-        "paper_only": 1,
-        "some_paper": 1,
+        "unread_only": 1,
+        "some_unread": 1,
         "not_fetched": 0,
         "before_swearing_in": 1,
     }
@@ -203,8 +203,8 @@ def test_who_a_signal_cannot_reach_is_counted_by_officeholder():
     ]
     with_unfetched = [*outcomes, o("d", "not read", report="fl:unfetched")]
     assert seal.reach(with_unfetched, filings) == {
-        "paper_only": 1,
-        "some_paper": 1,
+        "unread_only": 1,
+        "some_unread": 1,
         "not_fetched": 1,
         "before_swearing_in": 1,
     }

@@ -270,7 +270,7 @@ def test_a_scanned_document_is_captured_not_read_and_the_page_says_which():
     page = render.render_officeholder(HOLDERS[0], [read, scanned, pending], META, striker)
     assert "partly read" in page
     assert "1 of 3 documents read and hashed" in page
-    assert "1 fetched and hashed, not read: scanned paper, or a form" in page
+    assert "1 fetched and hashed, not read: no Filing ID line in the text" in page
     assert "1 not fetched" in page and "not yet fetched" not in page
     assert "the register read each document" not in page
     section = render.state_of_record(
@@ -706,7 +706,11 @@ def test_a_quiet_signal_says_which_silence_it_is():
             True,
             [LATE[0]],
         ),
-        "1 report is fetched and not read: scanned paper": (sworn(HOLDERS[0]), False, []),
+        "1 report is fetched and not read: the register found no Filing ID line": (
+            sworn(HOLDERS[0]),
+            False,
+            [],
+        ),
     }
     for expected, (holder_, read, rows) in cases.items():
         report = read_report(holder_["id"], "2025-03-20", 1, read)
@@ -898,8 +902,8 @@ def test_the_signal_page_counts_what_it_evaluated_and_who_it_cannot_reach():
     ]
     reach = render.coverage(outcomes, rejected)
     assert reach == {
-        "paper_only": 1,
-        "some_paper": 0,
+        "unread_only": 1,
+        "some_unread": 0,
         "not_fetched": 0,
         "before_swearing_in": 1,
         "set_aside_held": 1,
@@ -907,7 +911,7 @@ def test_the_signal_page_counts_what_it_evaluated_and_who_it_cannot_reach():
         "set_aside_other": 1,
     }
     unfetched = render.coverage(outcomes, rejected, fetched=set())
-    assert (unfetched["paper_only"], unfetched["not_fetched"]) == (0, 1), (
+    assert (unfetched["unread_only"], unfetched["not_fetched"]) == (0, 1), (
         "a report never fetched is not scanned paper (Seats D and E, third reading)"
     )
     page = render.render_signal_page(
@@ -918,7 +922,10 @@ def test_the_signal_page_counts_what_it_evaluated_and_who_it_cannot_reach():
         "on 1 it evaluated at least one row, and it fired on 1 of those; on 1 it evaluated no row"
         in record
     )
-    assert "<dt>1</dt><dd>officeholders whose transaction reports are all scanned paper" in record
+    assert (
+        "<dt>1</dt><dd>officeholders none of whose transaction reports the register could read"
+        in record
+    )
     assert (
         "which it does not see: 1 under the surname of an officeholder the register holds"
     ) in record
@@ -967,10 +974,14 @@ def test_an_earlier_versions_finding_stays_on_the_page_as_published():
     report = read_report(holder_["id"], "2025-03-20", 1)
     found, _, by_holder = evaluated([holder_], [report], LATE)
     v2 = dict(SIGNAL, id=SIGNAL["id"].replace(":v1", ":v2"), version=2)
+    # A version's words move with its criteria, so a v2 carries its own entry or the register
+    # refuses to render (INVARIANTS §11; the second reading of the built answer, Seats C and G).
+    render.ANSWER_WORDS[(SIGNAL["slug"], 2)] = dict(render.ANSWER_WORDS[(SIGNAL["slug"], 1)])
     page = render.render_officeholder(
         holder_, [report], META, striker, 0, LATE, 0, [v2], found, {v2["id"]: []}, [SIGNAL, v2]
     )
     assert "Version 1, which version 2 replaced" in page
+    del render.ANSWER_WORDS[(SIGNAL["slug"], 2)]
     assert page.count('class="finding"') == 1, "the version 1 Finding is still drawn"
     assert f"python tools/rebuild.py {found[0]['id']}" in page
 
@@ -1291,7 +1302,10 @@ def test_a_row_under_another_given_name_at_a_departed_seat_is_said_apart():
     counted = render.held_by_holder(rows, [gone], {gone["id"]: "2026-09-28"})
     assert counted == {gone["id"]: {"left_other_name": 1, "left_open": 1}}, counted
     said = render.aside_sentence(counted[gone["id"]], "2026-09-28")
-    assert "1 under another given name, whose document the register has not read" in said
+    assert (
+        "1 that carries a given name other than this officeholder's, whose document the "
+        "register has not read" in said
+    ), "the row carries the name; the person did not (fifth reading, Seat F)"
     assert "before the swearing-in" not in said, "the successor's own check is not about them"
     assert "2 rows of the index at this seat carry this surname and are set aside" in said
 
@@ -1965,17 +1979,23 @@ def test_the_answer_comes_first_and_reads_the_same_whether_or_not_the_signal_fir
         ]
         assert order == sorted(order), "answer, checks, signal, record, standards, terms"
         answer = answer_of(page)
-        assert "The register read 1 of 1 transaction report attributed to this officeholder" in (
-            answer
-        ), "the register's own coverage is the first number a reader meets"
-        assert render.esc(render.EITHER_WAY) in answer
+        assert (
+            "The register read 1 of 1 transaction report it attributes to this officeholder"
+            in answer
+        ), "the register's own coverage is the first number a reader meets, and it attributes"
+        assert render.esc(render.FRAME) in between(answer, "<p>", "</p>"), (
+            "the frame is inside the result's own paragraph, so no crop carries one without the "
+            "other (Seat D), and it is the short sentence, so the paragraph fits a phone (Seat E)"
+        )
+        assert render.esc(render.NOT_A_RULING) in answer
         assert f'href="{render.USC_13105}"' in answer, "the standard is cited and linked"
         assert verdict_words(answer) == [] and frame.check_page(page) is None
     assert (
-        "The Clerk's index dates 1 of the 1 report checked after the deadline, by 37 days, for at "
+        "The Clerk's index dates 1 of the 1 report compared after the deadline, by 37 days, "
+        "for at "
         "least one trade on it."
     ) in answer_of(fired), "the count names its noun, and the days are the days (Seats A, B, D)"
-    assert "The Clerk's index dates none of the 1 report checked after the deadline." in (
+    assert "The Clerk's index dates none of the 1 report compared after the deadline." in (
         answer_of(quiet)
     )
     for page in (fired, quiet):
@@ -2009,11 +2029,11 @@ def test_the_answers_counts_are_the_signals_own_and_agree_with_the_page():
     found, page = signal_page(h, [scanned, before, late], rows)
     answer = answer_of(page)
     assert "The register read 2 of 3 transaction reports" in answer, "the scanned one is unread"
-    assert "and checked 1 against" in answer, "a report whose rows all predate the oath is read"
-    assert "The Clerk's index dates 1 of the 1 report checked after the deadline" in answer
-    assert "Not checked: 1 scanned paper or not yet fetched; 1 with no trade the rule reaches." in (
-        answer
-    ), "each silence named where it is (Seats A and E)"
+    assert "and compared 1 against" in answer, "a report whose rows all predate the oath is read"
+    assert "The Clerk's index dates 1 of the 1 report compared after the deadline" in answer
+    assert (
+        "No row compared: 1 in a form it does not read; 1 on which it compared no row." in answer
+    ), "each silence named where it is, and neither called the rule's doing (Seats A, B and E)"
     assert page.count('<article class="finding"') == len(found) == 1
     assert "It evaluated 2 rows on 1 report attributed to this officeholder" in page
 
@@ -2022,16 +2042,20 @@ def test_an_answer_with_nothing_checked_never_reads_as_a_clean_result():
     h = sworn(HOLDERS[0])
     _, unread = signal_page(h, [read_report(h["id"], "2025-03-20", 1, read=False)], [])
     answer = answer_of(unread)
-    assert "The register read 0 of 1 transaction report" in answer and "checked 0" in answer
-    assert "It could check none of them: it is scanned paper or not yet fetched" in answer
+    assert "The register read 0 of 1 transaction report" in answer and "compared 0" in answer
+    assert "It compared no row on any of them: 1 is in a form it does not read." in answer
+    assert "scanned" not in answer, "no physical claim about a document it only failed to read"
     assert "a fact about what the register could read, not about what was filed" in answer
     assert "dates none" not in answer, "nothing checked is not a clean result"
     _, nothing = signal_page(sworn(HOLDERS[2]), [], [], held_reports=2)
     answer = answer_of(nothing)
-    assert "No transaction report in the Clerk's 2025 index is attributed to this officeholder" in (
+    assert "it attributes no transaction report in the Clerk's 2025 index to this officeholder" in (
         answer
     )
-    assert "It says nothing about whether this officeholder had anything to report." in answer
+    assert (
+        "It says nothing about whether this officeholder made any trade the rule requires "
+        "reported." in answer
+    ), "the clause that makes a quiet page honest, in words that do not translate as a clearance"
     assert "2 transaction reports at this seat under this surname are set aside" in answer
     assert "dates none" not in answer
 
@@ -2188,8 +2212,13 @@ def test_an_answer_that_read_everything_and_checked_nothing_says_why_in_one_line
     report = read_report(h["id"], "2025-03-20", 1)
     _, page = signal_page(h, [report], [LATE[0]])
     answer = answer_of(page)
-    assert "The register read 1 of 1 transaction report" in answer and "checked 0" in answer
-    assert "It could check none of them: no trade on them is one the rule reaches." in answer
+    assert "The register read 1 of 1 transaction report" in answer and "compared 0" in answer
+    assert (
+        "It compared no row on any of them: of the rows on them, 1 dated before the "
+        "swearing-in the roster records, which does not say whether this officeholder served "
+        "before it." in answer
+    ), "the register says what it did not do, never what the rule does not reach (Seat B)"
+    assert "the rule" not in between(answer, "It compared no row", "That is a fact")
     assert "scanned" not in between(answer, "<p>", "</p>")
 
 
@@ -2309,7 +2338,9 @@ def test_the_strip_teaches_the_marks_and_draws_the_process_never_a_person():
         assert render.KEY_MARKS[mark] in strip, mark
     assert "officeholders/" not in strip and verdict_words(strip) == []
     assert "it does not ask anyone to stop trading" in strip
-    assert "lists 2 of these reports. 1 of them arrived as scanned paper" in strip
+    assert "lists 2 of these reports. On 1 the register found no Filing ID line to read" in strip, (
+        "never a physical fact about a document the register only failed to read (Seat G)"
+    )
     assert page.index('id="how"') < page.index('id="glance"')
     person = render.render_officeholder(HOLDERS[0], FILINGS[:1], META, striker, 0, [])
     assert 'class="comic"' not in person, "a person's name is never lettered as a comic"
