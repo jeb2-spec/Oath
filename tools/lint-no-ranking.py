@@ -50,9 +50,10 @@ ATTR = re.compile(r"""\b([a-z-]+)="([^"]*)\"""", re.I)
 TAGS = re.compile(r"<[^>]+>")
 SEAT_OR_DATE = re.compile(r"\b[A-Z]{2}\d{2}\b|\b\d{4}-\d{2}-\d{2}\b")
 OFFICEHOLDER_LINK = re.compile(r"""href="[^"]*\bofficeholders/[^"/]+\.html""", re.I)
-# On an officeholder's own page, a link to another person's page is a sibling file's name.
+# On an officeholder's own page, a link to another person's page, in any form a page could
+# write it: any quoting, any path before the file name, a fragment or a query after it, any case.
 PERSON_LINK = re.compile(
-    r"""<a\b([^>]*\bhref="(?:\.\./officeholders/|\./)?(oh-[a-z0-9-]+)\.html"[^>]*)>""", re.I
+    r"""<a\b([^>]*?\bhref\s*=\s*["']?[^"'\s>]*?\b(oh-[a-z0-9-]+)\.html\b[^>]*)>""", re.I
 )
 ANSWER = re.compile(r"""<section\b[^>]*\bid="answer"[^>]*>(.*?)</section>""", re.S | re.I)
 
@@ -160,8 +161,14 @@ def check_person(text: str, own: str) -> list[str]:
     failures = []
     for list_attrs, _rows, _body in lists_on(text):
         failures.append(f"it lists officeholders (the {list_name(list_attrs)} list)")
+    # A table or list holding links to two or more other persons' pages lists them, whatever
+    # form the links take and whatever marks they carry.
+    for match in re.finditer(r"<(table|ol|ul)\b[^>]*>(.*?)</\1>", text, re.S | re.I):
+        others = {n.lower() for _a, n in PERSON_LINK.findall(match.group(2))} - {own.lower()}
+        if len(others) >= 2:
+            failures.append(f"it lists {len(others)} other officeholders in one {match.group(1)}")
     for link_attrs, name in PERSON_LINK.findall(text):
-        if name != own and attrs(link_attrs).get("data-cross") != "correction":
+        if name.lower() != own.lower() and attrs(link_attrs).get("data-cross") != "correction":
             failures.append(f"a link to {name} is not a correction's")
     answer = ANSWER.search(text)
     if answer and PERSON_LINK.search(answer.group(1)):

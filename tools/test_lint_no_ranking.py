@@ -238,3 +238,33 @@ def test_the_walk_reads_every_officeholder_page_and_names_the_failing_one(tmp_pa
     out = capsys.readouterr().out
     assert "officeholders/oh-us-house-c000003.html: a link to oh-us-house-b000002" in out
     assert OWN not in out
+
+
+def test_every_form_of_a_link_to_another_person_is_read():
+    """Seat C: single quotes, no quotes, a fragment, another prefix, spaces, any case."""
+    for href in (
+        "href='oh-us-house-b000002.html'",
+        "href=oh-us-house-b000002.html",
+        'href="oh-us-house-b000002.html#signals"',
+        'href="officeholders/oh-us-house-b000002.html"',
+        'href="/Oath/officeholders/OH-US-HOUSE-B000002.html?x=1"',
+        'href = "oh-us-house-b000002.html"',
+    ):
+        failures = lint.check_person(person(body=f"<p><a {href}>B</a></p>"), OWN)
+        assert failures and "is not a correction's" in failures[0], href
+
+
+def test_a_list_of_sibling_links_is_a_list_of_persons_even_marked_as_corrections():
+    body = (
+        "<table><tr><td>"
+        '<a href="oh-us-house-b000002.html" data-cross="correction">B</a> 3</td></tr><tr><td>'
+        '<a href="oh-us-house-c000003.html" data-cross="correction">C</a> 1</td></tr></table>'
+    )
+    assert "it lists 2 other officeholders in one table" in lint.check_person(
+        person(body=body), OWN
+    )
+
+
+def test_a_link_to_the_page_itself_in_another_case_is_not_another_person():
+    page = person(body=f'<a href="{OWN.upper()}.html">top</a>')
+    assert lint.check_person(page, OWN) == []
