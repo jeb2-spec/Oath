@@ -38,6 +38,7 @@ import argparse
 import base64
 import gzip
 import hashlib
+import http.client
 import json
 import sys
 import time
@@ -56,6 +57,7 @@ AGENT = (
 )
 PAUSE_SECONDS = 3
 PAYLOADS_PER_DOCUMENT = 5
+CAPTURES_PER_PAYLOAD = 3
 FRAME = (
     "A copy whose bytes hash to the sealed hash shows that the Internet Archive holds the bytes "
     "the register read, and since when. It says nothing about whether the document is accurate."
@@ -65,21 +67,27 @@ Get = Callable[[str], tuple[bytes, dict]]
 
 
 def get(url: str) -> tuple[bytes, dict]:
-    """Fetch one address at the Archive, retrying once after a refusal or a dropped connection."""
+    """Fetch one address at the Archive, trying three times, waiting longer each time, after a
+    refusal, a timed-out handshake or a dropped connection. The first run lost six of 27
+    documents to the Archive's connections and none to what it holds (2026-09-27)."""
     if not url.startswith(ARCHIVE + "/"):
         raise ValueError(f"this tool asks only the Internet Archive, not {url}")
-    for attempt in (1, 2):
+    for attempt, wait in enumerate((10, 30, 0), 1):
         request = urllib.request.Request(url, headers={"User-Agent": AGENT})
         try:
             with urllib.request.urlopen(request, timeout=120) as response:  # noqa: S310
                 body = response.read()
                 headers = {k.lower(): v for k, v in response.headers.items()}
             break
-        except (urllib.error.URLError, TimeoutError, ConnectionError) as error:
-            if attempt == 2:
+        except (
+            urllib.error.URLError,
+            http.client.HTTPException,
+            TimeoutError,
+            ConnectionError,
+        ) as error:
+            if attempt == 3:
                 raise
-            code = getattr(error, "code", None)
-            time.sleep(60 if code == 429 else 10)
+            time.sleep(60 if getattr(error, "code", None) == 429 else wait)
     if headers.get("content-encoding", "").lower() == "gzip":
         body = gzip.decompress(body)
     time.sleep(PAUSE_SECONDS)
@@ -133,16 +141,23 @@ def witness(document: dict, fetch: Get) -> dict:
     row["captures"] = len(listed)
     if not listed:
         return {**row, "outcome": "none"}
-    earliest: dict[str, dict] = {}
+    by_payload: dict[str, list[dict]] = {}
     for entry in listed:
-        earliest.setdefault(entry["digest"], entry)
+        by_payload.setdefault(entry["digest"], []).append(entry)
     read = []
-    for entry in list(earliest.values())[:PAYLOADS_PER_DOCUMENT]:
-        raw = f"{ARCHIVE}/web/{entry['timestamp']}id_/{entry['original']}"
-        try:
-            body, _ = fetch(raw)
-        except Exception as error:  # noqa: BLE001
-            read.append({"captured_at": when(entry["timestamp"]), "error": type(error).__name__})
+    for group in list(by_payload.values())[:PAYLOADS_PER_DOCUMENT]:
+        # The earliest capture of each payload first, and where the Archive cannot serve it, a
+        # later capture of the same payload: one unreadable copy is not the payload unreadable.
+        body = None
+        for entry in group[:CAPTURES_PER_PAYLOAD]:
+            raw = f"{ARCHIVE}/web/{entry['timestamp']}id_/{entry['original']}"
+            try:
+                body, _ = fetch(raw)
+                break
+            except Exception as error:  # noqa: BLE001
+                failed = {"captured_at": when(entry["timestamp"]), "error": type(error).__name__}
+        if body is None:
+            read.append(failed)
             continue
         sha256 = hashlib.sha256(body).hexdigest()
         read.append(
@@ -154,7 +169,7 @@ def witness(document: dict, fetch: Get) -> dict:
                 "replay": f"{ARCHIVE}/web/{entry['timestamp']}/{entry['original']}",
             }
         )
-    row["payloads"] = len(earliest)
+    row["payloads"] = len(by_payload)
     row["read"] = read
     held = [capture for capture in read if capture.get("matches")]
     if held:
