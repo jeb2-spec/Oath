@@ -324,11 +324,19 @@ who arrived for one person could not reach it until word 301.
 
 **What the reading found that is not fixed here**, each a design question rather than a wording one:
 
-- A recorded correction moves a report in the rows and the answer does not move with it, because
+- ~~A recorded correction moves a report in the rows and the answer does not move with it, because
   the counts come from the Signal's run record and nothing reconciles the two; a re-captured
-  document would inflate them (Seat G). The renderer already refuses a ledger naming an
-  officeholder with no page; this wants the same guard, one set comparison, and it is the next
-  pass's first item.
+  document would inflate them (Seat G).~~ **Fixed, and worse than this entry said.** Constructed
+  against the renderer, the page the report moved *away from* read "The register read 1 of 1
+  transaction report it attributes to this officeholder ... The Clerk's index dates 1 report it
+  compared after the deadline: 1 trade on it, 37 days past its own deadline", with no such report
+  among its rows, while the page the rows now attribute it to read "The register found nothing to
+  compare here". Not a drifting count: an adverse sentence about a named person, resting on a report
+  the register's own rows give to somebody else. `answer_rests_on_these_rows` now compares every
+  Signal's run record with the rows before a page is written, and refuses where they disagree about a
+  report's officeholder, about a report the rows no longer hold, or about how many rows a report
+  lists, naming both officeholders and the route. On build `0005-house-2025` all 463 outcomes agree,
+  so the refusal is a guard and not a change to any page.
 - `producing_filings` has no `maxItems` and nine readers take `[0]` (Seat C).
 - There is no schema for the signal run record, and one of the answer's four numbers is
   recoverable from nothing else (Seat G).

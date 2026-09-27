@@ -4926,6 +4926,62 @@ def load_signals(
     return signals, findings, signal_runs, outcomes_by
 
 
+def answer_rests_on_these_rows(
+    outcomes_by: dict[str, dict[str, list[dict]]],
+    filings: list[dict],
+    transactions: list[dict],
+) -> list[str]:
+    """Where a Signal's run record and the register's rows disagree about a report.
+
+    `load_signals` keys each Signal's outcomes by the officeholder the RUN RECORD names, and every
+    page's answer is drawn from those outcomes while the page's own rows come from
+    data/filings.ndjson. The maintainer's correction of an attribution (tools/correct.py --field
+    officeholder_id, the documented route) moves the row and not the run record, because the Signal
+    has not been re-run since. Both pages then say something the rows contradict, and one of them
+    says it adversely. Shown against this renderer: the page the report moved away from reads "The
+    register read 1 of 1 transaction report it attributes to this officeholder ... The Clerk's index
+    dates 1 report it compared after the deadline: 1 trade on it, 37 days past its own deadline",
+    with no such report among its rows, while the page the rows now attribute it to reads "The
+    register found nothing to compare here". An adverse sentence about a named person, resting on a
+    report the register's own rows give to somebody else, is the worst defect this project has.
+
+    A correction of a report's row count is the same class: the answer's trade counts, and the
+    landing's narrowing figure, would be the counts the Signal saw and not the ones the rows hold.
+
+    So the register asserts rather than picks, as it does where reports read and reports compared
+    cannot both be true. A refusal is recoverable by a maintainer in minutes (the Council's second
+    reading of the built answer, Seat G).
+    """
+    holder_of = {f["id"]: f["officeholder_id"] for f in filings}
+    rows_of: dict[str, int] = {}
+    for t in transactions:
+        rows_of[t["filing_id"]] = rows_of.get(t["filing_id"], 0) + 1
+    problems = []
+    for signal_id, by_oh in sorted(outcomes_by.items()):
+        for outcome in sorted(
+            (o for group in by_oh.values() for o in group), key=lambda o: o["filing_id"]
+        ):
+            report, said = outcome["filing_id"], outcome["officeholder_id"]
+            if report not in holder_of:
+                problems.append(
+                    f"{signal_id} read {report}, which no row of data/filings.ndjson holds"
+                )
+                continue
+            if holder_of[report] != said:
+                problems.append(
+                    f"{signal_id} attributes {report} to {said} and data/filings.ndjson attributes "
+                    f"it to {holder_of[report]}"
+                )
+            counted, held = outcome.get("rows") or 0, rows_of.get(report, 0)
+            if counted != held:
+                problems.append(
+                    f"{signal_id} read {counted} "
+                    f"{plural(counted, 'row', 'rows')} on {report} and data/transactions.ndjson "
+                    f"holds {held}"
+                )
+    return problems
+
+
 def unpaged_officeholders(findings: list[dict], holders: list[dict]) -> list[str]:
     """Officeholders the ledger's current rows name and the rows no longer hold. A published
     Finding stays on a page, so a render that would leave one without a page refuses."""
@@ -5044,6 +5100,21 @@ def main(argv: list[str] | None = None) -> int:
     findings_by: dict[str, list[dict]] = {}
     for f in findings:
         findings_by.setdefault(f["officeholder_id"], []).append(f)
+    adrift = answer_rests_on_these_rows(outcomes_by, filings, transactions)
+    if adrift:
+        raise SystemExit(
+            "refusing to render: a Signal's run record and the register's rows disagree about "
+            f"{len(adrift)} {plural(len(adrift), 'report', 'reports')}, and every page's answer is "
+            "drawn from the record while its rows are drawn from the register. One of the two "
+            "pages would carry a sentence the rows contradict, and where a Finding rests on the "
+            "report it would be an adverse sentence about a person the rows no longer attribute it "
+            "to:\n  "
+            + "\n  ".join(adrift[:10])
+            + (f"\n  and {len(adrift) - 10} more" if len(adrift) > 10 else "")
+            + "\nRe-run the Signal (python src/signals/run.py) so its record covers the rows as "
+            "they now stand, or supersede the Findings the moved reports produce "
+            "(python src/signals/run.py --correct), citing the evidence."
+        )
     unpaged = unpaged_officeholders(findings, holders)
     if unpaged:
         raise SystemExit(
