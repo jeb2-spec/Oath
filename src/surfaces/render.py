@@ -2885,18 +2885,32 @@ def state_of_record(
     gone = bool(not_listed(changes, "officeholders"))
     changes_line = ""
     if reads:
+        # Said by kind: a read of the roster or the index cites bytes the register keeps, and a
+        # read of a document cites both files' fingerprints and keeps neither (the Council's
+        # fourth reading of S.1b, Seats F and G).
+        docs = sum(1 for history in changes.values() for c in history if c["change"] == "replaced")
+        cites = (
+            "each a row of its own citing the read, with the copy of the roster or the index the "
+            "register kept"
+            if not docs
+            else (
+                "each a row of its own citing the read: the copy of the roster or the index the "
+                "register kept, or, for a document, both files' fingerprints, since the register "
+                "keeps no filed document"
+            )
+        )
         changes_line += (
             f"<dt>{reads:,}</dt><dd>{plural(reads, 'change', 'changes')} a later read of the "
             "Clerk's roster, index or documents showed about rows the register had published, "
-            "each a row of its own citing the read, with the copy of the roster or the index the "
-            "register kept; a page shows each beside the row it concerns, except a party, which "
+            f"{cites}; a page shows each beside the row it concerns, except a party, which "
             "no page shows</dd>\n"
         )
     if decisions:
         changes_line += (
             f"<dt>{decisions:,}</dt><dd>{plural(decisions, 'decision', 'decisions')} the "
             "maintainer recorded, correcting a published fact or recording that it stands, each "
-            "citing the evidence and shown beside the rows it concerns</dd>\n"
+            "citing the evidence and shown beside the rows it concerns, except a party, which "
+            "no page shows</dd>\n"
         )
     if reads or decisions:
         changes_line += (

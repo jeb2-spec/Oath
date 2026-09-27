@@ -422,6 +422,22 @@ def departed_of(row: dict, kept: dict[str, dict], held: dict | None) -> dict | N
     return near[0] if len(near) == 1 else None
 
 
+def reason_group(reason: str) -> str:
+    """A set-aside reason as the run record groups it, and the sealed sentence quotes: the words
+    without the specifics in the trailing parentheses, which name a member and a seat.
+
+    Cut at the first parenthesis and a row kept from a departed member's seat lost the clause
+    that explains it, so the one sentence about the build gave half a reason; and the rows of one
+    member the roster stopped listing filled three groups, each small enough to be a count about
+    that person. They are one group, each row keeping its own reason in the set-aside file (the
+    Council's fourth reading of S.1b, Seats A, B and F).
+    """
+    if reason.startswith(DEPARTED):
+        return DEPARTED + ", each with the reason the register gave the row"
+    cut = reason.rfind(" (")
+    return reason[:cut] if cut > 0 and reason.endswith(")") else reason
+
+
 def departed_reason(
     gone: dict, filed_at: str | None, before: str | None, same_given: bool = True
 ) -> str:
@@ -1776,7 +1792,7 @@ def build(year: int, dry_run: bool = False, expect_not_listed: int = 0) -> int:
     mine_ids = {f["id"] for f in mine}
     listed_now = {hid for hid in of_this_congress if latest_listing(changes, hid) != NOT_LISTED}
     with_a_filing = {f["officeholder_id"] for f in mine}
-    reasons = dict(collections.Counter(r["reason"].split(" (")[0] for r in rejected))
+    reasons = dict(collections.Counter(reason_group(r["reason"]) for r in rejected))
     counts = {
         "seats": len(seats),
         "filled": len(people),

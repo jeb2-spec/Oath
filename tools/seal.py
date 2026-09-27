@@ -172,19 +172,28 @@ def held_clause(rows: list[dict]) -> str:
     return ", ".join(parts)
 
 
-def reach(outcomes: list[dict]) -> dict[str, int]:
+def reach(outcomes: list[dict], filings: list[dict] | None = None) -> dict[str, int]:
     """Who a Signal's run could not reach, in counts of officeholders: those whose reports are
     all fetched and not read, those with some, and those with rows dated before this
-    Congress's swearing-in, which it does not evaluate."""
+    Congress's swearing-in, which it does not evaluate. A report the register has not fetched
+    is counted apart and never called scanned paper, as the pages count it (the Council's
+    fourth reading of S.1b, Seat F)."""
+    fetched = {f["id"]: bool((f.get("source") or {}).get("content_hash")) for f in filings or []}
     states: dict[str, set[str]] = {}
     before: set[str] = set()
+    unfetched = 0
     for o in outcomes:
-        states.setdefault(o["officeholder_id"], set()).add(o["state"])
+        state = o["state"]
+        if state == "not read" and fetched.get(o.get("filing_id"), True) is False:
+            unfetched += 1
+            state = "not fetched"
+        states.setdefault(o["officeholder_id"], set()).add(state)
         if o["not_evaluated"].get("dated before this Congress's swearing-in"):
             before.add(o["officeholder_id"])
     return {
         "paper_only": sum(1 for s in states.values() if s == {"not read"}),
         "some_paper": sum(1 for s in states.values() if "not read" in s and s != {"not read"}),
+        "not_fetched": unfetched,
         "before_swearing_in": len(before),
     }
 
@@ -350,7 +359,7 @@ def derive_state(root: Path, meta: dict) -> str:
         signal = signals.get(summary["signal_id"], {})
         by_state = summary.get("reports_by_state", {})
         skipped = sum(summary.get("rows_not_evaluated", {}).values())
-        cannot = reach(outcomes)
+        cannot = reach(outcomes, filings)
         sentences.append(
             f"The Signal {signal.get('name', summary['signal_id'])} ({summary['signal_id']}) "
             f"evaluated {summary['rows_evaluated']:,} rows on the {by_state.get('evaluated', 0):,} "
@@ -362,7 +371,14 @@ def derive_state(root: Path, meta: dict) -> str:
             f"{by_state.get('not read', 0):,} reports were not read. It cannot reach "
             f"{plural(cannot['paper_only'], 'officeholder', 'officeholders')} whose transaction "
             f"reports are all scanned paper, or some of the reports of "
-            f"{cannot['some_paper']:,} more; it does not evaluate the rows dated before the "
+            f"{cannot['some_paper']:,} more"
+            + (
+                f"; it has not read {plural(cannot['not_fetched'], 'report', 'reports')} the "
+                "register has not fetched"
+                if cannot["not_fetched"]
+                else ""
+            )
+            + "; it does not evaluate the rows dated before the "
             f"swearing-in the roster records for the {congress_of_register(holders)} on the "
             "reports of "
             f"{plural(cannot['before_swearing_in'], 'officeholder', 'officeholders')}; and the "
@@ -412,7 +428,7 @@ CHANGE_WORDS = {
     "not listed": "a row a later read no longer lists",
     "listed again": "a row a later read lists again",
     "read otherwise": "a fact a later read states otherwise",
-    "replaced": "a document the Clerk later serves as a different file, which reads otherwise",
+    "replaced": "a document a later read found served as a different file, which reads otherwise",
 }
 
 
@@ -434,12 +450,23 @@ def changes_sentence(changes: list[dict]) -> str:
             words for kind, words in CHANGE_WORDS.items() if any(c["change"] == kind for c in reads)
         ]
         listed = kinds[0] if len(kinds) == 1 else ", ".join(kinds[:-1]) + " and " + kinds[-1]
-        shown = plural(
-            len(reads), "change a later read showed is", "changes later reads showed are"
-        )
-        parts.append(
-            f"{shown} recorded, each a row of its own citing the read, of these kinds: {listed}"
-        )
+        # With one kind the total is the count by kind, and when small that is a count about one
+        # person, which this sentence rules out: give the kind and no number (Seat F, N29).
+        if len(kinds) == 1:
+            shown = plural(
+                len(reads), "A change a later read showed is", "Changes later reads showed are"
+            )
+            shown = shown.split(" ", 1)[1] if len(reads) == 1 else shown
+            parts.append(
+                f"{shown} recorded, each a row of its own citing the read, of this kind: {listed}"
+            )
+        else:
+            shown = plural(
+                len(reads), "change a later read showed is", "changes later reads showed are"
+            )
+            parts.append(
+                f"{shown} recorded, each a row of its own citing the read, of these kinds: {listed}"
+            )
     if decided:
         parts.append(
             f"{plural(len(decided), 'decision', 'decisions')} the maintainer recorded, "

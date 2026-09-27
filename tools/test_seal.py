@@ -154,9 +154,14 @@ def test_held_rows_are_counted_by_why_they_wait():
 def test_who_a_signal_cannot_reach_is_counted_by_officeholder():
     seal = load()
 
-    def o(who, state, before=0):
+    def o(who, state, before=0, report="fl:read"):
         swore = {"dated before this Congress's swearing-in": before} if before else {}
-        return {"officeholder_id": who, "state": state, "not_evaluated": swore}
+        return {
+            "officeholder_id": who,
+            "filing_id": report,
+            "state": state,
+            "not_evaluated": swore,
+        }
 
     outcomes = [
         o("a", "not read"),
@@ -165,7 +170,26 @@ def test_who_a_signal_cannot_reach_is_counted_by_officeholder():
         o("b", "evaluated", before=2),
         o("c", "evaluated"),
     ]
-    assert seal.reach(outcomes) == {"paper_only": 1, "some_paper": 1, "before_swearing_in": 1}
+    assert seal.reach(outcomes) == {
+        "paper_only": 1,
+        "some_paper": 1,
+        "not_fetched": 0,
+        "before_swearing_in": 1,
+    }
+    # A report the register has not fetched is not scanned paper, and never counted as it (the
+    # Council's fourth reading of S.1b, Seat F): d's one report is unfetched, so d is neither
+    # "all scanned paper" nor "some".
+    filings = [
+        {"id": "fl:read", "source": {"content_hash": "0" * 64}},
+        {"id": "fl:unfetched", "source": {"content_hash": None}},
+    ]
+    with_unfetched = [*outcomes, o("d", "not read", report="fl:unfetched")]
+    assert seal.reach(with_unfetched, filings) == {
+        "paper_only": 1,
+        "some_paper": 1,
+        "not_fetched": 1,
+        "before_swearing_in": 1,
+    }
 
 
 def test_the_seal_points_at_the_anchor_and_never_seals_its_state():

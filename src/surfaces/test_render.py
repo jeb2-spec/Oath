@@ -1138,6 +1138,30 @@ def test_the_landing_counts_departures_and_changes_and_no_ones_rows():
     assert "or when the maintainer published a correction" in section
     assert "every Monday at 09:17 UTC" in section
     assert "2 filled and 2 vacant" in section, "a Member the roster no longer lists fills no seat"
+    assert "with the copy of the roster or the index the register kept" in section, (
+        "a read of the roster cites bytes the register keeps"
+    )
+    replaced = {
+        "fl:house-clerk:P:1": [
+            {
+                "id": "ch:replaced:fl:house-clerk:P:1:2026-10-05T00:00:00Z",
+                "row_id": "fl:house-clerk:P:1",
+                "rows": "filings",
+                "change": "replaced",
+                "was": "a" * 64,
+                "now": "b" * 64,
+                "capture": {"url": "https://x/1.pdf", "retrieved_at": "2026-10-05T00:00:00Z"},
+            }
+        ]
+    }
+    with_doc = plain(
+        render.state_of_record(
+            META, RUN, HOLDERS, FILINGS, OFFICES, 1, "https://x/rows", changes=replaced, seated=2
+        )
+    )
+    assert "both files' fingerprints, since the register keeps no filed document" in with_doc, (
+        "a read of a document keeps neither file, and the line says so (Seats F and G)"
+    )
 
 
 def test_a_closed_year_says_whose_seats_these_are_and_counts_the_rows_it_holds():
