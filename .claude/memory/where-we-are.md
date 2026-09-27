@@ -12,6 +12,8 @@ metadata:
 
 ## The next session starts here
 
+**The cloud environment reaches the sources now.** Jared widened its network access on 2026-09-27. From a cloud session, disclosures-clerk.house.gov, clerk.house.gov, ethics.house.gov, conduct.house.gov (the Office of Congressional Conduct, formerly the OCE, which oce.house.gov redirects to), uscode.house.gov and govinfo.gov all answer; congress.gov returns 403. Earlier notes here that say those hosts return 000 describe the environment before that day. Fetch at the adapter's pace (3 seconds a request, its user agent), and read every PDF from a copy whose hash is checked.
+
 **P.6 landed, items 1 to 3** ([NEXT.md P.6](../../NEXT.md) has the numbers): who decides said once in full, the frame under every result, the glance on `record.html`, the captions' shared caveats said once. Item 4 was weighed and left, because the narrows list is the landing's statement of its own limits. The three things that do not move did not move.
 
 **Read [feedback-pages-are-the-window.md](feedback-pages-are-the-window.md) before touching a page.** Jared stopped a full local CI run for this change: the pages are the window into the record, not the record. A check on a page stays if it keeps a sentence about a person true and goes if it only keeps the window arranged; the evidence for a page change is the render, the page gates, the render tests and a screenshot. 34 of the 67 measured guards sit on `render.py`, and sorting them by that question is his call, not a session's.
