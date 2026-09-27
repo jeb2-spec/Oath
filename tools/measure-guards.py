@@ -28,6 +28,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import shlex
 import subprocess
 import sys
 import time
@@ -49,6 +51,22 @@ def guards(root: Path, only: str = "") -> list[dict]:
     return [g for g in rows if not only or g["id"] == only]
 
 
+def forget(path: Path) -> None:
+    """Drop any compiled bytecode for one source file.
+
+    A .pyc header records the source's mtime to the SECOND, so two versions of the same file
+    written inside one second are indistinguishable to the import machinery and the first one's
+    bytecode is reused for the second. Measuring 37 guards takes eleven seconds, so several
+    removals land in the same second as the restore before them, and the tests then ran against
+    code that was no longer on disk. That made a measurement depend on the order of the run: one
+    guard reported caught alone and uncaught in the sweep, which is the worst kind of failure here,
+    because both runs printed a number and neither said which to believe.
+    """
+    cache = path.parent / "__pycache__"
+    for stale in cache.glob(f"{path.stem}.*.pyc") if cache.is_dir() else ():
+        stale.unlink(missing_ok=True)
+
+
 def remove(root: Path, guard: dict) -> str:
     """The file's contents before the guard was removed from it, or a refusal saying why it
     could not be. A guard whose `old` text is no longer in the file is stale, and stale is a
@@ -60,15 +78,43 @@ def remove(root: Path, guard: dict) -> str:
     if before.count(guard["old"]) != 1:
         return ""
     path.write_text(before.replace(guard["old"], guard["new"]), encoding="utf-8")
+    forget(path)
     return before
 
 
+# What pytest's exit code means, and which of them is a measurement. 1 is the only one: tests ran
+# and one failed. 5 collected nothing, 4 is a usage error, 2 and 3 are an interrupted or broken run,
+# and each of those is a run that measured nothing while exiting non-zero, which this tool used to
+# read as the guard being caught. A measurement that passes because the measurement broke is worse
+# than no measurement, so a run that did not run is its own outcome.
+ALL_PASSED = 0
+RAN_AND_FAILED = 1
+DID_NOT_RUN = {2: "interrupted", 3: "an internal error", 4: "a usage error", 5: "no test collected"}
+
+
 def caught(root: Path, guard: dict, whole: bool) -> tuple[bool, str]:
-    """Whether the tests refuse the tree with the guard removed, and the first line that says so."""
+    """Whether the tests refuse the tree with the guard removed, and the first line that says so.
+    A run that could not run returns (False, "did not run: ...") rather than a verdict."""
     args = [sys.executable, "-m", "pytest", "-x", "-q"]
-    args += [] if whole else guard["tests"].split()
-    done = subprocess.run(args, cwd=root, capture_output=True, text=True, encoding="utf-8")
-    if done.returncode == 0:
+    # shlex, not split: a guard whose named tests are a -k expression writes it quoted, and a
+    # plain split turned `-k "a or b"` into three arguments and pytest into "file not found:
+    # or", which the runner then reported as the guard being caught. A measurement that passes
+    # because the measurement broke is worse than no measurement.
+    args += [] if whole else shlex.split(guard["tests"])
+    # And no new bytecode is written during the run, so nothing this measurement leaves behind
+    # can shadow the next one.
+    env = dict(os.environ, PYTHONDONTWRITEBYTECODE="1")
+    done = subprocess.run(args, cwd=root, capture_output=True, text=True, encoding="utf-8", env=env)
+    ran = done.returncode in (ALL_PASSED, RAN_AND_FAILED)
+    if not ran:
+        said = [
+            line
+            for line in (done.stdout + done.stderr).splitlines()
+            if line.startswith("ERROR") or "not found" in line or "no tests ran" in line
+        ]
+        why = DID_NOT_RUN.get(done.returncode, f"pytest exited {done.returncode}")
+        return False, f"did not run ({why}): {said[0] if said else guard['tests']}"
+    if done.returncode == ALL_PASSED:
         return False, ""
     failed = [
         line
@@ -95,8 +141,12 @@ def measure(root: Path, only: str = "", whole: bool = False) -> int:
             found, why = caught(root, guard, whole)
         finally:
             (root / guard["file"]).write_text(before, encoding="utf-8")
+            forget(root / guard["file"])
         if found:
             print(f"ok    {guard['id']}: {why}")
+        elif why:
+            missed.append(guard)
+            print(f"FAIL  {guard['id']}: {why}")
         else:
             missed.append(guard)
             print(f"FAIL  {guard['id']}: removed, and every test it names still passes")
