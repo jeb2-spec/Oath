@@ -346,6 +346,9 @@ figure.dates figcaption { max-width: 36rem; margin-top: .35rem; }
 .dates text { font-family: var(--mono); font-size: 10px; fill: var(--ink-2); }
 .dates text.days { fill: var(--ink); }
 svg.key { width: 1.1em; height: .8em; vertical-align: -.05em; overflow: visible; }
+details { margin: .2rem 0 .8rem; }
+summary { cursor: pointer; font-size: .9rem; color: var(--link); padding: .25rem 0; }
+summary:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
 /* the door: a tile map of states; equal squares on purpose */
 .tiles { display: grid; grid-template-columns: repeat(11, minmax(0, 1fr)); gap: 4px;
          max-width: 34rem; margin-top: .5rem; }
@@ -385,6 +388,7 @@ code { font-family: var(--mono); font-size: .88em; overflow-wrap: anywhere; }
   .skip { display: none; } a { color: inherit; }
   figure.seal { width: 28mm; } figure.seal svg { width: 28mm; height: 28mm; }
   table, figure { break-inside: avoid; }
+  details::details-content { content-visibility: visible; display: block; }
 }
 """
 
@@ -2552,11 +2556,15 @@ def marked_clause(rows: list[dict]) -> str:
     return ", " + ", ".join(f"{n} marked {esc(status)}" for status, n in sorted(counts.items()))
 
 
+FOLD_AT = 25
+
+
 def transactions_section(
     filings: list[dict],
     transactions: list[dict],
     held_reports: int = 0,
     changes: dict[str, list[dict]] | None = None,
+    fired_reports: set[str] | None = None,
 ) -> str:
     """What the reports the register read list, as filed, grouped by report.
 
@@ -2701,13 +2709,24 @@ def transactions_section(
             "</tr>"
             for t in rows
         )
-        parts.append(
+        table = (
             f"<table>\n<caption>{n} {plural(n, 'row', 'rows')} of the report, oldest transaction "
             "date first; the report itself may list them in another order.</caption>\n"
             "<thead><tr><th>Transaction date</th><th>Notified</th><th>Type</th>"
             "<th>Owner, as marked</th><th>Asset, as named</th><th>Amount</th></tr></thead>\n"
             f"<tbody>\n{body}\n</tbody>\n</table>\n"
         )
+        # A long report folds, so a page of a thousand rows can be walked; every row stays in the
+        # page, and a report a Finding rests on stays open, so nothing a reader needs is behind
+        # a click they must know to make (docs/design/pages-a-reader-can-use.md §2.4).
+        if n > FOLD_AT:
+            rests = f["id"] in (fired_reports or set())
+            table = (
+                f"<details{' open' if rests else ''}>\n<summary>The {n:,} rows of this report, as "
+                f"filed{'; a Finding rests on this report' if rests else ''}</summary>\n"
+                f"{table}</details>\n"
+            )
+        parts.append(table)
     return (
         '<section id="transactions">\n<h2>Transactions reported</h2>\n'
         + "".join(parts)
@@ -3002,13 +3021,14 @@ def render_officeholder(
     # check, what the signal found, then the record it read, then the standards and the terms,
     # every one still whole (docs/design/pages-a-reader-can-use.md §2.2). The same order on every
     # page, whether a signal fired or not.
+    fired = {f["producing_filings"][0] for f in fired_now(findings)}
     body = (
         f'{head}\n<main id="main">\n'
         f"{answer_section(signals, findings, outcomes, meta, held_reports)}\n"
         f"{checks_section(holder, filings, held_here, check_line, until, listings, changes)}\n"
         f"{section}\n"
         f"{filings_section(filings, held_here, changes, until, moved_away, holder['id'], sworn)}\n"
-        f"{transactions_section(filings, transactions or [], held_reports, changes)}\n"
+        f"{transactions_section(filings, transactions or [], held_reports, changes, fired)}\n"
         f"{REQUIRES}\n"
         f"{how_to_read(True)}\n"
         "</main>\n"

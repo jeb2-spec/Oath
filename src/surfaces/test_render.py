@@ -2066,6 +2066,40 @@ def test_each_finding_draws_its_dates_from_its_own_rows_and_says_what_it_does_no
     assert verdict_words(figure) == []
 
 
+def test_a_long_report_folds_and_a_report_a_finding_rests_on_stays_open():
+    h = sworn(HOLDERS[0])
+    quiet_long = read_report(h["id"], "2025-03-20", 1)
+    fired_long = read_report(h["id"], "2025-04-20", 2)
+    short = read_report(h["id"], "2025-05-20", 3)
+
+    def rows_on(report: dict, n: int, traded: str, notified: str) -> list[dict]:
+        return [
+            dict(
+                transaction(report["id"], i, transaction_date=traded, notified_date=notified),
+                filing_status="New",
+            )
+            for i in range(1, n + 1)
+        ]
+
+    rows = (
+        rows_on(quiet_long, 30, "2025-03-01", "2025-03-02")
+        + rows_on(fired_long, 30, "2025-02-01", "2025-02-02")
+        + rows_on(short, 3, "2025-05-01", "2025-05-02")
+    )
+    found, page = signal_page(h, [quiet_long, fired_long, short], rows)
+    assert [f["producing_filings"][0] for f in found] == [fired_long["id"]]
+    section = between(page, '<section id="transactions">', '<section id="requires"')
+    assert section.count("<details>") == 1 and section.count("<details open>") == 1
+    assert "<summary>The 30 rows of this report, as filed</summary>" in section
+    assert (
+        "<summary>The 30 rows of this report, as filed; a Finding rests on this report</summary>"
+    ) in section
+    folded = between(section, 'id="report-1"', 'id="report-2"')
+    assert "<details>" in folded, "the report no Finding rests on is the folded one"
+    assert section.count('<td class="idx">2025-05-01</td>') == 3, "a short report stays open"
+    assert section.count('<td class="amt">') == 63, "every row is still in the page"
+
+
 def test_the_practical_thing_is_where_a_reader_reaches_it():
     h = sworn(HOLDERS[0])
     _, page = signal_page(h, [read_report(h["id"], "2025-03-20", 1)], LATE)
