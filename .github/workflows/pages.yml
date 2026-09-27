@@ -10,7 +10,7 @@
 # rewritten or dropped (the Findings and the Signal versions, against main as it stood
 # before this push). Every page published here is one self-contained file rendered from
 # the sealed rows by src/surfaces/render.py, gated by lint-frame-presence, lint-no-ranking,
-# check-mark and lint-verdict-language before it is uploaded. Since the first
+# lint-no-names, check-mark and lint-verdict-language before it is uploaded. Since the first
 # Signal the site carries Findings, so the verdict lint reads the rendered pages
 # themselves here too, not only the sources they are made from.
 
@@ -81,6 +81,7 @@ jobs:
         run: |
           python tools/lint-frame-presence.py
           python tools/lint-no-ranking.py
+          python tools/lint-no-names.py
           python tools/check-mark.py
           python tools/lint-verdict-language.py
 

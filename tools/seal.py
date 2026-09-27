@@ -64,9 +64,19 @@ def run_figures(run: dict) -> list[tuple[int, str]]:
         (counts.get("rejected"), "rows not attributed"),
         (counts.get("attributed_by_document"), "rows attributed by the document"),
         (documents.get("read"), "documents read"),
-        (run.get("rejected_by_reason", {}).get("surname matches a sitting member"), "rows held"),
+        (held_rows(run), "rows held"),
     ]
     return [(int(n), label) for n, label in figures if n]
+
+
+def held_rows(run: dict) -> int:
+    """The rows set aside because a row's surname matches a sitting member, whatever clause the
+    group carries after that. Looked up by an exact key, the figure went silent the moment the
+    adapter grouped those reasons by their words, and the guard that would have caught it is the
+    one it switched off (the Council's fifth reading of S.1b, Seat E)."""
+    return sum(
+        n for key, n in run.get("rejected_by_reason", {}).items() if key.startswith(HELD_REASON)
+    )
 
 
 def change_figures(changes: list[dict]) -> list[tuple[int, str]]:
@@ -217,7 +227,7 @@ def derive_state(root: Path, meta: dict) -> str:
     for run in runs:
         counts, documents = run.get("counts", {}), run.get("documents", {})
         reasons = dict(run.get("rejected_by_reason", {}))
-        held = reasons.pop(HELD_REASON, 0)
+        held = sum(reasons.pop(k) for k in list(reasons) if k.startswith(HELD_REASON))
         index = next((s for s in run.get("sources", []) if s["name"].endswith("FD.zip")), {})
         roster = next((s for s in run.get("sources", []) if s["name"] == "MemberData.xml"), {})
         starts = sorted({o["term_start"] for h in holders for o in h.get("offices", [])[:1]})
@@ -453,10 +463,13 @@ def changes_sentence(changes: list[dict]) -> str:
         # With one kind the total is the count by kind, and when small that is a count about one
         # person, which this sentence rules out: give the kind and no number (Seat F, N29).
         if len(kinds) == 1:
-            shown = plural(
-                len(reads), "A change a later read showed is", "Changes later reads showed are"
+            # With one kind the total is the count by kind, and when small that is a count about
+            # one person, which this sentence rules out: give the kind and no number (Seat F, N29).
+            shown = (
+                "A change a later read showed is"
+                if len(reads) == 1
+                else ("Changes later reads showed are")
             )
-            shown = shown.split(" ", 1)[1] if len(reads) == 1 else shown
             parts.append(
                 f"{shown} recorded, each a row of its own citing the read, of this kind: {listed}"
             )

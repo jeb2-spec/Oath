@@ -240,19 +240,27 @@ def appended(tree: str, published: str) -> list[str]:
     ]
 
 
-# The two captures the register keeps: the Clerk's roster, and a filing year's index. They are
-# named by the adapter, so the rule is what the URL is, not what a file is called: a filed
-# document served from a URL that does not end .pdf was kept whole by the suffix rule (the
-# Council's fourth reading of S.1b, Seat B).
-KEEPS = ("clerk.house.gov/xml/lists/", "/public_disc/financial-pdfs/")
+# The two captures the register keeps, by the URLs the adapter fetches them from
+# (src/adapters/house-fd/fetch.py): the Clerk's roster, and a filing year's index.
+#
+# A prefix on the index's folder cannot tell it from what else that folder holds. The Clerk
+# serves a year's index at /public_disc/financial-pdfs/<year>FD.zip and every filing not coded P
+# at /public_disc/financial-pdfs/<year>/<DocID>.pdf, so a folder prefix called 734 of the
+# register's own 1,197 filed documents captures it keeps: the gate then demanded bytes the build
+# never keeps, and failed them when kept, leaving no state in which the register could record
+# that the Clerk had served one of those reports otherwise (the Council's fifth reading of S.1b,
+# Seats B, E and G). Matched whole, against the two URLs and nothing else.
+KEPT_URLS = (
+    re.compile(r"^https://clerk\.house\.gov/xml/lists/MemberData\.xml$"),
+    re.compile(r"^https://disclosures-clerk\.house\.gov/public_disc/financial-pdfs/\d{4}FD\.zip$"),
+)
 PDF_BYTES = b"%PDF-"
 
 
 def document(url: str) -> bool:
-    """Whether a capture is a filed document, cited by its fingerprint and never kept: anything
-    but the roster and a year's index, which the adapter fetches and the register keeps."""
-    where = urlsplit(url)
-    return not any(part in f"{where.netloc}{where.path}" for part in KEEPS)
+    """Whether a capture is cited by its fingerprint and never kept: everything but the Clerk's
+    roster and a filing year's index, which the adapter fetches and the register keeps."""
+    return not any(kept.match(url) for kept in KEPT_URLS)
 
 
 def capture_problems(root: Path, ref: str, changes: list[dict]) -> list[str]:

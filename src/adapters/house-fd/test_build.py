@@ -1087,6 +1087,46 @@ def test_a_value_that_stands_answers_a_reading_of_the_very_bytes_it_was_decided_
     monkeypatch.setattr(StubReader, "rows", real_rows)
 
 
+def test_a_decision_about_a_reports_own_fact_answers_those_bytes_and_no_others(reports):
+    """The Council's fifth reading of S.1b (Seat G, R5-2): a correction of a fact a report's own
+    bytes state was made against a reading of those bytes. The Clerk then serves a different
+    file, which states that fact otherwise. The difference is the register's to record: a
+    decision made against other bytes does not answer for this file, and what it says would
+    otherwise be lost for good, because neither file is kept."""
+    tx = "tx:house-clerk:20000001:001"
+    assert correct_row(reports, tx, "asset", "--now", "As corrected", "--kind", "register") == 0
+    assert build.build(2025) == 0, "the same bytes: the correction answers the reading"
+    assert [c["change"] for c in changes_of(reports)] == ["corrected"], (
+        "the correction is the only change row: the reading is answered, so nothing differs"
+    )
+    document(  # a different file, whose first row states the asset as the correction moved it from
+        reports,
+        "20000001",
+        ADA,
+        [TX, dict(TX, asset="Other Holdings")],
+        "2026-01-12T00:00:02Z",
+        pad="a second file the Clerk served",
+    )
+    assert build.build(2025) == 0
+    replaced = [c for c in changes_of(reports) if c["change"] == "replaced"]
+    assert len(replaced) == 1, "the Clerk served a different file"
+    assert replaced[0]["differs"] == [{"row": tx, "fields": ["asset"]}], (
+        "what the other file states otherwise, by row and field name"
+    )
+    assert json.loads(rows_of(reports, "transactions")[tx])["asset"] == "As corrected", (
+        "and the published row still stands as the correction left it"
+    )
+
+
+def test_every_fact_a_reading_gives_is_the_documents_own_or_the_registers(reports):
+    """The split as_corrected turns on. A fact added to the reading belongs to the report's own
+    bytes or to the register's join, and until it is placed in one a correction of it would
+    reach either too far (answering bytes it was never made against) or not far enough
+    (refusing the refresh every week). Measured on a row the reading itself produced."""
+    row = json.loads(rows_of(reports, "transactions")["tx:house-clerk:20000001:001"])
+    assert set(row) == build.FROM_THE_DOCUMENT | {"id", "filing_id", "officeholder_id"}
+
+
 def test_a_name_the_roster_restates_does_not_refuse_a_report_it_confirmed(tmp_path, monkeypatch):
     """Seat C, C4-1 (iii): a report whose document printed another seat was published because
     the printed name confirmed the officeholder. The roster later gives the name otherwise, a
@@ -1629,38 +1669,56 @@ def test_a_confirmed_mass_not_listing_and_each_documents_read_are_recorded(regis
     assert record["documents"]["read_at"] == {}, "no document was read in this build"
 
 
+def published_reasons() -> list[str]:
+    """Every reason the register's own set-aside file gives, as the build wrote them. A fixture
+    shaped by hand hid this behaviour for a whole pass: the one the fourth reading's test carried
+    ended in a parenthesis, which no reason the adapter writes does, so the rule it measured was
+    not the rule that ran (the Council's fifth reading of S.1b, Seats C, D and E)."""
+    files = sorted((ROOT / "data" / "rejected" / "house-fd").glob("*.ndjson"))
+    return [
+        json.loads(line)["reason"]
+        for path in files
+        for line in path.read_text("utf-8").splitlines()
+        if line.strip()
+    ]
+
+
 def test_the_reasons_the_seal_quotes_keep_their_clause_and_isolate_no_one():
     """The Council's fourth reading of S.1b (Seats A, B and F): the run record grouped reasons by
     cutting at the first parenthesis, so a row kept from a departed member's seat lost the clause
     that explains it and the sealed sentence gave half a reason; and one member's rows filled
-    three groups, each small enough to be a count about that person."""
+    three groups, each small enough to be a count about that person. The fifth reading (Seats C,
+    D and E) found the repair leaving the name and seat of a sitting member inside the group, so
+    the run record and the sealed sentence carried a group per member, a third of them a count of
+    one row: the count that was a person, at scale, on a sealed surface.
+
+    Measured over every reason the register has actually set a row aside for."""
+    reasons = published_reasons()
+    assert len(reasons) > 1000, "the register's own set-aside rows, not a fixture"
+    groups = {build.reason_group(r) for r in reasons}
+    named = sorted(g for g in groups if build.A_SPECIFIC.search(g))
+    assert not named, f"a group names a person or places them: {named}"
+    assert len(groups) < 10, f"a group is a condition, not a person: {len(groups)} of them"
+    for group in groups:
+        assert ";" in group or group.startswith(build.DEPARTED), (
+            f"the clause that explains the row is gone: {group!r}"
+        )
+    # And the shapes no published row has taken yet, built from the adapter's own words.
     specifics = " (Placeholder, Bea, XX02; last listed 2026-01-05)"
-    kept = (
-        build.DEPARTED_KEPT
-        + "surname matches a sitting member (Placeholder, Bea, XX02) but the given names differ; "
-        + "the document carries no Filing ID line"
-        + specifics
-    )
-    groups = {
+    unseen = {
         build.reason_group(r)
         for r in (
-            kept,
+            build.DEPARTED_KEPT
+            + "surname matches a sitting member (Placeholder, Bea, XX02) but the given names "
+            + "differ; the document carries no Filing ID line"
+            + build.HELD_SUFFIX
+            + specifics,
             build.DEPARTED_OPEN + specifics,
             build.DEPARTED_SHUT + specifics,
             build.DEPARTED_OTHER_NAME + specifics,
         )
     }
-    assert groups == {build.DEPARTED + ", each with the reason the register gave the row"}, groups
-    assert build.reason_group("no sitting member has this name; the row is a candidate") == (
-        "no sitting member has this name; the row is a candidate"
-    ), "a reason with no specifics is quoted whole"
-    assert build.reason_group(
-        "surname matches a sitting member (Placeholder, Bea, XX02) but the given names differ; "
-        "the document carries no Filing ID line (XX02)"
-    ) == (
-        "surname matches a sitting member (Placeholder, Bea, XX02) but the given names differ; "
-        "the document carries no Filing ID line"
-    ), "only the trailing specifics are cut, so the clause that explains the row survives"
+    assert unseen == {build.DEPARTED + ", each with the reason the register gave the row"}, unseen
 
 
 def test_an_entry_is_weighed_against_the_one_the_register_last_read(register, monkeypatch):

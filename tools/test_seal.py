@@ -23,10 +23,28 @@ META = {
         "data/transactions.ndjson": 7346,
     }
 }
+# The groups as the adapter writes them, from the register's own set-aside rows: the held ones are
+# one condition each, and none is the bare "surname matches a sitting member" that this fixture
+# carried for two passes. An exact-key lookup against that shorter key silently returned nothing,
+# so the held figure left the sealed sentence and the guard that required it went quiet with it: a
+# fixture one shape behind the code hid both (the Council's fifth reading of S.1b, Seats A, C, D).
+HELD = "surname matches a sitting member but the given names differ; "
+DECIDES = "a human decides this one"
 RUN = {
     "counts": {"quiet": 11, "rejected": 1737, "attributed_by_document": 101},
     "documents": {"read": 409},
-    "rejected_by_reason": {"surname matches a sitting member": 162},
+    "rejected_by_reason": {
+        "no sitting member has this name; the row is a candidate or a former member": 1575,
+        HELD + DECIDES: 127,
+        HELD + "the document carries no Filing ID line (scanned paper, or a form that prints "
+        f"none) and cannot confirm the filer; {DECIDES}": 28,
+        HELD + "the document prints a Status other than Member for the filer the document names, "
+        f"at the seat it prints; the header does not attribute the row to the seat's member; "
+        f"{DECIDES}": 6,
+        HELD + "the index dates the filing before the swearing-in for this Congress that the "
+        f"roster records; the roster does not say who held the seat before that date, so the "
+        f"register does not; {DECIDES}": 1,
+    },
 }
 GOOD = (
     "439 filled; 1,197 filings, 101 of them by the document; 1,737 rows not attributed, 162 held; "
