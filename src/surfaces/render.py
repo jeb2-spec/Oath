@@ -5852,8 +5852,17 @@ def render_index(
     # filed against it, then the one date the filer writes, then what the register could not
     # reach, then where the record ends, then the oath the whole page is set beside. The doors out
     # are last.
+    # The halftone every drawing here fills from is defined once for the page, not inside one of
+    # its figures. It used to live in the glance's squares, and when the glance moved to the record
+    # page the notice clock's reassuring band and the strip's screens drew empty, so the figure's
+    # weight ran one way with nobody having chosen it. A zero-size drawing, not display:none, which
+    # some browsers decline to paint patterns from.
+    screens = (
+        '<svg width="0" height="0" style="position:absolute" aria-hidden="true" '
+        f'focusable="false">{BENDAY}</svg>'
+    )
     body = (
-        f'{head}\n<main id="main">\n{tile_map(offices)}\n{how}\n{deadline}\n'
+        f'{head}\n<main id="main">\n{screens}\n{tile_map(offices)}\n{how}\n{deadline}\n'
         f"{notice}\n{narrows}\n{ends}\n{oath}\n"
         f"{disputes_section(False, brief=True)}\n{door}\n"
         f"</main>\n{footer(meta, home=True)}"
