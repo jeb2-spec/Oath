@@ -3251,7 +3251,7 @@ def annual_outcome(filed: str, evaluated: int, reason: str | None, fid: str = "2
         "after": 0,
         "not_evaluated": {reason: 1} if reason else {},
         "finding_id": None,
-        "due": "2026-05-15",
+        "original_due": "2026-05-15",
         "latest": "2026-08-13",
     }
 
@@ -3309,7 +3309,85 @@ def test_a_header_only_signal_is_not_held_to_transaction_rows():
     row to disagree with; the rows check stays whole for a Signal that reads transactions."""
     outcome = annual_outcome("2026-05-01", 1, None)
     by = {ANNUAL["id"]: {"oh:us:house:a000001": [outcome]}}
-    filing = {"id": outcome["filing_id"], "officeholder_id": "oh:us:house:a000001"}
+    filing = {
+        "id": outcome["filing_id"],
+        "officeholder_id": "oh:us:house:a000001",
+        "filed_at": "2026-05-01",
+    }
     assert render.answer_rests_on_these_rows(by, [filing], [], set()) == []
     held = render.answer_rests_on_these_rows(by, [filing], [], {ANNUAL["id"]})
     assert held and "read 1 row" in held[0]
+
+
+def test_a_header_only_signals_one_row_is_held_to_the_register():
+    """A correction of a report's date moves the answer or stops the render: the page must not
+    say a Finding rests on a date the rows no longer give (the second reading, Seat C)."""
+    outcome = annual_outcome("2026-09-08", 1, None)
+    by = {ANNUAL["id"]: {"oh:us:house:a000001": [outcome]}}
+    moved = {
+        "id": outcome["filing_id"],
+        "officeholder_id": "oh:us:house:a000001",
+        "filed_at": "2026-05-01",
+    }
+    said = render.answer_rests_on_these_rows(by, [moved], [], set())
+    assert said and "dated 2026-09-08" in said[0] and "2026-05-01" in said[0]
+
+
+def test_a_member_sworn_in_with_sixty_days_or_fewer_left_is_told_which_quiet_it_is():
+    """The rule asks no annual report for a year of 60 days' service or fewer, so the page says
+    that, and not that the Signal cannot tell whether a report was filed (Seats A, B, D, E, F)."""
+    text = " ".join(render.annual_answer(ANNUAL, [], [], [], held_all=1, sworn="2026-01-06"))
+    assert "60 days or fewer of 2025" in text
+    assert "whether this officeholder filed" not in text and "filed one" not in text
+    full = " ".join(render.annual_answer(ANNUAL, [], [], [], held_all=1, sworn="2025-01-03"))
+    assert "60 days or fewer" not in full
+
+
+def test_dates_that_disagree_are_all_given_and_none_is_drawn_as_the_reports():
+    """Where the index date and the dates the report prints disagree, the page gives all three
+    and draws no dot: a figure that drew one gave the report a date it does not print."""
+    o = annual_outcome("2026-08-13", 0, render.ANNUAL_DATES_DISAGREE)
+    filing = {
+        "id": o["filing_id"],
+        "officeholder_id": "oh:us:house:a000001",
+        "filed_at": "2026-08-13",
+        "printed": {"filing_date": "2026-08-14", "signed_on": "2026-08-14"},
+        "source": {"url": "https://example.test/o.pdf"},
+    }
+    parts = render.annual_answer(ANNUAL, [o], [], [filing])
+    text = " ".join(parts)
+    assert "2026-08-13" in text and text.count("2026-08-14") >= 2
+    assert not any('figure class="annual"' in p for p in parts)
+
+
+def test_every_extension_row_at_the_seat_is_listed_attributed_or_set_aside_read_or_not():
+    """What a page lists beside the report must not turn on how a name was spelled or whether a
+    form was on paper (the second reading, Seats A, B and D), so every row the index gives the
+    extension forms' code at the seat under the surname is listed, in the same words."""
+    read = {
+        "id": "fl:house-clerk:X:30000001",
+        "source_form_code": "X",
+        "filed_at": "2026-04-01",
+        "printed": {"extension_length_days": 90, "new_due_date": "2026-08-13"},
+        "source": {"url": "https://example.test/x1.pdf"},
+    }
+    paper = {
+        "id": "fl:house-clerk:X:9100001",
+        "source_form_code": "X",
+        "filed_at": "2026-04-02",
+        "source": {"url": "https://example.test/x2.pdf"},
+    }
+    aside = {
+        "source_row": {
+            "doc_id": "30000003",
+            "filing_type": "X",
+            "filing_date": "4/3/2026",
+            "year": "2025",
+        }
+    }
+    html_ = render.annual_notices([read, paper], [aside])
+    assert html_.count("<li>") == 3
+    assert "2 attributed to this officeholder and 1 set aside" in html_
+    assert "could not be read" in html_ and "does not say whose it is" in html_
+    empty = render.annual_notices([], [])
+    assert "0 attributed to this officeholder and 0 set aside" in empty
