@@ -261,3 +261,83 @@ carries the amendment. Its text: the diagram and paragraph in PR #42's commit `0
 there, kept in the history for this purpose), with the answer's sentence shapes quoted so a change
 to the wording moves the digest (Seat G), and §1.4 gaining *The House at a glance*. INVARIANTS §13's
 gate line should say the gate reads every officeholder's page (Seat C); that is §17's to approve.
+
+## 8. The second reading, of the pages as published
+
+*2026-09-27, all seven seats, on `adc06f5` and the 439 pages it renders. The first reading read the
+pages as they were built; this one read them as a stranger meets them. Every finding below was
+reachable on a published page, and each seat verified its own numbers against the sealed rows. The
+reports are in the session record.*
+
+**What made the answer a claim it could not stand behind, and is fixed:**
+
+- **Two integers side by side are a rate, and the reader divides them** (Seat A, blocking). The
+  denominator was the reports the register *could compare*, which shrinks for reasons that are not
+  about timeliness at all. So the officeholder whose whole condition was two trades one day past a
+  deadline that fell on a weekend showed **1 of 1** — the largest figure on the site — while the one
+  with 463 trades up to 165 days past showed **1 of 4**. The landing publishes the chamber's own
+  rate of 9%, so the comparator was already in the reader's hand. The numerator now carries the size
+  the record holds, the trades, and no two counts sit adjacent.
+- **"No trade the rule reaches" asserted the statute's reach** (Seat B, blocking). On 17 pages not
+  one skipped row was skipped on a ground about the rule: they were dated before the swearing-in the
+  roster records, or the report marks them amended, or the transaction is dated after the report.
+  The Signal's own criteria say a returning Member's earlier trades "were under the same rule". A
+  sentence that flatters a person falsely is the same defect as one that condemns them falsely, and
+  it was never the register's to say. It names its own reasons now.
+- **The Clerk's name stood behind the register's own undecided matching** (Seat B, blocking). "No
+  report in the Clerk's index is attributed to this officeholder", on a page where the index lists
+  twelve reports at that seat under that surname which the register has simply not decided. The
+  register attributes; the index lists.
+- **"Checked" is not what the register did** (Seat F, blocking). In three of five languages its
+  fluent equivalent is *audited*, *investigated* or *inspected for compliance*, which makes a quiet
+  page a clearance and a fired page an adverse finding by an authority the register is not. The act
+  is a comparison of two printed dates against a span the statute defines, and the page says so.
+- **The answer's numbers could contradict each other** (Seat C, blocking). A `min()` clamped a
+  discrepancy where an assertion belongs: a Finding resting on a report this build's run record
+  marks unread made one paragraph assert that the register read none, compared one, found that one
+  after the deadline, and could not read it. It refuses now, naming the two routes that resolve it.
+- **A Signal's words did not move with its version** (Seats C and G, blocking). The table was keyed
+  by slug alone, so a v2 would publish v1's account of the rule: INVARIANTS §11's silent
+  redefinition, relocated into the sentence a reader actually meets. And a Signal with no words
+  printed a bare firing count with no coverage and no standard, in a shape that differed according
+  to whether it fired.
+- **The year came from a default argument** (Seat G, blocking). A build with no run record published
+  1,644 sentences about the Clerk's 2025 index with nothing behind them. The year is the answer's
+  only durable anchor; it fails closed.
+- **The paragraph fitted no phone** (Seat E, blocking). Eighty to a hundred and fifty words, of
+  which forty were a sentence the reader met at word four, and on no page of 439 did it fit a first
+  screen: a reader saw the coverage clause cut mid-sentence and nothing else. The result and its
+  framing are two paragraphs now, adjacent and inseparable.
+- Smaller, and each a sentence a person reads about themselves: the day span belongs to the trades,
+  each with its own deadline, not to a report that has one filing date; the tenure context prints
+  wherever it is true, not only where the page is quiet; the innocence clause says "made any trade
+  the rule requires reported", because "anything to report" renders in Arabic as "anything to be
+  reported on"; the framing sentence is in full ink rather than the page's fine print; the square
+  that carries the reassuring answer measured 1.76:1 against the paper while the adverse one sat at
+  15.69:1; and the strip of squares carries what it does not show, which every figure here must.
+
+**What the landing gained.** *Where the record narrows*: four bars from the Clerk's index to a
+signal firing, each with the number that survives and a plain sentence naming what did not. Every
+other surface says what the register found; this one says what it could reach, which is the harder
+half and the half nobody else publishes. And the state map moved above the glance, because a visitor
+who arrived for one person could not reach it until word 301.
+
+**What the reading found that is not fixed here**, each a design question rather than a wording one:
+
+- A recorded correction moves a report in the rows and the answer does not move with it, because
+  the counts come from the Signal's run record and nothing reconciles the two; a re-captured
+  document would inflate them (Seat G). The renderer already refuses a ledger naming an
+  officeholder with no page; this wants the same guard, one set comparison, and it is the next
+  pass's first item.
+- `producing_filings` has no `maxItems` and nine readers take `[0]` (Seat C).
+- There is no schema for the signal run record, and one of the answer's four numbers is
+  recoverable from nothing else (Seat G).
+- "Scanned paper" is a property no sealed row records (Seats C and G): the register should record
+  why a document was not read, on the row.
+- No surface tells a subject how to dispute a fact (Seat B). BYLAWS §6 promises the route and the
+  pages never name it.
+- The answer is still four numbers where this reader holds two, and "transaction report" has no
+  glossary entry (Seat E).
+- The committed Council prompt defines three seats; four of the seven that read this are defined
+  only in §5 above (Seats E and G). COUNCIL §8 makes the prompt's blob SHA the reproducibility
+  guarantee, and a later reader holding it cannot reproduce four of these readings.
