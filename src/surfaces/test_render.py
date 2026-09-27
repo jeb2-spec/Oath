@@ -2692,3 +2692,52 @@ def test_a_signal_version_with_no_words_of_its_own_refuses():
     assert "keyed by (slug, version)" in said and "INVARIANTS §11" in said
     # v1 renders, so the refusal is about the version and not about the Signal.
     assert "answer" in render.answer_section([SIGNAL], [], {SIGNAL["id"]: []}, META)
+
+
+def test_a_correction_never_leaves_an_adverse_sentence_on_the_wrong_persons_page():
+    """A Signal's run record keys its outcomes by the officeholder it read, and a page's rows come
+    from the register. The maintainer's correction of an attribution moves the row and not the
+    record, because the Signal has not been re-run, and the two pages then say opposite things.
+
+    Shown against this renderer before the guard existed: the page the report moved AWAY from read
+    "The register read 1 of 1 transaction report it attributes to this officeholder ... The Clerk's
+    index dates 1 report it compared after the deadline: 1 trade on it, 37 days past its own
+    deadline", with no such report among its rows, while the page the rows now attribute it to read
+    "The register found nothing to compare here". An adverse sentence about a named person, resting
+    on a report the register's own rows give to somebody else, is the worst defect this project has
+    (the Council's second reading of the built answer, Seat G).
+    """
+    holder_, moved_to = sworn(HOLDERS[0]), sworn(HOLDERS[1])
+    report = read_report(holder_["id"], "2025-03-20", 1)
+    found, outcomes, by_holder = evaluated([holder_], [report], LATE)
+    assert found and found[0]["officeholder_id"] == holder_["id"], "a Finding to move"
+    rows = [t for t in LATE if t["filing_id"] == report["id"]]
+
+    # Before the correction the record and the rows agree, and nothing is refused.
+    assert render.answer_rests_on_these_rows({SIGNAL["id"]: by_holder}, [report], rows) == []
+
+    # The correction moves the row. The run record still names the officeholder it read.
+    corrected_row = dict(report, officeholder_id=moved_to["id"])
+    adrift = render.answer_rests_on_these_rows({SIGNAL["id"]: by_holder}, [corrected_row], rows)
+    assert len(adrift) == 1, adrift
+    assert report["id"] in adrift[0]
+    assert holder_["id"] in adrift[0] and moved_to["id"] in adrift[0], (
+        "the refusal names both officeholders, because a reader needs to know which page was wrong"
+    )
+
+    # A report the record read and the rows no longer hold at all.
+    gone = render.answer_rests_on_these_rows({SIGNAL["id"]: by_holder}, [], rows)
+    assert len(gone) == 1 and "no row of data/filings.ndjson holds" in gone[0]
+
+    # And the other half of the same finding: a correction recording that a report lists more rows
+    # than the Signal read leaves the answer's trade counts, and the landing's narrowing figure, the
+    # counts the Signal saw. The register asserts rather than publishes the older number.
+    more = rows + [
+        dict(
+            transaction(report["id"], 99, transaction_date="2025-04-01"),
+            filing_status="New",
+        )
+    ]
+    counted = render.answer_rests_on_these_rows({SIGNAL["id"]: by_holder}, [report], more)
+    assert len(counted) == 1 and "data/transactions.ndjson holds" in counted[0]
+    assert str(len(rows)) in counted[0] and str(len(more)) in counted[0]
