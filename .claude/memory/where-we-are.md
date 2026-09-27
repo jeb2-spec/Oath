@@ -8,7 +8,21 @@ metadata:
 
 # Where we are
 
-*Last updated: 2026-09-27, small hours, same cloud session. The register is build `0005-house-2025`, published on main with the first Signal's 27 Findings; its OpenTimestamps proof is pending in the calendars (PR #39, merged). PR #40 (S.1b) is on its fifth pass, after the seven-seat Council's fourth reading: every blocking finding of that reading is fixed and pushed, the advisories with them, and 354 tests pass.*
+*Last updated: 2026-09-27, Opus 5.5 in a cloud session. The register is still build `0005-house-2025` (27 Findings, proof pending). PR #40 (S.1b) and #41 (P.1's design) are merged. PR #42 built P.1: the pages a reader can use, and the House at a glance on the landing, read by all seven seats. Another session is populating the record in parallel.*
+
+**P.1 built, 2026-09-27, PR #42: the pages a reader can use.** Jared asked for storytelling in the pages commensurate with the work, then, mid-build, for more: pages are the canvas and the front door; the record gives them their credibility; dead simple at a glance; do not be a legalist and do not trip over the process; build, merge, show it in production. What shipped:
+
+- Every officeholder page opens with the answer: reports read and checked, what the Clerk's index shows and by how many days, and, from the Findings' own rows, what decides them (a weekend deadline met the next business day; a notice printed after the 45-day limit). One square per report beneath it, the rule in one line, then the signal with each Finding's dates drawn on a line, the record (long reports folded), and the oath and standards, whole.
+- The landing leads with *the House at a glance*: 463 squares, one per transaction report, 27 dark. No square names anyone. The full count is one tap in.
+- The no-ranking gate reads all 439 person pages.
+
+Measured: words before what the signal found fell from a median of 912 (max 33,443) to about 85; on a phone the longest page's first Finding went from 185 screens down to under 4.
+
+Three lessons worth keeping:
+
+1. **A true count can rank records backwards.** The first answer counted reports: a page with three one-day Findings, two on weekend deadlines met the next business day, read "3"; a page with one Finding of 197 days read "1". Seats A and B found it independently. Every number was true and the picture was false; the fix was to show the magnitude and the deciding context, which is just showing the record. When a summary counts, ask what it ranks.
+2. **Pages are not sealed builds.** ECOSYSTEM §1.3 draws the page and is sealed, so the first pass cut build 0006 for a layout. Jared's word made plain that it was tripping over ourselves, with another session about to cut builds from new rows. Reverted; the anatomy amendment rides the record's next build (the design note's last section holds the text). Build 0006 is therefore still the one planned for the Council amendment and D.4.
+3. **A council's findings converge when the defect is real.** The missing noun ("dates 3 after the deadline") was found by five seats of seven; the backwards ranking by two; the cropped frame by one. Weight convergence, but a single seat's blocking finding (Seat D's crop) can be the most important.
 
 **S.1b, the fourth reading, into the small hours of 2026-09-27.** All seven seats read the fourth pass (8edd423). Every blocking finding of the third reading closed, each by the seat that wrote it. The fourth reading made three new blocking findings and about forty advisories, and all of them are answered in the fifth pass.
 
