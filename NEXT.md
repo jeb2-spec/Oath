@@ -114,6 +114,40 @@ Ship this phase as: a green CI badge on the working branch, and a sealed empty b
 
 Ship gate for the phase: `oath-doctor` prints all-green on a clean clone, and CI is green on the branch.
 
+### S.2 The next signal, and the one thing it waits on
+
+*Added 2026-09-27.* The maintainer's recorded direction after P.1: pages as a large, well-sourced
+anomaly detector for a citizen who needs help seeing the record, and the recommended next row is the
+annual disclosure against its deadline (5 U.S.C. § 13103), which reaches every member and not only
+those who trade. That direction is right and the register is closer to it than it looks, but it is
+blocked on one specific, obtainable thing, and the block is worth writing down so the next session
+does not build on an inference.
+
+**What the register already holds.** 1,197 filing rows, every one with the date the Clerk's index
+gives it. A deadline signal over an annual disclosure needs the filing date and the deadline, and not
+the document's schedules, so the sealed rows would be enough.
+
+**What it does not hold.** Which of those rows *are* annual disclosures. The index gives a one-letter
+form code, and the register does not interpret it: `data/README.md` and the adapter's own README say
+so, because the Clerk publishes the codes on the filing pages and not as a definition a reader can
+cite. On the 2025 rows the codes come to 463 `P`, 422 `O`, 276 `X`, 24 `A`, 6 `C`, 3 `G` and 3 `H`,
+and every non-`P` row is written `form_type: other`. Reading `A` as *annual report* is a plausible
+inference and it is not in the primary record, so a signal resting on it would rest on a guess about
+a form, published against named people. Twenty-four rows would also not be *every member*, which is
+the whole reason the direction names this signal.
+
+**The one thing it waits on:** the Clerk's own definition of the form codes, read at its source and
+entered in [SOURCES.md](SOURCES.md) with a row per code. Until then, a form-code signal is not
+definable under Vow IV, and saying so is cheaper than discovering it after the Council reads it.
+
+**What can be done before that, and needs no network:** the signal's definition document and its
+known-answer cases against the statute, if 5 U.S.C. § 13103 can be read at its source; the register's
+own annual-report *header* read (24 rows carry `A` and their headers are captured), which would say
+what the form itself calls itself and might settle the codes from the documents rather than from a
+legend; and a decision about whether a signal that reaches 24 of 441 members should ship at all, since
+a page that fires on a fifth of a chamber and is silent on the rest invites the reader to read the
+silence as clearance, which is COUNCIL §5 mode 6 in a new shape.
+
 ## Phase 2. The decisions the adapter needs (goal: schema settled, identifier settled, empty register anchored)
 
 Ship this phase as: schemas a stranger can read, an identifier convention that will survive contact with real data, and an anchored seal over a register that still holds nothing.

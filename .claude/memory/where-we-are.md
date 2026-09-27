@@ -10,6 +10,26 @@ metadata:
 
 *Last updated: 2026-09-27, Opus 5.5 in a cloud session. The register is still build `0005-house-2025` (27 Findings, proof pending). PR #40 (S.1b) and #41 (P.1's design) are merged. PR #42 built P.1: the pages a reader can use, and the House at a glance on the landing, read by all seven seats. Another session is populating the record in parallel.*
 
+**The whole second reading, closed out, 2026-09-27, PRs #43 and #48 to #52.** Every finding the second seven-seat reading of the built answer left open is now fixed, blocked on something nameable, or waiting on the maintainer. What the six passes came to, and the one pattern underneath them:
+
+| PR | The claim it had | What was true |
+| --- | --- | --- |
+| #43 | no unsourced fact about a person | nine surfaces said 54 documents were *scanned paper*, which no row records |
+| #43 | 31 guards, each with a failing test | eight were not measurements: pytest exits non-zero when it collects *no test* |
+| #48 | §17 protects the other sixteen rules | §17 had no gate, and that absence is self-concealing |
+| #49 | a correction moves the answer with it | it left the **adverse** sentence on the page the report moved *away* from |
+| #50 | BYLAWS §6 gives a subject a route | no page named it, and the correction form had existed since the founding |
+| #51 | every canonical row validates | the run record every answer is counted from lived one directory below the glob |
+| #52 | the answer is four numbers | 326 of 439 pages carry no count at all; the defect was one restated number on the other 113 |
+
+**55 guards, every one measured. 437 tests.** And three things worth keeping beyond the list:
+
+1. **A rule you are applying elsewhere is not a rule you are applying.** Two findings this session existed to fix were reproduced *inside the figure written to answer them*: Seat B's about the rule's scope, and Seat G's about scanned paper, which I published more prominently than it had ever been.
+2. **Where two seats pull against each other and both are right, look for the narrowest thing that satisfies both.** Seat D wanted the frame inside the result's paragraph so no crop carries a verdict without it; Seat E wanted that paragraph to fit a phone. The answer was not to pick: *the sentence that must never travel alone is the shortest one*. The nine-word frame stays; the thirty words about who decides move. Where no such thing exists (Seat A's "no two integers form a rate" against Seat E's "fewer numbers"), state the tension and leave it for Jared rather than settling it on taste.
+3. **The measurer caught its author twice.** Once when six guards named tests a merge had dropped, and again in #52 when a guard of mine named a test that does not exist. A gate that has never caught the person who wrote it is a gate nobody has tested.
+
+**What is not mine, and why I did not do it anyway.** The Council's seats amendment needs Jared's approval, its own Council reading, and a re-seal. `approved_by` must never say *the maintainer* before the maintainer has said it: a row asserting a decision nobody made is the exact defect this register exists to prevent, and being the one who would benefit from writing it is not a reason to write it. `docs/design/the-councils-seven-seats.md` holds the whole amendment so that saying yes is one pass and not a session.
+
 **Never say what the record does not hold, 2026-09-27, PR #43's second half.** Jared asked twice for storytelling in pages commensurate with the work, then said: *critically challenge your assumptions here.* Four findings came out of that, three of them against my own new work, and they are the most useful thing in this session.
 
 1. **Main had moved eight commits ahead while I was building.** PRs #44 to #47 landed the comic layer, the notice clock and the impossible-dates rows. I had written "check `origin/main` before building" into the record one commit earlier and then built a landing figure without doing it. The merge took their `render.py` and `test_render.py` whole and re-applied my fixes on top, one at a time, against their newer wording.
