@@ -3897,13 +3897,15 @@ def year_figure(
         # What the register did not read of the transaction reports: everything after the last day
         # the one index it reads lists a report, outlined across the lane and said.
         if index_end < end:
+            # A band along the top of the lane, not a box its full height: it says what was not
+            # read without becoming the largest shape on a page whose record is the point.
             left = x(index_end + timedelta(days=1))
-            parts.append(outline(left, x(end), top, height))
+            parts.append(outline(left, x(end), top, 26))
             parts += words_at(
                 left,
                 x(end),
                 top,
-                height,
+                26,
                 [f"the Clerk's {ERA['year'] + 1} index:", "not read in this build"],
             )
         if not reports:
@@ -3912,8 +3914,8 @@ def year_figure(
             left = x(began) if began and start < began < index_end else x(start)
             right = x(index_end)
             if right - left > 12:
-                parts.append(outline(left, right, top + 6, 16))
-            parts += words_at(left, right, top + 6, 16, ["no transaction report attributed here"])
+                parts.append(outline(left, right, top, 26))
+            parts += words_at(left, right, top, 26, ["no transaction report attributed here"])
             said.append("no transaction report attributed here")
     for report in reports:
         doc = report["id"].rsplit(":", 1)[1]
