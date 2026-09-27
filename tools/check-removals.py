@@ -70,6 +70,9 @@ FILES = (
     "data/holdings.ndjson",
     "data/transactions.ndjson",
     "data/changes.ndjson",
+    # A recorded amendment to the antidrift core never leaves the record: it is the only place a
+    # later reader can read why a rule that holds every other rule was changed (INVARIANTS §17).
+    "data/doctrine-amendments.ndjson",
 )
 APPENDED = "data/changes.ndjson"
 CAPTURES = "data/captures/sha256"

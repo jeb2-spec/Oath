@@ -60,6 +60,7 @@ KEYWORDS = {
     "format",
     "items",
     "minItems",
+    "minLength",
     "minimum",
     "default",
     "examples",
@@ -67,7 +68,10 @@ KEYWORDS = {
 TYPES = {"string", "integer", "number", "boolean", "null", "array", "object"}
 FORMATS = {"date", "date-time", "uri"}
 DRAFT = "https://json-schema.org/draft/2020-12/schema"
-ID_RULE = re.compile(r"^https://oath\.jeb2-spec\.dev/schemas/([a-z]+)/v(\d+)\.json$")
+# A schema's name is lower case words joined by hyphens: single words until a row needed two
+# (doctrine-amendment), and "amendments" alone would have read as a filer amending a report,
+# which `amends` on a filing already means.
+ID_RULE = re.compile(r"^https://oath\.jeb2-spec\.dev/schemas/([a-z][a-z-]*)/v(\d+)\.json$")
 CANONICAL = {
     "officeholders": "officeholder",
     "offices": "office",
@@ -77,6 +81,9 @@ CANONICAL = {
     "findings": "finding",
     "signals": "signal",
     "changes": "change",
+    # An amendment to the antidrift core is a row of the register like any other: schema'd,
+    # sealed, and never edited once published (INVARIANTS §17; tools/highlight-charter-change.py).
+    "doctrine-amendments": "doctrine-amendment",
 }
 
 
@@ -155,6 +162,14 @@ def validate(
             errors.append(f"{path}: {value!r} does not match pattern {schema['pattern']}")
         if "format" in schema and not format_ok(value, schema["format"]):
             errors.append(f"{path}: {value!r} is not a valid {schema['format']}")
+        # A field a gate refuses as empty, or as a label where a reason belongs, is a field the
+        # schema should refuse too: two rules that disagree about the same row are one rule a
+        # reader cannot rely on (INVARIANTS §2, §17).
+        if "minLength" in schema and len(value) < schema["minLength"]:
+            errors.append(
+                f"{path}: {len(value)} characters, and this field needs at least "
+                f"{schema['minLength']}"
+            )
     is_number = isinstance(value, (int, float)) and not isinstance(value, bool)
     if is_number and "minimum" in schema and value < schema["minimum"]:
         errors.append(f"{path}: {value} is below the minimum {schema['minimum']}")

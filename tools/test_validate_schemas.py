@@ -11,6 +11,7 @@ from __future__ import annotations
 import copy
 import importlib.util
 import json
+import re
 import shutil
 from pathlib import Path
 
@@ -206,7 +207,12 @@ def test_main_on_the_repository_is_green(capsys):
     """Green on the real register. It stopped being empty when the House index landed."""
     assert vs.main([str(ROOT)]) == 0
     out = capsys.readouterr().out
-    assert "OK    8 schemas valid" in out
+    # The count is the tool's, not this line's: read it from the message rather than pin a
+    # number that a new schema silently makes false.
+    said = re.search(r"OK    (\d+) schemas valid; ([\d,]+) rows across (\d+) NDJSON", out)
+    assert said, out
+    assert int(said.group(1)) == len(SCHEMAS) >= 9
+    assert int(said.group(3)) == len(list((ROOT / "data").glob("*.ndjson")))
     assert "rows across" in out and "NDJSON files validated" in out
 
 
@@ -285,3 +291,49 @@ def test_validation_reports_rows_that_disagree(tmp_path):
     )
     problems, _, _ = vs.check_rows(tmp_path, SCHEMAS)
     assert any("fl:9 names oh:9, whom the register does not hold" in p for p in problems)
+
+
+def test_min_length_refuses_what_a_gate_would_refuse():
+    """A field a gate rejects as empty, or as a label where a reason belongs, is a field the schema
+    rejects too. Two rules that disagree about one row are one rule a contributor cannot rely on,
+    and the looser of the two is the one a future row will satisfy (INVARIANTS §2, §17).
+
+    The case that needed it: `because` on a doctrine amendment. §17 asks the reason to say what the
+    current text costs and what the change is expected to fix; the gate refuses a reason under
+    twelve words, and before this the schema would have taken `""`.
+    """
+    schema = SCHEMAS["doctrine-amendment.schema.json"]
+    good = schema["examples"][0]
+    assert vs.validate(good, schema, SCHEMAS, "doctrine-amendment.schema.json") == []
+    errors = vs.validate(
+        dict(good, because="Cleanup.", approved_by="", sections=[""]),
+        schema,
+        SCHEMAS,
+        "doctrine-amendment.schema.json",
+    )
+    joined = "\n".join(errors)
+    assert "$.because: 8 characters, and this field needs at least 60" in errors
+    assert "$.approved_by:" in joined and "needs at least 3" in joined
+    assert "$.sections[0]:" in joined and "needs at least 1" in joined
+    # And the gate refuses the same row, for the same reasons, in its own words.
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "hcc", Path(__file__).resolve().parents[1] / "tools/highlight-charter-change.py"
+    )
+    gate = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(gate)
+    assert gate.incomplete(good) == []
+    assert any(
+        "a reason, not a label" in g for g in gate.incomplete(dict(good, because="Cleanup."))
+    )
+    assert "approved_by" in gate.incomplete(dict(good, approved_by=""))
+
+
+def test_a_hyphenated_schema_name_is_a_valid_id():
+    """Schema names were single words until a row needed two. "amendments" alone would have read as
+    a filer amending a report, which `amends` on a filing already means."""
+    assert vs.ID_RULE.match("https://oath.jeb2-spec.dev/schemas/doctrine-amendment/v0.json")
+    assert vs.ID_RULE.match("https://oath.jeb2-spec.dev/schemas/change/v0.json")
+    assert not vs.ID_RULE.match("https://oath.jeb2-spec.dev/schemas/Doctrine_Amendment/v0.json")
+    assert not vs.ID_RULE.match("https://oath.jeb2-spec.dev/schemas/-leading/v0.json")
