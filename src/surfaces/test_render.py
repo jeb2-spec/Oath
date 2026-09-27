@@ -2729,6 +2729,10 @@ def test_the_notice_clock_counts_trades_reports_and_members_and_names_no_one():
     ]
     section = render.notice_section(rows, [report])
     assert "3 trades on the transaction reports" in section
+    # The band that reassures is filled from the page's halftone, so the page must define it; when
+    # the only definition left the landing with the glance, that band drew empty.
+    landing = render.render_index(HOLDERS, OFFICES, [report], RUN, META, striker, rows)
+    assert 'pattern id="benday"' in landing and 'class="nb within"' in landing
     assert "<b>1</b> printed more than 45 days after the trade" in section
     assert (
         "1 trade on 1 report by 1 member. For 1 of these trades the filer marked the asset as a "

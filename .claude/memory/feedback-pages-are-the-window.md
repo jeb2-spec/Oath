@@ -39,6 +39,10 @@ maintainer is actually asking for more of.
   page different, it should be able to make it different.
 - **Look at the page.** The screenshot is the instrument for a window. It caught what the HTML
   assertions did not, twice on the same day.
+- **Looking is not comparing.** The after-screenshot of PR #61 showed the notice clock's
+  reassuring band drawn empty, because the halftone it fills from had been defined inside the
+  glance, and the glance had moved. I read past it; it shipped. Set before and after side by
+  side, and when something moves, ask what else on the page was leaning on it.
 
 Related: [[story-the-product-was-fine]] (rigour has a derivative), [[feedback-usage-stewardship]]
 (one hand, cheap evidence), [[feedback-signal-to-noise]].
