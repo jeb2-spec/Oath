@@ -434,12 +434,17 @@ ul.squarekey svg.key .evoid { stroke-width: 1.6; stroke-dasharray: 3 2; }
 section.deadline { border-top: 0; }
 figure.deadline { margin: .6rem 0 .3rem; }
 svg.deadline { width: 100%; max-width: 36rem; height: auto; display: block; }
-.dl.by { fill: var(--ink); fill-opacity: .22; stroke: var(--ink); stroke-width: .7; }
+.dl.by { fill: url(#benday50); stroke: var(--ink); stroke-width: 1.6; }
 .dl.after { fill: var(--ink); }
-.dfan { fill: var(--ink); fill-opacity: .1; stroke: var(--ink-2); stroke-width: .6;
-  stroke-dasharray: 2 1.6; }
-.dline { stroke: var(--ink); stroke-width: 1.4; }
-.daxis { stroke: var(--ink); stroke-width: 1.2; }
+.dshadow { fill: var(--ink); }
+.dpaper, .dlabel { fill: var(--paper); }
+.dlabel { stroke: var(--ink); stroke-width: 1; }
+.dtag { fill: var(--spot); stroke: var(--ink); stroke-width: 1.2; }
+svg.deadline text.dtagt { font: 700 7.5px var(--letter); letter-spacing: .06em;
+  text-transform: uppercase; fill: var(--spot-ink); }
+.dfan { fill: url(#benday); fill-opacity: .35; stroke: var(--ink-2); stroke-width: .6; }
+.dline { stroke: var(--ink); stroke-width: 2.2; stroke-linecap: round; }
+.daxis { stroke: var(--ink); stroke-width: 2.4; stroke-linecap: round; }
 .dtick { stroke: var(--ink-2); stroke-width: .8; }
 svg.deadline text { font: 700 9px var(--letter); fill: var(--ink-2); }
 svg.deadline text.don { font-size: 10px; fill: var(--ink); }
@@ -4466,7 +4471,12 @@ def deadline_chart(on_time: int, late: list[int], meta: dict | None = None) -> s
     furthest = max(per_day, default=1)
     step = inner / max(furthest, 1)
     top = max(per_day.values(), default=1)
+    on_w = len(f"{on_time:,}") * 6.2 + 8
     parts = [
+        # The strip's own ink: a panel's hard shadow under the whole bar, and paper beneath the
+        # screened block so the shadow does not show through its dots.
+        f'<rect class="dshadow" x="{pad + 3}" y="{bar_y + 3}" width="{inner}" height="{bar_h}"/>',
+        f'<rect class="dpaper" x="{pad}" y="{bar_y}" width="{inner}" height="{bar_h}"/>',
         # the whole, and the part of it past the deadline
         f'<rect class="dl by" x="{pad}" y="{bar_y}" width="{split - pad:.1f}" height="{bar_h}"/>',
         f'<rect class="dl after" x="{split:.1f}" y="{bar_y}" width="{w - pad - split:.1f}" '
@@ -4474,9 +4484,14 @@ def deadline_chart(on_time: int, late: list[int], meta: dict | None = None) -> s
         # the deadline itself, the one line the rest of the drawing hangs on
         f'<line class="dline" x1="{split:.1f}" y1="{bar_y - 4}" x2="{split:.1f}" '
         f'y2="{bar_y + bar_h + 4}"/>',
-        f'<text x="{split:.1f}" y="{bar_y - 6}" text-anchor="middle">the deadline</text>',
+        # The deadline named the way the strip names things: a caption box in the spot colour.
+        f'<rect class="dtag" x="{split - 34:.1f}" y="3" width="68" height="12"/>',
+        f'<text class="dtagt" x="{split:.1f}" y="12" text-anchor="middle">the deadline</text>',
         # Both counts on the blocks they belong to, so the picture says what it is without the
         # key: a reader should be able to take the whole of it in before reading a word below.
+        # The screened block's count sits on paper, in a box, so the dots never cross the digits.
+        f'<rect class="dlabel" x="{(pad + split) / 2 - on_w / 2:.1f}" y="{bar_y + 2}" '
+        f'width="{on_w:.1f}" height="{bar_h - 4}"/>',
         f'<text class="don" x="{(pad + split) / 2:.1f}" y="{bar_y + bar_h - 4.5}" '
         f'text-anchor="middle">{on_time:,}</text>',
         f'<text class="doff" x="{(split + w - pad) / 2:.1f}" y="{bar_y + bar_h - 4.5}" '
