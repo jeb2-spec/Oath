@@ -101,6 +101,21 @@ def test_the_sources_a_run_record_read_are_not_about_a_person(register):
     assert load().problems(register) == []
 
 
+def test_the_documents_a_run_record_read_and_when_are_not_about_a_person(register):
+    """The adapter records when it read each of the Clerk's documents, by DocID, so a later read
+    of other bytes is measured from a dated read. That is a time beside a file; the same DocID
+    placed anywhere else in the record, as a group key or in a figure, still fails."""
+    path = next((register / "data" / "adapter-runs").glob("*.ndjson"))
+    lines = path.read_text("utf-8").splitlines()
+    run = json.loads(lines[0])
+    run.setdefault("documents", {})["read_at"] = {"20032062": "2026-09-27T19:42:33Z"}
+    path.write_text("\n".join([json.dumps(run), *lines[1:]]) + "\n", encoding="utf-8")
+    assert load().problems(register) == []
+    run["documents"]["refused_docs"] = {"20032062": 1}
+    path.write_text("\n".join([json.dumps(run), *lines[1:]]) + "\n", encoding="utf-8")
+    assert any("a DocID" in p for p in load().problems(register))
+
+
 def test_a_build_with_no_sealed_state_or_no_run_record_fails(register, tmp_path):
     lint = load()
     (register / "data" / "meta.json").unlink()
