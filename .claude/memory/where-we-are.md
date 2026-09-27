@@ -10,6 +10,22 @@ metadata:
 
 *Last updated: 2026-09-27, Opus 5 in a cloud session. The register is still build `0005-house-2025` (27 Findings, its proof confirmed at Bitcoin block 968733). PR #40 (S.1b) and #41 (P.1's design) are merged. PR #42 built P.1: the pages a reader can use, and the House at a glance on the landing, read by all seven seats. Another session is populating the record in parallel.*
 
+**The wanted register, 2026-09-27, P.5.** Jared, after the black-hole figure shipped: *keep a register on oath, in pages or otherwise, outlining exactly what pieces of official information public or not would be needed to close the loop and effectively eliminate the black hole. I mean it.*
+
+The answer to a hole in the record is a register, not an essay. `docs/wanted/wanted.ndjson`, thirteen rows, a schema, a gate, and a page that draws the loop as a chain of seven links with the last three open.
+
+**The rule that makes it worth keeping, and the thing to carry forward.** A row may say a record is published, obtainable or not public **only when somebody here has read a candidate at its source**. Twelve of thirteen say *unknown*, because this session's network reaches none of the hosts.
+
+Why that rule and not a softer one: **a list of absent records is the easiest document in this project to lie in.** Every row is about something nobody here has seen, a confident sentence costs nothing to write, and no reader can check it — the exact conditions under which every other discipline here was built to hold, applied to a genre that has none of the usual friction. And the *not public* claim is the one that would read as an accusation against a body that may publish the thing freely. So the strictest rules in the repository are on the file with the least evidence in it, which is the right way round and was not the obvious one.
+
+**A gate that cries wolf is a gate somebody switches off.** Three false positives in two drafts, all against rows written in good faith: matching any four-letter word that is also a House surname reported *fields* (the plural noun) and *case* twice; matching published names as bare substrings reported "a named case where one exists"; and reading any five-digit run as a DocID reported `5 U.S.C. 13106` in a file whose whole job is citing statutes. Fixed by matching on word boundaries and against the DocIDs the register actually holds. All three are tests now. **I fixed the matcher, not the prose** — contorting a sentence to dodge my own gate would have been the worse outcome and it was genuinely tempting.
+
+**The aggregate move.** Two rows have unit `chamber-year`: how many fees were assessed, waived and collected, and how many matters reached each stage. They name nobody, so they are the cheapest things on the list to ask for and they answer most of what a reader actually wants. Worth keeping generally: *when a per-person record is out of reach, the count is often the thing that was wanted anyway, and it costs nobody their privacy.*
+
+**And one row that argues against the list it is on.** `wt:the-case-file` says the Committee's own file should stay shut: it holds an unproven allegation and a person's answer to it, and the confidentiality protecting it shields exactly the reader this project is built for. That it also means nobody outside can tell whether a founded complaint was acted on is true and does not cancel the first. A list of everything we want, with nothing on it we do not want, is a demand rather than a register.
+
+The work now is reading, not code: every unverified row carries a `check` naming what to read and where. `wt:the-clerks-filing-date` goes first — the Clerk's index row carries eight fields and one date, nothing says whether it is the day the member filed or the day the Clerk posted, and all 27 Findings rest on it. It is the only row that could make a sentence already published here **wrong about a person**.
+
 **Where the record ends, 2026-09-27, P.4.** Jared read the new landing and asked the question none of its figures answered: *the House ethics committee… seems like a black hole. Don't accept that this is normal. Accountability is critical… imagine where you and I would be if we did not in any way hold each other accountable and base trust in receipts.*
 
 He was right that it was missing, and the honest version turned out to be sharper than the rhetorical one.
