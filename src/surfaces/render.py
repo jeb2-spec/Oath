@@ -425,8 +425,8 @@ figure.ends { margin: .6rem 0 .3rem; }
 svg.ends { width: 100%; max-width: 36rem; height: auto; display: block; }
 .esq { fill: var(--ink); }
 .evoid { fill: none; stroke: var(--ink-2); stroke-width: 1; stroke-dasharray: 4 3; }
-.eline { stroke: var(--ink); stroke-width: 1.4; stroke-dasharray: 3 2; }
-.eaxis { stroke: var(--ink); stroke-width: 1.2; }
+.eline { stroke: var(--ink); stroke-width: 2.2; stroke-linecap: round; }
+.eaxis { stroke: var(--ink); stroke-width: 2.4; stroke-linecap: round; }
 svg.ends text { font: 700 9px var(--letter); fill: var(--ink-2); }
 svg.ends text.eq { font: 700 22px var(--letter); fill: var(--ink-2); }
 ul.squarekey svg.key .evoid { stroke-width: 1.6; stroke-dasharray: 3 2; }
@@ -449,18 +449,22 @@ svg.deadline text.dtagt { font: 700 7.5px var(--letter); letter-spacing: .06em;
 svg.deadline text { font: 700 9px var(--letter); fill: var(--ink-2); }
 svg.deadline text.don { font-size: 10px; fill: var(--ink); }
 svg.deadline text.doff { font-size: 10px; fill: var(--paper); }
-svg text.stamp { font: 600 6px var(--mono); letter-spacing: .02em; fill: var(--ink-2); }
+figure svg text.stamp { font: 600 6px var(--mono); letter-spacing: .02em; fill: var(--ink-2); }
 .stampwave { fill: none; stroke: var(--ink-2); stroke-width: .35; }
 /* the notice clock */
 section.noticeclock { border-top: 0; }
 figure.noticeclock { margin: .6rem 0 .3rem; }
 svg.noticeclock { width: 100%; max-width: 36rem; height: auto; display: block; }
-.nb.within { fill: url(#benday); stroke: var(--ink-2); stroke-width: .4; }
+.nb.within { fill: url(#benday50); stroke: var(--ink); stroke-width: .4; }
 .nb.past { fill: var(--ink); }
 .nb.before { fill: none; stroke: var(--ink); stroke-width: .8; stroke-dasharray: 1.4 1.2; }
-.nl { stroke: var(--ink); stroke-width: 1; }
-.nl.thirty { stroke-dasharray: 3 2; }
-.na { stroke: var(--ink); stroke-width: 1.2; }
+.nl { stroke: var(--ink); stroke-width: 2.2; stroke-linecap: round; }
+.nl.thirty { stroke-width: 1.2; stroke-dasharray: 3 2; }
+.na { stroke: var(--ink); stroke-width: 2.4; stroke-linecap: round; }
+/* the strip's caption box, for a line the rule draws on a figure */
+.stag { fill: var(--spot); stroke: var(--ink); stroke-width: 1.2; }
+svg text.stagt { font: 700 7px var(--letter); letter-spacing: .06em; text-transform: uppercase;
+  fill: var(--spot-ink); }
 svg.noticeclock text { font: 700 9px var(--letter); fill: var(--ink-2); }
 /* the house at a glance */
 p.glance { font-size: 1.12rem; line-height: 1.5; max-width: 38rem; margin: 0 0 .5rem; }
@@ -472,6 +476,13 @@ figure.narrows svg { width: 100%; max-width: 34rem; height: auto; display: block
                      color: var(--ink); }
 figure.narrows text { font: 13px var(--mono); }
 figure.narrows text.in { fill: var(--paper); }
+.nrshadow { fill: var(--ink); }
+.nrpaper { fill: var(--paper); }
+.nr { stroke: var(--ink); stroke-width: 1.6; }
+.nr.listed { fill: var(--paper); }
+.nr.read { fill: url(#benday); }
+.nr.compared { fill: url(#benday50); }
+.nr.after { fill: var(--ink); }
 figure.narrows text.out { fill: var(--ink); }
 dl.narrows { margin: .3rem 0 .6rem; display: grid; grid-template-columns: auto 1fr;
              gap: .35rem .75rem; max-width: 40rem; font-size: .92rem; }
@@ -4240,7 +4251,7 @@ def report_lateness(findings: list[dict], signal_id: str) -> list[int]:
     return sorted(out)
 
 
-def ends_chart(late: list[int]) -> str:
+def ends_chart(late: list[int], meta: dict | None = None) -> str:
     """Two rows, one span: the days after a report's own due date.
 
     Above, every report the Clerk's index dates after the deadline, one square each, stacked where
@@ -4278,11 +4289,13 @@ def ends_chart(late: list[int]) -> str:
     xg = x(GRACE_DAYS)
     parts = [
         f'<text x="{pad}" y="10" text-anchor="start">what the Clerk\'s index shows</text>',
-        f'<line class="eline" x1="{xg:.1f}" y1="16" x2="{xg:.1f}" y2="{axis_y}"/>',
+        f'<line class="eline" x1="{xg:.1f}" y1="25" x2="{xg:.1f}" y2="{axis_y}"/>',
+        # The 30th day is where the Committee's memorandum sets a fee, so it is named in the
+        # strip's caption box; the register draws the line and computes no fee.
+        law_tag(xg, 14, f"day {GRACE_DAYS}", 40),
         *squares,
         f'<line class="eaxis" x1="{pad}" y1="{axis_y}" x2="{w - pad}" y2="{axis_y}"/>',
         f'<text x="{pad}" y="{axis_y + 12}" text-anchor="start">0</text>',
-        f'<text x="{xg:.1f}" y="{axis_y + 12}" text-anchor="middle">{GRACE_DAYS}</text>',
         f'<text x="{w - pad}" y="{axis_y + 12}" text-anchor="end">{span}</text>',
         f'<text x="{w - pad}" y="{axis_y + 24}" text-anchor="end">'
         "days after the report was due</text>",
@@ -4291,13 +4304,16 @@ def ends_chart(late: list[int]) -> str:
         f'<text class="eq" x="{w / 2:.1f}" y="{band_top + band_h / 2 + 8:.1f}" '
         'text-anchor="middle">?</text>',
     ]
+    stamp = figure_stamp(meta, pad, w - pad, band_top + band_h + 18)
     return (
-        f'<svg class="ends" viewBox="0 0 {w} {band_top + band_h + 8:.0f}" direction="ltr" '
-        'aria-hidden="true" focusable="false">' + "".join(parts) + "</svg>"
+        f'<svg class="ends" viewBox="0 0 {w} {band_top + band_h + (24 if stamp else 8):.0f}" '
+        'direction="ltr" aria-hidden="true" focusable="false">' + "".join(parts) + stamp + "</svg>"
     )
 
 
-def ends_section(signal_runs: list[tuple[dict, dict]], findings: list[dict]) -> str:
+def ends_section(
+    signal_runs: list[tuple[dict, dict]], findings: list[dict], meta: dict | None = None
+) -> str:
     """Where this register's chain stops, drawn at the width of the part it can see.
 
     Every other figure on this page is about what the register found or could not read inside the
@@ -4344,7 +4360,7 @@ def ends_section(signal_runs: list[tuple[dict, dict]], findings: list[dict]) -> 
             "may be waived in exceptional circumstances. The register computes no fee for anyone "
             "and holds no row about what the Committee did.</p>\n"
             '<figure class="ends">\n'
-            + ends_chart(late)
+            + ends_chart(late, meta)
             + f"\n<figcaption>Above: the {n:,} {plural(n, 'report', 'reports')} the Clerk's "
             f"{ERA['year']} index dates after the deadline, one square each, placed by the days "
             "between the report's own due date and the date the index gives it, and stacked where "
@@ -4403,7 +4419,17 @@ def days_after_rows(findings: list[dict], signal_id: str) -> list[int]:
     )
 
 
-def figure_stamp(meta: dict | None, left: float, right: float, y: float) -> str:
+def law_tag(x: float, y: float, words: str, width: float) -> str:
+    """The strip's caption box, in the spot colour, naming a line the law or the Committee draws
+    on a figure. Only such a line gets one: the box says *this line is the rule*, never *this is
+    what the register found*."""
+    return (
+        f'<rect class="stag" x="{x - width / 2:.1f}" y="{y}" width="{width}" height="11"/>'
+        f'<text class="stagt" x="{x:.1f}" y="{y + 8.2:.1f}" text-anchor="middle">{words}</text>'
+    )
+
+
+def figure_stamp(meta: dict | None, left: float, right: float, y: float, size: float = 6.0) -> str:
     """The build a figure was drawn from, inside the drawing, so a crop of it still says which
     sealed record it shows and a reader can find that build in ANCHORS.md and check it.
 
@@ -4419,16 +4445,19 @@ def figure_stamp(meta: dict | None, left: float, right: float, y: float) -> str:
     label = f"oath · {build_label(meta)}"
     # The words take their width from the type, roughly; the band takes what is left, and is left
     # out entirely on a figure too narrow to hold it quietly.
-    text_w = len(label) * 3.6
+    text_w = len(label) * size * 0.62
     x0, x1 = left + text_w + 8, right
     parts = [
-        f'<text class="stamp" x="{left}" y="{y + 2.4:.1f}" text-anchor="start">{esc(label)}</text>'
+        # The size rides on the element, because each figure draws on its own canvas and its own
+        # text rule would otherwise set the stamp in the figure's type.
+        f'<text class="stamp" x="{left}" y="{y + size * 0.4:.1f}" style="font-size:{size}px" '
+        f'text-anchor="start">{esc(label)}</text>'
     ]
     if x1 - x0 > 40:
         for i in range(3):
             cycles = 4 + raw[i] % 5
             phase = raw[i + 3] / 255 * 2 * math.pi
-            amp = 1.0 + (raw[i + 6] % 3) * 0.35
+            amp = (1.0 + (raw[i + 6] % 3) * 0.35) * size / 6
             pts = []
             for k in range(81):
                 t = k / 80
@@ -4644,10 +4673,11 @@ def notice_bands(transactions: list[dict], filings: list[dict]) -> dict:
     return {"days": days, "bands": out, "spouse": spouse, "same_day": same_day}
 
 
-def notice_chart(days: dict) -> str:
+def notice_chart(days: dict, meta: dict | None = None) -> str:
     """One bar a day, from the day of the trade to 60 days after it, a bar for notices printed
     before the trade at the left and one for 61 days or more at the right, drawn to one linear
-    scale; upright lines at 30 and 45 days. Dates and counts only; its words are in the caption."""
+    scale; upright lines at 30 and 45 days. Dates and counts only; its words are in the caption,
+    and the stamp at its foot names the build it was drawn from."""
     keys = ["<0"] + list(range(61)) + ["61+"]
     top = max(days.values(), default=1) or 1
     base, height, step = 128, 110, 5.0
@@ -4671,21 +4701,28 @@ def notice_chart(days: dict) -> str:
             )
     for mark, cls in ((30, "thirty"), (45, "fortyfive")):
         xm = x(mark) + 2 + step / 2
-        parts.append(f'<line class="nl {cls}" x1="{xm:.1f}" y1="12" x2="{xm:.1f}" y2="{base}"/>')
-        parts.append(f'<text x="{xm:.1f}" y="9" text-anchor="middle">{mark}</text>')
+        parts.append(f'<line class="nl {cls}" x1="{xm:.1f}" y1="14" x2="{xm:.1f}" y2="{base}"/>')
+        # 45 days is the line the statute draws, so it is named in the strip's caption box; 30 is
+        # counted from the notice, which moves, so it keeps a plain label.
+        parts.append(
+            law_tag(xm, 1, "45", 22)
+            if mark == 45
+            else f'<text x="{xm:.1f}" y="10" text-anchor="middle">{mark}</text>'
+        )
     parts.append(f'<line class="na" x1="2" y1="{base}" x2="358" y2="{base}"/>')
     for k, label in (("<0", "&lt;0"), (0, "0"), (30, ""), ("61+", "61+")):
         if label:
             parts.append(
                 f'<text x="{x(k) + 2:.1f}" y="{base + 13}" text-anchor="middle">{label}</text>'
             )
+    stamp = figure_stamp(meta, 4, 356, base + 30)
     return (
-        f'<svg class="noticeclock" viewBox="0 0 360 {base + 18}" direction="ltr" '
-        'aria-hidden="true" focusable="false">' + "".join(parts) + "</svg>"
+        f'<svg class="noticeclock" viewBox="0 0 360 {base + (36 if stamp else 18)}" '
+        'direction="ltr" aria-hidden="true" focusable="false">' + "".join(parts) + stamp + "</svg>"
     )
 
 
-def notice_section(transactions: list[dict], filings: list[dict]) -> str:
+def notice_section(transactions: list[dict], filings: list[dict], meta: dict | None = None) -> str:
     """The one date the filer writes: the notice date, which alone can move a deadline, and by no
     more than 15 days. Every trade the register has read, drawn by the days from the trade to its
     printed notice; the key says trades, reports and members for each band. It names no one, and
@@ -4729,7 +4766,7 @@ def notice_section(transactions: list[dict], filings: list[dict]) -> str:
         "filer's own entry and the only date that can move a deadline, by at most 15 days; past "
         "45 days after the trade it no longer waits for one.</p>\n"
         '<figure class="noticeclock">\n'
-        + notice_chart(facts["days"])
+        + notice_chart(facts["days"], meta)
         + f"\n<figcaption>All {total:,} trades on the transaction reports the register has read, "
         "by the days from the trade to the notice date the report prints, one bar a day, with "
         "every trade 61 days or more after in the last bar, notices printed before the trade in "
@@ -4784,7 +4821,9 @@ def narrows_group(reason: str) -> tuple[str, str]:
     return f"set aside, recorded as {reason}", "register"
 
 
-def narrows_figure(outcomes: list[dict], findings: list[dict], signal: dict, words: dict) -> str:
+def narrows_figure(
+    outcomes: list[dict], findings: list[dict], signal: dict, words: dict, meta: dict | None = None
+) -> str:
     """Where the record narrows, and why, from the Clerk's index to a signal firing: four steps,
     each with the number of reports that survive it and a plain sentence naming what did not.
 
@@ -4872,21 +4911,27 @@ def narrows_figure(outcomes: list[dict], findings: list[dict], signal: dict, wor
     w, bar, gap = 640, 26, 16
     height = len(steps) * (bar + gap)
     drawn = []
+    # One mark, one meaning, on every figure of the landing: the squares' own three states. The
+    # reports the index lists and the register read are outlined and lightly screened, the ones it
+    # compared carry the 50% screen the squares give "checked", and the ones the index dates after
+    # the deadline are solid ink, as every figure draws after. Each bar sits on a panel's shadow.
+    fills = ("nr listed", "nr read", "nr compared", "nr after")
     for i, (n, _label, _why, _tail) in enumerate(steps):
         y = i * (bar + gap)
         width = max(round(w * n / total, 1), 2.0)
-        inside = width > 64
         drawn.append(
-            f'<rect x="0" y="{y}" width="{width}" height="{bar}" fill="currentColor" '
-            f'fill-opacity="{0.88 - i * 0.16:.2f}"/>'
-            f'<text class="{"in" if inside else "out"}" '
-            f'x="{width - 8 if inside else width + 8:.1f}" y="{y + bar - 8}" '
-            f'text-anchor="{"end" if inside else "start"}">{n:,}</text>'
+            f'<rect class="nrshadow" x="4" y="{y + 4}" width="{width}" height="{bar}"/>'
+            f'<rect class="nrpaper" x="0" y="{y}" width="{width}" height="{bar}"/>'
+            f'<rect class="{fills[i]}" x="0" y="{y}" width="{width}" height="{bar}"/>'
+            f'<text class="out" x="{width + 12:.1f}" y="{y + bar - 8}" text-anchor="start">'
+            f"{n:,}</text>"
         )
     spoken = "; ".join(f"{n:,} {label}" for n, label, _why, _tail in steps)
+    stamp = figure_stamp(meta, 0, w + 50, height + 8, 11)
     svg = (
-        f'<svg viewBox="-1 0 {w + 60} {height}" role="img" aria-label="{esc(spoken)}." '
-        f'xmlns="http://www.w3.org/2000/svg">{"".join(drawn)}</svg>'
+        f'<svg viewBox="-1 0 {w + 60} {height + (20 if stamp else 0)}" role="img" '
+        f'aria-label="{esc(spoken)}." xmlns="http://www.w3.org/2000/svg">{"".join(drawn)}'
+        f"{stamp}</svg>"
     )
     listed = "\n".join(
         f"<dt>{n:,}</dt><dd><b>{esc(label)}.</b> {esc(why)}{tail}</dd>"
@@ -4909,6 +4954,7 @@ def narrows_section(
     signal_runs: list[tuple[dict, dict]],
     outcomes_all: dict[str, list[dict]],
     findings: list[dict],
+    meta: dict | None = None,
 ) -> str:
     """What the register could not reach, in one place.
 
@@ -4924,7 +4970,7 @@ def narrows_section(
         outcomes = outcomes_all.get(signal["id"], [])
         if words is None or not outcomes:
             continue
-        parts.append(narrows_figure(outcomes, findings, signal, words))
+        parts.append(narrows_figure(outcomes, findings, signal, words, meta))
     if not parts:
         return ""
     return (
@@ -5842,9 +5888,9 @@ def render_index(
         "The register sets the record beside it.</footer></blockquote>\n</section>"
     )
     deadline = deadline_section(signal_runs or [], findings or [], meta)
-    ends = ends_section(signal_runs or [], findings or [])
-    narrows = narrows_section(signal_runs or [], outcomes_all or {}, findings or [])
-    notice = notice_section(transactions or [], filings)
+    ends = ends_section(signal_runs or [], findings or [], meta)
+    narrows = narrows_section(signal_runs or [], outcomes_all or {}, findings or [], meta)
+    notice = notice_section(transactions or [], filings, meta)
     everything = [o for group in (outcomes_all or {}).values() for o in group]
     by_id = {f["id"]: f for f in filings}
     how = (
