@@ -398,6 +398,22 @@ svg.noticeclock text { font: 700 9px var(--letter); fill: var(--ink-2); }
 p.glance { font-size: 1.12rem; line-height: 1.5; max-width: 38rem; margin: 0 0 .5rem; }
 figure.glance { margin: .5rem 0 .2rem; }
 figure.glance svg.squares { width: 100%; max-width: 30rem; }
+/* where the record narrows: the register's own reach, in the page's own ink */
+figure.narrows { margin: 1rem 0 .4rem; }
+figure.narrows svg { width: 100%; max-width: 34rem; height: auto; display: block;
+                     color: var(--ink); }
+figure.narrows text { font: 13px var(--mono); }
+figure.narrows text.in { fill: var(--paper); }
+figure.narrows text.out { fill: var(--ink); }
+dl.narrows { margin: .3rem 0 .6rem; display: grid; grid-template-columns: auto 1fr;
+             gap: .35rem .75rem; max-width: 40rem; font-size: .92rem; }
+dl.narrows dt { font-family: var(--mono); text-align: right; white-space: nowrap; }
+dl.narrows dd { margin: 0; }
+@media (max-width: 40rem) {
+  dl.narrows { grid-template-columns: 1fr; gap: .1rem; }
+  dl.narrows dt { text-align: left; }
+  dl.narrows dd { margin: 0 0 .5rem; }
+}
 /* the reports as squares, the same on the landing and on a person's page */
 svg.squares { display: block; max-width: 100%; height: auto; margin: .3rem 0 .4rem; }
 .sq.s-after { fill: var(--ink); }
@@ -3095,6 +3111,7 @@ def finding_facts(findings: list[dict], signal_id: str) -> dict:
         "days": (min(days, default=0), max(days, default=0)),
         "weekend": weekend,
         "notice": notice,
+        "trades": len(days),
     }
 
 
@@ -3260,9 +3277,11 @@ def answer_section(
                         else f"{low:,} to {high:,} days"
                     )
                     text += (
-                        f"The Clerk's index dates {fired:,} of the {checked:,} "
-                        f"{plural(checked, 'report', 'reports')} compared after the deadline, by "
-                        f"{span}, for at least one trade on {plural(fired, 'it', 'each')}."
+                        f"The Clerk's index dates {fired:,} "
+                        f"{plural(fired, 'report', 'reports')} it compared after the deadline: "
+                        f"{facts['trades']:,} {plural(facts['trades'], 'trade', 'trades')} on "
+                        f"{plural(fired, 'it', 'them')}, {span} past "
+                        f"{plural(fired, 'its own deadline', 'their own deadlines')}."
                     )
                     for count, clause in (
                         (
@@ -3862,8 +3881,8 @@ def state_of_record(
         "officeholder's own seat under their surname"
         + (
             f"; {shut:,} more {plural(shut, 'is', 'are')} not attributed, because the register "
-            "cannot show the "
-            "officeholder in office on the date the index gives them "
+            "cannot show an officeholder of that seat in office on the date the index gives "
+            f"{plural(shut, 'it', 'them')} "
             f'(<a href="{SUBJECTS_1}">SUBJECTS.md §1</a>)'
             if shut
             else ""
@@ -4130,6 +4149,160 @@ def notice_section(transactions: list[dict], filings: list[dict]) -> str:
     )
 
 
+# What the Signal's run record says about a row it did not evaluate, grouped as a reader needs and
+# attributed where it belongs. The register's own limits on one side; the rule's own scope on the
+# other, which on the 2025 record is one row of 1,156. Saying "the rule does not reach" of the rest
+# is the falsehood that flatters, and it is the same defect as the one that condemns (COUNCIL §5).
+NARROWS_GROUPS = (
+    ("asset coded", "a kind of asset the register does not evaluate", "register"),
+    (
+        "coded as a stock, named as an ETF",
+        "an asset whose printed code and printed name disagree",
+        "register",
+    ),
+    (
+        "dated before this Congress's swearing-in",
+        "dated before the swearing-in the roster records",
+        "register",
+    ),
+    ("marked Amended", "the report itself marks amended or deleted", "report"),
+    ("marked Deleted", "the report itself marks amended or deleted", "report"),
+    ("transaction dated after the report", "dated after the report that lists them", "report"),
+    ("$1,000 or less", "at or under the $1,000 the rule sets", "rule"),
+)
+
+
+def narrows_group(reason: str) -> tuple[str, str]:
+    """One recorded reason, as (words, whose). A reason this version has no words for is given as
+    the run record writes it and attributed to the register, never to the rule."""
+    for prefix, words, whose in NARROWS_GROUPS:
+        if reason.startswith(prefix):
+            return words, whose
+    return f"set aside, recorded as {reason}", "register"
+
+
+def narrows_figure(outcomes: list[dict], findings: list[dict], signal: dict, words: dict) -> str:
+    """Where the record narrows, and why, from the Clerk's index to a signal firing: four steps,
+    each with the number of reports that survive it and a plain sentence naming what did not.
+
+    Every other surface here says what the register found. This one says what it could reach, which
+    is the harder half and the half nobody else publishes. The landing already gives 463 in the
+    strip and 294 in the paragraph above; what it never gave is the 115 between them, the reports
+    the register read and compared no row on, and that is the one number a reader needs before
+    trusting any other. Each step is a fact about the register, not about anyone; no step names a
+    person and nothing is sorted by anything about one (INVARIANTS §7, §13).
+
+    Bars in the page's own ink, at one opacity per step so the narrowing reads without colour
+    carrying the meaning; inline SVG, no script, legible at 360px and through the caption alone.
+    Drawn from the same run record the sentence above it counts, so it regenerates with it.
+    """
+    one, many = words["reports"]
+    total = len(outcomes)
+    if not total:
+        return ""
+    read = [o for o in outcomes if o["state"] == "evaluated"]
+    compared = [o for o in read if o.get("evaluated")]
+    fired = len({f["producing_filings"][0] for f in fired_now(findings, signal["id"])})
+    rows = sum(o.get("rows") or 0 for o in read)
+    set_aside: dict[tuple[str, str], int] = {}
+    codes: dict[str, int] = {}
+    for o in read:
+        for reason, n in (o.get("not_evaluated") or {}).items():
+            key = narrows_group(reason)
+            set_aside[key] = set_aside.get(key, 0) + n
+            if reason.startswith("asset coded "):
+                code = reason.removeprefix("asset coded ")
+                codes[code] = codes.get(code, 0) + n
+    biggest = max(codes.items(), key=lambda i: (i[1], i[0]), default=None)
+    by_whose = {"register": 0, "report": 0, "rule": 0}
+    for (_w, whose_), n in set_aside.items():
+        by_whose[whose_] += n
+    said = "; ".join(
+        f"{n:,} {w}"
+        + (
+            f", {biggest[1]:,} of them coded {biggest[0]}"
+            if biggest and w == NARROWS_GROUPS[0][1]
+            else ""
+        )
+        for (w, _whose), n in sorted(set_aside.items(), key=lambda i: (-i[1], i[0]))
+    )
+    ours = by_whose["register"] + by_whose["report"]
+    whose = (
+        " Of those, the rule's own scope accounts for "
+        + (f"{by_whose['rule']:,}" if by_whose["rule"] else "none")
+        + f"; the other {ours:,} {plural(ours, 'is a limit', 'are limits')} of the register, "
+        "or what the report says about itself."
+        if said
+        else ""
+    )
+    steps = (
+        (
+            total,
+            f"the Clerk's {ERA['year']} index lists",
+            f"Every {one} the index attributes to a member of the chamber.",
+            "",
+        ),
+        (
+            len(read),
+            "the register read",
+            f"{total - len(read):,} it fetched and could not read: it looks in the text it "
+            "extracts for the Filing ID line and the State/District line the Clerk's system "
+            "prints on a filed report, and did not find both. That is a limit of the register, "
+            "not a fact about what was filed.",
+            "",
+        ),
+        (
+            len(compared),
+            "it compared a trade on",
+            f"On {len(read) - len(compared):,} more it compared no trade at all. Of the "
+            f"{rows - sum(o.get('evaluated') or 0 for o in read):,} trades it set aside across "
+            f"every report it read: {said}.{whose} Each reason is one this Signal ",
+            f'<a href="{signal_page_path(signal)}">wrote down before it ran</a>.',
+        ),
+        (
+            fired,
+            "the index dates after the deadline",
+            "For at least one trade compared. What that means for a filer is the House Committee "
+            "on Ethics's to decide, and the register sees none of its decisions.",
+            "",
+        ),
+    )
+    w, bar, gap = 640, 26, 16
+    height = len(steps) * (bar + gap)
+    drawn = []
+    for i, (n, _label, _why, _tail) in enumerate(steps):
+        y = i * (bar + gap)
+        width = max(round(w * n / total, 1), 2.0)
+        inside = width > 64
+        drawn.append(
+            f'<rect x="0" y="{y}" width="{width}" height="{bar}" fill="currentColor" '
+            f'fill-opacity="{0.88 - i * 0.16:.2f}"/>'
+            f'<text class="{"in" if inside else "out"}" '
+            f'x="{width - 8 if inside else width + 8:.1f}" y="{y + bar - 8}" '
+            f'text-anchor="{"end" if inside else "start"}">{n:,}</text>'
+        )
+    spoken = "; ".join(f"{n:,} {label}" for n, label, _why, _tail in steps)
+    svg = (
+        f'<svg viewBox="-1 0 {w + 60} {height}" role="img" aria-label="{esc(spoken)}." '
+        f'xmlns="http://www.w3.org/2000/svg">{"".join(drawn)}</svg>'
+    )
+    listed = "\n".join(
+        f"<dt>{n:,}</dt><dd><b>{esc(label)}.</b> {esc(why)}{tail}</dd>"
+        for n, label, why, tail in steps
+    )
+    return (
+        '<figure class="narrows">\n'
+        f"{svg}\n"
+        f"<figcaption>Where the record narrows, and why. Each bar counts {many}, not trades, as a "
+        f"share of the {total:,} the index lists; a report counts as compared where the register "
+        "compared at least one trade on it, and one report can list hundreds. The figure shows the "
+        "register's own reach. It does not show what any report says, or anything the House "
+        "Committee on Ethics has determined.</figcaption>\n"
+        "</figure>\n"
+        f'<dl class="narrows">\n{listed}\n</dl>\n'
+    )
+
+
 def glance_section(
     signal_runs: list[tuple[dict, dict]],
     outcomes_all: dict[str, list[dict]],
@@ -4166,6 +4339,7 @@ def glance_section(
             f"{esc(first)} to {esc(last)}. No square names anyone, and nothing here is sorted by "
             "anything about a person.</figcaption>\n</figure>\n"
             + square_key(counts)
+            + narrows_figure(outcomes, findings, signal, words)
             + f"<p>The {counts['after']:,} dark squares are {counts['after']:,} reports by "
             f"{named:,} "
             f"{plural(named, 'member', 'members')}. Each is on that member's page, with the dates "
