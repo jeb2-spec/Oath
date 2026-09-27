@@ -3387,7 +3387,13 @@ def test_every_extension_row_at_the_seat_is_listed_attributed_or_set_aside_read_
     }
     html_ = render.annual_notices([read, paper], [aside])
     assert html_.count("<li>") == 3
-    assert "2 attributed to this officeholder and 1 set aside" in html_
+    assert (
+        "2 attributed to this officeholder, and at this seat under this surname 1 set aside"
+        in html_
+    )
     assert "could not be read" in html_ and "does not say whose it is" in html_
     empty = render.annual_notices([], [])
-    assert "0 attributed to this officeholder and 0 set aside" in empty
+    assert (
+        "0 attributed to this officeholder, and at this seat under this surname 0 set aside"
+        in empty
+    )
