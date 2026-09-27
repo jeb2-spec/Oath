@@ -62,7 +62,7 @@
     "rows_evaluated": {
       "type": "integer",
       "minimum": 0,
-      "description": "Transaction rows the Signal evaluated against its criteria, across every report it read."
+      "description": "Rows the Signal evaluated against its criteria, across every report it read: transaction rows, for a Signal that reads them, or each report's own date, for one that reads only the header (signal-outcome.schema.json, rows)."
     },
     "rows_after": {
       "type": "integer",

@@ -38,12 +38,12 @@
         "evaluated",
         "not read"
       ],
-      "description": "Whether the register read the report from the Clerk's document. \"not read\" says the text it extracted carried no Filing ID line, or no State/District line, and nothing about what the document physically is."
+      "description": "Whether the register read the report from the Clerk's document; for a Signal that reads only a report's header, the header is what it read, and a report whose header it did not read is not among its outcomes. \"not read\" says the text it extracted carried no Filing ID line, or no State/District line, and nothing about what the document physically is."
     },
     "rows": {
       "type": "integer",
       "minimum": 0,
-      "description": "Transaction rows the register read from the report. Zero where it did not read the report. The renderer refuses where this and the rows data/transactions.ndjson holds for the report disagree, because a correction recording that a report lists more rows would otherwise leave the answer's trade counts at the number the Signal saw."
+      "description": "The rows the Signal read on the report: for a Signal whose inputs include transactions, the transaction rows the register read from it; for a Signal that reads only a report's own header, the one date it reads, so 1. Zero where it did not read the report. For a Signal that reads transactions, the renderer refuses where this and the rows data/transactions.ndjson holds for the report disagree, because a correction recording that a report lists more rows would otherwise leave the answer's trade counts at the number the Signal saw."
     },
     "evaluated": {
       "type": "integer",
@@ -69,6 +69,16 @@
         "null"
       ],
       "description": "The Finding this report produced, or null. Never a Finding of another run: a Finding names the report it rests on, and the ledger is what keeps it after the run (INVARIANTS §12)."
+    },
+    "due": {
+      "type": "string",
+      "format": "date",
+      "description": "For a Signal that compares a report's own date with dates the law sets for it: the due date it compared the report with, wherever the report's filing year gives one, whether or not the report was compared. Written by the Signal, so a page states it from the sealed record and never recomputes the calendar. Absent for a Signal that compares rows."
+    },
+    "latest": {
+      "type": "string",
+      "format": "date",
+      "description": "With due: the latest date any extension the statute allows could reach, as the Signal computed it. Absent for a Signal that compares rows."
     }
   },
   "examples": [

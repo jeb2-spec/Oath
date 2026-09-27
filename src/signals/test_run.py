@@ -124,7 +124,7 @@ def test_the_register_regenerates_byte_identically():
 
 
 def test_check_mode_sees_a_hand_edit(tmp_path):
-    for rel in ("data", "docs/signals", "src/signals", "fixtures/stock-act-ptr-after-deadline"):
+    for rel in ("data", "docs/signals", "src/signals", "fixtures"):
         shutil.copytree(ROOT / rel, tmp_path / rel)
     ledger = tmp_path / "data" / "findings.ndjson"
     rows = [json.loads(line) for line in ledger.read_text("utf-8").splitlines() if line]
@@ -230,7 +230,7 @@ def test_the_next_correction_takes_the_next_number_and_only_the_head_changes():
 
 
 def copy_register(tmp_path: Path) -> Path:
-    for rel in ("data", "docs/signals", "src/signals", "fixtures/stock-act-ptr-after-deadline"):
+    for rel in ("data", "docs/signals", "src/signals", "fixtures"):
         shutil.copytree(ROOT / rel, tmp_path / rel)
     (tmp_path / "tools").mkdir()
     shutil.copy(ROOT / "tools" / "check-aggregator-sole.py", tmp_path / "tools")

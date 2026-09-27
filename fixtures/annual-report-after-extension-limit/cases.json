@@ -1,0 +1,476 @@
+{
+ "about": "Known-answer cases for sg:annual-report-after-extension-limit:v1, each worked by hand and by a separate script, with no person in them. A case names what the Signal must do, and why, in the rule's own terms.",
+ "rule": "Due 15 May of the year after the filing year, moved to the next business day where it falls on a weekend or a federal holiday. The latest date is the later of 15 May + 90 days and the due date + 90 days, moved to the next business day where it falls on one. Fires where the report is dated two days or more after the latest date (5 U.S.C. § 13103(d), (g)(1); the Committee's 2025 Instruction Guide).",
+ "cases": [
+  {
+   "name": "dated on the due date",
+   "why": "15 May 2026 is a Friday, so the due date does not move. A report dated on it is not after it.",
+   "officeholder": {
+    "id": "oh:us:example:example",
+    "sworn_at": "2025-01-03"
+   },
+   "report": {
+    "id": "fl:example:O:0001",
+    "officeholder_id": "oh:us:example:example",
+    "filed_at": "2026-05-15",
+    "printed": {
+     "filing_type": "Annual Report",
+     "status": "Member",
+     "filing_year": 2025,
+     "filing_date": "2026-05-15",
+     "signed_on": "2026-05-15"
+    }
+   },
+   "expect": {
+    "in_scope": true,
+    "fires": false,
+    "compared": true,
+    "reason": null
+   }
+  },
+  {
+   "name": "the day after the due date",
+   "why": "Inside the 90 days an extension may add. The register does not decide whether one covered it, so it is not evaluated, whatever extension the register holds or does not.",
+   "officeholder": {
+    "id": "oh:us:example:example",
+    "sworn_at": "2025-01-03"
+   },
+   "report": {
+    "id": "fl:example:O:0001",
+    "officeholder_id": "oh:us:example:example",
+    "filed_at": "2026-05-16",
+    "printed": {
+     "filing_type": "Annual Report",
+     "status": "Member",
+     "filing_year": 2025,
+     "filing_date": "2026-05-16",
+     "signed_on": "2026-05-16"
+    }
+   },
+   "expect": {
+    "in_scope": true,
+    "fires": false,
+    "compared": false,
+    "reason": "after its due date, within the time an extension may cover"
+   }
+  },
+  {
+   "name": "the ninetieth day",
+   "why": "15 May 2026 + 90 days is Thursday 13 August 2026, the latest date any extension could reach. A report dated on it may be covered by an extension.",
+   "officeholder": {
+    "id": "oh:us:example:example",
+    "sworn_at": "2025-01-03"
+   },
+   "report": {
+    "id": "fl:example:O:0001",
+    "officeholder_id": "oh:us:example:example",
+    "filed_at": "2026-08-13",
+    "printed": {
+     "filing_type": "Annual Report",
+     "status": "Member",
+     "filing_year": 2025,
+     "filing_date": "2026-08-13",
+     "signed_on": "2026-08-13"
+    }
+   },
+   "expect": {
+    "in_scope": true,
+    "fires": false,
+    "compared": false,
+    "reason": "after its due date, within the time an extension may cover"
+   }
+  },
+  {
+   "name": "the day after the latest date",
+   "why": "Not evaluated: a report submitted late in the evening of 13 August could carry the next day's date, and the register has not established the filing system's clock.",
+   "officeholder": {
+    "id": "oh:us:example:example",
+    "sworn_at": "2025-01-03"
+   },
+   "report": {
+    "id": "fl:example:O:0001",
+    "officeholder_id": "oh:us:example:example",
+    "filed_at": "2026-08-14",
+    "printed": {
+     "filing_type": "Annual Report",
+     "status": "Member",
+     "filing_year": 2025,
+     "filing_date": "2026-08-14",
+     "signed_on": "2026-08-14"
+    }
+   },
+   "expect": {
+    "in_scope": true,
+    "fires": false,
+    "compared": false,
+    "reason": "the day after the latest date, whose clock the register has not established"
+   }
+  },
+  {
+   "name": "two days after the latest date",
+   "why": "Fires: no extension the statute allows outside a combat zone reaches 15 August 2026. 2 days after 13 August; 92 after 15 May (16 to 31 May, 30, 31, 15).",
+   "officeholder": {
+    "id": "oh:us:example:example",
+    "sworn_at": "2025-01-03"
+   },
+   "report": {
+    "id": "fl:example:O:0001",
+    "officeholder_id": "oh:us:example:example",
+    "filed_at": "2026-08-15",
+    "printed": {
+     "filing_type": "Annual Report",
+     "status": "Member",
+     "filing_year": 2025,
+     "filing_date": "2026-08-15",
+     "signed_on": "2026-08-15"
+    }
+   },
+   "expect": {
+    "in_scope": true,
+    "fires": true,
+    "compared": true,
+    "reason": null,
+    "due": "2026-05-15",
+    "latest": "2026-08-13",
+    "days_after_latest": 2,
+    "days_after_due": 92,
+    "description": "This is an annual financial disclosure report for calendar year 2025. The Clerk's index dates it 2026-08-15, the same date the report prints as its filing date and its signature line gives. It was due 2026-05-15. The statute lets extensions add at most 90 days (5 U.S.C. § 13103(d), (g)(1)), so the latest date any extension could reach was 2026-08-13. The report is dated 2 days after that date and 92 days after its due date. The register cannot see an extension for service in a combat zone, which 5 U.S.C. § 13103(g)(2) allows beyond 90 days."
+   }
+  },
+  {
+   "name": "well after the latest date, with no extension anywhere",
+   "why": "Fires the same way whether or not any extension row exists, because none could reach this date: 38 days after 13 August (18 + 20), 128 after 15 May.",
+   "officeholder": {
+    "id": "oh:us:example:example",
+    "sworn_at": "2025-01-03"
+   },
+   "report": {
+    "id": "fl:example:O:0001",
+    "officeholder_id": "oh:us:example:example",
+    "filed_at": "2026-09-20",
+    "printed": {
+     "filing_type": "Annual Report",
+     "status": "Member",
+     "filing_year": 2025,
+     "filing_date": "2026-09-20",
+     "signed_on": "2026-09-20"
+    }
+   },
+   "expect": {
+    "in_scope": true,
+    "fires": true,
+    "compared": true,
+    "reason": null,
+    "due": "2026-05-15",
+    "latest": "2026-08-13",
+    "days_after_latest": 38,
+    "days_after_due": 128
+   }
+  },
+  {
+   "name": "a due date on a Saturday, as in 2027",
+   "why": "Filing year 2026: 15 May 2027 is a Saturday, so the report is due Monday 17 May 2027. A report dated that Monday is not after its due date.",
+   "officeholder": {
+    "id": "oh:us:example:example",
+    "sworn_at": "2025-01-03"
+   },
+   "report": {
+    "id": "fl:example:O:0001",
+    "officeholder_id": "oh:us:example:example",
+    "filed_at": "2027-05-17",
+    "printed": {
+     "filing_type": "Annual Report",
+     "status": "Member",
+     "filing_year": 2026,
+     "filing_date": "2027-05-17",
+     "signed_on": "2027-05-17"
+    }
+   },
+   "expect": {
+    "in_scope": true,
+    "fires": false,
+    "compared": true,
+    "reason": null
+   }
+  },
+  {
+   "name": "the latest date, the later reading, off the weekend",
+   "why": "15 May 2027 + 90 is Friday 13 August; 17 May + 90 is Sunday 15 August. The later reading, moved off the weekend, is Monday 16 August 2027, so 17 August is the day after and not evaluated.",
+   "officeholder": {
+    "id": "oh:us:example:example",
+    "sworn_at": "2025-01-03"
+   },
+   "report": {
+    "id": "fl:example:O:0001",
+    "officeholder_id": "oh:us:example:example",
+    "filed_at": "2027-08-17",
+    "printed": {
+     "filing_type": "Annual Report",
+     "status": "Member",
+     "filing_year": 2026,
+     "filing_date": "2027-08-17",
+     "signed_on": "2027-08-17"
+    }
+   },
+   "expect": {
+    "in_scope": true,
+    "fires": false,
+    "compared": false,
+    "reason": "the day after the latest date, whose clock the register has not established"
+   }
+  },
+  {
+   "name": "two days after the later reading",
+   "why": "Fires: 2 days after Monday 16 August 2027; 93 days after Monday 17 May 2027 (14 + 30 + 31 + 18).",
+   "officeholder": {
+    "id": "oh:us:example:example",
+    "sworn_at": "2025-01-03"
+   },
+   "report": {
+    "id": "fl:example:O:0001",
+    "officeholder_id": "oh:us:example:example",
+    "filed_at": "2027-08-18",
+    "printed": {
+     "filing_type": "Annual Report",
+     "status": "Member",
+     "filing_year": 2026,
+     "filing_date": "2027-08-18",
+     "signed_on": "2027-08-18"
+    }
+   },
+   "expect": {
+    "in_scope": true,
+    "fires": true,
+    "compared": true,
+    "reason": null,
+    "due": "2027-05-17",
+    "latest": "2027-08-16",
+    "days_after_latest": 2,
+    "days_after_due": 93,
+    "description": "This is an annual financial disclosure report for calendar year 2026. The Clerk's index dates it 2027-08-18, the same date the report prints as its filing date and its signature line gives. It was due 2027-05-17, the first business day after 2027-05-15, a Saturday. The statute lets extensions add at most 90 days (5 U.S.C. § 13103(d), (g)(1)), so the latest date any extension could reach was 2027-08-16, the first business day after 2027-08-15, a Sunday. The report is dated 2 days after that date and 93 days after its due date. The register cannot see an extension for service in a combat zone, which 5 U.S.C. § 13103(g)(2) allows beyond 90 days."
+   }
+  },
+  {
+   "name": "dates that disagree",
+   "why": "The index gives 20 September and the report prints 19 September. Not evaluated: which one is the filing date is not the register's to choose.",
+   "officeholder": {
+    "id": "oh:us:example:example",
+    "sworn_at": "2025-01-03"
+   },
+   "report": {
+    "id": "fl:example:O:0001",
+    "officeholder_id": "oh:us:example:example",
+    "filed_at": "2026-09-20",
+    "printed": {
+     "filing_type": "Annual Report",
+     "status": "Member",
+     "filing_year": 2025,
+     "filing_date": "2026-09-19",
+     "signed_on": "2026-09-19"
+    }
+   },
+   "expect": {
+    "in_scope": true,
+    "fires": false,
+    "compared": false,
+    "reason": "the index date, the printed filing date and the signature date disagree"
+   }
+  },
+  {
+   "name": "no filing year printed",
+   "why": "A header with no Filing Year line: the due date cannot be known from the document.",
+   "officeholder": {
+    "id": "oh:us:example:example",
+    "sworn_at": "2025-01-03"
+   },
+   "report": {
+    "id": "fl:example:O:0001",
+    "officeholder_id": "oh:us:example:example",
+    "filed_at": "2026-09-20",
+    "printed": {
+     "filing_type": "Annual Report",
+     "status": "Member",
+     "filing_date": "2026-09-20",
+     "signed_on": "2026-09-20"
+    }
+   },
+   "expect": {
+    "in_scope": true,
+    "fires": false,
+    "compared": false,
+    "reason": "prints no filing year"
+   }
+  },
+  {
+   "name": "a year whose instructions were not read",
+   "why": "Filing year 2024: the register has read the Committee's instructions for 2025 only.",
+   "officeholder": {
+    "id": "oh:us:example:example",
+    "sworn_at": "2025-01-03"
+   },
+   "report": {
+    "id": "fl:example:O:0001",
+    "officeholder_id": "oh:us:example:example",
+    "filed_at": "2025-09-20",
+    "printed": {
+     "filing_type": "Annual Report",
+     "status": "Member",
+     "filing_year": 2024,
+     "filing_date": "2025-09-20",
+     "signed_on": "2025-09-20"
+    }
+   },
+   "expect": {
+    "in_scope": true,
+    "fires": false,
+    "compared": false,
+    "reason": "a filing year whose instructions the register has not read"
+   }
+  },
+  {
+   "name": "sixty-one days of service",
+   "why": "Sworn in 1 November 2025: 1 November to 31 December is 61 days, more than 60, so the report is required and evaluated.",
+   "officeholder": {
+    "id": "oh:us:example:example",
+    "sworn_at": "2025-11-01"
+   },
+   "report": {
+    "id": "fl:example:O:0001",
+    "officeholder_id": "oh:us:example:example",
+    "filed_at": "2026-09-20",
+    "printed": {
+     "filing_type": "Annual Report",
+     "status": "Member",
+     "filing_year": 2025,
+     "filing_date": "2026-09-20",
+     "signed_on": "2026-09-20"
+    }
+   },
+   "expect": {
+    "in_scope": true,
+    "fires": true,
+    "compared": true,
+    "reason": null,
+    "due": "2026-05-15",
+    "latest": "2026-08-13",
+    "days_after_latest": 38,
+    "days_after_due": 128
+   }
+  },
+  {
+   "name": "sixty days of service",
+   "why": "Sworn in 2 November 2025: 60 days, not more than 60, so the rule may not require the report. Not evaluated.",
+   "officeholder": {
+    "id": "oh:us:example:example",
+    "sworn_at": "2025-11-02"
+   },
+   "report": {
+    "id": "fl:example:O:0001",
+    "officeholder_id": "oh:us:example:example",
+    "filed_at": "2026-09-20",
+    "printed": {
+     "filing_type": "Annual Report",
+     "status": "Member",
+     "filing_year": 2025,
+     "filing_date": "2026-09-20",
+     "signed_on": "2026-09-20"
+    }
+   },
+   "expect": {
+    "in_scope": true,
+    "fires": false,
+    "compared": false,
+    "reason": "60 days or fewer of service in the filing year, by the swearing-in recorded"
+   }
+  },
+  {
+   "name": "no swearing-in recorded",
+   "why": "The roster records no swearing-in, so the service condition cannot be read.",
+   "officeholder": {
+    "id": "oh:us:example:example",
+    "sworn_at": null
+   },
+   "report": {
+    "id": "fl:example:O:0001",
+    "officeholder_id": "oh:us:example:example",
+    "filed_at": "2026-09-20",
+    "printed": {
+     "filing_type": "Annual Report",
+     "status": "Member",
+     "filing_year": 2025,
+     "filing_date": "2026-09-20",
+     "signed_on": "2026-09-20"
+    }
+   },
+   "expect": {
+    "in_scope": true,
+    "fires": false,
+    "compared": false,
+    "reason": "the roster records no swearing-in"
+   }
+  },
+  {
+   "name": "an amendment is not an annual report",
+   "why": "Its header says Amendment Report, whatever its code. The Signal does not read it at all.",
+   "officeholder": {
+    "id": "oh:us:example:example",
+    "sworn_at": "2025-01-03"
+   },
+   "report": {
+    "id": "fl:example:O:0001",
+    "officeholder_id": "oh:us:example:example",
+    "filed_at": "2026-09-20",
+    "printed": {
+     "filing_type": "Amendment Report",
+     "status": "Member",
+     "filing_year": 2025,
+     "filing_date": "2026-09-20",
+     "signed_on": "2026-09-20"
+    }
+   },
+   "expect": {
+    "in_scope": false
+   }
+  },
+  {
+   "name": "a paper report, whose header the register cannot read",
+   "why": "No printed fields: the Signal cannot know from the document that it is annual, and reads no code, so it is not among the reports it evaluates.",
+   "officeholder": {
+    "id": "oh:us:example:example",
+    "sworn_at": "2025-01-03"
+   },
+   "report": {
+    "id": "fl:example:O:0001",
+    "officeholder_id": "oh:us:example:example",
+    "filed_at": "2026-09-20",
+    "printed": {}
+   },
+   "expect": {
+    "in_scope": false
+   }
+  },
+  {
+   "name": "a candidate's report",
+   "why": "Status: Congressional Candidate. The Signal reads Members' reports.",
+   "officeholder": {
+    "id": "oh:us:example:example",
+    "sworn_at": "2025-01-03"
+   },
+   "report": {
+    "id": "fl:example:O:0001",
+    "officeholder_id": "oh:us:example:example",
+    "filed_at": "2026-09-20",
+    "printed": {
+     "filing_type": "Annual Report",
+     "status": "Congressional Candidate",
+     "filing_year": 2025,
+     "filing_date": "2026-09-20",
+     "signed_on": "2026-09-20"
+    }
+   },
+   "expect": {
+    "in_scope": false
+   }
+  }
+ ]
+}

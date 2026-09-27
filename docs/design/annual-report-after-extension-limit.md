@@ -1,0 +1,54 @@
+---
+id: sg:annual-report-after-extension-limit:v1
+slug: annual-report-after-extension-limit
+version: 1
+name: Annual financial disclosure report dated after the latest date an extension could reach
+standard: S.1
+standard_citation: 5 U.S.C. § 13103(d), (g)(1), of the Ethics in Government Act of 1978 (5 U.S.C. chapter 131)
+inputs: filing, officeholder
+supersedes: null
+fixture: fixtures/annual-report-after-extension-limit/cases.json
+---
+
+# Annual financial disclosure report dated after the latest date an extension could reach
+
+*The definition as built, 2026-09-27, held here in `docs/design/` until the Council has read the built Signal and its pages. The runner reads only `docs/signals/`, so until this file moves there no Finding rests on it, no page shows it, and nothing in `data/` carries it. It moves with the sealed build that first carries the Signal, together with its rows in STANDARDS.md S.1 and SOURCES.md F.1, and this note goes when it moves.*
+
+## Description
+
+A Member of the U.S. House of Representatives, including its Delegates and its Resident Commissioner, is required to file an annual financial disclosure report for each calendar year of more than 60 days' service, due 15 May of the next year, and extensions may add at most 90 days in total. This Signal compares the date on each Member's annual report with the latest date any extension the statute allows could reach, and reports a result only where the report's date is later, stating by how many days. Before that date it does not decide whether an extension covered a report: it says the report is within the time an extension may cover, and does not evaluate it.
+
+## Standard
+
+[STANDARDS.md S.1](../../STANDARDS.md#s1-ethics-in-government-act-of-1978). [5 U.S.C. § 13103(d)](https://uscode.house.gov/view.xhtml?req=granuleid:USC-prelim-title5-section13103&num=0&edition=prelim): an individual described in subsection (f) who performs the duties of the office for more than 60 days in a calendar year "shall file on or before May 15 of the succeeding year" a report for that year. Subsection (f) lists Members of Congress, and [§ 13101](https://uscode.house.gov/view.xhtml?req=granuleid:USC-prelim-title5-section13101&num=0&edition=prelim) defines a Member to include a Delegate and the Resident Commissioner. § 13103(g)(1): extensions "may be granted under procedures prescribed by the supervising ethics office", "but the total of such extensions shall not exceed 90 days". § 13103(g)(2) allows more for service in a combat zone. [§ 13106(d)](https://uscode.house.gov/view.xhtml?req=granuleid:USC-prelim-title5-section13106&num=0&edition=prelim) sets a $200 fee for a report filed more than 30 days after the later of its due date and the last day of a granted extension, which may be waived. The House Committee on Ethics' [2025 Instruction Guide](https://ethics.house.gov/wp-content/uploads/2026/07/7-8-2026-2025-Published-Instruction-Guide.pdf) states that an annual report due on a weekend or federal holiday is due the next business day, that the end of an extension 90 days from the original due date is not moved for a weekend or holiday, and that the Clerk is required to post notice of all extensions granted. The register read these at uscode.house.gov (currency through Pub. L. 119-103, as the pages state) and ethics.house.gov on 2026-09-27.
+
+## Inputs
+
+- **filing.** `printed`, what the document's own header prints: `filing_type`, `status`, `filing_year`, `filing_date` and `signed_on`, the date its signature line gives, each read only where its labelled line says one thing (`schemas/filing.schema.json`); `filed_at`, the date the Clerk's public index gives the document; `officeholder_id`.
+- **officeholder.** `sworn_at`, the date the Clerk's roster records the officeholder as sworn in for the Congress it lists.
+
+## Criteria
+
+The Signal reads every filing whose header prints *Filing Type: Annual Report* and *Status: Member*. It reads no index code: which reports are annual is what each report says of itself. A filing whose header the register has not read, which includes every report filed on paper, is not among the reports it evaluates, and neither is any other kind of report or a report filed as a candidate.
+
+For each report it reads, it evaluates the report only where each of these holds, and otherwise records the first reason that fails. The header prints a filing year. The filing year is 2025 or later: the instructions the register has read are those for calendar year 2025. The date the Clerk's index gives the report, the Filing Date the report prints and the date its signature line gives can all be read, and are the same day. The roster records a swearing-in for the officeholder. The officeholder served more than 60 days of the filing year, counted from the later of 1 January and the swearing-in the roster records to 31 December.
+
+The due date is 15 May of the year after the filing year, or the first business day after it where 15 May is a Saturday, a Sunday or a federal holiday as 5 U.S.C. § 6103 lists them on the days observed. The latest date is 90 days after 15 May or 90 days after the due date, whichever is later, and the first business day after that where it falls on a Saturday, a Sunday or a holiday. The Committee's Guide does not move the end of a 90-day extension for a weekend; the Signal takes the later day wherever the rules could be read two ways, so that it never fires on a report that any reading of them would leave within an extension. No extension the statute allows outside a combat zone reaches past the latest date.
+
+A report dated on or before its due date is evaluated, and the Signal does not fire. A report dated after its due date and on or before the latest date is not evaluated: an extension may cover it, and the register does not decide whether one did. A report dated the day after the latest date is not evaluated either, because the register has not established in which time zone the filing system prints the date, and a report submitted late in the evening could carry the next day's. The Signal fires for a report dated two days or more after the latest date. The Finding names the report and the officeholder the register attributes it to, and gives the report's date, the due date, the latest date, what moved either and from which day, and the days after each. No extension notice, attributed or set aside, enters the Signal: the register's join of notices to Members is shown on the page and decides nothing.
+
+    due      = 15 May (Y + 1), moved to the next business day
+    latest   = max(15 May (Y + 1) + 90, due + 90), moved to the next business day
+    fires    where report date >= latest + 2
+
+The implementation that writes the Findings is [`src/signals/annual-report-after-extension-limit.py`](../../src/signals/annual-report-after-extension-limit.py). The reference implementation, [`src/signals/annual-report-after-extension-limit.ts`](../../src/signals/annual-report-after-extension-limit.ts), shares no code with it and must agree with it on every known-answer case and every row of the register; `python tools/rebuild.py <finding-id>` regenerates any Finding from the rows it names. Each carries its own copy of the federal calendar. This file, both implementations and the known-answer cases are frozen with the version: the Signal's row carries the SHA-256 of each, and a change to any of them is a new version.
+
+## What this Signal does not say
+
+This Signal does not say the House Committee on Ethics found a report late, assessed a fee or waived one: Oath reads none of the Committee's decisions, which is not to say none exist. The register computes no fee for anyone. This Signal does not say anything about what a report discloses, or why a report carries the date it does. This Signal does not say that a report dated within the time an extension may cover was covered by one, or that it was not; the page lists the extension notices the Clerk's index shows at the seat, as the register's join, and none of them decides anything here. This Signal does not see an extension for service in a combat zone, which the statute allows beyond 90 days; every Finding says so.
+
+This Signal does not reach a report the register has not read, which includes every report filed on paper, so an officeholder whose report is on paper cannot be among those on which it fires. It does not reach a Member who left before the roster the register read, a candidate for the seat, or a Congress's second year: the 2026 reports are due after the 119th Congress's terms end, and the register attributes no row of a closed Congress by name. Where the index lists no annual report the register attributes to a Member, this Signal says nothing, and the page says exactly that, never that a report was not filed. The Signal relies on the date the Clerk's index gives a report, and reads it only where the report's own Filing Date and signature date agree with it; where all three are wrong together, a Finding repeats the error, and the correction follows the record by supersession, never by removal. It does not rank, total or compare officeholders.
+
+## Worked example
+
+Against [`fixtures/annual-report-after-extension-limit/cases.json`](../../fixtures/annual-report-after-extension-limit/cases.json), eighteen cases with no person in them, each answer worked by hand and by a separate script. For calendar year 2025, 15 May 2026 is a Friday, so the report is due that day, and the latest date is Thursday 13 August 2026. A report dated 13 August is within the time an extension may cover and is not evaluated; one dated 14 August is the day after, and is not evaluated; one dated 15 August fires, with this text: "This is an annual financial disclosure report for calendar year 2025. The Clerk's index dates it 2026-08-15, the same date the report prints as its filing date and its signature line gives. It was due 2026-05-15. The statute lets extensions add at most 90 days (5 U.S.C. § 13103(d), (g)(1)), so the latest date any extension could reach was 2026-08-13. The report is dated 2 days after that date and 92 days after its due date. The register cannot see an extension for service in a combat zone, which 5 U.S.C. § 13103(g)(2) allows beyond 90 days." For calendar year 2026, 15 May 2027 is a Saturday, so the report is due Monday 17 May; 90 days after 15 May is Friday 13 August and 90 days after 17 May is Sunday 15 August, so the latest date is the later reading moved off the weekend, Monday 16 August. A report dated 17 August is not evaluated, and one dated 18 August fires, 2 days after the latest date and 93 after the due date. A report whose printed Filing Date differs from its index date is not evaluated, whatever its dates. A report whose header says *Amendment Report*, or *Status: Congressional Candidate*, or a paper report with no header the register can read, is not among the reports the Signal evaluates.
