@@ -8,6 +8,7 @@ moved in place, nothing a person could do would correct a filing's date or attri
 
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import json
 import shutil
@@ -404,6 +405,77 @@ def test_a_filed_document_is_cited_by_its_hash_and_never_kept(ledger, capsys):
     kept.mkdir(parents=True)
     (kept / f"{PDF_SHA}.pdf").write_bytes(PDF)
     assert gate.main([str(ledger)]) == 1, "a kept filed document fails"
+
+
+@pytest.mark.parametrize(
+    "url, name, body, kept",
+    [
+        ("https://clerk.house.gov/xml/lists/MemberData.xml", "roster.xml", b"<x/>", True),
+        (
+            "https://disclosures-clerk.house.gov/public_disc/financial-pdfs/2025FD.zip",
+            "2025FD.zip",
+            b"PK\x03\x04",
+            True,
+        ),
+        (
+            "https://efdsearch.senate.gov/search/view/ptr/abc/",
+            "report.html",
+            b"<p>a row</p>",
+            False,
+        ),
+        (
+            "https://disclosures-clerk.house.gov/public_disc/ptr-pdfs/2025/1",
+            "evidence.bin",
+            PDF,
+            False,
+        ),
+    ],
+)
+def test_only_the_roster_and_the_index_are_kept_whatever_a_file_is_called(
+    ledger, url, name, body, kept
+):
+    """Seat B on the fourth reading (F2): "a filed document is never kept" was tested by a
+    ".pdf" suffix, so a report served from a URL that does not end .pdf, or under any other
+    file name, was kept whole and then required to be kept for good. The register keeps the two
+    captures the adapter fetches, the Clerk's roster and a filing year's index, by what the URL
+    is; everything else is cited by its fingerprint, and a kept file whose bytes are a PDF
+    fails whatever it is called."""
+    (ledger / name).write_bytes(body)
+    assert (
+        correct.main(
+            [
+                str(ledger),
+                "--row",
+                "fl:house-clerk:P:1",
+                "--field",
+                "filed_at",
+                "--now",
+                "2025-02-26",
+                "--kind",
+                "source",
+                "--because",
+                "The source reads so.",
+                "--evidence-url",
+                url,
+                "--evidence-file",
+                str(ledger / name),
+                "--evidence-retrieved-at",
+                RETRIEVED,
+                "--decided-by",
+                "the maintainer",
+                "--decided-at",
+                "2026-10-06T12:00:00Z",
+            ]
+        )
+        == 0
+    )
+    folder = ledger / "data" / "captures" / "sha256"
+    assert folder.is_dir() is kept, url
+    assert gate.main([str(ledger)]) == 0, "the gate honours what the tool wrote"
+    if not kept:
+        folder.mkdir(parents=True)
+        (folder / f"{hashlib.sha256(body).hexdigest()}{Path(name).suffix}").write_bytes(body)
+        assert gate.main([str(ledger)]) == 1, "keeping it anyway fails"
 
 
 def test_the_filers_own_text_is_corrected_by_its_hash(ledger):

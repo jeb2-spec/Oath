@@ -15,9 +15,12 @@ those bytes were retrieved, and their SHA-256, which it keeps at
 data/captures/sha256/<sha256><ext> so the correction can be checked from the repository
 alone, unless the evidence is a filed document (a PDF): that it cites by its SHA-256 and
 never keeps, because a filed document can carry the names of private people and a kept copy
-would outlast the Clerk's withdrawal or redaction of it (EVIDENCE.md §7). A correction of a
+would outlast the Clerk's withdrawal or redaction of it (a decision of the Council's third
+reading of S.1b; NEXT.md D.4 carries it into the doctrine). A correction of a
 transaction's asset or notes, the filer's own text, keeps the SHA-256 of what it carried
-(`was_sha256`), never the text. Then it moves the facts. tools/check-removals.py lets those
+(`was_sha256`) and not the text; the build that published the line still carries it, as every
+sealed build stays in the repository's history, and removing it from there has no route yet
+(NEXT.md D.4). Then it moves the facts. tools/check-removals.py lets those
 moves through, and no other.
 
 An attribution moves whole. Moving a filing's officeholder_id also moves its office_id to
@@ -84,6 +87,18 @@ def json_of(value) -> str:
     """A value as canonical JSON, the form whose SHA-256 a correction keeps for as-filed text,
     and the form tools/check-removals.py hashes to match it."""
     return json.dumps(value, ensure_ascii=False, sort_keys=True)
+
+
+def kept_rule():
+    """The §14 gate's own rule for which captures the register keeps, loaded from beside this
+    tool so the two can never drift: what this writes, that gate must honour."""
+    spec = importlib.util.spec_from_file_location(
+        "removals_rule", Path(__file__).resolve().with_name("check-removals.py")
+    )
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
 
 
 def primary_hosts(root: Path) -> set[str]:
@@ -255,9 +270,12 @@ def correction(
             raise Refusal(f"{row_id}: {field} already carries {json.dumps(now)}; nothing to move")
         else:
             moves = moves_of(root, row_id, field, was, now)
-    document = any(
-        name.lower().endswith(".pdf") for name in (urlsplit(evidence_url).path, evidence_name)
-    )
+    # Kept only where the evidence is one of the two captures the register keeps, the Clerk's
+    # roster or a filing year's index; everything else is cited by its fingerprint, because a
+    # filed document served from a URL that does not end .pdf was kept whole by the suffix rule
+    # (the Council's fourth reading of S.1b, Seat B).
+    rule = kept_rule()
+    document = rule.document(evidence_url) or evidence[:5] == rule.PDF_BYTES
     kept = "" if document else f"data/captures/sha256/{sha}{Path(evidence_name).suffix}"
     changes, files = [], {}
     recorded = root / "data" / "changes.ndjson"

@@ -187,7 +187,7 @@ def change(capture: bytes) -> dict:
         "rows": "officeholders",
         "change": "not listed",
         "capture": {
-            "url": "u",
+            "url": "https://clerk.house.gov/xml/lists/MemberData.xml",
             "retrieved_at": "2026-01-01T00:00:00Z",
             "content_hash": hashlib.sha256(capture).hexdigest(),
         },

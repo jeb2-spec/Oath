@@ -21,7 +21,8 @@ stood before the push), and fails when:
      kept there, so a change can be checked from the repository alone; except a filed
      document (a PDF), which is cited by its SHA-256 and never kept, because it can carry the
      names of private people and a kept copy would outlast the Clerk's withdrawal or redaction
-     of it (EVIDENCE.md §7; the Council's third reading of S.1b, Seat B). A kept PDF fails;
+     of it: the Council's third reading of S.1b (Seat B) decided it, and NEXT.md D.4 carries
+     it into the doctrine. A kept PDF fails;
   5. a correction does not say what makes it one: its kind (the source, or the register),
      its reason, who decided and when, and evidence at an https URL on a host SOURCES.md
      registers as primary. Such a row is honoured for nothing, and fails by itself, however
@@ -239,9 +240,19 @@ def appended(tree: str, published: str) -> list[str]:
     ]
 
 
+# The two captures the register keeps: the Clerk's roster, and a filing year's index. They are
+# named by the adapter, so the rule is what the URL is, not what a file is called: a filed
+# document served from a URL that does not end .pdf was kept whole by the suffix rule (the
+# Council's fourth reading of S.1b, Seat B).
+KEEPS = ("clerk.house.gov/xml/lists/", "/public_disc/financial-pdfs/")
+PDF_BYTES = b"%PDF-"
+
+
 def document(url: str) -> bool:
-    """Whether a capture's URL is a filed document (a PDF), cited and never kept."""
-    return urlsplit(url).path.lower().endswith(".pdf")
+    """Whether a capture is a filed document, cited by its fingerprint and never kept: anything
+    but the roster and a year's index, which the adapter fetches and the register keeps."""
+    where = urlsplit(url)
+    return not any(part in f"{where.netloc}{where.path}" for part in KEEPS)
 
 
 def capture_problems(root: Path, ref: str, changes: list[dict]) -> list[str]:
@@ -261,14 +272,20 @@ def capture_problems(root: Path, ref: str, changes: list[dict]) -> list[str]:
         named = KEPT.match(name)
         if named is None or hashlib.sha256(path.read_bytes()).hexdigest() != named.group(1):
             fails.append(f"{CAPTURES}/{name}: not named by the SHA-256 of its bytes")
-        if name.lower().endswith(".pdf"):
+        if name.lower().endswith(".pdf") or path.read_bytes()[:5] == PDF_BYTES:
             fails.append(
                 f"{CAPTURES}/{name}: a filed document is kept; the register cites a document by "
-                "its SHA-256 and never keeps it (EVIDENCE.md §7)"
+                "its SHA-256 and never keeps it (the Council's third reading of S.1b)"
             )
     hashes = {KEPT.match(n).group(1) for n in here if KEPT.match(n)}
     for change in changes:
         if document(change["capture"]["url"]):
+            if change["capture"].get("content_hash") in hashes:
+                fails.append(
+                    f"{APPENDED}: {change['id']} cites a filed document, which the register "
+                    f"keeps under {CAPTURES}/; a document is cited by its SHA-256 and never "
+                    "kept, whatever the file is called (the Council's fourth reading of S.1b)"
+                )
             continue
         if change["capture"]["content_hash"] not in hashes:
             fails.append(
@@ -316,7 +333,8 @@ def main(argv: list[str] | None = None) -> int:
         print(
             "      A published row stays, byte for byte, and only gains facts it lacked "
             "(INVARIANTS.md §14). What a later capture shows otherwise is a change row of its "
-            "own, citing the capture, which the register keeps; a fact found wrong moves only "
+            "own, citing the read, whose bytes the register keeps where it was of the roster "
+            "or a year's index; a fact found wrong moves only "
             "by the maintainer's correction row that names it (tools/correct.py), with the "
             "evidence."
         )

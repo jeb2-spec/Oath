@@ -28,7 +28,10 @@
 # byte; a row only gains a fact it lacked. What a later capture shows otherwise (a Member the
 # roster no longer lists, a filing the index stops listing or dates otherwise, a document
 # served in other bytes that read otherwise) is a row of its own in data/changes.ndjson,
-# citing the capture, whose bytes the build keeps in data/captures/sha256/ and this job commits; a
+# citing the read; where that read was of the roster or a year's index the build keeps its bytes
+# in data/captures/sha256/ and this job commits them, and a filed document it cites by its
+# fingerprint alone and never keeps, because a kept copy would outlast the Clerk's redaction of
+# it (the Council's third reading of S.1b); a
 # filing year whose Congress has ended is carried as published (NEXT.md S.1b). A fact moves
 # only by a person's correction, a change row of its own that tools/correct.py writes with
 # the evidence. check-removals holds the build to all of it, and its report is in the pull
