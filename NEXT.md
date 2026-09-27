@@ -138,7 +138,41 @@ a form, published against named people. Twenty-four rows would also not be *ever
 the whole reason the direction names this signal.
 
 **The one thing it waits on:** the Clerk's own definition of the form codes, read at its source and
-entered in [SOURCES.md](SOURCES.md) with a row per code. Until then, a form-code signal is not
+entered in [SOURCES.md](SOURCES.md) with a row per code.
+
+**Read at the source, 2026-09-27, and the premise above was wrong in the way it feared.** The
+Clerk publishes no legend for the codes, and the documents do not need one: each prints its own
+*Filing Type*, *Filing Year* and *Filing Date* in its header. All 24 `A` documents that carry text
+say *Amendment Report*; none is annual. 38 of 40 sampled `O` documents say *Annual Report* by a
+Member, so the annual reports are under `O`, 422 rows against 441 seats, and **this Signal can
+reach nearly every member**, which is the whole reason the direction named it. The Signal must
+read each document's own *Filing Type* line and never the code (`wt:the-form-codes`).
+
+**The standard, read at uscode.house.gov the same day.** 5 U.S.C. § 13103(d): a Member who
+performs the duties of the office for more than 60 days in a calendar year files *on or before May
+15 of the succeeding year*. § 13103(g)(1): extensions *shall not exceed 90 days* in total.
+§ 13106(d)(1): the $200 fee falls on a report filed *more than 30 days after the later of* the due
+date or *the last day of the filing extension period*. The Committee's 2025 Instruction Guide:
+unlike a transaction report, an annual report whose deadline falls on a weekend or federal
+holiday is due the next business day.
+
+**What the Signal must do before it may say anything about a person, learnt from one header.**
+A 2025 annual report sampled that day prints *Filing Date: 08/13/2026*, which is exactly 90 days
+after 15 May 2026. Read alone it is 90 days late; read with its extension it may be on time. So
+extension requests (the `X` documents, which print *Extension Length* and *Report Type Due*) are
+joined to the report they extend before any row is evaluated, and a report whose extension the
+register cannot read is not evaluated at all. The join is by officeholder, year and report type,
+because an extension request carries no filing ID of the report it extends; that join is an
+inference about a named person, and the Council reads it before the Signal ships.
+
+**Next:** the definition document, its known-answer cases, and a Council reading of both, before any
+code. [docs/design/the-annual-report-signal.md](docs/design/the-annual-report-signal.md) is the draft.
+
+**One sentence of the first Signal's own definition is now stale, and it stays until a version says
+so.** `stock-act-ptr-after-deadline` v1 says *the register has not compared the index date with the
+date signed on each report*. Since 2026-09-27 it has, on all 409 reports whose text it can read, and
+they agree (`wt:the-clerks-filing-date`). The definition is frozen with the version by its hash, so
+the sentence is not edited: v2 of that Signal says what was found, and v1 stays readable as it was. Until then, a form-code signal is not
 definable under Vow IV, and saying so is cheaper than discovering it after the Council reads it.
 
 **What can be done before that, and needs no network:** the signal's definition document and its
