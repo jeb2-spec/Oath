@@ -395,6 +395,20 @@ p.punch { font: 700 1.02rem/1.45 var(--letter); max-width: 40rem; margin: .8rem 
   ol.strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   h1.comic { font-size: 3rem; }
 }
+/* the deadline: by it, or after it */
+section.deadline { border-top: 0; }
+figure.deadline { margin: .6rem 0 .3rem; }
+svg.deadline { width: 100%; max-width: 36rem; height: auto; display: block; }
+.dl.by { fill: var(--ink); fill-opacity: .22; stroke: var(--ink); stroke-width: .7; }
+.dl.after { fill: var(--ink); }
+.dfan { fill: var(--ink); fill-opacity: .1; stroke: var(--ink-2); stroke-width: .6;
+  stroke-dasharray: 2 1.6; }
+.dline { stroke: var(--ink); stroke-width: 1.4; }
+.daxis { stroke: var(--ink); stroke-width: 1.2; }
+.dtick { stroke: var(--ink-2); stroke-width: .8; }
+svg.deadline text { font: 700 9px var(--letter); fill: var(--ink-2); }
+svg.deadline text.don { font-size: 10px; fill: var(--ink); }
+svg.deadline text.doff { font-size: 10px; fill: var(--paper); }
 /* the notice clock */
 section.noticeclock { border-top: 0; }
 figure.noticeclock { margin: .6rem 0 .3rem; }
@@ -4132,10 +4146,10 @@ def strip_section(unread: int, total: int, year: int) -> str:
         )
     paper = (
         f" On {unread:,} the register found no Filing ID line to read, so it read nothing "
-        "from them: a limit of the register, not a fact about what was filed. Every one is "
-        "below, one square each; those are the outlines."
+        "from them: a limit of the register, not a fact about what was filed. Every one of them is "
+        "on this page, one square each; those are the outlines."
         if unread
-        else " Every one is below, one square each."
+        else " Every one of them is on this page, one square each."
     )
     return (
         '<section class="howto" id="how">\n<h2><span class="tag">How a stock trade becomes a '
@@ -4149,6 +4163,167 @@ def strip_section(unread: int, total: int, year: int) -> str:
 
 
 # ---- the notice clock: the one date the filer writes ----------------------------------------
+
+
+# The key's swatch, drawn from the same two fills the figure uses, so a reader matches the block
+# in the key to the block in the bar without being told which is which.
+DEADLINE_SWATCH = (
+    '<svg class="key" viewBox="0 0 12 12" aria-hidden="true" focusable="false">'
+    '<rect class="dl {0}" x="1" y="1" width="10" height="10"/></svg>'
+)
+
+
+# ---- the deadline: by it, or after it -------------------------------------------------------
+
+
+def days_after_rows(findings: list[dict], signal_id: str) -> list[int]:
+    """Every row a current Finding of this signal rests on, as the days the Signal computed between
+    the deadline and the date the Clerk's index gives the report. The arithmetic is the Signal's and
+    is sealed with the Finding; this reads it back and never recomputes it."""
+    return sorted(
+        row["days_after"]
+        for finding in fired_now(findings, signal_id)
+        for row in finding["evidence"]["rows"]
+        if isinstance(row.get("days_after"), int)
+    )
+
+
+def deadline_chart(on_time: int, late: list[int]) -> str:
+    """One drawing, two registers.
+
+    Above: every trade the Signal compared, as a single bar split where the deadline falls, so the
+    proportion is the first thing a reader takes in and not a number they have to divide. Below:
+    the far side of that split enlarged, spread by the days past the deadline, one bar a day. A
+    bracket joins the two, because the lower register is the upper one's dark segment magnified and
+    a reader should not have to be told that in words.
+
+    The page taught four marks in its four panels; the tick is the deadline and the bar is how late.
+    This is where it draws them at the scale of the whole chamber."""
+    # Room above the bar for its one label, and room between the two registers for the bracket to
+    # read as a bracket: the whole drawing is the one line at the split, twice, joined.
+    pad, w = 8, 360
+    bar_y, bar_h, gap = 20, 16, 3
+    head, base = 78, 168
+    # A day carrying any trade at all is drawn at least this high. Without a floor the long tail,
+    # where a day holds one or two trades against a busiest day of hundreds, falls below a pixel
+    # and the figure shows four spikes and an empty plain; with one, the caption says so.
+    FLOOR = 2.5
+    inner = w - 2 * pad
+    total = on_time + len(late)
+    if not total:
+        return ""
+    split = pad + inner * on_time / total
+    per_day: dict[int, int] = {}
+    for d in late:
+        per_day[d] = per_day.get(d, 0) + 1
+    furthest = max(per_day, default=1)
+    step = inner / max(furthest, 1)
+    top = max(per_day.values(), default=1)
+    parts = [
+        # the whole, and the part of it past the deadline
+        f'<rect class="dl by" x="{pad}" y="{bar_y}" width="{split - pad:.1f}" height="{bar_h}"/>',
+        f'<rect class="dl after" x="{split:.1f}" y="{bar_y}" width="{w - pad - split:.1f}" '
+        f'height="{bar_h}"/>',
+        # the deadline itself, the one line the rest of the drawing hangs on
+        f'<line class="dline" x1="{split:.1f}" y1="{bar_y - 4}" x2="{split:.1f}" '
+        f'y2="{bar_y + bar_h + 4}"/>',
+        f'<text x="{split:.1f}" y="{bar_y - 6}" text-anchor="middle">the deadline</text>',
+        # Both counts on the blocks they belong to, so the picture says what it is without the
+        # key: a reader should be able to take the whole of it in before reading a word below.
+        f'<text class="don" x="{(pad + split) / 2:.1f}" y="{bar_y + bar_h - 4.5}" '
+        f'text-anchor="middle">{on_time:,}</text>',
+        f'<text class="doff" x="{(split + w - pad) / 2:.1f}" y="{bar_y + bar_h - 4.5}" '
+        f'text-anchor="middle">{len(late):,}</text>',
+        # the bracket: the dark segment, opened out into the register below it
+        f'<path class="dfan" d="M{split:.1f} {bar_y + bar_h + gap} L{pad} {head - 6} '
+        f'L{w - pad} {head - 6} L{w - pad} {bar_y + bar_h + gap} Z"/>',
+    ]
+    for day, n in sorted(per_day.items()):
+        h = max(round(n / top * (base - head), 1), FLOOR)
+        x = pad + (day - 1) * step
+        parts.append(
+            f'<rect class="dl after" x="{x:.2f}" y="{base - h:.1f}" '
+            f'width="{min(step - 0.25, 3):.2f}" height="{h:.1f}"/>'
+        )
+    parts.append(f'<line class="dline" x1="{pad}" y1="{head - 6}" x2="{pad}" y2="{base}"/>')
+    parts.append(f'<line class="daxis" x1="{pad}" y1="{base}" x2="{w - pad}" y2="{base}"/>')
+    for day in (30, 90, furthest):
+        if day > furthest:
+            continue
+        x = pad + (day - 1) * step
+        parts.append(f'<line class="dtick" x1="{x:.1f}" y1="{base}" x2="{x:.1f}" y2="{base + 3}"/>')
+        parts.append(f'<text x="{x:.1f}" y="{base + 12}" text-anchor="middle">{day}</text>')
+    parts.append(f'<text x="{pad}" y="{base + 12}" text-anchor="start">1</text>')
+    parts.append(
+        f'<text x="{w - pad}" y="{base + 24}" text-anchor="end">days after the deadline</text>'
+    )
+    return (
+        f'<svg class="deadline" viewBox="0 0 {w} {base + 28}" direction="ltr" aria-hidden="true" '
+        'focusable="false">' + "".join(parts) + "</svg>"
+    )
+
+
+def deadline_section(signal_runs: list[tuple[dict, dict]], findings: list[dict]) -> str:
+    """The one figure the page is for: the deadline, and how many trades fell on each side of it.
+
+    Every other figure here says which reports the register could read, or where a filer's own
+    notice date fell. None said the thing the register was built to show: that of the trades it
+    compared, most were reported inside the limit the law sets, and that where a report came after
+    it the distance is usually days and occasionally months. Both halves are the record, and a
+    figure that drew only the second would be an indictment rather than a register.
+
+    The counts come from the run record; the distribution comes from the rows the Findings carry,
+    which is the Signal's own arithmetic, sealed. Where the two disagree about how many rows are
+    past the deadline the section says so and draws nothing, because a picture drawn from one and
+    labelled from the other is the defect this project exists to prevent."""
+    parts = []
+    for signal, summary in signal_runs:
+        compared = summary.get("rows_evaluated") or 0
+        after = summary.get("rows_after") or 0
+        if not compared:
+            continue
+        late = days_after_rows(findings, signal["id"])
+        if len(late) != after:
+            parts.append(
+                f'<p class="quiet">This build\'s run record counts {after:,} '
+                f"{plural(after, 'trade', 'trades')} past the deadline and its Findings carry "
+                f"{len(late):,}, so the register draws neither: "
+                f'<a href="{signal_page_path(signal)}">the signal\'s own page</a> has what it '
+                "did.</p>\n"
+            )
+            continue
+        on_time = compared - len(late)
+        reports = summary.get("reports_with_a_finding") or 0
+        middle = late[len(late) // 2] if late else 0
+        parts.append(
+            '<figure class="deadline">\n'
+            + deadline_chart(on_time, late)
+            + f"\n<figcaption>Every trade the signal compared against the deadline, as one bar "
+            f"split where the deadline falls: {on_time:,} reported by it, {len(late):,} after. "
+            "Below, that second part on its own and spread by the days between the deadline and "
+            "the date the Clerk's index gives the report, one bar a day, on a plain scale; a day "
+            "carrying any trade at all is drawn at least a tick high, so the far days show. It "
+            "counts trades and not reports or people: one report can list hundreds of trades, so "
+            "a tall bar can be a single report. The arithmetic is the signal's, sealed with each "
+            "Finding, and this draws it back. It names no one, and nothing here is ordered by "
+            "anything about a person.</figcaption>\n</figure>\n"
+            '<ul class="squarekey">'
+            f"<li>{DEADLINE_SWATCH.format('by')} <b>{on_time:,}</b> trades whose report the "
+            "Clerk's index dates on or before the deadline the rule sets</li>"
+            f"<li>{DEADLINE_SWATCH.format('after')} <b>{len(late):,}</b> trades whose report it "
+            f"dates after the deadline, on {reports:,} {plural(reports, 'report', 'reports')}: "
+            f"half of them by {middle:,} {plural(middle, 'day', 'days')} or fewer, the "
+            f"furthest by {max(late):,}</li></ul>\n"
+        )
+    if not parts:
+        return ""
+    return (
+        '<section class="deadline" id="deadline">\n'
+        '<h2><span class="tag">By the deadline, or after it</span></h2>\n'
+        + "".join(parts)
+        + f'<p class="quiet">{esc(EITHER_WAY)}</p>\n'
+        "</section>"
+    )
 
 
 def notice_bands(transactions: list[dict], filings: list[dict]) -> dict:
@@ -5156,6 +5331,7 @@ def render_index(
         "The register sets the record beside it.</footer></blockquote>\n</section>"
     )
     glance = glance_section(signal_runs or [], outcomes_all or {}, findings or [])
+    deadline = deadline_section(signal_runs or [], findings or [])
     narrows = narrows_section(signal_runs or [], outcomes_all or {}, findings or [])
     notice = notice_section(transactions or [], filings)
     everything = [o for group in (outcomes_all or {}).values() for o in group]
@@ -5180,7 +5356,7 @@ def render_index(
     # filed against it, then the one date the filer writes, then what the register could not
     # reach, then the oath the whole page is set beside. The doors out are last.
     body = (
-        f'{head}\n<main id="main">\n{tile_map(offices)}\n{how}\n{glance}\n'
+        f'{head}\n<main id="main">\n{tile_map(offices)}\n{how}\n{deadline}\n{glance}\n'
         f"{notice}\n{narrows}\n{oath}\n{disputes_section(False, brief=True)}\n{door}\n"
         f"</main>\n{footer(meta, home=True)}"
     )

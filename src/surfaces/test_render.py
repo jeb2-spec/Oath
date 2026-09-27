@@ -2317,7 +2317,7 @@ def test_the_landing_shows_the_house_at_a_glance_and_names_no_one():
     assert (
         page.index('id="find"')
         < page.index("How a stock trade becomes a public record")
-        < page.index("Every one is below")
+        < page.index("Every one of them is on this page")
         < page.index('id="glance"')
         < page.index('id="narrows"')
         < page.index("What every member swore")
@@ -2370,6 +2370,93 @@ def test_the_strip_teaches_the_marks_and_draws_the_process_never_a_person():
     assert page.index('id="how"') < page.index('id="glance"')
     person = render.render_officeholder(HOLDERS[0], FILINGS[:1], META, striker, 0, [])
     assert 'class="comic"' not in person, "a person's name is never lettered as a comic"
+
+
+def test_the_deadline_figure_draws_both_sides_of_the_line_and_names_no_one():
+    """The one figure the page is for: of the trades the signal compared, how many were reported
+    by the deadline and how many after it, and for those, how far after.
+
+    Both halves or neither. A figure that drew only the 1,105 would be an indictment; a page that
+    drew only the 5,085 would be a brochure. The bar is drawn to scale from the two counts, so the
+    proportion is read before any number is.
+    """
+    holder_ = sworn(HOLDERS[0])
+    report = read_report(holder_["id"], "2025-03-20", 1)
+    found, outcomes, _ = evaluated([holder_], [report], LATE)
+    summary = signal_run.run_record(SIGNAL["id"], "c" * 64, outcomes)[0]
+    page = render.render_index(
+        HOLDERS,
+        OFFICES,
+        FILINGS + [report],
+        RUN,
+        META,
+        striker,
+        LATE,
+        [(SIGNAL, summary)],
+        None,
+        {SIGNAL["id"]: outcomes},
+        found,
+    )
+    section = between(page, '<section class="deadline" id="deadline">', "</section>")
+    late = render.days_after_rows(found, SIGNAL["id"])
+    assert late and len(late) == summary["rows_after"]
+    on_time = summary["rows_evaluated"] - len(late)
+
+    svg = between(section, '<svg class="deadline"', "</svg>")
+    assert "NaN" not in svg and svg.count('class="dl by"') == 1
+    assert f">{on_time:,}</text>" in svg and f">{len(late):,}</text>" in svg, (
+        "both counts are on the blocks they belong to, so the picture says what it is"
+    )
+    assert svg.count('class="dline"') == 2, "the deadline is one line, drawn in both registers"
+    assert svg.count('class="dl after"') == 1 + len(set(late)), "the bar, and one bar a day"
+
+    # The split is the proportion, not a decoration.
+    whole = [
+        float(x)
+        for x in re.findall(r'class="dl by" x="([\d.]+)" y="[\d.]+" width="([\d.]+)"', svg)[0]
+    ]
+    dark = float(re.findall(r'class="dl after" x="([\d.]+)" y="20"', svg)[0])
+    assert abs((dark - whole[0]) / 344 - on_time / (on_time + len(late))) < 0.01
+
+    said = html.unescape(re.sub(r"<[^>]+>", " ", section))
+    assert "It counts trades and not reports or people" in said
+    assert "a tall bar can be a single report" in said
+    assert "drawn at least a tick high" in said, "an unstated floor is a lie about the shape"
+    assert render.FRAME in said
+    assert "officeholders/" not in section, "it names and links no one"
+    assert verdict_words(section) == []
+    assert ranking.check_register(page) == []
+    # After the rule that makes it legible, before the report-by-report squares it summarises.
+    assert page.index('id="how"') < page.index('id="deadline"') < page.index('id="glance"')
+
+
+def test_the_deadline_figure_refuses_where_the_run_record_and_the_findings_disagree():
+    """The counts come from the run record and the distribution from the rows the Findings carry.
+    A picture drawn from one and labelled from the other is the defect this project exists to
+    prevent, so where the two disagree the section draws nothing and says which page has the
+    answer."""
+    holder_ = sworn(HOLDERS[0])
+    report = read_report(holder_["id"], "2025-03-20", 1)
+    found, outcomes, _ = evaluated([holder_], [report], LATE)
+    summary = dict(signal_run.run_record(SIGNAL["id"], "c" * 64, outcomes)[0])
+    summary["rows_after"] = summary["rows_after"] + 3
+    section = render.deadline_section([(SIGNAL, summary)], found)
+    assert "<svg" not in section, "it draws neither count"
+    said = html.unescape(re.sub(r"<[^>]+>", " ", section))
+    assert "so the register draws neither" in said
+    assert f'href="{render.signal_page_path(SIGNAL)}"' in section
+    assert verdict_words(section) == []
+
+
+def test_the_deadline_figure_reads_the_signals_own_arithmetic_and_never_recomputes_it():
+    """days_after is the Signal's, sealed with the Finding. The renderer reads it back; it does
+    not hold a second copy of the rule, which would be a second rule."""
+    holder_ = sworn(HOLDERS[0])
+    report = read_report(holder_["id"], "2025-03-20", 1)
+    found, _, _ = evaluated([holder_], [report], LATE)
+    rows = [r for f in found for r in f["evidence"]["rows"]]
+    assert render.days_after_rows(found, SIGNAL["id"]) == sorted(r["days_after"] for r in rows)
+    assert render.days_after_rows(found, "sg:no-such-signal:v1") == []
 
 
 def test_the_notice_clock_counts_trades_reports_and_members_and_names_no_one():
