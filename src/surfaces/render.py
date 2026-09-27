@@ -1798,21 +1798,23 @@ HELD_CLAUSES = {
     "prints none) and cannot confirm the filer",
     "status": "whose {docs} {print} a filer status other than Member",
     "before_sworn": "dated by the index before the swearing-in the roster records for the Congress",
-    "not_captured": "whose {docs} the register has not yet fetched",
+    "not_captured": "whose {docs} the register has not fetched",
     "other": "whose {docs} {print} another seat or another Filing ID, or were set aside for "
     "another recorded reason",
     "left_open": "dated on or before {until}, the last roster read the register built from "
     "that listed them: the name join attributes no row to a member the roster does not list, "
     "and the maintainer's recorded decision can attribute {it}",
-    "closed_open": "listed by the index after the register closed the year and dated within "
-    "the Congress's terms, whose {docs} the register has not read: the maintainer's recorded "
-    "decision can attribute {it}",
+    "closed_open": "first read by the register when or after it closed the year, and dated "
+    "within the Congress's terms, whose {docs} the register has not read: the maintainer's "
+    "recorded decision can attribute {it}",
     "left_other_name": "under another given name, whose {docs} the register has not read: the "
     "name join attributes no row to a member the roster does not list",
     "left_closed": "dated after {until}, the last roster read the register built from that "
-    "listed them, which no decision attributes to them while the roster does not list them",
-    "after_term": "that the maintainer's recorded decision attributes to them, dated by the "
-    "index after the last day the register can show them in office",
+    "listed them, which no decision attributes to them: the register cannot show them in office "
+    "then",
+    "after_term": "that the maintainer's recorded decision names them for, which the register "
+    "does not attribute: the index dates it after the last day the register can show them in "
+    "office",
     "closed_after": "dated by the index after the Congress's terms ended",
 }
 
@@ -1890,10 +1892,15 @@ def quiet_words(sworn: str | None = None) -> str:
             "so there was nothing to match; this is not a statement about what was filed."
         )
     if sworn and ERA.get("began") and sworn > ERA["began"]:
+        # The date, and nothing about what it obliged: an on-time Member's quiet page calls the
+        # quiet the register's own, and this one asked what the Member may have owed, on a
+        # register whose one Signal is about reports dated late (the Council's fourth reading of
+        # S.1b, Seat A).
         return (
             f"The Clerk's roster records their swearing-in on {esc(sworn)}, after the Congress's "
-            "terms began; the register does not say whether a report was due from them, and "
-            "this is not a statement about what was filed."
+            "terms began. Whether the Clerk's index lists nothing of theirs for "
+            f"{ERA['year']} or lists a row in a form the register did not match, this is not a "
+            "statement about what was filed."
         )
     return "This is a gap in the register's name-matching, not a statement about what was filed."
 
@@ -2023,9 +2030,14 @@ FIELD_WORDS = {
     "officeholder_id": "the attribution",
     "office_id": "the office",
     "source.content_hash": "the document's bytes",
-    "asset": "the asset, as named",
-    "notes": "the report's own lines",
-    "owner": "the owner, as marked",
+    "asset": "the asset as named",
+    "notes": "the notes the register wrote from the report's lines",
+    "action": "the type of transaction",
+    "amount_range": "the category of value",
+    "asset_code": "the Clerk's asset type code",
+    "asset_normalized": "the ticker the register read from the asset",
+    "filing_status": "the filer's own mark on the line",
+    "owner": "the owner as marked",
     "transaction_date": "the transaction date",
     "notified_date": "the notification date",
     "legal_name": "the name",
@@ -2086,8 +2098,9 @@ def change_notes(history: list[dict], holder_id: str = "") -> str:
             what = (
                 f"No longer in the Clerk's index read {when(c)}, which does not say why; the "
                 "register keeps its row as published. The link opens the Clerk's copy while the "
-                f'Clerk serves it, and <a href="{CLERK_SITE}">the Clerk\'s disclosure site</a> '
-                f"can be searched for DocID {esc(doc_id)}"
+                f'Clerk serves it; <a href="{CLERK_SITE}">search the Clerk\'s disclosure site</a> '
+                f"by the filer's name and {ERA['year']}, and this report's link ends "
+                f"{esc(doc_id)}.pdf"
             )
             words = "the copy of that index the register kept, a ZIP archive"
         elif c["change"] == "listed again":
@@ -2436,8 +2449,9 @@ def transactions_section(
         dates = ", ".join(esc(f["filed_at"]) for f in unfetched)
         n = len(unfetched)
         parts.append(
-            f'<p class="quiet">The {plural(n, "report", "reports")} filed {dates} '
-            f"{plural(n, 'has', 'have')} not been fetched, so {plural(n, 'its', 'their')} "
+            f'<p class="quiet">The {plural(n, "report", "reports")} filed {dates}: the register '
+            f"has not fetched {plural(n, 'its document', 'their documents')}, so "
+            f"{plural(n, 'its', 'their')} "
             f"transactions are not listed here. {plural(n, 'It is', 'They are')} linked "
             "above.</p>\n"
         )
@@ -3377,7 +3391,7 @@ def render_index(
         h = holder_by_seat.get(seat)
         office = office_by_seat[seat]
         kept = "".join(
-            '<span class="note">Last listed here on the roster read '
+            '<span class="note">Last listed here on the roster read the register built from, '
             f"{esc((off_roster[k['id']].get('before') or ERA['first_read'])[:10])}, and not on "
             f"the one read {esc(off_roster[k['id']]['capture']['retrieved_at'][:10])}: "
             f'<a href="officeholders/{esc(slug(k["id"]))}.html">{esc(k["legal_name"])}</a>; their '
@@ -3395,7 +3409,8 @@ def render_index(
         if h is None and not earlier:
             kept += (
                 '<span class="note">The register holds no Member of this seat in that Congress; '
-                "a filing by one who left before the register first read the roster is among the "
+                "any filing by a Member of this seat who left before the register first read the "
+                "roster is among the "
                 "rows set aside, as the caption below says.</span>"
             )
         if h is None:
@@ -3527,7 +3542,8 @@ def render_index(
             f'{esc(ERA["first_read"])} (<a href="{SUBJECTS_1}">SUBJECTS.md §1</a>). The order '
             "says nothing about anyone, and neither does a name here.</caption>\n"
             "<thead><tr><th>Seat</th><th>Name, as the Clerk's roster listed it</th>"
-            "<th>Last listed, roster read</th><th>Not listed, roster read</th></tr></thead>\n"
+            "<th>Last listed, roster read the register built from</th>"
+            "<th>Not listed, roster read</th></tr></thead>\n"
             f"<tbody>\n{kept_rows}\n</tbody>\n</table>\n</section>"
         )
     record = state_of_record(

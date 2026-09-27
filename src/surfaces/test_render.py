@@ -1054,8 +1054,9 @@ def test_an_officeholder_the_roster_no_longer_lists_keeps_a_page_and_no_seat():
     ak00 = roll[roll.index('data-seat="AK00"') :].split("</tr>")[0]
     assert "Vacant on the Clerk's roster read 2026-09-22" in ak00
     assert (
-        "Last listed here on the roster read 2026-09-22, and not on the one read 2026-10-05" in ak00
-    ), "reachable from the seat, dated both ways, never a last day in office"
+        "Last listed here on the roster read the register built from, 2026-09-22, and not on "
+        "the one read 2026-10-05" in ak00
+    ), "reachable from the seat, dated both ways, and by the read a build was made from"
     assert f'href="officeholders/{render.slug(gone["id"])}.html"' in ak00
     assert render.slug(gone["id"]) in kept
     assert '<td class="idx">2026-09-22</td><td class="idx">2026-10-05</td>' in kept
@@ -1500,6 +1501,22 @@ def test_a_seat_whose_member_was_sworn_late_says_what_the_register_cannot_show()
     )
 
 
+def test_a_late_sworn_quiet_page_says_the_date_and_asks_nothing_of_the_member():
+    """Seat A on the fourth reading (A4-1): a Member the roster records as sworn after the
+    terms began got a quiet page saying the register "does not say whether a report was due
+    from them", where a Member sworn with the Congress got the register's own limit. The same
+    facts, and one page raised an obligation, on a register whose one Signal is about reports
+    the index dates late."""
+    late = render.quiet_words("2025-12-04")
+    on_time = render.quiet_words("2025-01-03")
+    assert "2025-12-04" in late and "after the Congress's terms began" in late
+    assert "due" not in late and "owed" not in late, "no page asks what a Member may have owed"
+    assert on_time.endswith("not a statement about what was filed."), (
+        "and a Member sworn with the Congress gets the register's own limit"
+    )
+    assert late.endswith("this is not a statement about what was filed.")
+
+
 def test_a_name_the_roster_restates_is_shown_and_a_party_is_not():
     """Seats A and F: a later roster that gives a name or a swearing-in date otherwise was
     recorded and shown on no page, though the landing said every change is beside its row."""
@@ -1750,8 +1767,8 @@ def test_a_replaced_document_says_which_rows_differ_and_that_neither_file_is_kep
     )
     assert "was a different file from the one the register first read" in note
     assert (
-        "1 of the rows the register published read otherwise there, in the report's own lines"
-        in note
+        "1 of the rows the register published read otherwise there, in the notes the register "
+        "wrote from the report's lines" in note
     )
     assert "it lists 1 row the first file does not" in note
     assert "The register keeps neither file" in note and "the copy the register kept" not in note
