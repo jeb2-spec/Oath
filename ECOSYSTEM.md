@@ -57,18 +57,16 @@ Name (legal, as filed)                                  [mark]
 Office · Jurisdiction · Term
 ─────────────────────────────────────────────────────────────
 
-WHAT THE OFFICE REQUIRES
-  The oath of office, verbatim, cited (STANDARDS.md C.1)
-  Each disclosure the office requires · the Standard it comes from
+WHAT THE REGISTER FOUND (the same shape on every page)
+  Reports attributed, read, and checked against the rule, the rule
+    cited and linked: the register's own coverage, first
+  The result, in the same words whether a signal fired or not
+  Either way, this is not a determination
+  The signal · every transaction · what this office requires
+  Check it yourself: the build, and the command that verifies it
 
-FILINGS
-  Year · Form type · Filed · Source URL · Retrieved · How attributed
-  ...
-
-TRANSACTIONS REPORTED (grouped by report, as filed)
-  Report filed · rows · Source URL
-    Transaction date · Notified · Type · Owner as marked · Asset as named · Amount category
-  ...
+WHAT THE REGISTER CAN CHECK HERE
+  Identity · Filings index · Documents · Signals
 
 SIGNALS FIRED (grouped by signal, not by severity)
   Signal name (version)                     STANDARD ref · its page
@@ -77,10 +75,12 @@ SIGNALS FIRED (grouped by signal, not by severity)
     not, with the reasons
     Report the Clerk's index dates <date> · its rows, as filed · the Clerk's copy
       Description text
-      The rows after the deadline: dates, deadline, which limit set it,
-        days; a weekend or holiday deadline and the business day after it
       Corrected because the source changed, or the register erred: the row
         it supersedes, and the reason with its source (only on a correction)
+      The dates on a line: each row below drawn to scale in days, the
+        caption saying what the figure shows and what it does not
+      The rows after the deadline: dates, deadline, which limit set it,
+        days; a weekend or holiday deadline and the business day after it
       Reproduce: `python tools/rebuild.py <finding-id>`
   ...
 
@@ -92,6 +92,23 @@ SIGNALS THAT DID NOT FIRE (defined signals, no finding)
   determination by anyone. A Finding withdrawn by correction is said
   here as a withdrawal, never drawn as a Finding.
 
+FILINGS
+  Year · Form type · Filed · Source URL · Retrieved · How attributed
+  ...
+
+TRANSACTIONS REPORTED (grouped by report, as filed)
+  Report filed · rows · Source URL
+    Transaction date · Notified · Type · Owner as marked · Asset as named · Amount category
+    (a report of more than 25 rows folds, and opens with a click; one a
+     Finding rests on is open)
+  ...
+
+WHAT THE OFFICE REQUIRES
+  The oath of office, verbatim, cited (STANDARDS.md C.1)
+  Each disclosure the office requires · the Standard it comes from
+
+HOW TO READ THIS PAGE
+
 ─────────────────────────────────────────────────────────────
 BUILD: <digest>  ANCHOR: <state>  CITE THIS BUILD: <cmd>
 ```
@@ -99,6 +116,8 @@ BUILD: <digest>  ANCHOR: <state>  CITE THIS BUILD: <cmd>
 The page is a static file. It is regenerated on every build. The mark in the top-right is struck from the officeholder's identifier and the build digest, per §2.
 
 **Name first.** These are people, and the page is about a person's record, not about a glyph. The name the Clerk lists is the largest thing on the page. The mark sits beside the record the way a notary's stamp sits beside a signature: smaller than the name, never a badge on the person, never the thing the eye lands on first. The oath the officeholder took is printed on the page verbatim and cited, and so is each disclosure the office requires with the Standard it comes from, because that is the standard the register exists to set the record beside, and it is the same words for everyone. Set by the maintainer on 2026-09-22.
+
+**The answer first.** A person who arrives with a question meets the answer before the method: what the register read for this officeholder and what the signal found, in sentences whose shape is the same for everyone. The register's own coverage comes first (how many reports are attributed, read, and checked, with the rule named and linked), then the result in the same words whether a signal fired or not, then one sentence that is the same on every page, that either way this is not a determination. A page where nothing could be checked says so and never reads as a clean result. The answer names no other person and links to no other person's page (Invariant §13, whose gate reads every officeholder's page). Then the page keeps one order for everyone: what the register can check, what the signal found, the record it read, and the standards, which follow the record whole and word for word, because a reader who came for one fact should not have to pass the reference to reach it, and the answer's first sentence already names the rule. Each Finding carries one figure, its dates on a line, drawn from its own rows so it regenerates with them. Nothing is removed from any page to make it shorter; a long report folds, and one a Finding rests on stays open. Built on 2026-09-27 at the maintainer's direction, from the design in [docs/design/pages-a-reader-can-use.md](docs/design/pages-a-reader-can-use.md) (NEXT.md P.1).
 
 **What a report lists.** Beneath the filings, the page carries every transaction the reports the register read list, as filed and grouped by report: the dates traded and notified, the type and the owner as the filer marked them, the asset as named, and the category of value the form provides. It is the record, not a judgement of it: the register interprets nothing in a row, cites the House Committee on Ethics form that defines each column, and sums no amounts, averages nothing, and compares no one with anyone else beside a name (Invariant §13). The form makes marking a spouse's, child's or joint asset optional, so an unmarked row is carried as unmarked and never as the filer's own. A row the filer marked Amended or Deleted in the report's filing-status column is listed as filed with the mark shown; nothing is merged, so a transaction reported on more than one report appears under each. A report the register captured and could not read is named by its filed date and its rows are absent rather than guessed; a page with no transaction report attributed says so, and says how many such reports at the seat are set aside. Set by the maintainer's direction on 2026-09-23. A surface of this kind goes to the Council before it publishes.
 
