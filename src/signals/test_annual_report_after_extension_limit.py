@@ -34,7 +34,10 @@ validator = load(ROOT / "tools" / "validate-schemas.py", "validate_schemas")
 
 @pytest.mark.parametrize("case", CASES["cases"], ids=lambda c: c["name"])
 def test_each_known_answer(case):
-    findings, outcomes = signal.evaluate([case["officeholder"]], [case["report"]], [])
+    rows = [*case.get("also", []), case["report"]]
+    findings, outcomes = signal.evaluate([case["officeholder"]], rows, [])
+    findings = [f for f in findings if f["producing_filings"] == [case["report"]["id"]]]
+    outcomes = [o for o in outcomes if o["filing_id"] == case["report"]["id"]]
     want = case["expect"]
     if not want["in_scope"]:
         assert outcomes == [] and findings == [], "not an annual report a Member filed"
@@ -50,7 +53,7 @@ def test_each_known_answer(case):
         assert findings[0]["description"] == want["description"]
     if want["fires"]:
         (found,) = findings
-        for key in ("due", "latest", "days_after_latest", "days_after_due"):
+        for key in ("original_due", "latest", "days_after_latest"):
             assert found["evidence"][key] == want[key], key
         assert found["frame"] == signal.FRAME
         assert "late" not in found["description"].lower().replace("latest", "")
@@ -115,3 +118,48 @@ def test_every_outcome_and_the_run_record_validate_against_their_schemas():
     )
     assert errors == [], errors
     assert summary["reports_by_state"] == {"evaluated": len(outcomes)}
+
+
+@pytest.mark.parametrize(
+    "moved, reason",
+    [
+        ({"filed_at": "2026-08-14"}, signal.DAY_AFTER),
+        ({"printed_filing_date": "2026-09-23"}, signal.DATES_DISAGREE),
+        ({"filed_at": "2026-07-01"}, signal.WITHIN),
+        ({"filed_at": "2026-05-01"}, None),
+    ],
+)
+def test_a_withdrawal_says_why_on_the_rows_as_they_now_stand(moved, reason):
+    """A withdrawal is written once, into a ledger that never removes a row, so its sentence
+    must say the reason the rows now give: the Council's second reading, Seat G, found every
+    withdrawal saying the report was not after the latest date, whatever the reason was."""
+    firing = next(c for c in CASES["cases"] if c["expect"].get("fires"))
+    (head,), _ = signal.evaluate([firing["officeholder"]], [firing["report"]], [])
+    report = json.loads(json.dumps(firing["report"]))
+    if "filed_at" in moved:
+        for key in ("filing_date", "signed_on"):
+            report["printed"][key] = moved["filed_at"]
+        report["filed_at"] = moved["filed_at"]
+    else:
+        report["printed"]["filing_date"] = moved["printed_filing_date"]
+    _, (outcome,) = signal.evaluate([firing["officeholder"]], [report], [])
+    text = signal.withdrawal(head, outcome)["description"]
+    if reason:
+        assert f"does not evaluate it: {reason}." in text
+        assert "not dated after the latest date" not in text
+    else:
+        assert "not dated after the latest date" in text
+
+
+@pytest.mark.parametrize("year", CASES["calendar"]["years"], ids=lambda y: str(y["filing_year"]))
+def test_the_calendar_for_each_filing_year(year):
+    """The two dates the law sets, held for years this version does not read, so the weekend
+    and holiday arithmetic is tested though filing year 2025 moves neither date."""
+    d = signal.dates_for(year["filing_year"])
+    got = {
+        "original_due": d["due"].isoformat(),
+        "original_due_moved_for": d["due_moved_for"],
+        "latest": d["latest"].isoformat(),
+        "latest_moved_for": d["latest_moved_for"],
+    }
+    assert got == {k: v for k, v in year.items() if k != "filing_year"}

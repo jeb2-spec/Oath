@@ -70,15 +70,15 @@
       ],
       "description": "The Finding this report produced, or null. Never a Finding of another run: a Finding names the report it rests on, and the ledger is what keeps it after the run (INVARIANTS §12)."
     },
-    "due": {
+    "original_due": {
       "type": "string",
       "format": "date",
-      "description": "For a Signal that compares a report's own date with dates the law sets for it: the due date it compared the report with, wherever the report's filing year gives one, whether or not the report was compared. Written by the Signal, so a page states it from the sealed record and never recomputes the calendar. Absent for a Signal that compares rows."
+      "description": "For a Signal that compares a report's own date with dates the law sets for it: the original due date it compared the report with, before any extension (the Committee on Ethics' own term), wherever the report's filing year gives one, whether or not the report was compared. Written by the Signal, so a page states it from the sealed record and never recomputes the calendar. Absent for a Signal that compares rows."
     },
     "latest": {
       "type": "string",
       "format": "date",
-      "description": "With due: the latest date any extension the statute allows could reach, as the Signal computed it. Absent for a Signal that compares rows."
+      "description": "With original_due: the latest date any extension the statute allows could reach, as the Signal computed it. Absent for a Signal that compares rows."
     }
   },
   "examples": [

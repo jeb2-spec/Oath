@@ -1,6 +1,6 @@
 {
  "about": "Known-answer cases for sg:annual-report-after-extension-limit:v1, each worked by hand and by a separate script, with no person in them. A case names what the Signal must do, and why, in the rule's own terms.",
- "rule": "Due 15 May of the year after the filing year, moved to the next business day where it falls on a weekend or a federal holiday. The latest date is the later of 15 May + 90 days and the due date + 90 days, moved to the next business day where it falls on one. Fires where the report is dated two days or more after the latest date (5 U.S.C. § 13103(d), (g)(1); the Committee's 2025 Instruction Guide).",
+ "rule": "Filing year 2025 only, the one year whose instructions the register has read. The original due date is 15 May of the year after the filing year, moved to the next business day where it falls on a weekend or a federal holiday. The latest date is the later of 15 May + 90 days and the original due date + 90 days, moved to the next business day where it falls on one. Fires where the report is dated two days or more after the latest date (5 U.S.C. § 13103(d), (g)(1); the Committee's 2025 Instruction Guide).",
  "cases": [
   {
    "name": "dated on the due date",
@@ -51,7 +51,7 @@
     "in_scope": true,
     "fires": false,
     "compared": false,
-    "reason": "after its due date, within the time an extension may cover"
+    "reason": "after the original due date, within the time an extension may cover"
    }
   },
   {
@@ -77,7 +77,7 @@
     "in_scope": true,
     "fires": false,
     "compared": false,
-    "reason": "after its due date, within the time an extension may cover"
+    "reason": "after the original due date, within the time an extension may cover"
    }
   },
   {
@@ -103,7 +103,7 @@
     "in_scope": true,
     "fires": false,
     "compared": false,
-    "reason": "the day after the latest date, whose clock the register has not established"
+    "reason": "the day after the latest date, and the register has not established the time zone of the printed date"
    }
   },
   {
@@ -130,11 +130,10 @@
     "fires": true,
     "compared": true,
     "reason": null,
-    "due": "2026-05-15",
+    "original_due": "2026-05-15",
     "latest": "2026-08-13",
     "days_after_latest": 2,
-    "days_after_due": 92,
-    "description": "This is an annual financial disclosure report for calendar year 2025. The Clerk's index dates it 2026-08-15, the same date the report prints as its filing date and its signature line gives. It was due 2026-05-15. The statute lets extensions add at most 90 days (5 U.S.C. § 13103(d), (g)(1)), so the latest date any extension could reach was 2026-08-13. The report is dated 2 days after that date and 92 days after its due date. The register cannot see an extension for service in a combat zone, which 5 U.S.C. § 13103(g)(2) allows beyond 90 days."
+    "description": "This is an annual financial disclosure report for calendar year 2025. The Clerk's index dates it 2026-08-15, the same date the report prints as its filing date and its signature line gives. Its original due date was 2026-05-15. Outside a combat zone the statute lets extensions add at most 90 days to it (5 U.S.C. § 13103(d), (g)(1)), so the latest date any such extension could reach was 2026-08-13. The report is dated 2 days after that latest date. The register cannot see an extension for service in a combat zone, which 5 U.S.C. § 13103(g)(2) allows beyond 90 days."
    }
   },
   {
@@ -161,15 +160,14 @@
     "fires": true,
     "compared": true,
     "reason": null,
-    "due": "2026-05-15",
+    "original_due": "2026-05-15",
     "latest": "2026-08-13",
-    "days_after_latest": 38,
-    "days_after_due": 128
+    "days_after_latest": 38
    }
   },
   {
-   "name": "a due date on a Saturday, as in 2027",
-   "why": "Filing year 2026: 15 May 2027 is a Saturday, so the report is due Monday 17 May 2027. A report dated that Monday is not after its due date.",
+   "name": "a second annual report for the same filing year",
+   "why": "The index lists two documents whose headers print Annual Report for the same Member and filing year 2025: one dated 2026-05-01, on or before the original due date, and this one, dated 2026-09-20. The Signal compares the earliest; this one is not evaluated, because firing on a second copy of a report compared on time would be false about the report.",
    "officeholder": {
     "id": "oh:us:example:example",
     "sworn_at": "2025-01-03"
@@ -177,51 +175,39 @@
    "report": {
     "id": "fl:example:O:0001",
     "officeholder_id": "oh:us:example:example",
-    "filed_at": "2027-05-17",
+    "filed_at": "2026-09-20",
     "printed": {
      "filing_type": "Annual Report",
      "status": "Member",
-     "filing_year": 2026,
-     "filing_date": "2027-05-17",
-     "signed_on": "2027-05-17"
-    }
-   },
-   "expect": {
-    "in_scope": true,
-    "fires": false,
-    "compared": true,
-    "reason": null
-   }
-  },
-  {
-   "name": "the latest date, the later reading, off the weekend",
-   "why": "15 May 2027 + 90 is Friday 13 August; 17 May + 90 is Sunday 15 August. The later reading, moved off the weekend, is Monday 16 August 2027, so 17 August is the day after and not evaluated.",
-   "officeholder": {
-    "id": "oh:us:example:example",
-    "sworn_at": "2025-01-03"
-   },
-   "report": {
-    "id": "fl:example:O:0001",
-    "officeholder_id": "oh:us:example:example",
-    "filed_at": "2027-08-17",
-    "printed": {
-     "filing_type": "Annual Report",
-     "status": "Member",
-     "filing_year": 2026,
-     "filing_date": "2027-08-17",
-     "signed_on": "2027-08-17"
+     "filing_year": 2025,
+     "filing_date": "2026-09-20",
+     "signed_on": "2026-09-20"
     }
    },
    "expect": {
     "in_scope": true,
     "fires": false,
     "compared": false,
-    "reason": "the day after the latest date, whose clock the register has not established"
-   }
+    "reason": "a later annual report for a filing year for which the register reads an earlier one"
+   },
+   "also": [
+    {
+     "id": "fl:example:O:0002",
+     "officeholder_id": "oh:us:example:example",
+     "filed_at": "2026-05-01",
+     "printed": {
+      "filing_type": "Annual Report",
+      "status": "Member",
+      "filing_year": 2025,
+      "filing_date": "2026-05-01",
+      "signed_on": "2026-05-01"
+     }
+    }
+   ]
   },
   {
-   "name": "two days after the later reading",
-   "why": "Fires: 2 days after Monday 16 August 2027; 93 days after Monday 17 May 2027 (14 + 30 + 31 + 18).",
+   "name": "a filing year after 2025",
+   "why": "Filing year 2026, dated two days after the latest date its calendar gives (Monday 16 August 2027). This version reads only filing year 2025, whose instructions the register has read; a later year is a new version, read against its own Guide. Its calendar is held in `calendar` below.",
    "officeholder": {
     "id": "oh:us:example:example",
     "sworn_at": "2025-01-03"
@@ -240,14 +226,9 @@
    },
    "expect": {
     "in_scope": true,
-    "fires": true,
-    "compared": true,
-    "reason": null,
-    "due": "2027-05-17",
-    "latest": "2027-08-16",
-    "days_after_latest": 2,
-    "days_after_due": 93,
-    "description": "This is an annual financial disclosure report for calendar year 2026. The Clerk's index dates it 2027-08-18, the same date the report prints as its filing date and its signature line gives. It was due 2027-05-17, the first business day after 2027-05-15, a Saturday. The statute lets extensions add at most 90 days (5 U.S.C. § 13103(d), (g)(1)), so the latest date any extension could reach was 2027-08-16, the first business day after 2027-08-15, a Sunday. The report is dated 2 days after that date and 93 days after its due date. The register cannot see an extension for service in a combat zone, which 5 U.S.C. § 13103(g)(2) allows beyond 90 days."
+    "fires": false,
+    "compared": false,
+    "reason": "a filing year whose instructions the register has not read"
    }
   },
   {
@@ -351,10 +332,9 @@
     "fires": true,
     "compared": true,
     "reason": null,
-    "due": "2026-05-15",
+    "original_due": "2026-05-15",
     "latest": "2026-08-13",
-    "days_after_latest": 38,
-    "days_after_due": 128
+    "days_after_latest": 38
    }
   },
   {
@@ -472,5 +452,52 @@
     "in_scope": false
    }
   }
- ]
+ ],
+ "calendar": {
+  "about": "The two dates the law sets for a filing year, as both implementations compute them, held for years this version does not read so the weekend and holiday arithmetic stays tested. Worked by hand: 15 May 2027 and 2032 are Saturdays, so each original due date moves to Monday 17 May, and 90 days after it is a Sunday; 90 days after 15 May 2028 is Sunday 13 August 2028.",
+  "years": [
+   {
+    "filing_year": 2025,
+    "original_due": "2026-05-15",
+    "original_due_moved_for": null,
+    "latest": "2026-08-13",
+    "latest_moved_for": null
+   },
+   {
+    "filing_year": 2026,
+    "original_due": "2027-05-17",
+    "original_due_moved_for": "Saturday",
+    "latest": "2027-08-16",
+    "latest_moved_for": "Sunday"
+   },
+   {
+    "filing_year": 2027,
+    "original_due": "2028-05-15",
+    "original_due_moved_for": null,
+    "latest": "2028-08-14",
+    "latest_moved_for": "Sunday"
+   },
+   {
+    "filing_year": 2028,
+    "original_due": "2029-05-15",
+    "original_due_moved_for": null,
+    "latest": "2029-08-13",
+    "latest_moved_for": null
+   },
+   {
+    "filing_year": 2029,
+    "original_due": "2030-05-15",
+    "original_due_moved_for": null,
+    "latest": "2030-08-13",
+    "latest_moved_for": null
+   },
+   {
+    "filing_year": 2031,
+    "original_due": "2032-05-17",
+    "original_due_moved_for": "Saturday",
+    "latest": "2032-08-16",
+    "latest_moved_for": "Sunday"
+   }
+  ]
+ }
 }

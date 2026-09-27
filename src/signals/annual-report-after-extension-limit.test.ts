@@ -13,6 +13,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { expect, describe as group, test } from "vitest";
 import {
+  datesFor,
   evaluate,
   type Filing,
   FRAME,
@@ -48,24 +49,28 @@ interface Case {
   name: string;
   officeholder: Holder;
   report: Filing;
+  also?: Filing[];
   expect: {
     in_scope: boolean;
     fires?: boolean;
     compared?: boolean;
     reason?: string | null;
-    due?: string;
+    original_due?: string;
     latest?: string;
     days_after_latest?: number;
-    days_after_due?: number;
     description?: string;
   };
 }
 
-const cases: Case[] = JSON.parse(text(`fixtures/${SLUG}/cases.json`)).cases;
+const fixture = JSON.parse(text(`fixtures/${SLUG}/cases.json`));
+const cases: Case[] = fixture.cases;
+const calendar: Record<string, string | number | null>[] = fixture.calendar.years;
 
 group("the known-answer cases", () => {
   test.each(cases.map((c) => [c.name, c] as const))("%s", (_name, c) => {
-    const [findings, outcomes] = evaluate([c.officeholder], [c.report]);
+    const [allFindings, allOutcomes] = evaluate([c.officeholder], [...(c.also ?? []), c.report]);
+    const findings = allFindings.filter((f) => f.producing_filings[0] === c.report.id);
+    const outcomes = allOutcomes.filter((o) => o.filing_id === c.report.id);
     if (!c.expect.in_scope) {
       expect(outcomes).toEqual([]);
       expect(findings).toEqual([]);
@@ -84,13 +89,17 @@ group("the known-answer cases", () => {
     expect(found.id).toBe(outcome.finding_id);
     expect(found.producing_filings).toEqual([c.report.id]);
     expect(found.evidence).toMatchObject({
-      due: c.expect.due,
+      original_due: c.expect.original_due,
       latest: c.expect.latest,
       days_after_latest: c.expect.days_after_latest,
-      days_after_due: c.expect.days_after_due,
     });
     if (c.expect.description) expect(found.description).toBe(c.expect.description);
     expect(found.frame).toBe(FRAME);
+  });
+
+  test.each(calendar.map((y) => [y.filing_year, y] as const))("the calendar for %s", (_y, y) => {
+    const { filing_year, ...want } = y;
+    expect(datesFor(Number(filing_year))).toEqual(want);
   });
 
   test("only real dates written YYYY-MM-DD are read", () => {

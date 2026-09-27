@@ -47,8 +47,9 @@ SERVICE_DAYS = 60
 CITATION = "5 U.S.C. § 13103(d), (g)(1)"
 FRAME = "Presence in the register is not evidence of wrongdoing."
 # The filing years whose instructions the register has read at their source: the Committee's
-# Instruction Guide for calendar year 2025.
-FIRST_YEAR = 2025
+# Instruction Guide for calendar year 2025, and no other. A later year is a new version, read
+# against its own Guide (the Council's second reading, Seat G).
+FIRST_YEAR = LAST_YEAR = 2025
 
 EVALUATED = "evaluated"
 NOT_EVALUATED = "not evaluated"
@@ -59,8 +60,12 @@ NO_DATE = "a date the register cannot read"
 DATES_DISAGREE = "the index date, the printed filing date and the signature date disagree"
 NO_SWEARING_IN = "the roster records no swearing-in"
 SHORT_SERVICE = "60 days or fewer of service in the filing year, by the swearing-in recorded"
-WITHIN = "after its due date, within the time an extension may cover"
-DAY_AFTER = "the day after the latest date, whose clock the register has not established"
+LATER = "a later annual report for a filing year for which the register reads an earlier one"
+WITHIN = "after the original due date, within the time an extension may cover"
+DAY_AFTER = (
+    "the day after the latest date, and the register has not established the time zone of the "
+    "printed date"
+)
 
 ISO_DATE = re.compile(r"\d{4}-\d{2}-\d{2}")
 
@@ -160,8 +165,11 @@ def is_annual(filing: dict) -> bool:
     return printed.get("filing_type") == FILING_TYPE and printed.get("status") == STATUS
 
 
-def evaluate_report(report: dict, sworn_at: date | None) -> dict:
-    """One annual report: its state, the reason where it is not evaluated, and the dates."""
+def evaluate_report(report: dict, sworn_at: date | None, later: bool = False) -> dict:
+    """One annual report: its state, the reason where it is not evaluated, and the dates.
+    `later` marks a report the index dates after another annual report of the same officeholder
+    and filing year: the Signal compares the earliest, and firing on a second copy of a report
+    compared on time would be false about the report (the Council's second reading, Seat C)."""
     printed = report.get("printed") or {}
     year = printed.get("filing_year")
 
@@ -170,10 +178,12 @@ def evaluate_report(report: dict, sworn_at: date | None) -> dict:
 
     if isinstance(year, bool) or not isinstance(year, int):
         return not_evaluated(NO_YEAR)
-    if year < FIRST_YEAR:
+    if not FIRST_YEAR <= year <= LAST_YEAR:
         return not_evaluated(YEAR_UNREAD, filing_year=year)
     d = dates_for(year)
     known = {"filing_year": year, **d}
+    if later:
+        return not_evaluated(LATER, **known)
     dated = [read_date(report.get("filed_at")), read_date(printed.get("filing_date"))]
     dated.append(read_date(printed.get("signed_on")))
     if any(x is None for x in dated):
@@ -196,30 +206,23 @@ def evaluate_report(report: dict, sworn_at: date | None) -> dict:
     return {"state": EVALUATED, "reason": None, "after": True, **facts}
 
 
-def moved_from(why: str | None, day: date) -> str:
-    """Where a date was moved off a day that is not a business day, which day and why."""
-    if not why:
-        return ""
-    which = f"a {why}" if why in ("Saturday", "Sunday") else why
-    return f", the first business day after {day.isoformat()}, {which}"
-
-
 def describe(result: dict) -> str:
     """The Finding's sentences: what the report is, its dates, the rule, the days, and nothing
     about why. Short sentences, each one fact, because they are read in translation."""
     d, due, latest = result["dated"], result["due"], result["latest"]
     year = result["filing_year"]
+    # "Its original due date", the Committee's own term: where an extension was granted, 15 May
+    # was not the report's due date, and "N days after its due date" read, in every language the
+    # Council tried, as N days overdue (the second reading, Seats A, B, D and F).
     return (
         f"This is an annual financial disclosure report for calendar year {year}. The Clerk's "
         f"index dates it {d.isoformat()}, the same date the report prints as its filing date and "
-        f"its signature line gives. It was due {due.isoformat()}"
-        f"{moved_from(result['due_moved_for'], date(year + 1, 5, 15))}. The statute lets "
-        f"extensions add at most {EXTENSION_DAYS} days ({CITATION}), so the latest date any "
-        f"extension could reach was {latest.isoformat()}"
-        f"{moved_from(result['latest_moved_for'], result['cap'])}. The report is dated "
-        f"{(d - latest).days} days after that date and {(d - due).days} days after its due date. "
-        "The register cannot see an extension for service in a combat zone, which 5 U.S.C. "
-        "§ 13103(g)(2) allows beyond 90 days."
+        f"its signature line gives. Its original due date was {due.isoformat()}. Outside a combat "
+        f"zone the statute lets extensions add at most {EXTENSION_DAYS} days to it ({CITATION}), "
+        f"so the latest date any such extension could reach was {latest.isoformat()}. The report "
+        "is dated "
+        f"{(d - latest).days} days after that latest date. The register cannot see an extension "
+        "for service in a combat zone, which 5 U.S.C. § 13103(g)(2) allows beyond 90 days."
     )
 
 
@@ -240,12 +243,9 @@ def finding(report: dict, result: dict) -> dict | None:
             "after": 1,
             "filed_at": report["filed_at"],
             "filing_year": result["filing_year"],
-            "due": result["due"].isoformat(),
-            "due_moved_for": result["due_moved_for"],
+            "original_due": result["due"].isoformat(),
             "latest": result["latest"].isoformat(),
-            "latest_moved_for": result["latest_moved_for"],
             "days_after_latest": (result["dated"] - result["latest"]).days,
-            "days_after_due": (result["dated"] - result["due"]).days,
         },
         "frame": FRAME,
         "superseded_by": None,
@@ -265,8 +265,9 @@ def withdrawal(head: dict, outcome: dict | None) -> dict:
         filed_at, not_evaluated = None, {}
     else:
         filed_at, not_evaluated = outcome["filed_at"], outcome["not_evaluated"]
-        if outcome["state"] == NOT_EVALUATED:
-            reason = next(iter(not_evaluated), "not evaluated")
+        # An outcome is always a read report; what says it was not compared is its reason.
+        if not_evaluated:
+            reason = next(iter(not_evaluated))
             now = (
                 f"The Clerk's index dates this report {filed_at}, and on the register's rows as "
                 f"they now stand this Signal does not evaluate it: {reason}."
@@ -300,9 +301,17 @@ def evaluate(
     Returns the Findings (without fired_at and build_hash) and one outcome per report: read,
     with one row, its date, compared or not evaluated with the reason."""
     sworn = {h["id"]: read_date(h.get("sworn_at")) for h in officeholders}
+    reports = sorted((f for f in filings if is_annual(f)), key=lambda f: f["id"])
+    # The earliest report the index lists for each officeholder and filing year, then by id.
+    earliest: dict[tuple, str] = {}
+    for report in sorted(reports, key=lambda f: (f.get("filed_at") or "", f["id"])):
+        year = (report.get("printed") or {}).get("filing_year")
+        earliest.setdefault((report["officeholder_id"], year), report["id"])
     findings, outcomes = [], []
-    for report in sorted((f for f in filings if is_annual(f)), key=lambda f: f["id"]):
-        result = evaluate_report(report, sworn.get(report["officeholder_id"]))
+    for report in reports:
+        year = (report.get("printed") or {}).get("filing_year")
+        later = earliest[(report["officeholder_id"], year)] != report["id"]
+        result = evaluate_report(report, sworn.get(report["officeholder_id"]), later)
         found = finding(report, result)
         if found:
             findings.append(found)
@@ -324,7 +333,10 @@ def evaluate(
             # The two dates the report is compared with, wherever its filing year gives them,
             # so a page states them from the sealed record and never recomputes the calendar.
             | (
-                {"due": result["due"].isoformat(), "latest": result["latest"].isoformat()}
+                {
+                    "original_due": result["due"].isoformat(),
+                    "latest": result["latest"].isoformat(),
+                }
                 if "due" in result
                 else {}
             )

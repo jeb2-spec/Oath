@@ -17,6 +17,7 @@ const STATUS = "Member";
 const EXTENSION_DAYS = 90;
 const SERVICE_DAYS = 60;
 const FIRST_YEAR = 2025;
+const LAST_YEAR = 2025;
 const CITATION = "5 U.S.C. § 13103(d), (g)(1)";
 const DAY_MS = 86_400_000;
 
@@ -27,8 +28,11 @@ export const REASONS = {
   datesDisagree: "the index date, the printed filing date and the signature date disagree",
   noSwearingIn: "the roster records no swearing-in",
   shortService: "60 days or fewer of service in the filing year, by the swearing-in recorded",
-  within: "after its due date, within the time an extension may cover",
-  dayAfter: "the day after the latest date, whose clock the register has not established",
+  later: "a later annual report for a filing year for which the register reads an earlier one",
+  within: "after the original due date, within the time an extension may cover",
+  dayAfter:
+    "the day after the latest date, and the register has not established the time zone of the " +
+    "printed date",
 } as const;
 
 export interface Holder {
@@ -53,7 +57,7 @@ export interface Outcome {
   after: number;
   not_evaluated: Record<string, number>;
   finding_id: string | null;
-  due?: string;
+  original_due?: string;
   latest?: string;
 }
 
@@ -164,23 +168,40 @@ interface Result {
   cap?: number;
 }
 
+/** The two dates the law sets for a filing year, and why either moved, as the Signal takes them;
+ * exported so the known answers can hold the calendar for years this version does not read. */
+export function datesFor(year: number): Record<string, string | null> {
+  const may15 = day(year + 1, 5, 15);
+  const [due, dueMovedFor] = toBusinessDay(may15);
+  const [latest, latestMovedFor] = toBusinessDay(
+    Math.max(may15 + EXTENSION_DAYS, due + EXTENSION_DAYS),
+  );
+  return {
+    original_due: iso(due),
+    original_due_moved_for: dueMovedFor,
+    latest: iso(latest),
+    latest_moved_for: latestMovedFor,
+  };
+}
+
 export function isAnnual(filing: Filing): boolean {
   const p = filing.printed ?? {};
   return p.filing_type === FILING_TYPE && p.status === STATUS;
 }
 
-export function evaluateReport(filing: Filing, swornAt: number | null): Result {
+export function evaluateReport(filing: Filing, swornAt: number | null, later = false): Result {
   const p = filing.printed ?? {};
   const no = (reason: string): Result => ({ state: "not evaluated", reason, after: false });
   const year = p.filing_year;
   if (typeof year !== "number" || !Number.isInteger(year)) return no(REASONS.noYear);
-  if (year < FIRST_YEAR) return no(REASONS.yearUnread);
+  if (year < FIRST_YEAR || year > LAST_YEAR) return no(REASONS.yearUnread);
   const may15 = day(year + 1, 5, 15);
   const [due, dueMovedFor] = toBusinessDay(may15);
   const cap = Math.max(may15 + EXTENSION_DAYS, due + EXTENSION_DAYS);
   const [latest, latestMovedFor] = toBusinessDay(cap);
   const known = { year, due, dueMovedFor, latest, latestMovedFor, cap };
   const not = (reason: string): Result => ({ ...no(reason), ...known });
+  if (later) return not(REASONS.later);
   const dates = [readDate(filing.filed_at), readDate(p.filing_date), readDate(p.signed_on)];
   if (dates.some((d) => d === null)) return not(REASONS.noDate);
   if (new Set(dates).size !== 1) return not(REASONS.datesDisagree);
@@ -195,23 +216,16 @@ export function evaluateReport(filing: Filing, swornAt: number | null): Result {
   return { state: "evaluated", reason: null, after: true, ...facts };
 }
 
-function movedFrom(why: string | null | undefined, from: number): string {
-  if (!why) return "";
-  const which = why === "Saturday" || why === "Sunday" ? `a ${why}` : why;
-  return `, the first business day after ${iso(from)}, ${which}`;
-}
-
 function describe(r: Required<Result>): string {
   return (
     `This is an annual financial disclosure report for calendar year ${r.year}. The Clerk's ` +
     `index dates it ${iso(r.dated)}, the same date the report prints as its filing date and ` +
-    `its signature line gives. It was due ${iso(r.due)}` +
-    `${movedFrom(r.dueMovedFor, day(r.year + 1, 5, 15))}. The statute lets extensions add at ` +
-    `most ${EXTENSION_DAYS} days (${CITATION}), so the latest date any extension could reach ` +
-    `was ${iso(r.latest)}${movedFrom(r.latestMovedFor, r.cap)}. The report is dated ` +
-    `${r.dated - r.latest} days after that date and ${r.dated - r.due} days after its due date. ` +
-    "The register cannot see an extension for service in a combat zone, which 5 U.S.C. " +
-    "§ 13103(g)(2) allows beyond 90 days."
+    `its signature line gives. Its original due date was ${iso(r.due)}. Outside a combat ` +
+    `zone the statute lets extensions add at most ${EXTENSION_DAYS} days to it (${CITATION}), ` +
+    `so the latest date any such extension could reach was ${iso(r.latest)}. The report ` +
+    "is dated " +
+    `${r.dated - r.latest} days after that latest date. The register cannot see an extension ` +
+    "for service in a combat zone, which 5 U.S.C. § 13103(g)(2) allows beyond 90 days."
   );
 }
 
@@ -219,9 +233,22 @@ export function evaluate(holders: Holder[], filings: Filing[]): [Finding[], Outc
   const sworn = new Map(holders.map((h) => [h.id, readDate(h.sworn_at)]));
   const findings: Finding[] = [];
   const outcomes: Outcome[] = [];
-  const reports = filings.filter(isAnnual).sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  const byId = (a: Filing, b: Filing) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+  const reports = filings.filter(isAnnual).sort(byId);
+  // The earliest report the index lists for each officeholder and filing year, then by id.
+  const yearOf = (f: Filing) => String(f.printed?.filing_year);
+  const earliest = new Map<string, string>();
+  const byDate = [...reports].sort((a, b) => {
+    const [x, y] = [a.filed_at ?? "", b.filed_at ?? ""];
+    return x < y ? -1 : x > y ? 1 : byId(a, b);
+  });
+  for (const f of byDate) {
+    const key = `${f.officeholder_id}\u0000${yearOf(f)}`;
+    if (!earliest.has(key)) earliest.set(key, f.id);
+  }
   for (const report of reports) {
-    const r = evaluateReport(report, sworn.get(report.officeholder_id) ?? null);
+    const later = earliest.get(`${report.officeholder_id}\u0000${yearOf(report)}`) !== report.id;
+    const r = evaluateReport(report, sworn.get(report.officeholder_id) ?? null, later);
     let found: Finding | null = null;
     if (r.after) {
       const full = r as Required<Result>;
@@ -235,12 +262,9 @@ export function evaluate(holders: Holder[], filings: Filing[]): [Finding[], Outc
           after: 1,
           filed_at: report.filed_at,
           filing_year: full.year,
-          due: iso(full.due),
-          due_moved_for: full.dueMovedFor,
+          original_due: iso(full.due),
           latest: iso(full.latest),
-          latest_moved_for: full.latestMovedFor,
           days_after_latest: full.dated - full.latest,
-          days_after_due: full.dated - full.due,
         },
         frame: FRAME,
         superseded_by: null,
@@ -262,7 +286,7 @@ export function evaluate(holders: Holder[], filings: Filing[]): [Finding[], Outc
       finding_id: found ? found.id : null,
       // The two dates the report is compared with, wherever its filing year gives them.
       ...(r.due !== undefined && r.latest !== undefined
-        ? { due: iso(r.due), latest: iso(r.latest) }
+        ? { original_due: iso(r.due), latest: iso(r.latest) }
         : {}),
     });
   }
