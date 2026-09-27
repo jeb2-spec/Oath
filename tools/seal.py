@@ -64,14 +64,28 @@ def run_figures(run: dict) -> list[tuple[int, str]]:
         (counts.get("rejected"), "rows not attributed"),
         (counts.get("attributed_by_document"), "rows attributed by the document"),
         (documents.get("read"), "documents read"),
-        (run.get("rejected_by_reason", {}).get("surname matches a sitting member"), "rows held"),
+        (held_rows(run), "rows held"),
     ]
     return [(int(n), label) for n, label in figures if n]
 
 
+def held_rows(run: dict) -> int:
+    """The rows set aside because a row's surname matches a sitting member, whatever clause the
+    group carries after that. Looked up by an exact key, the figure went silent the moment the
+    adapter grouped those reasons by their words, and the guard that would have caught it is the
+    one it switched off (the Council's fifth reading of S.1b, Seat E)."""
+    return sum(
+        n for key, n in run.get("rejected_by_reason", {}).items() if key.startswith(HELD_REASON)
+    )
+
+
 def change_figures(changes: list[dict]) -> list[tuple[int, str]]:
-    """The figures the changes sentence carries: later reads, and the maintainer's decisions."""
-    reads = sum(1 for c in changes if c.get("change") != "corrected")
+    """The figures the changes sentence carries: later reads, and the maintainer's decisions. With
+    one kind of read the sentence gives no count, so neither does this: a guard that requires a
+    figure the sentence will not print passes only by an accident of the digits elsewhere in it
+    (the Council's fifth reading of S.1b, Seat C)."""
+    later = [c for c in changes if c.get("change") != "corrected"]
+    reads = 0 if len(change_kinds(later)) == 1 else len(later)
     decided = len(
         {
             (c.get("decided_at"), c.get("decided_by"), c.get("because"))
@@ -176,8 +190,9 @@ def reach(outcomes: list[dict], filings: list[dict] | None = None) -> dict[str, 
     """Who a Signal's run could not reach, in counts of officeholders: those whose reports are
     all fetched and not read, those with some, and those with rows dated before this
     Congress's swearing-in, which it does not evaluate. A report the register has not fetched
-    is counted apart and never called scanned paper, as the pages count it (the Council's
-    fourth reading of S.1b, Seat F)."""
+    is counted apart, and neither is called scanned paper anywhere: what the register records is
+    that the text it extracted carries no Filing ID line (the Council's fourth reading of S.1b,
+    Seat F, and its fifth, Seat G)."""
     fetched = {f["id"]: bool((f.get("source") or {}).get("content_hash")) for f in filings or []}
     states: dict[str, set[str]] = {}
     before: set[str] = set()
@@ -191,8 +206,8 @@ def reach(outcomes: list[dict], filings: list[dict] | None = None) -> dict[str, 
         if o["not_evaluated"].get("dated before this Congress's swearing-in"):
             before.add(o["officeholder_id"])
     return {
-        "paper_only": sum(1 for s in states.values() if s == {"not read"}),
-        "some_paper": sum(1 for s in states.values() if "not read" in s and s != {"not read"}),
+        "unread_only": sum(1 for s in states.values() if s == {"not read"}),
+        "some_unread": sum(1 for s in states.values() if "not read" in s and s != {"not read"}),
         "not_fetched": unfetched,
         "before_swearing_in": len(before),
     }
@@ -217,7 +232,7 @@ def derive_state(root: Path, meta: dict) -> str:
     for run in runs:
         counts, documents = run.get("counts", {}), run.get("documents", {})
         reasons = dict(run.get("rejected_by_reason", {}))
-        held = reasons.pop(HELD_REASON, 0)
+        held = sum(reasons.pop(k) for k in list(reasons) if k.startswith(HELD_REASON))
         index = next((s for s in run.get("sources", []) if s["name"].endswith("FD.zip")), {})
         roster = next((s for s in run.get("sources", []) if s["name"] == "MemberData.xml"), {})
         starts = sorted({o["term_start"] for h in holders for o in h.get("offices", [])[:1]})
@@ -297,8 +312,9 @@ def derive_state(root: Path, meta: dict) -> str:
             f"{documents.get('read', 0):,} were read from the Clerk's documents and "
             f"{documents.get('transactions', 0):,} transactions "
             "written, each checked against the seat and Filing ID printed in its report; "
-            f"{documents.get('unreadable', 0):,} are scanned paper filings the register fetched, "
-            "hashed and does not read"
+            f"{documents.get('unreadable', 0):,} the register fetched and hashed and did not "
+            "read: in each, the text it extracted carries no Filing ID line, or no "
+            "State/District line, and it reads nothing from such a document"
         )
         if documents.get("seat_discrepancies"):
             sentence += (
@@ -369,9 +385,9 @@ def derive_state(root: Path, meta: dict) -> str:
             f"attributed to {summary['officeholders_with_a_finding']:,} officeholders; "
             f"{skipped:,} rows were not evaluated, each with a reason, and "
             f"{by_state.get('not read', 0):,} reports were not read. It cannot reach "
-            f"{plural(cannot['paper_only'], 'officeholder', 'officeholders')} whose transaction "
-            f"reports are all scanned paper, or some of the reports of "
-            f"{cannot['some_paper']:,} more"
+            f"{plural(cannot['unread_only'], 'officeholder', 'officeholders')} none of whose "
+            "transaction reports it could read, or some of the reports of "
+            f"{cannot['some_unread']:,} more"
             + (
                 f"; it has not read {plural(cannot['not_fetched'], 'report', 'reports')} the "
                 "register has not fetched"
@@ -430,6 +446,32 @@ CHANGE_WORDS = {
     "read otherwise": "a fact a later read states otherwise",
     "replaced": "a document a later read found served as a different file, which reads otherwise",
 }
+# The fifth pass made every file the Clerk serves that is not the one last seen a change row of its
+# own, whether or not its rows read otherwise, so a replacement with an empty `differs` now exists.
+# One kind said of both that the file reads otherwise, which the change row itself contradicts (the
+# Council's fifth reading of S.1b, Seats C, D and F). Two kinds, by what the rows say.
+READS_SAME = (
+    "a document a later read found served as a different file, which reads as the rows the "
+    "register published"
+)
+
+
+def change_kinds(reads: list[dict]) -> list[str]:
+    """The kinds the changes sentence lists, in CHANGE_WORDS' order, a replacement split by
+    whether the other file's rows read otherwise."""
+    out = []
+    for kind, words in CHANGE_WORDS.items():
+        rows = [c for c in reads if c["change"] == kind]
+        if not rows:
+            continue
+        if kind != "replaced":
+            out.append(words)
+            continue
+        if any(c.get("differs") for c in rows):
+            out.append(words)
+        if any(not c.get("differs") for c in rows):
+            out.append(READS_SAME)
+    return out
 
 
 def changes_sentence(changes: list[dict]) -> str:
@@ -446,17 +488,18 @@ def changes_sentence(changes: list[dict]) -> str:
     }
     parts = []
     if reads:
-        kinds = [
-            words for kind, words in CHANGE_WORDS.items() if any(c["change"] == kind for c in reads)
-        ]
+        kinds = change_kinds(reads)
         listed = kinds[0] if len(kinds) == 1 else ", ".join(kinds[:-1]) + " and " + kinds[-1]
-        # With one kind the total is the count by kind, and when small that is a count about one
-        # person, which this sentence rules out: give the kind and no number (Seat F, N29).
         if len(kinds) == 1:
-            shown = plural(
-                len(reads), "A change a later read showed is", "Changes later reads showed are"
+            # With one kind the total is the count by kind, and when small that is a count about
+            # one person, which this sentence rules out: give the kind and no number, at every
+            # count (Seat F, N29; the fifth reading, Seats C and F). change_figures drops the
+            # figure with it, so the seal does not require a number the sentence will not print.
+            shown = (
+                "A change a later read showed is"
+                if len(reads) == 1
+                else ("Changes later reads showed are")
             )
-            shown = shown.split(" ", 1)[1] if len(reads) == 1 else shown
             parts.append(
                 f"{shown} recorded, each a row of its own citing the read, of this kind: {listed}"
             )

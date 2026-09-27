@@ -56,6 +56,8 @@ GATES = [
     ("§11 no silent redefinition", "tools/check-signal-versions.py"),
     ("§12 supersessions chained", "tools/check-supersessions.py"),
     ("§13 no ranking", "tools/lint-no-ranking.py"),
+    ("§7 §13 no person in a figure", "tools/lint-no-names.py"),
+    ("Council §2 every guard is measured", "tools/measure-guards.py"),
     ("§14 facts stay", "tools/check-removals.py"),
     ("§15 contributor COI", "tools/check-coi-disclosure.py"),
     ("§16 evidence bundle", "tools/check-evidence-bundle.py"),

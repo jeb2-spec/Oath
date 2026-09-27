@@ -100,6 +100,12 @@ jobs:
       - name: lint-no-ranking, no ranking on the index or any Signal page (Invariant 13)
         run: python tools/lint-no-ranking.py
 
+      - name: lint-no-names, the sealed state and run records name no person (Invariants 7, 13)
+        run: python tools/lint-no-names.py
+
+      - name: measure-guards, every guard in the list has a failing input
+        run: python tools/measure-guards.py
+
       - name: check-mark, the seal is struck and legible (ECOSYSTEM section 2.4)
         run: python tools/check-mark.py
 

@@ -164,6 +164,7 @@ jobs:
           python src/surfaces/render.py
           python tools/lint-frame-presence.py
           python tools/lint-no-ranking.py
+          python tools/lint-no-names.py
           python tools/check-mark.py
           python tools/lint-verdict-language.py
           python tools/check-crossrefs.py
@@ -225,7 +226,7 @@ jobs:
             echo
             echo "## Gates"
             echo
-            echo "Ruff, pytest, verify, tamper-test, validate-schemas, rebuild, check-signal-versions, check-supersessions, check-removals, check-aggregator-sole, anchor, render, lint-frame-presence, lint-no-ranking, check-mark, lint-verdict-language, check-crossrefs, Biome, tsc and Vitest all passed in this workflow run before the push. A pull request opened by the workflow token does not trigger verify.yml; merging it runs verify.yml on main."
+            echo "Ruff, pytest, verify, tamper-test, validate-schemas, rebuild, check-signal-versions, check-supersessions, check-removals, check-aggregator-sole, anchor, render, lint-frame-presence, lint-no-ranking, lint-no-names, check-mark, lint-verdict-language, check-crossrefs, Biome, tsc and Vitest all passed in this workflow run before the push. A pull request opened by the workflow token does not trigger verify.yml; merging it runs verify.yml on main."
             echo
             echo "## Conflict of interest disclosure"
             echo

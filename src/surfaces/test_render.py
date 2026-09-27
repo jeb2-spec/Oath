@@ -270,7 +270,7 @@ def test_a_scanned_document_is_captured_not_read_and_the_page_says_which():
     page = render.render_officeholder(HOLDERS[0], [read, scanned, pending], META, striker)
     assert "partly read" in page
     assert "1 of 3 documents read and hashed" in page
-    assert "1 fetched and hashed, not read: scanned paper, or a form" in page
+    assert "1 fetched and hashed, not read: no Filing ID line in the text" in page
     assert "1 not fetched" in page and "not yet fetched" not in page
     assert "the register read each document" not in page
     section = render.state_of_record(
@@ -706,7 +706,11 @@ def test_a_quiet_signal_says_which_silence_it_is():
             True,
             [LATE[0]],
         ),
-        "1 report is fetched and not read: scanned paper": (sworn(HOLDERS[0]), False, []),
+        "1 report is fetched and not read: the register found no Filing ID line": (
+            sworn(HOLDERS[0]),
+            False,
+            [],
+        ),
     }
     for expected, (holder_, read, rows) in cases.items():
         report = read_report(holder_["id"], "2025-03-20", 1, read)
@@ -898,8 +902,8 @@ def test_the_signal_page_counts_what_it_evaluated_and_who_it_cannot_reach():
     ]
     reach = render.coverage(outcomes, rejected)
     assert reach == {
-        "paper_only": 1,
-        "some_paper": 0,
+        "unread_only": 1,
+        "some_unread": 0,
         "not_fetched": 0,
         "before_swearing_in": 1,
         "set_aside_held": 1,
@@ -907,7 +911,7 @@ def test_the_signal_page_counts_what_it_evaluated_and_who_it_cannot_reach():
         "set_aside_other": 1,
     }
     unfetched = render.coverage(outcomes, rejected, fetched=set())
-    assert (unfetched["paper_only"], unfetched["not_fetched"]) == (0, 1), (
+    assert (unfetched["unread_only"], unfetched["not_fetched"]) == (0, 1), (
         "a report never fetched is not scanned paper (Seats D and E, third reading)"
     )
     page = render.render_signal_page(
@@ -918,7 +922,10 @@ def test_the_signal_page_counts_what_it_evaluated_and_who_it_cannot_reach():
         "on 1 it evaluated at least one row, and it fired on 1 of those; on 1 it evaluated no row"
         in record
     )
-    assert "<dt>1</dt><dd>officeholders whose transaction reports are all scanned paper" in record
+    assert (
+        "<dt>1</dt><dd>officeholders none of whose transaction reports the register could read"
+        in record
+    )
     assert (
         "which it does not see: 1 under the surname of an officeholder the register holds"
     ) in record
@@ -967,10 +974,14 @@ def test_an_earlier_versions_finding_stays_on_the_page_as_published():
     report = read_report(holder_["id"], "2025-03-20", 1)
     found, _, by_holder = evaluated([holder_], [report], LATE)
     v2 = dict(SIGNAL, id=SIGNAL["id"].replace(":v1", ":v2"), version=2)
+    # A version's words move with its criteria, so a v2 carries its own entry or the register
+    # refuses to render (INVARIANTS §11; the second reading of the built answer, Seats C and G).
+    render.ANSWER_WORDS[(SIGNAL["slug"], 2)] = dict(render.ANSWER_WORDS[(SIGNAL["slug"], 1)])
     page = render.render_officeholder(
         holder_, [report], META, striker, 0, LATE, 0, [v2], found, {v2["id"]: []}, [SIGNAL, v2]
     )
     assert "Version 1, which version 2 replaced" in page
+    del render.ANSWER_WORDS[(SIGNAL["slug"], 2)]
     assert page.count('class="finding"') == 1, "the version 1 Finding is still drawn"
     assert f"python tools/rebuild.py {found[0]['id']}" in page
 
@@ -1291,7 +1302,10 @@ def test_a_row_under_another_given_name_at_a_departed_seat_is_said_apart():
     counted = render.held_by_holder(rows, [gone], {gone["id"]: "2026-09-28"})
     assert counted == {gone["id"]: {"left_other_name": 1, "left_open": 1}}, counted
     said = render.aside_sentence(counted[gone["id"]], "2026-09-28")
-    assert "1 under another given name, whose document the register has not read" in said
+    assert (
+        "1 that carries a given name other than this officeholder's, whose document the "
+        "register has not read" in said
+    ), "the row carries the name; the person did not (fifth reading, Seat F)"
     assert "before the swearing-in" not in said, "the successor's own check is not about them"
     assert "2 rows of the index at this seat carry this surname and are set aside" in said
 
@@ -1804,7 +1818,10 @@ def test_the_landing_counts_the_rows_no_decision_attributes_apart():
         render.state_of_record(META, RUN, HOLDERS, FILINGS, OFFICES, counts, "https://x/rows")
     )
     assert "<dt>1</dt><dd>index rows set aside for the maintainer to decide by hand" in section
-    assert "1 more is not attributed, because the register cannot show the officeholder" in section
+    assert (
+        "1 more is not attributed, because the register cannot show an officeholder of that seat"
+        in section
+    ), "at one departure the count is 1 and the table below names the person (Seats A and D)"
 
 
 # ---- the two page guards the fourth reading found unmeasured (Seat A, A4-9) -----------------
@@ -1965,17 +1982,26 @@ def test_the_answer_comes_first_and_reads_the_same_whether_or_not_the_signal_fir
         ]
         assert order == sorted(order), "answer, checks, signal, record, standards, terms"
         answer = answer_of(page)
-        assert "The register read 1 of 1 transaction report attributed to this officeholder" in (
-            answer
-        ), "the register's own coverage is the first number a reader meets"
-        assert render.esc(render.EITHER_WAY) in answer
+        assert (
+            "The register read 1 of 1 transaction report it attributes to this officeholder"
+            in answer
+        ), "the register's own coverage is the first number a reader meets, and it attributes"
+        assert render.esc(render.FRAME) in between(answer, "<p>", "</p>"), (
+            "the frame is inside the result's own paragraph, so no crop carries one without the "
+            "other (Seat D), and it is the short sentence, so the paragraph fits a phone (Seat E)"
+        )
+        assert render.esc(render.NOT_A_RULING) in answer
         assert f'href="{render.USC_13105}"' in answer, "the standard is cited and linked"
         assert verdict_words(answer) == [] and frame.check_page(page) is None
     assert (
-        "The Clerk's index dates 1 of the 1 report checked after the deadline, by 37 days, for at "
-        "least one trade on it."
-    ) in answer_of(fired), "the count names its noun, and the days are the days (Seats A, B, D)"
-    assert "The Clerk's index dates none of the 1 report checked after the deadline." in (
+        "The Clerk's index dates 1 report it compared after the deadline: 1 trade on it, "
+        "37 days past its own deadline."
+    ) in answer_of(fired), (
+        "the count names its noun and the days are the days (Seats A, B, D), and no two integers "
+        "in one phrase form a rate a reader divides (the second reading, Seat A)"
+    )
+    assert "of the 1 report compared" not in answer_of(fired)
+    assert "The Clerk's index dates none of the 1 report compared after the deadline." in (
         answer_of(quiet)
     )
     for page in (fired, quiet):
@@ -2009,11 +2035,11 @@ def test_the_answers_counts_are_the_signals_own_and_agree_with_the_page():
     found, page = signal_page(h, [scanned, before, late], rows)
     answer = answer_of(page)
     assert "The register read 2 of 3 transaction reports" in answer, "the scanned one is unread"
-    assert "and checked 1 against" in answer, "a report whose rows all predate the oath is read"
-    assert "The Clerk's index dates 1 of the 1 report checked after the deadline" in answer
-    assert "Not checked: 1 scanned paper or not yet fetched; 1 with no trade the rule reaches." in (
-        answer
-    ), "each silence named where it is (Seats A and E)"
+    assert "and compared 1 against" in answer, "a report whose rows all predate the oath is read"
+    assert "The Clerk's index dates 1 report it compared after the deadline" in answer
+    assert (
+        "No row compared: 1 in a form it does not read; 1 on which it compared no row." in answer
+    ), "each silence named where it is, and neither called the rule's doing (Seats A, B and E)"
     assert page.count('<article class="finding"') == len(found) == 1
     assert "It evaluated 2 rows on 1 report attributed to this officeholder" in page
 
@@ -2022,16 +2048,20 @@ def test_an_answer_with_nothing_checked_never_reads_as_a_clean_result():
     h = sworn(HOLDERS[0])
     _, unread = signal_page(h, [read_report(h["id"], "2025-03-20", 1, read=False)], [])
     answer = answer_of(unread)
-    assert "The register read 0 of 1 transaction report" in answer and "checked 0" in answer
-    assert "It could check none of them: it is scanned paper or not yet fetched" in answer
+    assert "The register read 0 of 1 transaction report" in answer and "compared 0" in answer
+    assert "It compared no row on any of them: 1 is in a form it does not read." in answer
+    assert "scanned" not in answer, "no physical claim about a document it only failed to read"
     assert "a fact about what the register could read, not about what was filed" in answer
     assert "dates none" not in answer, "nothing checked is not a clean result"
     _, nothing = signal_page(sworn(HOLDERS[2]), [], [], held_reports=2)
     answer = answer_of(nothing)
-    assert "No transaction report in the Clerk's 2025 index is attributed to this officeholder" in (
+    assert "it attributes no transaction report in the Clerk's 2025 index to this officeholder" in (
         answer
     )
-    assert "It says nothing about whether this officeholder had anything to report." in answer
+    assert (
+        "It says nothing about whether this officeholder made any trade the rule requires "
+        "reported." in answer
+    ), "the clause that makes a quiet page honest, in words that do not translate as a clearance"
     assert "2 transaction reports at this seat under this surname are set aside" in answer
     assert "dates none" not in answer
 
@@ -2158,7 +2188,7 @@ def test_the_answer_says_the_days_and_what_decides_them():
     found, page = signal_page(h, [weekend], rows)
     assert found and found[0]["evidence"]["rows"][0]["deadline_falls_on"], "a holiday deadline"
     answer = answer_of(page)
-    assert "by 1 day, for at least one trade on it." in answer
+    assert "1 trade on it, 1 day past its own deadline." in answer
     assert (
         "For that report, the deadline fell on a weekend or holiday and the report is dated by the "
         "next business day; the 2025 form says such a deadline does not move."
@@ -2179,7 +2209,7 @@ def test_the_answer_says_the_days_and_what_decides_them():
         answer
     )
     days = found[0]["evidence"]["rows"][0]["days_after"]
-    assert f"by {days} days" in answer
+    assert f"{days} days past its own deadline" in answer
 
 
 def test_an_answer_that_read_everything_and_checked_nothing_says_why_in_one_line():
@@ -2188,8 +2218,13 @@ def test_an_answer_that_read_everything_and_checked_nothing_says_why_in_one_line
     report = read_report(h["id"], "2025-03-20", 1)
     _, page = signal_page(h, [report], [LATE[0]])
     answer = answer_of(page)
-    assert "The register read 1 of 1 transaction report" in answer and "checked 0" in answer
-    assert "It could check none of them: no trade on them is one the rule reaches." in answer
+    assert "The register read 1 of 1 transaction report" in answer and "compared 0" in answer
+    assert (
+        "It compared no row on any of them: of the rows on them, 1 dated before the "
+        "swearing-in the roster records, which does not say whether this officeholder served "
+        "before it." in answer
+    ), "the register says what it did not do, never what the rule does not reach (Seat B)"
+    assert "the rule" not in between(answer, "It compared no row", "That is a fact")
     assert "scanned" not in between(answer, "<p>", "</p>")
 
 
@@ -2309,7 +2344,9 @@ def test_the_strip_teaches_the_marks_and_draws_the_process_never_a_person():
         assert render.KEY_MARKS[mark] in strip, mark
     assert "officeholders/" not in strip and verdict_words(strip) == []
     assert "it does not ask anyone to stop trading" in strip
-    assert "lists 2 of these reports. 1 of them arrived as scanned paper" in strip
+    assert "lists 2 of these reports. On 1 the register found no Filing ID line to read" in strip, (
+        "never a physical fact about a document the register only failed to read (Seat G)"
+    )
     assert page.index('id="how"') < page.index('id="glance"')
     person = render.render_officeholder(HOLDERS[0], FILINGS[:1], META, striker, 0, [])
     assert 'class="comic"' not in person, "a person's name is never lettered as a comic"
@@ -2364,3 +2401,294 @@ def test_a_row_whose_own_dates_cannot_all_be_right_says_so_and_no_more():
     )
     assert "the trade is dated after the report that lists it" in section
     assert "does not say which is wrong" in section and verdict_words(section) == []
+
+
+def test_where_the_record_narrows_counts_reports_and_blames_the_rule_for_nothing_it_owns():
+    """The landing's one picture of what the register could reach, rather than what it found.
+
+    The strip gives the reports the index lists and the paragraph above gives the reports the
+    register compared; what neither gave is the gap between them, which is the number a reader
+    needs before trusting any other. Three things the figure must not do, each of them a defect an
+    earlier draft of it shipped: assert a physical fact about a document the register only failed
+    to read; count reports while the rule operates on trades and not say so; and call the rule's
+    scope what is the register's own reach.
+    """
+    holder_ = sworn(HOLDERS[0])
+    compared = read_report(holder_["id"], "2025-03-20", 1)
+    unread = read_report(holder_["id"], "2025-04-20", 2, read=False)
+    # Read, and every row on it set aside: one dated before the swearing-in the roster records,
+    # which is the register's own limit, and one the rule itself does not reach by amount.
+    quiet = read_report(holder_["id"], "2025-05-20", 3)
+    rows = LATE + [
+        dict(
+            transaction(quiet["id"], 1, transaction_date="2024-12-02", notified_date="2024-12-03"),
+            filing_status="New",
+        ),
+        dict(
+            transaction(quiet["id"], 2, amount_range={"min": 500, "max": 1000, "currency": "USD"}),
+            filing_status="New",
+        ),
+    ]
+    found, outcomes, _ = evaluated([holder_], [compared, unread, quiet], rows)
+    summary = signal_run.run_record(SIGNAL["id"], "c" * 64, outcomes)[0]
+    page = render.render_index(
+        HOLDERS,
+        OFFICES,
+        FILINGS + [compared, unread, quiet],
+        RUN,
+        META,
+        striker,
+        0,
+        "https://x/rows",
+        rows,
+        [(SIGNAL, summary)],
+        None,
+        None,
+        {SIGNAL["id"]: outcomes},
+        found,
+    )
+    figure = between(page, '<figure class="narrows">', "</dl>")
+    caption = between(figure, "<figcaption>", "</figcaption>")
+    steps = [
+        (dt, html.unescape(dd))
+        for dt, dd in re.findall(r"<dt>([\d,]+)</dt><dd>(.*?)</dd>", figure, re.S)
+    ]
+
+    # The four numbers are the run record's own, derived here without the figure's code.
+    n, read, checked, fired = render.answer_counts(outcomes, found, SIGNAL["id"])
+    assert [int(d.replace(",", "")) for d, _ in steps] == [n, read, checked, fired] == [3, 2, 1, 1]
+    assert re.search(r'aria-label="3 [^"]*; 2 [^"]*; 1 [^"]*; 1 [^"]*"', figure), (
+        "the bars are readable as numbers with no sight of them"
+    )
+
+    # The step that narrows says what the register looked for, never what the document is.
+    assert (
+        "1 it fetched and could not read: it looks in the text it extracts for the Filing ID line "
+        "and the State/District line" in steps[1][1]
+    )
+    assert "scanned" not in figure and "picture" not in figure, (
+        "the register records that it found no Filing ID line, not that a document is a picture "
+        "of its pages (the fifth reading of S.1b, Seat G)"
+    )
+    assert "a limit of the register, not a fact about what was filed" in steps[1][1]
+
+    # The rule's scope is credited with exactly the rows the rule's scope covers.
+    assert "1 at or under the $1,000 the rule sets" in steps[2][1]
+    assert "1 dated before the swearing-in the roster records" in steps[2][1]
+    assert (
+        "the rule's own scope accounts for 1; the other 1 is a limit of the register" in steps[2][1]
+    ), "a register limit is never called the rule's doing (the second reading, Seat B)"
+    assert "no trade the rule reaches" not in figure
+    assert (
+        '<a href="signals/stock-act-ptr-after-deadline/v1.html">wrote down before it ran</a>'
+        in steps[2][1]
+    ), "every reason cites the Signal that wrote it, as a link and not as escaped text"
+
+    # The caption says which unit the bars count, because a report can list hundreds of trades.
+    caption = html.unescape(caption)
+    assert "Each bar counts transaction reports, not trades" in caption
+    assert "compared at least one trade on it, and one report can list hundreds" in caption
+    assert "It does not show what any report says" in caption
+
+    # And it is a figure about the register: no person, no place, no rate.
+    assert "officeholders/" not in figure and ranking.check_index(page) == []
+    for h in HOLDERS:
+        assert h["legal_name"] not in figure and h["id"] not in figure
+        for office in h["offices"]:
+            assert office["seat"] not in figure, "no seat stands in for a person"
+    assert verdict_words(figure) == [] and "%" not in figure, (
+        "no figure about the register carries a rate, which a reader reads as a person's score"
+    )
+
+
+# ---- the four guards the sixth measurement found unmeasured ---------------------------------
+
+
+def test_the_year_the_answer_names_is_read_and_never_defaulted():
+    """Every page asserts a fact about one year's Clerk index. A build whose adapter run record
+    does not state the year published four hundred and thirty-nine of those sentences from a
+    Python default argument, which is a claim about a year nothing in the build holds (the second
+    reading of the built answer, Seat G)."""
+    assert render.year_of({"year": 2025}) == 2025
+    for run in ({}, {"year": None}, {"year": "2025"}, {"year": 2025.0}):
+        with pytest.raises(SystemExit) as refused:
+            render.year_of(run)
+        said = str(refused.value)
+        assert "no adapter run record states the filing year" in said
+        assert "src/adapters/house-fd/build.py" in said, "the refusal says what to run"
+    # And the refusal reaches a real render, not only the helper.
+    with pytest.raises(SystemExit):
+        render.era_of({k: v for k, v in RUN.items() if k != "year"}, HOLDERS)
+
+
+def test_the_outline_squares_words_never_call_a_register_limit_the_rules_doing():
+    """A report the register compared no row on is one the register did not reach, except where
+    the rule itself does not reach a row. Of 1,156 trades set aside on the 2025 record, one was
+    out of the rule's reach by amount (the second reading of the built answer, Seat B)."""
+    words = render.SQUARE_WORDS["unchecked"]
+    assert "the rule does not cover" not in words and "no trade on it that the rule" not in words
+    assert "a limit of the register" in words
+    assert "except where the rule itself does not reach a row" in words
+    key = render.square_key({"after": 1, "checked": 2, "unchecked": 3})
+    assert render.esc(words) in key, "the key beside the squares says it, on every page"
+    for state, said in render.SQUARE_WORDS.items():
+        assert verdict_words(said) == [], state
+
+
+def test_the_square_that_reassures_is_as_visible_as_the_one_that_does_not():
+    """The three states are told apart by texture, which is right; but the square carrying the
+    reassuring answer measured 1.64:1 against the paper in light mode against 15.69:1 for the
+    adverse one, so a grid of 463 read as if the adverse state were most of it. WCAG 2.1 SC
+    1.4.11 asks 3:1 of a graphic a reader needs, and these squares are also links (the second
+    reading of the built answer, Seat E)."""
+    import math
+
+    css = render.CSS
+    assert ".sq.s-checked { fill: url(#benday50); }" in css, (
+        "the square's own screen, not the art's"
+    )
+    assert 'id="benday50"' in render.BENDAY and 'id="benday"' in render.BENDAY
+    # The screen's ink and its coverage are what set the contrast, so both are pinned here.
+    dense = re.search(
+        r'id="benday50"[^>]*>\s*<circle cx="1.3" cy="1.3" r="([\d.]+)" '
+        r'fill="var\(--ink\)"',
+        render.BENDAY,
+    )
+    assert dense, "the dense screen is drawn in the page's own ink"
+    coverage = math.pi * float(dense.group(1)) ** 2 / 2.6**2
+    assert 0.45 < coverage < 0.6, f"a 50% screen, not a light one ({coverage:.2f})"
+
+    def ratio(a: str, b: str) -> float:
+        def lum(hexc: str) -> float:
+            parts = [int(hexc[i : i + 2], 16) / 255 for i in (1, 3, 5)]
+            parts = [p / 12.92 if p <= 0.04045 else ((p + 0.055) / 1.055) ** 2.4 for p in parts]
+            return 0.2126 * parts[0] + 0.7152 * parts[1] + 0.0722 * parts[2]
+
+        one, two = lum(a), lum(b)
+        return (max(one, two) + 0.05) / (min(one, two) + 0.05)
+
+    def over(fg: str, bg: str, alpha: float) -> str:
+        f = [int(fg[i : i + 2], 16) for i in (1, 3, 5)]
+        b = [int(bg[i : i + 2], 16) for i in (1, 3, 5)]
+        mixed = (round(f[i] * alpha + b[i] * (1 - alpha)) for i in range(3))
+        return "#" + "".join(f"{part:02x}" for part in mixed)
+
+    for paper, ink in (("#f7f4ec", "#1c1b16"), ("#141410", "#e9e5d8")):
+        assert f"--paper: {paper}" in css and f"--ink: {ink}" in css, "the tokens the page declares"
+        assert ratio(over(ink, paper, coverage), paper) >= 3.0, (
+            "the screened square reaches 3:1 against the paper as a mass, in both themes"
+        )
+
+
+def test_the_practical_thing_is_in_the_readers_path_and_says_what_to_run():
+    """The practical thing at the end is a rule this project wrote and then broke with length: the
+    verify line sat at word 9,196 of one page and 35,816 of the longest. It is inside the answer
+    now, which is the first section of every page (NEXT.md P.1 §2.5)."""
+    holder_ = sworn(HOLDERS[0])
+    report = read_report(holder_["id"], "2025-03-20", 1)
+    _, page = signal_page(holder_, [report], LATE)
+    answer = answer_of(page)
+    assert "Check it yourself: every report on this page links to the Clerk" in answer
+    assert "tools/verify.py" in answer, "the command a reader runs, in the reader's path"
+    body = page[page.index('<main id="main">') : page.index("tools/verify.py")]
+    words = len(re.sub(r"<[^>]+>", " ", body).split())
+    assert words < 400, f"the citation is reachable without scrolling a long page ({words} words)"
+
+
+# ---- the six guards whose named tests the merge with main's pages dropped --------------------
+
+
+def test_a_corrected_line_names_the_build_before_the_first_correction_of_it():
+    """The sentence tells a private person where a filer's own line survives as filed. Where the
+    text was corrected twice, the builds before the SECOND carry the maintainer's first wording,
+    not the line as filed, so naming this correction's build sent the reader to builds that do not
+    hold what the sentence promises (the fourth reading, Seats B, E and G; the fifth, Seats C
+    and F)."""
+    first = corrected(
+        "fl:house-clerk:P:1",
+        "data/filings.ndjson",
+        "notes",
+        None,
+        "A neighbour's name, removed.",
+        at="2026-10-06T12:00:00Z",
+        was_sha256="1" * 64,
+        build="0005-house-2025",
+    )
+    second = corrected(
+        "fl:house-clerk:P:1",
+        "data/filings.ndjson",
+        "notes",
+        None,
+        "The same line, tightened.",
+        at="2026-11-06T12:00:00Z",
+        was_sha256="2" * 64,
+        build="0006-house-2025",
+    )
+    history = [first, second]
+    assert render.earlier_builds(second, history) == (
+        "the builds before <code>0005-house-2025</code>"
+    ), "the first correction's build, not this one's"
+    assert render.earlier_builds(first, history) == "the builds before <code>0005-house-2025</code>"
+    # And on the page, so the sentence a person reads is the one that was measured.
+    note = render.change_notes(history)
+    assert note.count("the builds before <code>0005-house-2025</code>") == 2
+    assert "0006-house-2025</code> carry the line as filed" not in note
+    # A correction with no build named at all still says something true.
+    assert render.earlier_builds({"field": "notes"}, []) == (
+        "every build sealed before this correction"
+    )
+
+
+def test_the_seal_speaks_once_inside_its_figure():
+    """The mark carries its own title and description, because it is also served as mark.svg on its
+    own. Inside a captioned figure those made a screen reader say the same three sentences twice,
+    so there the caption is the one voice (the fifth reading of S.1b, Seat E)."""
+    svg = '<svg role="img" aria-labelledby="t d"><title id="t">A</title><desc id="d">B</desc></svg>'
+    figure = render.seal_figure(svg, "What the mark says.")
+    assert 'role="presentation"' in figure and 'aria-labelledby="t d"' not in figure
+    assert "<figcaption>What the mark says.</figcaption>" in figure
+    assert figure.count("role=") == 1, "one role, and it is not a second voice"
+    # Served on its own the mark keeps its own words, because then nothing else carries them.
+    assert 'role="img" aria-labelledby="t d"' in svg
+
+
+def test_an_answer_whose_numbers_would_contradict_each_other_refuses():
+    """min() clamped a discrepancy where an assertion belongs. A Finding resting on a report this
+    build's run record marks unread made the answer say, in one paragraph, that the register read
+    none of the reports, compared one, found that one after the deadline, and could not read it
+    (the second reading of the built answer, Seat C)."""
+    holder_ = sworn(HOLDERS[0])
+    report = read_report(holder_["id"], "2025-03-20", 1)
+    found, _, by_holder = evaluated([holder_], [report], LATE)
+    assert found, "a Finding to rest the contradiction on"
+    # The run record says it read nothing; the Finding says a row on it was compared. Both cannot
+    # stand, and the register says so rather than publishing the smaller of the two.
+    unread = [dict(o, state="not read", evaluated=0, rows=0) for o in by_holder[holder_["id"]]]
+    with pytest.raises(SystemExit) as refused:
+        render.answer_section(
+            [SIGNAL], found, {SIGNAL["id"]: unread}, META, 0, holder_.get("sworn_at")
+        )
+    said = str(refused.value)
+    assert "which cannot all be true" in said
+    assert "src/signals/run.py" in said and "--correct" in said, "the refusal says what to run"
+    # And with the record whole, the same call renders.
+    assert "answer" in render.answer_section(
+        [SIGNAL], found, {SIGNAL["id"]: by_holder[holder_["id"]]}, META, 0, holder_.get("sworn_at")
+    )
+
+
+def test_a_signal_version_with_no_words_of_its_own_refuses():
+    """A Signal the answer has no words for was named with its firing count alone: no coverage
+    number, no standard, and a shape that differed according to whether it fired, which is a
+    verdict by placement. And keyed by slug alone, a v2 published v1's account of the rule, which
+    is INVARIANTS §11's silent redefinition moved into the sentence a reader meets (Seats C, G)."""
+    v2 = dict(SIGNAL, id=SIGNAL["id"].replace(":v1", ":v2"), version=2)
+    assert (SIGNAL["slug"], 1) in render.ANSWER_WORDS
+    assert (SIGNAL["slug"], 2) not in render.ANSWER_WORDS, "v2 has no words of its own"
+    with pytest.raises(SystemExit) as refused:
+        render.answer_section([v2], [], {v2["id"]: []}, META)
+    said = str(refused.value)
+    assert f"no words for signal {SIGNAL['slug']} version 2" in said
+    assert "keyed by (slug, version)" in said and "INVARIANTS §11" in said
+    # v1 renders, so the refusal is about the version and not about the Signal.
+    assert "answer" in render.answer_section([SIGNAL], [], {SIGNAL["id"]: []}, META)

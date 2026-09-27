@@ -23,10 +23,28 @@ META = {
         "data/transactions.ndjson": 7346,
     }
 }
+# The groups as the adapter writes them, from the register's own set-aside rows: the held ones are
+# one condition each, and none is the bare "surname matches a sitting member" that this fixture
+# carried for two passes. An exact-key lookup against that shorter key silently returned nothing,
+# so the held figure left the sealed sentence and the guard that required it went quiet with it: a
+# fixture one shape behind the code hid both (the Council's fifth reading of S.1b, Seats A, C, D).
+HELD = "surname matches a sitting member but the given names differ; "
+DECIDES = "a human decides this one"
 RUN = {
     "counts": {"quiet": 11, "rejected": 1737, "attributed_by_document": 101},
     "documents": {"read": 409},
-    "rejected_by_reason": {"surname matches a sitting member": 162},
+    "rejected_by_reason": {
+        "no sitting member has this name; the row is a candidate or a former member": 1575,
+        HELD + DECIDES: 127,
+        HELD + "the document carries no Filing ID line (scanned paper, or a form that prints "
+        f"none) and cannot confirm the filer; {DECIDES}": 28,
+        HELD + "the document prints a Status other than Member for the filer the document names, "
+        f"at the seat it prints; the header does not attribute the row to the seat's member; "
+        f"{DECIDES}": 6,
+        HELD + "the index dates the filing before the swearing-in for this Congress that the "
+        f"roster records; the roster does not say who held the seat before that date, so the "
+        f"register does not; {DECIDES}": 1,
+    },
 }
 GOOD = (
     "439 filled; 1,197 filings, 101 of them by the document; 1,737 rows not attributed, 162 held; "
@@ -171,8 +189,8 @@ def test_who_a_signal_cannot_reach_is_counted_by_officeholder():
         o("c", "evaluated"),
     ]
     assert seal.reach(outcomes) == {
-        "paper_only": 1,
-        "some_paper": 1,
+        "unread_only": 1,
+        "some_unread": 1,
         "not_fetched": 0,
         "before_swearing_in": 1,
     }
@@ -185,8 +203,8 @@ def test_who_a_signal_cannot_reach_is_counted_by_officeholder():
     ]
     with_unfetched = [*outcomes, o("d", "not read", report="fl:unfetched")]
     assert seal.reach(with_unfetched, filings) == {
-        "paper_only": 1,
-        "some_paper": 1,
+        "unread_only": 1,
+        "some_unread": 1,
         "not_fetched": 1,
         "before_swearing_in": 1,
     }
@@ -355,17 +373,65 @@ def test_a_closed_year_seals_a_sentence_that_says_the_register_closed_it(tmp_pat
     assert "0 seats" not in text and f"2 because {reason}" in text
 
 
+def test_a_different_file_that_reads_as_the_published_rows_is_its_own_kind():
+    """The Council's fifth reading of S.1b (Seats C, D and F): the fifth pass made every file the
+    Clerk serves that is not the one last seen a change row, whether or not its rows read
+    otherwise. One kind of words then said of a replacement with an empty `differs` that the file
+    reads otherwise, which the change row itself, and the page, say it does not."""
+    seal = load()
+    otherwise = {
+        "id": "a",
+        "change": "replaced",
+        "differs": [{"row": "tx:x:1", "fields": ["asset"]}],
+    }
+    same = {"id": "b", "change": "replaced", "differs": []}
+    said = seal.changes_sentence([otherwise])
+    assert (
+        "which reads otherwise" in said and "reads as the rows the register published" not in said
+    )
+    said = seal.changes_sentence([same])
+    assert "reads as the rows the register published" in said
+    assert "which reads otherwise" not in said, "the change row says the rows read the same"
+    both = seal.changes_sentence([otherwise, same])
+    assert "these kinds" in both and both.count("a different file") == 2
+
+
 def test_a_state_that_lacks_the_changes_is_refused():
     """Seat G on the third reading (R3-4): the check read no change, so a sentence that left
     the maintainer's corrections out sealed."""
     seal = load()
+    decision = {"change": "corrected", "decided_at": "t", "decided_by": "m", "because": "x"}
     changes = [
         {"id": "a", "change": "not listed"},
-        {"id": "b", "change": "corrected", "decided_at": "t", "decided_by": "m", "because": "x"},
-        {"id": "c", "change": "corrected", "decided_at": "t", "decided_by": "m", "because": "x"},
+        {"id": "a2", "change": "read otherwise"},
+        {"id": "b", **decision},
+        {"id": "c", **decision},
     ]
     lacking = seal.state_text_lacks({"state": "Nothing about changes.", "rows": {}}, None, changes)
-    assert "changes later reads showed 1" in lacking and "the maintainer's decisions 1" in lacking
+    assert "changes later reads showed 2" in lacking and "the maintainer's decisions 1" in lacking
     assert (
-        seal.state_text_lacks({"state": "1 change; 1 decision.", "rows": {}}, None, changes) == ""
+        seal.state_text_lacks({"state": "2 changes; 1 decision.", "rows": {}}, None, changes) == ""
     )
+    # With one kind of read the sentence gives no count, so the seal requires none. It used to
+    # demand one, and passed only because a standalone "1" happened to occur elsewhere in the
+    # sentence (the Council's fifth reading of S.1b, Seat C).
+    one_kind = [{"id": "a", "change": "not listed"}, {"id": "a2", "change": "not listed"}]
+    assert "changes later reads showed" not in seal.state_text_lacks(
+        {"state": "Nothing about changes.", "rows": {}}, None, one_kind
+    )
+    assert "of this kind" in seal.changes_sentence(one_kind)
+    assert "2" not in seal.changes_sentence(one_kind), "no count beside one kind, at any count"
+
+
+def test_held_rows_counts_every_group_whose_reason_begins_with_the_held_one():
+    """The figure was looked up by an exact key the adapter stopped writing, so it read 0, the
+    sealed sentence lost the aggregate, and the guard that required the figure skipped it because a
+    zero figure is skipped: the lookup, the sentence and the check all went quiet together (the
+    Council's fifth reading of S.1b, Seats A, C, D, E and F). The keys here are the ones the
+    adapter really writes."""
+    seal = load()
+    assert seal.held_rows(RUN) == 162
+    assert all(
+        key.startswith(seal.HELD_REASON) for key in RUN["rejected_by_reason"] if "differ" in key
+    )
+    assert seal.held_rows({"rejected_by_reason": {}}) == 0

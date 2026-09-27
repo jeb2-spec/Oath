@@ -17,12 +17,14 @@ stood before the push), and fails when:
   3. data/changes.ndjson is not the published file with rows added at its end, byte for
      byte: a change row records what a capture showed, and never changes;
   4. a capture the register keeps is gone or altered. Every file under data/captures/sha256/ is
-     named by the SHA-256 of its bytes and never changes, and every change row's capture is
-     kept there, so a change can be checked from the repository alone; except a filed
-     document (a PDF), which is cited by its SHA-256 and never kept, because it can carry the
-     names of private people and a kept copy would outlast the Clerk's withdrawal or redaction
-     of it: the Council's third reading of S.1b (Seat B) decided it, and NEXT.md D.4 carries
-     it into the doctrine. A kept PDF fails;
+     named by the SHA-256 of its bytes and never changes. The register keeps the bytes of two
+     captures, the ones the adapter fetches every week: the Clerk's roster, and a filing year's
+     index. Every other evidence a change row cites, a filed document among them, is cited by
+     its SHA-256 alone, which a reader checks against a copy they hold, because a filed document
+     can carry the names of private people and a kept copy would outlast the Clerk's withdrawal
+     or redaction of it: the Council's third reading of S.1b (Seat B) decided it, and its fifth
+     corrected the scope, which had been read as a folder and let through 734 of the register's
+     1,197 filed documents; NEXT.md D.4 carries it into the doctrine. A kept document fails;
   5. a correction does not say what makes it one: its kind (the source, or the register),
      its reason, who decided and when, and evidence at an https URL on a host SOURCES.md
      registers as primary. Such a row is honoured for nothing, and fails by itself, however
@@ -240,19 +242,27 @@ def appended(tree: str, published: str) -> list[str]:
     ]
 
 
-# The two captures the register keeps: the Clerk's roster, and a filing year's index. They are
-# named by the adapter, so the rule is what the URL is, not what a file is called: a filed
-# document served from a URL that does not end .pdf was kept whole by the suffix rule (the
-# Council's fourth reading of S.1b, Seat B).
-KEEPS = ("clerk.house.gov/xml/lists/", "/public_disc/financial-pdfs/")
+# The two captures the register keeps, by the URLs the adapter fetches them from
+# (src/adapters/house-fd/fetch.py): the Clerk's roster, and a filing year's index.
+#
+# A prefix on the index's folder cannot tell it from what else that folder holds. The Clerk
+# serves a year's index at /public_disc/financial-pdfs/<year>FD.zip and every filing not coded P
+# at /public_disc/financial-pdfs/<year>/<DocID>.pdf, so a folder prefix called 734 of the
+# register's own 1,197 filed documents captures it keeps: the gate then demanded bytes the build
+# never keeps, and failed them when kept, leaving no state in which the register could record
+# that the Clerk had served one of those reports otherwise (the Council's fifth reading of S.1b,
+# Seats B, E and G). Matched whole, against the two URLs and nothing else.
+KEPT_URLS = (
+    re.compile(r"^https://clerk\.house\.gov/xml/lists/MemberData\.xml$"),
+    re.compile(r"^https://disclosures-clerk\.house\.gov/public_disc/financial-pdfs/\d{4}FD\.zip$"),
+)
 PDF_BYTES = b"%PDF-"
 
 
 def document(url: str) -> bool:
-    """Whether a capture is a filed document, cited by its fingerprint and never kept: anything
-    but the roster and a year's index, which the adapter fetches and the register keeps."""
-    where = urlsplit(url)
-    return not any(part in f"{where.netloc}{where.path}" for part in KEEPS)
+    """Whether a capture is cited by its fingerprint and never kept: everything but the Clerk's
+    roster and a filing year's index, which the adapter fetches and the register keeps."""
+    return not any(kept.match(url) for kept in KEPT_URLS)
 
 
 def capture_problems(root: Path, ref: str, changes: list[dict]) -> list[str]:

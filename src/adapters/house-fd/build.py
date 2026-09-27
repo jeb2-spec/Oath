@@ -99,6 +99,24 @@ PTR_CODE = "P"
 BY_HEADER = "Attributed by the document's own header"
 BY_DECISION = "Attributed by the maintainer's recorded decision"
 
+# The facts of a transaction row that a report's own bytes state, as against the ones the
+# register derived from the index (`id`, `filing_id`, `officeholder_id`). Which of the two a
+# fact is decides how far a recorded correction of it reaches: see as_corrected.
+FROM_THE_DOCUMENT = frozenset(
+    {
+        "owner",
+        "asset",
+        "asset_normalized",
+        "asset_code",
+        "action",
+        "transaction_date",
+        "notified_date",
+        "amount_range",
+        "filing_status",
+        "notes",
+    }
+)
+
 # Dropped before comparing names: honorifics and generational suffixes, which the
 # two sources supply inconsistently.
 NOISE = {"jr", "sr", "ii", "iii", "iv", "v", "mr", "mrs", "ms", "miss", "dr", "hon"}
@@ -291,11 +309,17 @@ def attribute_by_header(
     sworn = sworn_iso(member)
     if filed_at and sworn and filed_at < sworn:
         which = f"the {ordinal(congress)} Congress" if congress else "this Congress"
+        # The roster's date is this member's own, not the day the Congress convened, and the two
+        # differ for a member sworn in mid-term. "The swearing-in for the Congress that the roster
+        # records" read as the day the Congress convened on the page of a member sworn eleven
+        # months later (the Council's fifth reading of S.1b, Seat F). And the register says only
+        # what it can see: where it holds another officeholder at this seat, it does not claim to
+        # be as silent as the roster (the fifth reading, Seat D).
         return (
             "held",
-            f"the index dates the filing {filed_at}, before the swearing-in for {which} "
-            f"that the roster records ({sworn}); the roster does not say who held the seat "
-            "before that date, so the register does not",
+            f"the index dates the filing {filed_at}, before the swearing-in the roster records "
+            f"for this member of {which} ({sworn}); the roster does not say who held the seat "
+            "before that date" + ("" if others else ", so the register does not"),
         )
     return (
         "attributed",
@@ -406,11 +430,21 @@ def given_of(person: dict) -> str:
     return next((fold(p) for p in person["first"].split() if fold(p) and fold(p) not in NOISE), "")
 
 
-def departed_of(row: dict, kept: dict[str, dict], held: dict | None) -> dict | None:
+def departed_of(
+    row: dict, kept: dict[str, dict], held: dict | None, filed_at: str | None = None
+) -> dict | None:
     """The officeholder the roster no longer lists whose seat the row names and whose surname it
     carries, or None. Where a member the roster lists at that seat bears the surname too (a
-    successor of the same name), a row is the departed member's only when it carries their given
-    name; the rest are the listed member's, whose document decides them."""
+    successor of the same name), a row is the departed member's when it carries their given name;
+    a row carrying neither given name is theirs too where the index dates it no later than the
+    last roster read that listed them and before the successor was sworn, because the successor
+    cannot have filed it. The rest are the listed member's, whose document decides them.
+
+    Without that second rule, a departed member whose successor shares their surname got a
+    different account of their own held rows from one whose successor does not: the reason was
+    re-derived from a roster holding somebody else, so the document's own words left their page
+    and the page invited a decision in their place (the Council's fifth reading of S.1b, Seats A
+    and D). A reason travels with the row."""
     row_last = tokens(row["last"])
     near = [
         k
@@ -418,24 +452,93 @@ def departed_of(row: dict, kept: dict[str, dict], held: dict | None) -> dict | N
         if k["seat"] == row["state_dst"] and tokens(k["last"]) and tokens(k["last"]) <= row_last
     ]
     if len(near) > 1 or (near and held is not None and held["seat"] == row["state_dst"]):
-        near = [k for k in near if given_of(k) and given_of(k) in tokens(row["first"])]
+        printed = tokens(row["first"])
+        same = [k for k in near if given_of(k) and given_of(k) in printed]
+        theirs = held is not None and given_of(held) and given_of(held) in printed
+        if not same and filed_at and not theirs:
+            sworn = sworn_iso(held) if held else None
+            same = [
+                k
+                for k in near
+                if k.get("_until") and filed_at <= k["_until"] and (not sworn or filed_at < sworn)
+            ]
+        near = same
     return near[0] if len(near) == 1 else None
+
+
+# The specifics a set-aside reason carries, and the plain words a group says in their place: the
+# roster name and seat of the member whose surname a row shares, a swearing-in or filing date, the
+# name and status a document prints for its filer, a seat, and a Filing ID. A group describes a
+# condition of the register; it never names a person or places them.
+SPECIFICS: tuple[tuple[re.Pattern[str], str], ...] = (
+    (re.compile(r" ?\([^()]*(?:[A-Z]{2}\d{2}|\d{4}-\d{2}-\d{2}|oh:)[^()]*\)"), ""),
+    (
+        re.compile(r"Status '[^']*' for the filer named '[^']*' at [A-Z]{2}\d{2}, not Member"),
+        "a Status other than Member for the filer the document names, at the seat it prints",
+    ),
+    (re.compile(r"Status '[^']*'"), "a Status other than Member"),
+    (re.compile(r"the filer as '[^']*'"), "the filer under a name"),
+    (re.compile(r"prints '[^']*'"), "prints a name"),
+    (re.compile(r"Filing ID \d+, not this row's DocID"), "a Filing ID other than this row's DocID"),
+    (
+        re.compile(r"says Filing ID \d+; the index row is DocID \d+"),
+        "says a Filing ID other than the index row's DocID",
+    ),
+    (
+        re.compile(
+            r"says State/District [A-Z]{2}\d{2}; the officeholder it was attributed to holds "
+            r"[A-Z]{2}\d{2}"
+        ),
+        "says a State/District other than the one the officeholder it was attributed to holds",
+    ),
+    (
+        re.compile(r"State/District [A-Z]{2}\d{2}, not the member's [A-Z]{2}\d{2}"),
+        "a State/District other than the member's",
+    ),
+    (re.compile(r"State/District [A-Z]{2}\d{2}"), "a State/District"),
+    (re.compile(r"dates the filing \d{4}-\d{2}-\d{2}, before"), "dates the filing before"),
+    (re.compile(r"\b(?:19|20)\d{2}-\d{2}-\d{2}\b"), "that date"),
+)
+# What no group may carry, whatever a later reason says: a seat, a date, a DocID or Filing ID, an
+# officeholder's id, or a value a source printed, which the adapter quotes. A possessive is not a
+# quote, so the opening mark must follow something other than a letter; a filing year is a fact
+# about the build, so only a longer run of digits (a DocID, a Filing ID) is a specific. Checked on
+# every build, because the run record and the sealed sentence derived from it are published and
+# sealed, and a sealed row stays.
+A_SPECIFIC = re.compile(r"[A-Z]{2}\d{2}|\d{4}-\d{2}-\d{2}|\d{5,}|oh:us:|(?<![A-Za-z])'[^']+'")
 
 
 def reason_group(reason: str) -> str:
     """A set-aside reason as the run record groups it, and the sealed sentence quotes: the words
-    without the specifics in the trailing parentheses, which name a member and a seat.
+    that say why a row waits, with every specific that names a person or places them replaced by
+    plain words. The build refuses rather than write a group that still carries one.
 
-    Cut at the first parenthesis and a row kept from a departed member's seat lost the clause
-    that explains it, so the one sentence about the build gave half a reason; and the rows of one
-    member the roster stopped listing filled three groups, each small enough to be a count about
-    that person. They are one group, each row keeping its own reason in the set-aside file (the
-    Council's fourth reading of S.1b, Seats A, B and F).
+    Cut at the first parenthesis and a row kept from a departed member's seat lost the clause that
+    explains it, so the one sentence about the build gave half a reason; and the rows of one member
+    the roster stopped listing filled three groups, each small enough to be a count about that
+    person (the Council's fourth reading of S.1b, Seats A, B and F). Cutting the trailing
+    parenthesis alone then left the name and seat of a sitting member inside the key, so on the
+    real index the run record and the sealed sentence carried seventy-four groups naming a member,
+    thirty-seven of them counts of one row, and one naming a private filer: the count that was a
+    person, at scale (the fifth reading, Seats A, C, D and E). A scrub that has to keep up with the
+    next reason's wording is the same defect waiting, so a group that still carries a specific
+    stops the build instead of being sealed. Every row keeps its own reason, with its specifics, in
+    the set-aside file, where it is a row about a row and not a figure about a person.
     """
     if reason.startswith(DEPARTED):
         return DEPARTED + ", each with the reason the register gave the row"
-    cut = reason.rfind(" (")
-    return reason[:cut] if cut > 0 and reason.endswith(")") else reason
+    words = reason
+    for pattern, plainly in SPECIFICS:
+        words = pattern.sub(plainly, words)
+    group = re.sub(r"\s+", " ", words).strip()
+    if A_SPECIFIC.search(group):
+        raise SystemExit(
+            "refusing to build: the words this reason would be grouped under name a person or "
+            f"place them, and the group is sealed as a figure about the register: {group!r}. Give "
+            "the specific a plain-words stand-in in build.py SPECIFICS, or move it into the "
+            "parentheses the row carries. The reason on the row is unaffected."
+        )
+    return group
 
 
 def departed_reason(
@@ -929,10 +1032,17 @@ def as_corrected(read: list[dict], changes: list[dict], sha256: str) -> list[dic
     """A document's rows as this build reads them, with each fact the maintainer's recorded
     decision answered taken as the decision left it: a correction was made against a reading
     of the bytes, and the next reading of them gives what the correction says the row carried
-    (its `was`, or the fingerprint of it), so that reading is no difference; a value that stands,
-    decided on these very bytes, answers any reading of them. Without this, the next refresh
-    after a correction of a report's own rows compared the reading with the corrected row and
-    refused every week (the Council's fourth reading of S.1b, Seats A and C)."""
+    (its `was`, or the fingerprint of it), so that reading is no difference. Without this, the
+    next refresh after a correction of a report's own rows compared the reading with the
+    corrected row and refused every week (the Council's fourth reading of S.1b, Seats A and C).
+
+    A decision answers only the reading it was made against. For a fact the document's own
+    bytes state, that is the capture the correction cites: these bytes, whose SHA-256 is
+    `sha256`. Another file that states the fact otherwise is a difference the register records,
+    and a decision made against other bytes does not speak for it (the Council's fifth reading
+    of S.1b, Seat G). For a fact the register derived rather than read (the attribution, the
+    report it belongs to), no document's bytes state it, so the decision answers every reading
+    of it."""
     answered: dict[tuple[str, str], list[dict]] = collections.defaultdict(list)
     for c in changes:
         if c["change"] == CORRECTED and c.get("rows") == "transactions" and c.get("field"):
@@ -943,12 +1053,15 @@ def as_corrected(read: list[dict], changes: list[dict], sha256: str) -> list[dic
         for field in list(row):
             for c in answered.get((row["id"], field), []):
                 hashed = "was_sha256" in c  # a filer's own text, kept as its fingerprint alone
+                these = (c.get("capture") or {}).get("content_hash") == sha256
+                if field in FROM_THE_DOCUMENT and not these:
+                    continue
 
                 def was(value, c=c, hashed=hashed) -> bool:
                     return fingerprint(value) == c["was_sha256"] if hashed else value == c["was"]
 
                 if was(c["now"]):  # the published value stands
-                    if (c.get("capture") or {}).get("content_hash") == sha256:
+                    if these:
                         row[field] = c["now"]
                 elif was(row[field]):
                     row[field] = c["now"]
@@ -1533,7 +1646,7 @@ def build(year: int, dry_run: bool = False, expect_not_listed: int = 0) -> int:
                 adjudicated_now += 1
                 notes = decision_note(decision)
         if person is None and decision is None and not closed and kept_people:
-            gone = departed_of(row, kept_people, held)
+            gone = departed_of(row, kept_people, held, filed_at)
             if gone is not None:
                 reason = departed_reason(
                     gone,
@@ -1668,7 +1781,16 @@ def build(year: int, dry_run: bool = False, expect_not_listed: int = 0) -> int:
                     "both agree with the Clerk's index."
                 )
                 derived["notes"] = " ".join(p for p in (filing["notes"], discrepancy) if p)
-            if status in ("ok", "discrepancy") and filing["source_form_code"] == PTR_CODE:
+            # A document whose header refuses the attribution has its rows read once the
+            # maintainer has recorded a decision about that attribution, and not before. Leaving
+            # the entry instead, as the fourth reading's fix did, discarded the reading whole, so
+            # a reader that drifted or found a row was answered by no guard for exactly the
+            # reports that already carry a recorded dispute, and the route the refusal names was
+            # unreachable for them (the Council's fifth reading of S.1b, Seat C).
+            settled = status != "contradiction" or decided(
+                published["changes"], filing["id"], "officeholder_id"
+            )
+            if settled and filing["source_form_code"] == PTR_CODE:
                 derived["extraction_confidence"] = "structured"
                 rows_read = [
                     {
@@ -1735,12 +1857,10 @@ def build(year: int, dry_run: bool = False, expect_not_listed: int = 0) -> int:
                     "wrong, correct it with tools/correct.py, citing the document; if it "
                     "stands, record that with tools/correct.py --stands, and the build goes on."
                 )
-            if status == "contradiction" and not first_read:
-                # The very bytes the rows were published from, whose header disputes an
-                # attribution the maintainer has decided: the rows stay as published, and the
-                # build goes on, as the refusal above promises (the Council's fourth reading of
-                # S.1b, Seat C).
-                continue
+            # The header's dispute is absorbed here, and only it: an attribution the maintainer
+            # has decided is not refused again, and the build goes on, as the refusal above
+            # promises (the Council's fourth reading of S.1b, Seat C). What the document's own
+            # rows say still answers to the guards below.
             differs = reads_otherwise(before, rows_read, extend=True)
             if before and differs and was.get("extraction_confidence") == "structured":
                 raise SystemExit(
@@ -1768,8 +1888,12 @@ def build(year: int, dry_run: bool = False, expect_not_listed: int = 0) -> int:
                     "did, and a row is not published on the reading's word. If the report "
                     f"lists {'it' if len(extra) == 1 else 'them'}, the maintainer records that "
                     f"it lists {len(rows_read)} rows: tools/correct.py --row {was['id']} "
-                    f"--field transactions --now {len(rows_read)} --json --kind register, "
-                    "citing the document; if it does not, revert the change to the reader."
+                    f"--field transactions --now {len(rows_read)} --json --kind register, with "
+                    "--because, --decided-by, --decided-at and the evidence flags "
+                    "correct.py --help lists; --evidence-file must be the document these rows "
+                    "were published from, whose SHA-256 the tool checks against the filing's "
+                    "own source.content_hash. If the report does not list "
+                    f"{'it' if len(extra) == 1 else 'them'}, revert the change to the reader."
                 )
             filings_by_id[was["id"]] = accrue(filings_by_id[was["id"]], derived)
             for tx in rows_read:

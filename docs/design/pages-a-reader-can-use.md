@@ -153,6 +153,26 @@ seal that already sits there, and stay at the foot as well.
 6. **This adds surface to maintain.** Each of the five changes needs a test that fails without it,
    and the guard sweep must cover them, as the fourth reading's eleven unmeasured guards taught.
 
+## 4a. A second reading of the built answer
+
+*Added 2026-09-27. Two sessions built this note's proposals in parallel, without knowing of each
+other: the one recorded in §7 below, which shipped on PR #42, and one that reached §2.2 to §2.5
+separately and drafted §2.1 three times. PR #42's is the implementation, and it is better: the
+answer's numbers come from the Signal's own run record rather than from a filing's extraction
+field, it says the days and what decides them, and it carries the frame inside its own paragraph.
+The parallel draft was dropped. What it contributes instead is a second seven-seat reading, of the
+merged sentence and not of a proposal, convened on the pages as published, and the page fixes the
+Council's fifth reading of S.1b found that PR #42 did not carry: the swearing-in named as the
+officeholder's own rather than the Congress's, a row said to carry a given name rather than a
+person said to have used one, a replaced file distinguished by whether its rows read otherwise, the
+build named for the first correction of a line rather than the latest, and what a fingerprint does
+and does not do.*
+
+*The duplication is worth recording because it cost a working session. The lesson is the one the
+memory already carries about the junction: two halves both working perfectly is exactly when nobody
+notices. A session that is about to build something already on the course should read `origin/main`
+first, not the branch it cut.*
+
 ## 5. The reading this needs before it ships
 
 COUNCIL §2 requires an adversarial reading for any surface that names an officeholder in a new
@@ -241,3 +261,157 @@ carries the amendment. Its text: the diagram and paragraph in PR #42's commit `0
 there, kept in the history for this purpose), with the answer's sentence shapes quoted so a change
 to the wording moves the digest (Seat G), and §1.4 gaining *The House at a glance*. INVARIANTS §13's
 gate line should say the gate reads every officeholder's page (Seat C); that is §17's to approve.
+
+## 8. The second reading, of the pages as published
+
+*2026-09-27, all seven seats, on `adc06f5` and the 439 pages it renders. The first reading read the
+pages as they were built; this one read them as a stranger meets them. Every finding below was
+reachable on a published page, and each seat verified its own numbers against the sealed rows. The
+reports are in the session record.*
+
+**What made the answer a claim it could not stand behind, and is fixed:**
+
+- **Two integers side by side are a rate, and the reader divides them** (Seat A, blocking). The
+  denominator was the reports the register *could compare*, which shrinks for reasons that are not
+  about timeliness at all. So the officeholder whose whole condition was two trades one day past a
+  deadline that fell on a weekend showed **1 of 1** — the largest figure on the site — while the one
+  with 463 trades up to 165 days past showed **1 of 4**. The landing publishes the chamber's own
+  rate of 9%, so the comparator was already in the reader's hand. The numerator now carries the size
+  the record holds, the trades, and no two counts sit adjacent.
+- **"No trade the rule reaches" asserted the statute's reach** (Seat B, blocking). On 17 pages not
+  one skipped row was skipped on a ground about the rule: they were dated before the swearing-in the
+  roster records, or the report marks them amended, or the transaction is dated after the report.
+  The Signal's own criteria say a returning Member's earlier trades "were under the same rule". A
+  sentence that flatters a person falsely is the same defect as one that condemns them falsely, and
+  it was never the register's to say. It names its own reasons now.
+- **The Clerk's name stood behind the register's own undecided matching** (Seat B, blocking). "No
+  report in the Clerk's index is attributed to this officeholder", on a page where the index lists
+  twelve reports at that seat under that surname which the register has simply not decided. The
+  register attributes; the index lists.
+- **"Checked" is not what the register did** (Seat F, blocking). In three of five languages its
+  fluent equivalent is *audited*, *investigated* or *inspected for compliance*, which makes a quiet
+  page a clearance and a fired page an adverse finding by an authority the register is not. The act
+  is a comparison of two printed dates against a span the statute defines, and the page says so.
+- **The answer's numbers could contradict each other** (Seat C, blocking). A `min()` clamped a
+  discrepancy where an assertion belongs: a Finding resting on a report this build's run record
+  marks unread made one paragraph assert that the register read none, compared one, found that one
+  after the deadline, and could not read it. It refuses now, naming the two routes that resolve it.
+- **A Signal's words did not move with its version** (Seats C and G, blocking). The table was keyed
+  by slug alone, so a v2 would publish v1's account of the rule: INVARIANTS §11's silent
+  redefinition, relocated into the sentence a reader actually meets. And a Signal with no words
+  printed a bare firing count with no coverage and no standard, in a shape that differed according
+  to whether it fired.
+- **The year came from a default argument** (Seat G, blocking). A build with no run record published
+  1,644 sentences about the Clerk's 2025 index with nothing behind them. The year is the answer's
+  only durable anchor; it fails closed.
+- **The paragraph fitted no phone** (Seat E, blocking). Eighty to a hundred and fifty words, of
+  which forty were a sentence the reader met at word four, and on no page of 439 did it fit a first
+  screen: a reader saw the coverage clause cut mid-sentence and nothing else. The result and its
+  framing are two paragraphs now, adjacent and inseparable.
+- Smaller, and each a sentence a person reads about themselves: the day span belongs to the trades,
+  each with its own deadline, not to a report that has one filing date; the tenure context prints
+  wherever it is true, not only where the page is quiet; the innocence clause says "made any trade
+  the rule requires reported", because "anything to report" renders in Arabic as "anything to be
+  reported on"; the framing sentence is in full ink rather than the page's fine print; the square
+  that carries the reassuring answer measured 1.76:1 against the paper while the adverse one sat at
+  15.69:1; and the strip of squares carries what it does not show, which every figure here must.
+
+**What the landing gained.** *Where the record narrows*: four bars from the Clerk's index to a
+signal firing, each with the number that survives and a plain sentence naming what did not. Every
+other surface says what the register found; this one says what it could reach, which is the harder
+half and the half nobody else publishes. And the state map moved above the glance, because a visitor
+who arrived for one person could not reach it until word 301.
+
+**What the reading found that is not fixed here**, each a design question rather than a wording one:
+
+- A recorded correction moves a report in the rows and the answer does not move with it, because
+  the counts come from the Signal's run record and nothing reconciles the two; a re-captured
+  document would inflate them (Seat G). The renderer already refuses a ledger naming an
+  officeholder with no page; this wants the same guard, one set comparison, and it is the next
+  pass's first item.
+- `producing_filings` has no `maxItems` and nine readers take `[0]` (Seat C).
+- There is no schema for the signal run record, and one of the answer's four numbers is
+  recoverable from nothing else (Seat G).
+- "Scanned paper" is a property no sealed row records (Seats C and G): the register should record
+  why a document was not read, on the row.
+- No surface tells a subject how to dispute a fact (Seat B). BYLAWS §6 promises the route and the
+  pages never name it.
+- The answer is still four numbers where this reader holds two, and "transaction report" has no
+  glossary entry (Seat E).
+- The committed Council prompt defines three seats; four of the seven that read this are defined
+  only in §5 above (Seats E and G). COUNCIL §8 makes the prompt's blob SHA the reproducibility
+  guarantee, and a later reader holding it cannot reproduce four of these readings.
+
+## 9. Where the record narrows, and what the measurement found
+
+This section records one addition to the landing and two findings the addition produced, the second
+of them against the tool that keeps every other finding honest.
+
+### 9.1 The figure
+
+The landing said what the register found and never said what it could reach. Three surfaces each
+held a piece of the answer and none held the shape: the comic strip names the 463 transaction
+reports the Clerk's 2025 index lists, the paragraph under the glance names the 294 the register
+compared, and nothing accounted for the 169 between them. Of those, 54 the register fetched and
+could not read and **115 it read and compared no trade on**, and that second number appeared on no
+surface at all. It is the one a reader who has run out of ways to check whether they are getting a
+fair game needs before they trust any other, and it is the half of the work nobody else publishes.
+
+Four bars, one opacity per step so the narrowing reads without colour carrying the meaning, the
+count inside the wide bars and beside the narrow one; then a definition list saying what fell out at
+each step and why, in the register's own voice, with every reason linking the Signal that wrote it
+down before it ran. Derived from the Signal's run record, so it regenerates with the rows; a test
+derives all four numbers again from `answer_counts` using none of the figure's code.
+
+### 9.2 Three defects the first draft of it shipped
+
+Recorded because each is a way a figure built to honour the discipline can break it.
+
+- **It asserted a physical fact the register has never recorded.** The draft said 54 reports were
+  "scanned paper, or a form that prints no Filing ID line", and published that more prominently than
+  any surface had before. What the rows hold is that all 54 were fetched and hashed and that the
+  text the register extracted carried no `Filing ID` line and no `State/District` line. A picture of
+  the pages would read that way; so would a form that prints neither. The register does not record
+  which. The same claim was in eight other places, among them the strip's own wry line and the
+  seal's sentence, and all nine now say what the register looked for and did not find. The fifth
+  reading had raised this (Seat G) and it was published anyway, in the figure built to answer it.
+- **It counted reports while the rule operates on trades, and said so nowhere.** A report where one
+  of two hundred trades was compared counts whole in the third bar. The caption now states the unit.
+- **It called the rule's scope what is the register's own reach.** The draft listed "a kind of asset
+  the register does not evaluate, an amount at or under the threshold, or a trade dated before the
+  swearing-in" as one series, which reads as three ways the law does not apply. Of the 1,156 trades
+  set aside across every report the register read, **exactly one** was out of the rule's reach by
+  amount. The figure now names each group, attributes it to the register, the report, or the rule,
+  and states the count on each side. This is Seat B's finding reproduced inside the figure written
+  to answer it, which is worth recording plainly: a rule you are applying elsewhere is not a rule
+  you are applying.
+
+### 9.3 The measurement that was not one
+
+`tools/measure-guards.py` reported thirty-one guards each failing a test it names. Eight of those
+were not measurements, and the tool's own reading of pytest's exit code is what hid them.
+
+pytest exits non-zero for a usage error, for an interrupted run, and for a run that collected no
+test at all. The runner read every non-zero exit as the guard being caught. Six guards named tests
+that the merge with main's pages had dropped, and all six reported measured; a seventh named its
+tests as a `-k` expression that a whitespace split turned into a path called `or`, and pytest's
+"file or directory not found" read as a catch. A measurement that passes because the measurement
+broke is worse than no measurement, because it prints a number.
+
+A second defect made the results depend on the order of the run. A `.pyc` header records its
+source's mtime **to the second**; thirty-nine guards measure in twelve seconds, so removals shared
+seconds with the restores before them and the tests ran against code no longer on disk. One guard
+reported caught on its own and uncaught in the sweep. Both runs printed a number and neither said
+which to believe.
+
+Both are fixed, and the fixes are themselves guards. Only "ran, and something failed" is a
+measurement now. `tools/test_measure_guards.py` is new and is the first test this tool has had:
+twelve cases, one for each way it could lie, including a run that collected nothing and a
+measurement that does not depend on what was measured before it. The list stands at thirty-nine
+guards, every one removed on its own against a passing baseline, each failing a test it names.
+
+The pattern across four readings is worth stating once: **every claim this project makes about its
+own rigour has decayed exactly where nothing re-ran it.** "Each guard has a test" decayed three
+times. The list is the repair; the runner is the repair for the list; the runner's own test is the
+repair for the runner. There is no further turtle, because the runner's test fails in CI with
+everything else.

@@ -140,6 +140,40 @@ def _member(last, first, seat, bioguide="X000001", sworn="20250103", official=No
     )
 
 
+def test_a_departed_member_keeps_their_rows_when_a_successor_shares_the_surname():
+    """The Council's fifth reading of S.1b (Seats A and D): where the roster fills a departed
+    member's seat with someone of the same surname, a row under that surname carrying neither
+    given name was given to the successor, so the departed member's own page lost the document's
+    words for it and invited a decision in their place. A reason travels with the row: the row is
+    the departed member's where the index dates it no later than the last roster read that listed
+    them and before the successor was sworn, because the successor cannot have filed it."""
+    gone = dict(
+        _member("Example", "Robert", "XX01", "X000001", sworn="20250103"),
+        namelist="Example, Robert",
+        _until="2026-09-29",
+    )
+    heir = _member("Example", "Jane", "XX01", "Z999999", sworn="20261020")
+    kept = {"oh:us:house:x000001": gone}
+
+    def whose(first: str, filed: str):
+        found = build.departed_of(row("Example", first, "XX01"), kept, heir, filed)
+        return found and found["bioguide"]
+
+    assert whose("Robert", "2026-09-24") == "X000001", "their own given name"
+    assert whose("Susan", "2026-09-24") == "X000001", "neither name, in the window that is theirs"
+    assert whose("Jane", "2026-09-24") is None, "the successor's given name is the successor's"
+    assert whose("Susan", "2026-10-02") is None, "after the last read that listed them"
+    assert whose("Susan", "2026-10-25") is None, "after the successor was sworn"
+    # And at a seat whose successor does not share the surname, the join reaches no sitting member
+    # under it, so nothing narrows and every row under the surname stays theirs, whatever its date.
+    assert build.departed_of(row("Example", "Susan", "XX01"), kept, None, "2026-10-25") == gone
+    # The reason the row carries is the one the last build gave it, prefixed, not one re-derived.
+    before = "the document carries no Filing ID line (scanned paper, or a form that prints none)"
+    assert build.departed_reason(gone, "2026-09-24", before, same_given=False).startswith(
+        build.DEPARTED_KEPT + before
+    )
+
+
 def test_the_surname_pick_is_the_one_member_or_the_one_at_the_rows_seat():
     people, by_surname = roster(
         _member("Allen", "Rick", "GA12"),
@@ -214,8 +248,24 @@ def test_the_document_header_attributes_or_holds_and_never_says_who_a_filer_is_n
     assert verdict == "held" and "does not carry the roster surname" in clause
     verdict, clause = build.attribute_by_header(head, index_row, member, "2025-01-01")
     assert verdict == "held"
-    assert "before the swearing-in for this Congress that the roster records (2025-01-03)" in clause
-    assert "the roster does not say who held the seat before that date" in clause
+    # The roster's date is this member's own; a member sworn in mid-term has one the Congress does
+    # not, and the old wording read as the day the Congress convened (the Council's fifth reading
+    # of S.1b, Seat F).
+    assert (
+        "before the swearing-in the roster records for this member of this Congress (2025-01-03)"
+        in clause
+    )
+    assert (
+        "the roster does not say who held the seat before that date, so the register does not"
+        in (clause)
+    ), "the register holds nobody else at this seat, so it is as silent as the roster"
+    # And where it does hold another officeholder at the seat, it does not claim that silence
+    # (the fifth reading, Seat D).
+    _, beside = build.attribute_by_header(
+        head, index_row, member, "2025-01-01", others=[("mary", build.tokens("Example"))]
+    )
+    assert "the roster does not say who held the seat before that date." in beside + "."
+    assert "so the register does not" not in beside
 
 
 def test_an_index_docid_listed_twice_identically_is_carried_once_and_says_so():
@@ -1087,6 +1137,46 @@ def test_a_value_that_stands_answers_a_reading_of_the_very_bytes_it_was_decided_
     monkeypatch.setattr(StubReader, "rows", real_rows)
 
 
+def test_a_decision_about_a_reports_own_fact_answers_those_bytes_and_no_others(reports):
+    """The Council's fifth reading of S.1b (Seat G, R5-2): a correction of a fact a report's own
+    bytes state was made against a reading of those bytes. The Clerk then serves a different
+    file, which states that fact otherwise. The difference is the register's to record: a
+    decision made against other bytes does not answer for this file, and what it says would
+    otherwise be lost for good, because neither file is kept."""
+    tx = "tx:house-clerk:20000001:001"
+    assert correct_row(reports, tx, "asset", "--now", "As corrected", "--kind", "register") == 0
+    assert build.build(2025) == 0, "the same bytes: the correction answers the reading"
+    assert [c["change"] for c in changes_of(reports)] == ["corrected"], (
+        "the correction is the only change row: the reading is answered, so nothing differs"
+    )
+    document(  # a different file, whose first row states the asset as the correction moved it from
+        reports,
+        "20000001",
+        ADA,
+        [TX, dict(TX, asset="Other Holdings")],
+        "2026-01-12T00:00:02Z",
+        pad="a second file the Clerk served",
+    )
+    assert build.build(2025) == 0
+    replaced = [c for c in changes_of(reports) if c["change"] == "replaced"]
+    assert len(replaced) == 1, "the Clerk served a different file"
+    assert replaced[0]["differs"] == [{"row": tx, "fields": ["asset"]}], (
+        "what the other file states otherwise, by row and field name"
+    )
+    assert json.loads(rows_of(reports, "transactions")[tx])["asset"] == "As corrected", (
+        "and the published row still stands as the correction left it"
+    )
+
+
+def test_every_fact_a_reading_gives_is_the_documents_own_or_the_registers(reports):
+    """The split as_corrected turns on. A fact added to the reading belongs to the report's own
+    bytes or to the register's join, and until it is placed in one a correction of it would
+    reach either too far (answering bytes it was never made against) or not far enough
+    (refusing the refresh every week). Measured on a row the reading itself produced."""
+    row = json.loads(rows_of(reports, "transactions")["tx:house-clerk:20000001:001"])
+    assert set(row) == build.FROM_THE_DOCUMENT | {"id", "filing_id", "officeholder_id"}
+
+
 def test_a_name_the_roster_restates_does_not_refuse_a_report_it_confirmed(tmp_path, monkeypatch):
     """Seat C, C4-1 (iii): a report whose document printed another seat was published because
     the printed name confirmed the officeholder. The roster later gives the name otherwise, a
@@ -1629,38 +1719,56 @@ def test_a_confirmed_mass_not_listing_and_each_documents_read_are_recorded(regis
     assert record["documents"]["read_at"] == {}, "no document was read in this build"
 
 
+def published_reasons() -> list[str]:
+    """Every reason the register's own set-aside file gives, as the build wrote them. A fixture
+    shaped by hand hid this behaviour for a whole pass: the one the fourth reading's test carried
+    ended in a parenthesis, which no reason the adapter writes does, so the rule it measured was
+    not the rule that ran (the Council's fifth reading of S.1b, Seats C, D and E)."""
+    files = sorted((ROOT / "data" / "rejected" / "house-fd").glob("*.ndjson"))
+    return [
+        json.loads(line)["reason"]
+        for path in files
+        for line in path.read_text("utf-8").splitlines()
+        if line.strip()
+    ]
+
+
 def test_the_reasons_the_seal_quotes_keep_their_clause_and_isolate_no_one():
     """The Council's fourth reading of S.1b (Seats A, B and F): the run record grouped reasons by
     cutting at the first parenthesis, so a row kept from a departed member's seat lost the clause
     that explains it and the sealed sentence gave half a reason; and one member's rows filled
-    three groups, each small enough to be a count about that person."""
+    three groups, each small enough to be a count about that person. The fifth reading (Seats C,
+    D and E) found the repair leaving the name and seat of a sitting member inside the group, so
+    the run record and the sealed sentence carried a group per member, a third of them a count of
+    one row: the count that was a person, at scale, on a sealed surface.
+
+    Measured over every reason the register has actually set a row aside for."""
+    reasons = published_reasons()
+    assert len(reasons) > 1000, "the register's own set-aside rows, not a fixture"
+    groups = {build.reason_group(r) for r in reasons}
+    named = sorted(g for g in groups if build.A_SPECIFIC.search(g))
+    assert not named, f"a group names a person or places them: {named}"
+    assert len(groups) < 10, f"a group is a condition, not a person: {len(groups)} of them"
+    for group in groups:
+        assert ";" in group or group.startswith(build.DEPARTED), (
+            f"the clause that explains the row is gone: {group!r}"
+        )
+    # And the shapes no published row has taken yet, built from the adapter's own words.
     specifics = " (Placeholder, Bea, XX02; last listed 2026-01-05)"
-    kept = (
-        build.DEPARTED_KEPT
-        + "surname matches a sitting member (Placeholder, Bea, XX02) but the given names differ; "
-        + "the document carries no Filing ID line"
-        + specifics
-    )
-    groups = {
+    unseen = {
         build.reason_group(r)
         for r in (
-            kept,
+            build.DEPARTED_KEPT
+            + "surname matches a sitting member (Placeholder, Bea, XX02) but the given names "
+            + "differ; the document carries no Filing ID line"
+            + build.HELD_SUFFIX
+            + specifics,
             build.DEPARTED_OPEN + specifics,
             build.DEPARTED_SHUT + specifics,
             build.DEPARTED_OTHER_NAME + specifics,
         )
     }
-    assert groups == {build.DEPARTED + ", each with the reason the register gave the row"}, groups
-    assert build.reason_group("no sitting member has this name; the row is a candidate") == (
-        "no sitting member has this name; the row is a candidate"
-    ), "a reason with no specifics is quoted whole"
-    assert build.reason_group(
-        "surname matches a sitting member (Placeholder, Bea, XX02) but the given names differ; "
-        "the document carries no Filing ID line (XX02)"
-    ) == (
-        "surname matches a sitting member (Placeholder, Bea, XX02) but the given names differ; "
-        "the document carries no Filing ID line"
-    ), "only the trailing specifics are cut, so the clause that explains the row survives"
+    assert unseen == {build.DEPARTED + ", each with the reason the register gave the row"}, unseen
 
 
 def test_an_entry_is_weighed_against_the_one_the_register_last_read(register, monkeypatch):
@@ -2028,3 +2136,31 @@ def test_a_closed_year_reads_the_documents_of_decided_rows_and_only_those(tmp_pa
 def test_the_reader_that_read_the_documents_is_named_in_the_run_record(reports):
     """A change of reader can change what a document says; the record names the one that read."""
     assert run_record(reports)["documents"]["reader"] == StubReader.reader_version()
+
+
+def test_reason_group_refuses_a_specific_rather_than_sealing_it():
+    """A scrub that has to keep up with the next reason's wording is the defect waiting: the fifth
+    reading found the fourth's repair leaving a sitting member's name and seat inside the key. So a
+    specific the list of stand-ins knows becomes plain words, and one it does not stops the build,
+    where a maintainer can fix the wording, rather than being sealed where a sealed row stays."""
+    plainly = {
+        "surname matches a sitting member (Placeholder, Bea, XX02) but the given names differ": (
+            "surname matches a sitting member but the given names differ"
+        ),
+        "the document prints the filer as 'A private person'": (
+            "the document prints the filer under a name"
+        ),
+        "the index dates the filing 2025-01-01, before the swearing-in": (
+            "the index dates the filing before the swearing-in"
+        ),
+    }
+    for reason, group in plainly.items():
+        assert build.reason_group(reason) == group
+    for named in (
+        "the maintainer's decision names oh:us:house:x000001 for it",
+        "DocID 20030699 is listed under another year",
+        "the filer is listed at seat XX02 and the member at YY03",
+        "the roster gives the sworn date as 'not stated'",
+    ):
+        with pytest.raises(SystemExit, match="name a person or place them"):
+            build.reason_group(named)
