@@ -309,11 +309,17 @@ def attribute_by_header(
     sworn = sworn_iso(member)
     if filed_at and sworn and filed_at < sworn:
         which = f"the {ordinal(congress)} Congress" if congress else "this Congress"
+        # The roster's date is this member's own, not the day the Congress convened, and the two
+        # differ for a member sworn in mid-term. "The swearing-in for the Congress that the roster
+        # records" read as the day the Congress convened on the page of a member sworn eleven
+        # months later (the Council's fifth reading of S.1b, Seat F). And the register says only
+        # what it can see: where it holds another officeholder at this seat, it does not claim to
+        # be as silent as the roster (the fifth reading, Seat D).
         return (
             "held",
-            f"the index dates the filing {filed_at}, before the swearing-in for {which} "
-            f"that the roster records ({sworn}); the roster does not say who held the seat "
-            "before that date, so the register does not",
+            f"the index dates the filing {filed_at}, before the swearing-in the roster records "
+            f"for this member of {which} ({sworn}); the roster does not say who held the seat "
+            "before that date" + ("" if others else ", so the register does not"),
         )
     return (
         "attributed",
@@ -424,11 +430,21 @@ def given_of(person: dict) -> str:
     return next((fold(p) for p in person["first"].split() if fold(p) and fold(p) not in NOISE), "")
 
 
-def departed_of(row: dict, kept: dict[str, dict], held: dict | None) -> dict | None:
+def departed_of(
+    row: dict, kept: dict[str, dict], held: dict | None, filed_at: str | None = None
+) -> dict | None:
     """The officeholder the roster no longer lists whose seat the row names and whose surname it
     carries, or None. Where a member the roster lists at that seat bears the surname too (a
-    successor of the same name), a row is the departed member's only when it carries their given
-    name; the rest are the listed member's, whose document decides them."""
+    successor of the same name), a row is the departed member's when it carries their given name;
+    a row carrying neither given name is theirs too where the index dates it no later than the
+    last roster read that listed them and before the successor was sworn, because the successor
+    cannot have filed it. The rest are the listed member's, whose document decides them.
+
+    Without that second rule, a departed member whose successor shares their surname got a
+    different account of their own held rows from one whose successor does not: the reason was
+    re-derived from a roster holding somebody else, so the document's own words left their page
+    and the page invited a decision in their place (the Council's fifth reading of S.1b, Seats A
+    and D). A reason travels with the row."""
     row_last = tokens(row["last"])
     near = [
         k
@@ -436,7 +452,17 @@ def departed_of(row: dict, kept: dict[str, dict], held: dict | None) -> dict | N
         if k["seat"] == row["state_dst"] and tokens(k["last"]) and tokens(k["last"]) <= row_last
     ]
     if len(near) > 1 or (near and held is not None and held["seat"] == row["state_dst"]):
-        near = [k for k in near if given_of(k) and given_of(k) in tokens(row["first"])]
+        printed = tokens(row["first"])
+        same = [k for k in near if given_of(k) and given_of(k) in printed]
+        theirs = held is not None and given_of(held) and given_of(held) in printed
+        if not same and filed_at and not theirs:
+            sworn = sworn_iso(held) if held else None
+            same = [
+                k
+                for k in near
+                if k.get("_until") and filed_at <= k["_until"] and (not sworn or filed_at < sworn)
+            ]
+        near = same
     return near[0] if len(near) == 1 else None
 
 
@@ -1620,7 +1646,7 @@ def build(year: int, dry_run: bool = False, expect_not_listed: int = 0) -> int:
                 adjudicated_now += 1
                 notes = decision_note(decision)
         if person is None and decision is None and not closed and kept_people:
-            gone = departed_of(row, kept_people, held)
+            gone = departed_of(row, kept_people, held, filed_at)
             if gone is not None:
                 reason = departed_reason(
                     gone,
@@ -1862,8 +1888,12 @@ def build(year: int, dry_run: bool = False, expect_not_listed: int = 0) -> int:
                     "did, and a row is not published on the reading's word. If the report "
                     f"lists {'it' if len(extra) == 1 else 'them'}, the maintainer records that "
                     f"it lists {len(rows_read)} rows: tools/correct.py --row {was['id']} "
-                    f"--field transactions --now {len(rows_read)} --json --kind register, "
-                    "citing the document; if it does not, revert the change to the reader."
+                    f"--field transactions --now {len(rows_read)} --json --kind register, with "
+                    "--because, --decided-by, --decided-at and the evidence flags "
+                    "correct.py --help lists; --evidence-file must be the document these rows "
+                    "were published from, whose SHA-256 the tool checks against the filing's "
+                    "own source.content_hash. If the report does not list "
+                    f"{'it' if len(extra) == 1 else 'them'}, revert the change to the reader."
                 )
             filings_by_id[was["id"]] = accrue(filings_by_id[was["id"]], derived)
             for tx in rows_read:

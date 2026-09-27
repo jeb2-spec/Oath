@@ -11,12 +11,13 @@ it moves: the row, the fact (`--field`, a path such as filed_at or source.conten
 it carried (`was`), what it carries now (`now`), the kind (the source now states it
 otherwise, or the register read or joined it wrongly), the reason, who decided and when,
 and the evidence as a capture: the URL at a source SOURCES.md registers as primary, when
-those bytes were retrieved, and their SHA-256, which it keeps at
-data/captures/sha256/<sha256><ext> so the correction can be checked from the repository
-alone, unless the evidence is a filed document (a PDF): that it cites by its SHA-256 and
-never keeps, because a filed document can carry the names of private people and a kept copy
-would outlast the Clerk's withdrawal or redaction of it (a decision of the Council's third
-reading of S.1b; NEXT.md D.4 carries it into the doctrine). A correction of a
+those bytes were retrieved, and their SHA-256. It keeps the bytes at
+data/captures/sha256/<sha256><ext> only where they are one of the two captures the adapter
+fetches every week, the Clerk's roster or a filing year's index; every other evidence, a filed
+document among them, is cited by its SHA-256 alone and checked against a copy the reader holds,
+because a filed document can carry the names of private people and a kept copy would outlast the
+Clerk's withdrawal or redaction of it (a decision of the Council's third reading of S.1b, its
+scope corrected at the fifth; NEXT.md D.4 carries it into the doctrine). A correction of a
 transaction's asset or notes, the filer's own text, keeps the SHA-256 of what it carried
 (`was_sha256`) and not the text; the build that published the line still carries it, as every
 sealed build stays in the repository's history, and removing it from there has no route yet

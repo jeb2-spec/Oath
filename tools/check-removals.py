@@ -17,12 +17,14 @@ stood before the push), and fails when:
   3. data/changes.ndjson is not the published file with rows added at its end, byte for
      byte: a change row records what a capture showed, and never changes;
   4. a capture the register keeps is gone or altered. Every file under data/captures/sha256/ is
-     named by the SHA-256 of its bytes and never changes, and every change row's capture is
-     kept there, so a change can be checked from the repository alone; except a filed
-     document (a PDF), which is cited by its SHA-256 and never kept, because it can carry the
-     names of private people and a kept copy would outlast the Clerk's withdrawal or redaction
-     of it: the Council's third reading of S.1b (Seat B) decided it, and NEXT.md D.4 carries
-     it into the doctrine. A kept PDF fails;
+     named by the SHA-256 of its bytes and never changes. The register keeps the bytes of two
+     captures, the ones the adapter fetches every week: the Clerk's roster, and a filing year's
+     index. Every other evidence a change row cites, a filed document among them, is cited by
+     its SHA-256 alone, which a reader checks against a copy they hold, because a filed document
+     can carry the names of private people and a kept copy would outlast the Clerk's withdrawal
+     or redaction of it: the Council's third reading of S.1b (Seat B) decided it, and its fifth
+     corrected the scope, which had been read as a folder and let through 734 of the register's
+     1,197 filed documents; NEXT.md D.4 carries it into the doctrine. A kept document fails;
   5. a correction does not say what makes it one: its kind (the source, or the register),
      its reason, who decided and when, and evidence at an https URL on a host SOURCES.md
      registers as primary. Such a row is honoured for nothing, and fails by itself, however

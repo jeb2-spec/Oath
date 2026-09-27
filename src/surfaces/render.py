@@ -97,7 +97,8 @@ LIMITATIONS_9 = REPO + "LIMITATIONS.md#9-private-citizens-are-out-of-scope"
 # register keeps no copy of: EVIDENCE §7 says the register may keep the bytes, and INVARIANTS
 # §16 plans a bundle that holds them, so the practice cites the decision, not a section that
 # says otherwise (the Council's fourth reading of S.1b, Seats A, C and G).
-NEXT_D4 = REPO + "NEXT.md"
+NEXT_D4 = REPO + "NEXT.md#d4-doctrine-catch-up"
+CHANGES_DATA = REPO + "data/changes.ndjson"
 BYLAWS_5 = REPO + "BYLAWS.md#5-corrections"
 BYLAWS_6 = REPO + "BYLAWS.md#6-corrections-and-supersessions-facts-stay-change-is-shown"
 
@@ -526,17 +527,28 @@ def built_note(change: dict) -> str:
     return f"; recorded in build {esc(change['build'])}" if change.get("build") else ""
 
 
-def earlier_builds(change: dict) -> str:
+def earlier_builds(change: dict, history: list[dict] = ()) -> str:
     """Where a reader finds a filer's own text as filed, after a correction moved it. The
-    fingerprint the change row keeps is not the text, and saying only that would tell the
-    reader the text is gone: every sealed build stays in this repository's history, and the
-    builds before the one that sealed the correction carry the line (the Council's fourth
-    reading of S.1b, Seats B, E and G)."""
-    return (
-        f"the builds before <code>{esc(change['build'])}</code>"
-        if change.get("build")
-        else "every build sealed before this correction"
+    fingerprint the change row keeps is not the text, and saying only that would tell the reader
+    the text is gone: every sealed build stays in this repository's history, and the builds before
+    the line was first corrected carry it (the Council's fourth reading of S.1b, Seats B, E and G).
+
+    The build named must be the one that sealed the *first* correction of that fact, not this one:
+    after a second correction the builds between the two carry the maintainer's earlier wording,
+    not the line as filed, and on a first correction of a row published by the first build there
+    is no build before it at all (the fifth reading, Seats C and F)."""
+    builds = sorted(
+        c["build"]
+        for c in history or [change]
+        if c.get("build")
+        and c.get("change") == "corrected"
+        and c.get("field") == change.get("field")
+        and c.get("row_id") == change.get("row_id")
     )
+    first = builds[0] if builds else change.get("build")
+    if not first:
+        return "every build sealed before this correction"
+    return f"the builds before <code>{esc(first)}</code>"
 
 
 def cited(change: dict, words: str | None = None) -> str:
@@ -1424,7 +1436,15 @@ def finding_mark(changes: dict[str, list[dict]], filing_id: str) -> str:
     if "not listed" in state:
         marks.append(f"the index read {when(state['not listed'])} no longer lists it")
     if "replaced" in state:
-        marks.append(f"the Clerk's copy read {when(state['replaced'])} was a different file")
+        replaced = state["replaced"]
+        marks.append(
+            f"the Clerk's copy read {when(replaced)} was a different file, which "
+            + (
+                "reads as the rows the register published"
+                if not replaced.get("differs")
+                else "reads otherwise"
+            )
+        )
     reads = [c for k, c in state.items() if k.startswith("read otherwise:")]
     settled = None
     if reads:
@@ -1684,11 +1704,20 @@ def how_to_read(person: bool) -> str:
                     "outlast the Clerk's withdrawal or redaction of it; a private name a filer "
                     "wrote into a report's lines stays bound to that report and the Clerk's own "
                     f'copy, and is on no other page (<a href="{LIMITATIONS_9}">LIMITATIONS.md '
-                    "§9</a>). Keeping no document is the register's own practice, decided at the "
+                    "§9</a>). Such a line moves in two ways: the filer amends the report with "
+                    "the Clerk, or the maintainer records a correction of it, citing the Clerk's "
+                    f'copy (<a href="{BYLAWS_5}">BYLAWS.md §5</a>), which keeps a fingerprint '
+                    "of what the line carried and not the text. LIMITATIONS.md §9 still names "
+                    "the first alone; it is sealed doctrine, and NEXT.md D.4 carries the "
+                    "amendment. Keeping no document is the register's own practice, decided at the "
                     f'Council\'s third reading of this change (<a href="{NEXT_D4}">NEXT.md '
                     "D.4</a> carries what the doctrine should say). Where a later read found the "
                     "Clerk serving a different file, the register records both files' "
-                    "fingerprints and which rows read otherwise, never what they say."
+                    "fingerprints and which rows read otherwise, never what they say. A "
+                    "fingerprint proves that a copy a reader holds is or is not the file the "
+                    "register read; it does not reproduce either file, and nobody who lacks a "
+                    "copy can recover one from it. Both are in "
+                    f'<a href="{CHANGES_DATA}">the changes, as data</a>.'
                 ),
             ),
             (
@@ -1797,7 +1826,12 @@ HELD_CLAUSES = {
     "no_filing_id": "whose {docs} {carry} no Filing ID line (scanned paper, or a form that "
     "prints none) and cannot confirm the filer",
     "status": "whose {docs} {print} a filer status other than Member",
-    "before_sworn": "dated by the index before the swearing-in the roster records for the Congress",
+    # The roster records a swearing-in for each member, and for one sworn in mid-term it is not
+    # the day the Congress convened. Saying "for the Congress" read, on the page of a member sworn
+    # eleven months in, as a date the row is plainly after (the Council's fifth reading of S.1b,
+    # Seat F). One shape for everyone: the date is the officeholder's own, whichever it is.
+    "before_sworn": "dated by the index before the swearing-in the roster records for this "
+    "officeholder",
     "not_captured": "whose {docs} the register has not fetched",
     "other": "whose {docs} {print} another seat or another Filing ID, or were set aside for "
     "another recorded reason",
@@ -1807,8 +1841,9 @@ HELD_CLAUSES = {
     "closed_open": "first read by the register when or after it closed the year, and dated "
     "within the Congress's terms, whose {docs} the register has not read: the maintainer's "
     "recorded decision can attribute {it}",
-    "left_other_name": "under another given name, whose {docs} the register has not read: the "
-    "name join attributes no row to a member the roster does not list",
+    "left_other_name": "that {carry} a given name other than this officeholder's, whose {docs} "
+    "the register has not read: the name join attributes no row to a member the roster does not "
+    "list",
     "left_closed": "dated after {until}, the last roster read the register built from that "
     "listed them, which no decision attributes to them: the register cannot show them in office "
     "then",
@@ -2181,8 +2216,8 @@ def change_notes(history: list[dict], holder_id: str = "") -> str:
             what = (
                 f"Corrected by the maintainer on {when(c)}: {field}, the filer's own text. The "
                 "correction keeps a fingerprint of what it said, not the text; "
-                f"{earlier_builds(c)} carry the line as filed, and every sealed build stays in "
-                f"this repository's history. {esc(c.get('because', ''))}"
+                f"{earlier_builds(c, history)} carry the line as filed, and every sealed build "
+                f"stays in this repository's history. {esc(c.get('because', ''))}"
             )
         else:
             what = (
@@ -2282,14 +2317,16 @@ def filings_section(
         "Rows coded P are served from the Clerk's transaction-report path, which is the one code "
         f'the register files as a transaction report (<a href="{SOURCES_F1}">SOURCES.md F.1</a>).'
         + (
-            f" A later read of the Clerk's index shows {reads} of them otherwise; each note "
-            "says what and when, and links the copy of the index the register kept."
+            f" A later read of the Clerk's index showed {reads} of them otherwise; each note "
+            "says what and when, whether a later read gave the published value back, and what "
+            "the maintainer decided, and links the copy of the index the register kept."
             if reads
             else ""
         )
         + (
             f" For {files} of them a later read found the Clerk serving a different file; each "
-            "note says which rows read otherwise, and the register keeps neither file."
+            "note says whether its rows read as the ones the register published or otherwise, "
+            "and in which facts, and the register keeps neither file."
             if files
             else ""
         )
@@ -3045,9 +3082,9 @@ def state_of_record(
         f"because the register does not guess; {at_seat_total:,} of them sit at an "
         "officeholder's own seat under their surname"
         + (
-            f"; {shut:,} more {plural(shut, 'is', 'are')} not attributed, because the register "
-            "cannot show the "
-            "officeholder in office on the date the index gives them "
+            f"; {shut:,} more {plural(shut, 'is', 'are')} not attributed at all, because a row "
+            "enters only for an officeholder the register can show in office on the date the "
+            "index gives it "
             f'(<a href="{SUBJECTS_1}">SUBJECTS.md §1</a>)'
             if shut
             else ""
@@ -3172,8 +3209,8 @@ def coverage_sentence(c: dict[str, int]) -> str:
         f"aside, {held:,} under the surname of an officeholder the register holds, for the "
         "maintainer to decide by hand, "
         + (
-            f"{shut:,} under such a surname and dated when the register cannot show that "
-            "officeholder in office, which no decision attributes, "
+            f"{shut:,} under such a surname and dated outside the days the register can show "
+            "an officeholder of that seat in office, which no decision attributes, "
             if shut
             else ""
         )

@@ -80,8 +80,12 @@ def held_rows(run: dict) -> int:
 
 
 def change_figures(changes: list[dict]) -> list[tuple[int, str]]:
-    """The figures the changes sentence carries: later reads, and the maintainer's decisions."""
-    reads = sum(1 for c in changes if c.get("change") != "corrected")
+    """The figures the changes sentence carries: later reads, and the maintainer's decisions. With
+    one kind of read the sentence gives no count, so neither does this: a guard that requires a
+    figure the sentence will not print passes only by an accident of the digits elsewhere in it
+    (the Council's fifth reading of S.1b, Seat C)."""
+    later = [c for c in changes if c.get("change") != "corrected"]
+    reads = 0 if len(change_kinds(later)) == 1 else len(later)
     decided = len(
         {
             (c.get("decided_at"), c.get("decided_by"), c.get("because"))
@@ -440,6 +444,32 @@ CHANGE_WORDS = {
     "read otherwise": "a fact a later read states otherwise",
     "replaced": "a document a later read found served as a different file, which reads otherwise",
 }
+# The fifth pass made every file the Clerk serves that is not the one last seen a change row of its
+# own, whether or not its rows read otherwise, so a replacement with an empty `differs` now exists.
+# One kind said of both that the file reads otherwise, which the change row itself contradicts (the
+# Council's fifth reading of S.1b, Seats C, D and F). Two kinds, by what the rows say.
+READS_SAME = (
+    "a document a later read found served as a different file, which reads as the rows the "
+    "register published"
+)
+
+
+def change_kinds(reads: list[dict]) -> list[str]:
+    """The kinds the changes sentence lists, in CHANGE_WORDS' order, a replacement split by
+    whether the other file's rows read otherwise."""
+    out = []
+    for kind, words in CHANGE_WORDS.items():
+        rows = [c for c in reads if c["change"] == kind]
+        if not rows:
+            continue
+        if kind != "replaced":
+            out.append(words)
+            continue
+        if any(c.get("differs") for c in rows):
+            out.append(words)
+        if any(not c.get("differs") for c in rows):
+            out.append(READS_SAME)
+    return out
 
 
 def changes_sentence(changes: list[dict]) -> str:
@@ -456,15 +486,13 @@ def changes_sentence(changes: list[dict]) -> str:
     }
     parts = []
     if reads:
-        kinds = [
-            words for kind, words in CHANGE_WORDS.items() if any(c["change"] == kind for c in reads)
-        ]
+        kinds = change_kinds(reads)
         listed = kinds[0] if len(kinds) == 1 else ", ".join(kinds[:-1]) + " and " + kinds[-1]
-        # With one kind the total is the count by kind, and when small that is a count about one
-        # person, which this sentence rules out: give the kind and no number (Seat F, N29).
         if len(kinds) == 1:
             # With one kind the total is the count by kind, and when small that is a count about
-            # one person, which this sentence rules out: give the kind and no number (Seat F, N29).
+            # one person, which this sentence rules out: give the kind and no number, at every
+            # count (Seat F, N29; the fifth reading, Seats C and F). change_figures drops the
+            # figure with it, so the seal does not require a number the sentence will not print.
             shown = (
                 "A change a later read showed is"
                 if len(reads) == 1

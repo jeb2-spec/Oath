@@ -1290,7 +1290,13 @@ def test_a_row_under_another_given_name_at_a_departed_seat_is_said_apart():
     counted = render.held_by_holder(rows, [gone], {gone["id"]: "2026-09-28"})
     assert counted == {gone["id"]: {"left_other_name": 1, "left_open": 1}}, counted
     said = render.aside_sentence(counted[gone["id"]], "2026-09-28")
-    assert "1 under another given name, whose document the register has not read" in said
+    # "Under another given name" read, on a named person's page, as that person having filed
+    # under one. The row carries the name; the person did not (the fifth reading, Seat F).
+    assert (
+        "1 that carries a given name other than this officeholder's, whose document the register "
+        "has not read" in said
+    )
+    assert "under another given name" not in said
     assert "before the swearing-in" not in said, "the successor's own check is not about them"
     assert "2 rows of the index at this seat carry this surname and are set aside" in said
 
@@ -1798,7 +1804,14 @@ def test_the_landing_counts_the_rows_no_decision_attributes_apart():
         render.state_of_record(META, RUN, HOLDERS, FILINGS, OFFICES, counts, "https://x/rows")
     )
     assert "<dt>1</dt><dd>index rows set aside for the maintainer to decide by hand" in section
-    assert "1 more is not attributed, because the register cannot show the officeholder" in section
+    # At one departure the count is 1, so the condition beside it must name nobody: "the
+    # officeholder" pointed at the one person the kept-seats table below names (the Council's
+    # fifth reading of S.1b, Seats A and D).
+    assert (
+        "1 more is not attributed at all, because a row enters only for an officeholder the "
+        "register can show in office on the date the index gives it" in section
+    )
+    assert "cannot show the officeholder in office" not in section
 
 
 # ---- the two page guards the fourth reading found unmeasured (Seat A, A4-9) -----------------
