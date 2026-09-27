@@ -206,7 +206,7 @@ citing each document ([the record](docs/council/2026-09-27-the-annual-report-sig
 report set aside by the name match is the Member's and fires, which makes six Findings by six members
 on the scratch build; the territory's report is the Delegate's and is compared on time. The decision
 route now works where only the printed seat differs. An adapter alias for the territory's two seat
-codes would let the document's own header settle such a row without a person; not built. An outside witness for every document a Finding rests on (INVARIANTS §16) is owed for
+codes would let the document's own header settle such a row without a person; not built. *Read 2026-09-27:* the roster itself gives the alias. It codes the seat `AQ00` and gives the same member's state as `<state postal-code="AS">`, and it is the only one of the roster's seats whose code does not begin with its postal code; the 2025 index has one row at `AS00`, the report already decided. So the join can compare the index's seat with the roster's postal code and district, a rule the source states, and it waits until after the annual Signal lands so the landing publishes exactly what the Council read. An outside witness for every document a Finding rests on (INVARIANTS §16) is owed for
 both Signals. *Measured from 2026-09-27, not yet recorded:* `tools/witness.py` asks the Internet Archive whether it holds each such document byte for byte, and observes without submitting; whether the register should submit, record the witness in the sealed record, or link the copy is the Council's question, set out in [docs/design/an-outside-witness.md](docs/design/an-outside-witness.md).
 
 **One sentence of the first Signal's own definition is now stale, and it stays until a version says
