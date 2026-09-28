@@ -34,16 +34,16 @@ metadata:
 
 **The landing's figures speak one drawing language** (PRs #64, #66): solid ink after the deadline, the 50% screen checked and within, an outline not reached, the spot caption box for a line the rule draws, and the build stamp on every figure.
 
-**The other two open threads need things this session did not have either.**
+**The other two open threads.**
 
-- **Network.** [NEXT.md E.0](../../NEXT.md) is thirteen rows of official information the register would need to follow a report past its deadline, twelve of them saying *nobody here has looked yet* because `ethics.house.gov`, `oce.house.gov`, `uscode.house.gov` and the federal dockets all return 000 through the cloud proxy. Every row carries a `check` naming exactly what to read. `wt:the-clerks-filing-date` goes first and is the highest-priority item in the project: the Clerk's index row carries eight fields and one date, nothing says whether it is the day the member filed or the day the Clerk posted, and **all 27 Findings rest on it.** It is the only open item that could make a sentence already published wrong about a person.
+- **Reading.** [NEXT.md E.0](../../NEXT.md) is fourteen rows of official information the register would need to follow a report past its deadline, nine of them still saying *nobody here has looked yet*. That is now a statement about reading, not about reach: re-tested 2026-09-28, `ethics.house.gov`, `conduct.house.gov`, `oce.house.gov`, `uscode.house.gov`, `disclosures-clerk.house.gov`, `govinfo.gov` and `api.open.fec.gov` all answer 200. Every row carries a `check` naming exactly what to read. `wt:the-clerks-filing-date` was the highest-priority item in the project and is **settled**: read 2026-09-27 on all 409 of 463 transaction reports whose text the register can read, on the sealed bytes, the Clerk's index date is the day the filer digitally signed the report, on none is it another day, and every transaction report a Finding rests on is among them. All 27 transaction-report Findings stand as written. `python tools/check-signed-dates.py` re-runs it; the 54 with no readable signature line carry no Finding and keep the row open for them.
 - **A re-seal.** The Monday refresh (09:17 UTC) re-reads the source, re-seals and re-anchors. Two things should ride it: the ECOSYSTEM §1.4 correction in [NEXT.md D.4](../../NEXT.md), whose replacement words are written out there, and the maintainer's answer to E.0's question of whether `docs/wanted/wanted.ndjson` should join the sealed set.
 
 **The wanted register, 2026-09-27, P.5.** Jared, after the black-hole figure shipped: *keep a register on oath, in pages or otherwise, outlining exactly what pieces of official information public or not would be needed to close the loop and effectively eliminate the black hole. I mean it.*
 
-The answer to a hole in the record is a register, not an essay. `docs/wanted/wanted.ndjson`, thirteen rows, a schema, a gate, and a page that draws the loop as a chain of seven links with the last three open.
+The answer to a hole in the record is a register, not an essay. `docs/wanted/wanted.ndjson`, fourteen rows, a schema, a gate, and a page that draws the loop as a chain of seven links with the last three open.
 
-**The rule that makes it worth keeping, and the thing to carry forward.** A row may say a record is published, obtainable or not public **only when somebody here has read a candidate at its source**. Twelve of thirteen say *unknown*, because this session's network reaches none of the hosts.
+**The rule that makes it worth keeping, and the thing to carry forward.** A row may say a record is published, obtainable or not public **only when somebody here has read a candidate at its source**. Nine of fourteen say *unknown*, because nobody here has read them yet, which since 2026-09-27 is the only reason left, the hosts being reachable.
 
 Why that rule and not a softer one: **a list of absent records is the easiest document in this project to lie in.** Every row is about something nobody here has seen, a confident sentence costs nothing to write, and no reader can check it — the exact conditions under which every other discipline here was built to hold, applied to a genre that has none of the usual friction. And the *not public* claim is the one that would read as an accusation against a body that may publish the thing freely. So the strictest rules in the repository are on the file with the least evidence in it, which is the right way round and was not the obvious one.
 
@@ -53,7 +53,7 @@ Why that rule and not a softer one: **a list of absent records is the easiest do
 
 **And one row that argues against the list it is on.** `wt:the-case-file` says the Committee's own file should stay shut: it holds an unproven allegation and a person's answer to it, and the confidentiality protecting it shields exactly the reader this project is built for. That it also means nobody outside can tell whether a founded complaint was acted on is true and does not cancel the first. A list of everything we want, with nothing on it we do not want, is a demand rather than a register.
 
-The work now is reading, not code: every unverified row carries a `check` naming what to read and where. `wt:the-clerks-filing-date` goes first — the Clerk's index row carries eight fields and one date, nothing says whether it is the day the member filed or the day the Clerk posted, and all 27 Findings rest on it. It is the only row that could make a sentence already published here **wrong about a person**.
+The work now is reading, not code: every unverified row carries a `check` naming what to read and where. `wt:the-clerks-filing-date` goes first — the Clerk's index row carries eight fields and one date, nothing says whether it is the day the member filed or the day the Clerk posted, and all 27 transaction-report Findings rest on it. It is the only row that could make a sentence already published here **wrong about a person**.
 
 **Where the record ends, 2026-09-27, P.4.** Jared read the new landing and asked the question none of its figures answered: *the House ethics committee… seems like a black hole. Don't accept that this is normal. Accountability is critical… imagine where you and I would be if we did not in any way hold each other accountable and base trust in receipts.*
 
@@ -275,11 +275,11 @@ What `main` holds, by the pull request that brought it:
 
 ## What is on `main`
 
-Doctrine (CHARTER, SUBJECTS, PIPELINE, EVIDENCE, RUBRIC, INVARIANTS, BYLAWS, COUNCIL) and the reference files; seven schemas; the House adapter (`src/adapters/house-fd/`); the renderer (`src/surfaces/render.py`); the gates in `tools/` and the doctor that runs them; four workflows (verify, pages, refresh, anchor); the sealed build in `data/`, its 27 Findings and the OpenTimestamps proof over its manifest. The doctor prints the live inventory of gates; trust it over this list. *(Rewritten 2026-09-26; until then this section still said "unchanged since PR #2".)*
+Doctrine (CHARTER, SUBJECTS, PIPELINE, EVIDENCE, RUBRIC, INVARIANTS, BYLAWS, COUNCIL) and the reference files; seven schemas; the House adapter (`src/adapters/house-fd/`); the renderer (`src/surfaces/render.py`); the gates in `tools/` and the doctor that runs them; four workflows (verify, pages, refresh, anchor); the sealed build in `data/`, its 33 Findings and the OpenTimestamps proof over its manifest. The doctor prints the live inventory of gates; trust it over this list. *(Rewritten 2026-09-26; until then this section still said "unchanged since PR #2".)*
 
 ## What is not real yet
 
-- One Signal, over one chamber and one filing year: `stock-act-ptr-after-deadline` v1, 27 Findings. The next one (S.2, the annual disclosure against its deadline) is blocked on the Clerk's own definition of the index's one-letter form codes, read at its source; reading `A` as *annual report* is an inference and not the record.
+- Two Signals, over one chamber and one filing year: `stock-act-ptr-after-deadline` v1 (27 Findings) and `annual-report-after-extension-limit` v1 (6 Findings, landed 2026-09-28 in build `0007-house-2025`), 33 in all. The form-code blocker that held the second one is gone: `wt:the-form-codes` was read at the source and each document prints its own Filing Type, so no Signal has to infer what a letter means.
 - The Senate, the executive branch and the states are not read. In the House, the annual reports' schedules are not read, and of 54 fetched documents the register records no extraction confidence: it looked for a `Filing ID` line and a `State/District` line in the text it extracted and found neither, and it holds nothing about what those documents physically are. *(This bullet said "scanned paper filings" until 2026-09-27, which is the claim PR #43 removed from nine surfaces.)*
 - Two planned gates are unbuilt, INVARIANTS §15 (contributor conflict of interest) and §16 (the evidence bundle); the doctor names both, and each waits on a decision that is the maintainer's. INVARIANTS.md also still marks landed gates *(planned)*, §17's among them, which is a D.4 item.
 - Six of the eleven schemas carry no worked example: filing, finding, holding, office, signal and transaction ([NEXT.md](../../NEXT.md) D.1). *(This read "six of the seven" until 2026-09-27; the total grew, so the six are named now rather than counted.)*
@@ -300,6 +300,7 @@ Per [NEXT.md](../../NEXT.md), and both head items need Jared before an engineer 
 - **Voice-print.** No em dashes in any authored markdown.
 - **Order of precedence.** Charter > Invariants > Rubric > Bylaws > Methodology and companions > everything else.
 - **Usage.** Jared's budget sets the scale of any fan-out, not the availability of the instrument.
+- **A constraint is a reading, not a property.** Re-test before recording a source, a host or a tool as out of reach, every time, and date the test. On 2026-09-28 this file and [NEXT.md E.0](../../NEXT.md) still said the government hosts returned 000 through the cloud proxy; all of them answered 200, and the stale sentence had already been carried into three reports and a design note before Jared asked *you should have full network, no?* Nothing was published wrong about a person, but the same habit applied to a source would do exactly that. Checking costs one `curl`.
 
 ## The through-line
 
