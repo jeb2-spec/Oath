@@ -97,5 +97,25 @@ own server errors (503 Service Unavailable, 504 Gateway Time-out). Across the tw
 documents were held byte for byte in at least one, no capture of any of them was other bytes in
 either, and 2 have not been checked in either, both times for the Archive's errors. A held capture is
 a fact about the Archive at the time it was read, so the union is a fair count; it is not a promise
-that the Archive holds them today. The Findings the annual Signal adds on its landing (build
-`0007-house-2025`) are checked the same way once they are published.
+that the Archive holds them today.
+
+**The third run, 2026-09-28** ([the run](https://github.com/jeb2-spec/Oath/actions/runs/36418213007)),
+over the 33 documents the Findings of build `0007-house-2025` rest on, the six annual reports the
+annual Signal's landing added among them:
+
+| Outcome | Transaction reports (27) | Annual reports (6) |
+| --- | --- | --- |
+| held | 17 | 0 |
+| differs | 0 | 0 |
+| none: no capture listed | 0 | 4 |
+| unchecked | 10 | 2 |
+
+Every one of the twelve unchecked failed on the Archive's server errors (503, 504) or a timeout.
+**Across the three runs,** 26 of the 27 transaction reports were held byte for byte in at least one,
+each as the one payload the Archive lists at its address, so no capture of other bytes has been
+listed at any of them; 1 has failed on the Archive's errors in all three runs. **The annual reports
+are a different answer.** The Archive lists no capture of four of the six addresses, and the other
+two could not be asked. For at least four of the six annual Findings, then, the Internet Archive
+holds no copy a reader could check the sealed hash against, and the evidence would outlive the
+Clerk's copy only as that hash. This measures the gap the first question above is about, for the
+Findings the landing added. It does not answer that question, which stays the Council's.
