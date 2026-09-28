@@ -25,8 +25,9 @@ So: the FEC enters mostly as **reference**, with **one** narrow Signal.
 
 Everything in this section is from this repository's own catalogue
 ([docs/related-work/aggregators.md](../related-work/aggregators.md)), read at its source on
-2026-09-21. Nothing here has been re-read from this session, whose network policy reaches no
-government host; §6 says what that means.
+2026-09-21, and not re-read since; where a claim in this section matters, it carries that date and
+not today's. What *was* read at the source on 2026-09-28 is the API's own published description of
+itself, and §6 records exactly what it said.
 
 **The FEC is a primary publisher, not an aggregator.** It publishes the filings themselves: a browse
 site, the OpenFEC 1.0 REST API, and bulk data files. Summary data and report images post within 48
@@ -46,13 +47,13 @@ source this register can build on. Cite it; do not depend on it
 
 **Access is ordinary.** An API key from api.data.gov; a registered key allows 1,000 calls an hour.
 The solo-operator test ([METHODOLOGY.md §9](../../METHODOLOGY.md)) passes without a human in the
-retrieval loop — unlike the Senate's disclosure search, which needs a person to click an agreement,
+retrieval loop, unlike the Senate's disclosure search, which needs a person to click an agreement,
 and unlike the Clerk's PTR documents, which need PDF text extraction.
 
 ## 2. The constraint that shapes everything, and why it is welcome
 
 The catalogue records a data-use restriction under **52 U.S.C. § 30111(a)(4)** and **11 CFR §
-104.15**: information about individual contributors — names, addresses — copied from reports is
+104.15**: information about individual contributors (names, addresses) copied from reports is
 restricted in how it may be used.
 
 That restriction points the same way this register's own doctrine already points.
@@ -61,7 +62,7 @@ That restriction points the same way this register's own doctrine already points
 money to a campaign; they are not an officeholder and they did not swear anything.
 
 **So the register does not read Schedule A at the contributor level, and publishes no contributor's
-name, ever.** Not because the statute forbids this use — it likely does not — but because the
+name, ever.** Not because the statute forbids this use, which it likely does not, but because the
 register would not publish it either way, and a rule that is obeyed for two independent reasons is
 one nobody has to remember.
 
@@ -73,7 +74,7 @@ aggregate. None of that names a private person.
 
 A **reference row** is a new shape for this register: a sourced, dated fact joined to an
 officeholder, with **no condition computed over it**. It never fires. It is never a Finding. It
-carries no adverse sentence, because it carries no sentence at all — a page renders it, and the
+carries no adverse sentence, because it carries no sentence at all: a page renders it, and the
 reader reads it.
 
 Proposed for the first pass, all of it committee-level and none of it about a private person:
@@ -87,8 +88,8 @@ Two rows. That is the whole adapter's output for the first pass.
 
 **Why this is the velocity answer.** A reference row makes no claim about a person's conduct, so it
 needs no Signal definition, no version freeze, no known-answer fixtures, and no adversarial reading
-before it ships. It needs what every row here needs — a schema, a primary source, an identifier that
-joins without inference, and a gate — and nothing more. §7 says what that means for how we work.
+before it ships. It needs what every row here needs: a schema, a primary source, an identifier that
+joins without inference, and a gate. Nothing more. §7 says what that means for how we work.
 
 ## 4. The one Signal
 
@@ -105,13 +106,17 @@ What it must say, in the register's existing voice:
 > its receipt date as *«date»*, which is *«n»* days after it. The register computes no penalty and
 > sees none of the Commission's decisions.
 
-What it must never say: that a committee was penalised, that anyone acted knowingly, or that a late
-report means anything beyond the two dates. Whether a report was late in the legal sense, and what
+What it must never say: that a committee was penalised, that anyone acted knowingly, that a late
+report means anything beyond the two dates, or that the committee **filed** late. That last one is
+not a style note. The field is the Commission's received date, by the FEC's own definition (§6.3), so
+the register says *recorded* and never *filed*, in the Signal's sentence and in every figure caption
+that renders it. The id proposed above, `committee-report-after-due-date`, already avoids both words,
+and should keep avoiding them. Whether a report was late in the legal sense, and what
 follows from it, is the Commission's; the register publishes the dates it read.
 
 **Expect it to be quiet.** Campaign committees are professionally administered and mostly file on
 time. A Signal that fires on almost nothing is [CHARTER](../../CHARTER.md) Vow V working, not a
-failure — *the register is silent by default, and empty is a legitimate result*. It is included
+failure: *the register is silent by default, and empty is a legitimate result*. It is included
 because it costs almost nothing once the reference rows exist, and because a domain the register only
 describes, never checks, would be a domain where nobody could tell whether the checking worked.
 
@@ -130,29 +135,61 @@ Stated here so it cannot be adopted later by drift.
   today, and because the nearest comparable project publishes exactly that.
 - **No per-person "score", index or grade**, assembled from any combination of these rows.
 
-## 6. What has not been verified, and what to read
+## 6. What has been verified, and what has not
 
-This session could reach no government host, so nothing below was confirmed from this container.
-Each of these belongs in [docs/wanted/wanted.ndjson](../wanted/wanted.ndjson) before the adapter is
-written, under the same rule that file already enforces: **a row may not say what a source holds
-until somebody here has read it at its source.**
+Read at the source on 2026-09-28, mostly from the document the API publishes about itself
+(`https://api.open.fec.gov/swagger/`); where an item rests on something else, it says so. Each belongs
+in
+[docs/wanted/wanted.ndjson](../wanted/wanted.ndjson) before the adapter is written, under the rule
+that file already enforces: **a row may not say what a source holds until somebody here has read it
+at its source.** Three of the five are settled; two are not.
 
-1. **The reporting calendar as data.** The Signal in §4 rests entirely on the FEC publishing due
-   dates in a form an adapter can read. The catalogue does not record one. If the calendar is a web
-   page for humans and not a dataset, the Signal is not definable and §4 does not ship; the reference
-   rows still do. **This is the load-bearing unknown and it should be settled first.**
-2. **A transaction-level identifier.** The catalogue's own "not verified" note says it could not
-   confirm whether the API exposes a `sub_id` or equivalent. Without a stable per-record id, rows
-   cannot be carried forward across reads the way [INVARIANTS.md §14](../../INVARIANTS.md) requires.
-3. **The receipt date's own name and meaning.** Exactly as with the Clerk's `FilingDate`
-   (`wt:the-clerks-filing-date`, still open and still the sharpest question in the project): does the
-   FEC's date mean the day the committee filed or the day the Commission recorded it? The same
-   mistake is available here, and it would be the same defect — an adverse sentence about a named
-   committee resting on a date that means something else.
-4. **The candidate-to-member crosswalk.** FEC candidate IDs must join to this register's
-   officeholder ids without inference. A published crosswalk exists in the open-data ecosystem; which
-   one, and whether it is primary, is unread.
-5. **The terms of service** behind the api.data.gov link, which the catalogue records as not captured.
+1. **The reporting calendar as data. Settled, yes.** `/v1/reporting-dates/` is a dataset, not a page
+   for humans. It takes `report_type`, `report_year` and `min_due_date`/`max_due_date`; each record
+   carries `due_date`, `report_type`, `report_type_full`, `report_year`, `create_date` and
+   `update_date`. The Signal in §4 is definable. This was the load-bearing unknown and it fell the
+   right way.
+
+2. **A transaction-level identifier. Settled, with a caveat.** The `Filings` resource carries
+   `sub_id`, a string. Its published description is **blank**, so what it identifies, and how stable
+   it is across reads, is undocumented. An id whose meaning nobody has written down is a weaker
+   foundation than one with a definition, so nothing in [INVARIANTS.md §14](../../INVARIANTS.md)
+   rests on it until the adapter has watched it hold still across builds.
+
+3. **The receipt date. Settled, and it is the opposite of the Clerk's.** The API documents
+   `receipt_date` as *"Date the FEC received the electronic or paper record."* It is the Commission's
+   received date. It is not the committee's filing act, and no amount of reading documents will make
+   it one, because the FEC says plainly that it is not.
+
+   This tightens §4 rather than loosening it. A Signal built on this field may say *the Commission
+   recorded this report after its due date*. It may never say *the committee filed late*; that is a
+   different claim about a named committee, and this field does not support it. The Clerk's
+   `FilingDate` turned out to be the filing act (`wt:the-clerks-filing-date`, read on every report
+   the register can read); the FEC's turns out not to be. The two must never be described in the
+   same words.
+
+   **The trap, named now while it is cheap:** the `EFilings` resource carries a field called
+   `filed_date`, described as *"Timestamp of electronic or paper record that FEC received."* A field
+   whose name says *filed* and whose definition says *received* is this project's characteristic
+   defect sitting in the open, waiting to be picked up by whoever reads the name and not the line
+   under it. The adapter reads the definition.
+
+4. **The candidate-to-member join. Settled, and the answer is better than a crosswalk.** The FEC's
+   candidate record carries no identifier this register already holds: no Bioguide id, no Clerk id.
+   What it carries is `office` (`H`, `S`, `P`), `state`, `district`, `district_number` and
+   `election_years`. That is a seat, and this register's offices are keyed the same way:
+   `data/offices.ndjson` holds `chamber`, `state`, `district` and `seat` (`AK00`). So the join is
+   structural, on fields both sides publish, and never a match on a person's name, which is also
+   how it avoids taking a dependency on an aggregator's crosswalk, per §1.
+
+   What stays open is narrow and testable: whether the FEC's two-digit `district` encodes an at-large
+   seat the way this register's `00` does, and what the join does with a seat that changed hands
+   inside a cycle. Both are read from the data once, before any row publishes.
+
+5. **The terms of service. Unread, and the catalogue's link is wrong.** `https://api.data.gov/terms/`
+   returns 404 today; `https://api.data.gov/about/` resolves and states no terms. Whatever governs an
+   api.data.gov key is not where the catalogue said it was, so this note claims nothing about it. It
+   blocks nothing: §2 already holds the register to less than any licence would grant.
 
 ## 7. What this changes about how we work
 
@@ -160,7 +197,7 @@ The maintainer's direction alongside this note was to rely less on the Council f
 move faster: *this is a mission, not a product.*
 
 The reference row is what makes that safe rather than merely fast. The Council's readings have
-earned their place — they caught a claim about scanned paper that no row supported, an adverse
+earned their place: they caught a claim about scanned paper that no row supported, an adverse
 sentence left on the wrong person's page, a frame that a crop would drop, a square at 1.64:1 against
 its background. Every one of those was **a claim about a person**. None of them was a gate on
 plumbing.
@@ -173,7 +210,7 @@ adapters, schemas and tooling do not.
 [COUNCIL.md §3](../../COUNCIL.md) currently says three seats convene **on every session**. That is
 the expensive rule and it is the stale one: it was written before the project had shipped anything,
 and practice long ago settled on reading what names a person. It is sealed, so narrowing it costs an
-amendment, a reading and a re-seal — and buying that ceremony to reduce ceremony would be the joke
+amendment, a reading and a re-seal, and buying that ceremony to reduce ceremony would be the joke
 this project has already caught itself telling once. It rides the next re-seal;
 [NEXT.md D.4](../../NEXT.md) carries it.
 
@@ -181,14 +218,16 @@ Until then the working stance is the binding one, and it says what it says.
 
 ## 8. The order to build it
 
-1. Settle §6.1 and §6.3 — the reporting calendar, and what the receipt date means. Both are reads,
-   not code. If §6.1 fails, §4 is dropped and this note still stands.
+1. **Done, 2026-09-28.** §6.1 and §6.3 were reads, not code, and both are settled: the reporting
+   calendar is a dataset, and the receipt date is the Commission's and not the committee's. §4
+   survives both, with *recorded* where it would have been tempting to write *filed*. What is still
+   to be read is §6.2's undocumented id, §6.4's two narrow encoding questions, and §6.5's terms.
 2. `SOURCES.md` row for the FEC, with its retrieval, its throttle, its licence and its known gaps.
    Sealed; rides a re-seal.
 3. Schemas for `committee` and `committee-period`, and the adapter that writes them. Gates as usual.
 4. The reference rows on the pages: a member's committee, its totals by period, sourced and dated,
    beside what they disclosed. No condition, no colour, no ranking.
-5. The Signal of §4, if and only if §6.1 settled yes. Fixtures first, then the runner, then one
-   adversarial reading before it publishes.
+5. The Signal of §4. §6.1 settled yes, so it is on the table. Fixtures first, then the runner, then
+   one adversarial reading before it publishes.
 
 Steps 2 to 4 are the engineer's to decide and ship. Step 5 is the one that names people in a new way.
