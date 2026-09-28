@@ -182,7 +182,7 @@ true whatever the register holds; on the build of 2026-09-22 that is 5 of 422 an
 their headers are read, and 252 sit in the window it does not evaluate. The join is display only.
 
 **Built, 2026-09-27, read by the Council, and held.** The adapter reads the headers (PR #69; from
-the refresh of 2026-09-28). The Signal is built: [its definition](docs/design/annual-report-after-extension-limit.md),
+the refresh of 2026-09-28). The Signal is built: [its definition](docs/signals/annual-report-after-extension-limit.md),
 held in `docs/design/` so the runner does not read it; both implementations, sharing no code and
 agreeing on 17 known-answer cases and a calendar for six filing years; and the pages' own voice for
 it. A second Signal was the first test of every shape written for the first, and each is met in the
