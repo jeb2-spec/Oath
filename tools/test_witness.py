@@ -155,3 +155,33 @@ def test_the_run_fails_loudly_on_other_bytes_and_says_what_it_checked(tmp_path, 
     out = capsys.readouterr().out
     assert "FAIL" in out and "differs" in out
     assert "20000002.pdf" in summary.read_text()
+
+
+def test_a_capture_the_archive_cannot_serve_falls_back_to_another_of_the_same_payload():
+    class Flaky(Archive):
+        def __call__(self, url):
+            if "20250101000000id_/" in url:
+                self.asked.append(url)
+                raise ConnectionError("the Archive reset the connection")
+            return super().__call__(url)
+
+    archive = Flaky({"20250101000000": READ, "20250601000000": READ})
+    row = witness.witness(document(), archive)
+    assert row["outcome"] == "held", "one unreadable copy is not the payload unreadable"
+    assert row["held_since"] == "2025-06-01T00:00:00Z", "the copy actually read is the one named"
+    assert row["payloads"] == 1 and len(row["read"]) == 1
+
+
+def test_a_payload_no_capture_of_which_can_be_read_is_unchecked_not_none():
+    class Down(Archive):
+        def __call__(self, url):
+            if "id_/" in url:
+                self.asked.append(url)
+                raise ConnectionError("the Archive reset the connection")
+            return super().__call__(url)
+
+    archive = Down({"20250101000000": READ, "20250601000000": READ, "20250901000000": READ})
+    row = witness.witness(document(), archive)
+    assert row["outcome"] == "unchecked"
+    fetched = [u for u in archive.asked if "id_/" in u]
+    assert len(fetched) == witness.CAPTURES_PER_PAYLOAD, "tries each capture up to the limit"

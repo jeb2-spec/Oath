@@ -70,6 +70,24 @@ kept-copy question, and each of these is that question in a new shape.
 
 ## Measured
 
-Asked from this session on 2026-09-27, the Archive's availability endpoint listed a capture for three
-of the first six documents a Finding rests on. That is the Archive's index, not a reading of bytes, and
-it is not the answer. The first run of the job is.
+**The first run, 2026-09-27, over the 27 documents the published Findings rest on** (build
+`0005-house-2025`; [the run](https://github.com/jeb2-spec/Oath/actions/runs/36356776336), its report
+kept as the run's artifact):
+
+| Outcome | Documents |
+| --- | --- |
+| held: a capture whose bytes hash to the sealed hash | 21 |
+| differs | 0 |
+| none: no capture listed | 0 |
+| unchecked | 6 |
+
+For 21 of the 27, someone other than the register already holds, byte for byte, the document the
+register read, and no capture of any of them is other bytes. The Archive lists captures of every
+document it answered for. The 6 unchecked are the Archive's connections and not its holdings: for 2,
+the request for its index of captures timed out in the handshake; for 4, it listed captures and
+served none of the ones asked for. Nothing in this run says anything about those 6 documents, and the
+job fails, as it should, until each is checked.
+
+The tool now asks three times, waiting longer each time, and where one capture of a payload cannot
+be served it reads a later capture of the same payload; the next run is the answer for the six. The
+Findings the annual Signal adds on its landing are checked the same way once they are published.
