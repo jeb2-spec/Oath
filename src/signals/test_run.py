@@ -252,7 +252,9 @@ def test_two_findings_that_change_together_are_corrected_together(tmp_path):
     root = copy_register(tmp_path)
     ledger_path = root / "data" / "findings.ndjson"
     before = [json.loads(line) for line in ledger_path.read_text("utf-8").splitlines() if line]
-    targets = before[:2]
+    # Two transaction-report Findings: the ledger is in id order, and the annual Signal's come
+    # first, with no rows to redate.
+    targets = [f for f in before if f["evidence"].get("rows")][:2]
     for target in targets:
         redate(root, target["producing_filings"][0], target["evidence"]["rows"][0]["deadline"])
     at = "2026-10-19T09:20:00Z"

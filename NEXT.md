@@ -181,8 +181,10 @@ where a report is dated after the latest date any extension the statute allows c
 true whatever the register holds; on the build of 2026-09-22 that is 5 of 422 annual-coded rows before
 their headers are read, and 252 sit in the window it does not evaluate. The join is display only.
 
+**Landed, Monday 2026-09-28, build `0007-house-2025` (PR #75).** Six Findings by six members, identical to the Council-read dry run; the definition is in [docs/signals/](docs/signals/annual-report-after-extension-limit.md) and its rows in STANDARDS.md S.1 and SOURCES.md F.1. The Monday refresh was dispatched by hand when the scheduler did not fire, and its build carried a defect (54 unreadable transaction reports marked read) that the landing fixed and corrected by recorded decision. What follows is how it got here.
+
 **Built, 2026-09-27, read by the Council, and held.** The adapter reads the headers (PR #69; from
-the refresh of 2026-09-28). The Signal is built: [its definition](docs/design/annual-report-after-extension-limit.md),
+the refresh of 2026-09-28). The Signal is built: [its definition](docs/signals/annual-report-after-extension-limit.md),
 held in `docs/design/` so the runner does not read it; both implementations, sharing no code and
 agreeing on 17 known-answer cases and a calendar for six filing years; and the pages' own voice for
 it. A second Signal was the first test of every shape written for the first, and each is met in the

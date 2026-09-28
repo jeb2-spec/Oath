@@ -12,8 +12,6 @@ fixture: fixtures/annual-report-after-extension-limit/cases.json
 
 # Annual financial disclosure report dated after the latest date an extension could reach
 
-*The definition as built, 2026-09-27, and as the Council's second reading changed it the same day ([its record](../council/2026-09-27-the-annual-report-signal-built.md)), held here in `docs/design/` until it lands. The runner reads only `docs/signals/`, so until this file moves there no Finding rests on it, no page shows it, and nothing in `data/` carries it. It moves with the sealed build that first carries the Signal, together with its rows in STANDARDS.md S.1 and SOURCES.md F.1, and this note goes when it moves.*
-
 ## Description
 
 A Member of the U.S. House of Representatives, a Delegate or the Resident Commissioner who serves more than 60 days in a calendar year is required to file an annual financial disclosure report for it by 15 May of the next year, its original due date, and outside a combat zone extensions may add at most 90 days in total. This Signal compares the date on each such annual report for filing year 2025 with the latest date any extension the statute allows outside a combat zone could reach, and reports a result only where the report's date is later, stating by how many days. Before that date it does not decide whether an extension covers a report: it says the report is within the time an extension may cover, and does not evaluate it.
