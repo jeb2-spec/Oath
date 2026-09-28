@@ -54,6 +54,34 @@ HELD_KINDS = (
 )
 
 
+def as_the_rows_read(run: dict, filings: list[dict]) -> dict:
+    """A run record with its counts of reports read and not read taken from the sealed rows of its
+    year, not from what the run recorded. The run record is the history of what the adapter did;
+    the state text is about the rows the seal covers, and a correction the maintainer records
+    after a run moves a row's reading. On 2026-09-28 a run marked 54 reports read that carry no
+    text its reader could extract, the rows were corrected, and the sentence sealed from the run
+    record still said all 463 were read."""
+    year = run.get("year")
+    reports = [
+        f
+        for f in filings
+        if f.get("form_type") == "House-PTR" and f"/{year}/" in f.get("source", {}).get("url", "")
+    ]
+    if not reports or "documents" not in run:
+        return run
+    documents = dict(
+        run["documents"],
+        read=sum(1 for f in reports if f.get("extraction_confidence") == "structured"),
+        unreadable=sum(
+            1
+            for f in reports
+            if f.get("source", {}).get("content_hash")
+            and f.get("extraction_confidence") != "structured"
+        ),
+    )
+    return {**run, "documents": documents}
+
+
 def run_figures(run: dict) -> list[tuple[int, str]]:
     """The run record's figures the state text is expected to carry: the ones that move
     between builds while the roster stands still."""
@@ -220,9 +248,9 @@ def derive_state(root: Path, meta: dict) -> str:
     adapter wrote a reason, the sentence quotes it. Every figure `state_text_lacks` checks is
     in it by construction.
     """
-    runs = current_runs(root)
-    holders = read_rows(root / "data" / "officeholders.ndjson")
     filings = read_rows(root / "data" / "filings.ndjson")
+    runs = [as_the_rows_read(run, filings) for run in current_runs(root)]
+    holders = read_rows(root / "data" / "officeholders.ndjson")
     transactions = len(read_rows(root / "data" / "transactions.ndjson"))
     offices = len(read_rows(root / "data" / "offices.ndjson"))
     findings = read_rows(root / "data" / "findings.ndjson")
@@ -658,7 +686,8 @@ def seal(root: Path, build: str, built_at: str, derive: bool = False) -> str:
     meta["rows"] = verify.row_counts(root)
     if derive:
         meta["state"] = derive_state(root, meta)
-    runs = current_runs(root)
+    filings = read_rows(root / "data" / "filings.ndjson")
+    runs = [as_the_rows_read(run, filings) for run in current_runs(root)]
     changes = read_rows(root / "data" / "changes.ndjson")
     stale = (
         state_text_lacks(meta, None, changes)

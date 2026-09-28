@@ -14,6 +14,8 @@ import shutil
 import subprocess
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -178,14 +180,19 @@ def test_a_finding_regenerates_from_the_rows_it_names():
     assert rebuild.main([str(ROOT), first["id"]]) == 0
 
 
-def test_a_tampered_finding_does_not_regenerate(tmp_path):
+@pytest.mark.parametrize("signal", ["stock-act-ptr-after-deadline", "annual-report-after"])
+def test_a_tampered_finding_does_not_regenerate(tmp_path, signal):
     for rel in ("data", "docs/signals", "src/signals", "fixtures"):
         shutil.copytree(ROOT / rel, tmp_path / rel)
     ledger = tmp_path / "data" / "findings.ndjson"
     lines = ledger.read_text("utf-8").splitlines()
-    first = json.loads(lines[0])
-    first["evidence"]["rows"][0]["days_after"] += 1
-    lines[0] = json.dumps(first, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    at = next(n for n, line in enumerate(lines) if signal in json.loads(line)["signal_id"])
+    first = json.loads(lines[at])
+    if "rows" in first["evidence"]:
+        first["evidence"]["rows"][0]["days_after"] += 1
+    else:
+        first["evidence"]["days_after_latest"] += 1
+    lines[at] = json.dumps(first, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
     ledger.write_text("\n".join(lines) + "\n", encoding="utf-8")
     assert rebuild.main([str(tmp_path), first["id"]]) == 1
     assert rebuild.main([str(tmp_path)]) == 1

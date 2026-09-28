@@ -89,5 +89,13 @@ served none of the ones asked for. Nothing in this run says anything about those
 job fails, as it should, until each is checked.
 
 The tool now asks three times, waiting longer each time, and where one capture of a payload cannot
-be served it reads a later capture of the same payload; the next run is the answer for the six. The
-Findings the annual Signal adds on its landing are checked the same way once they are published.
+be served it reads a later capture of the same payload.
+
+**The second run, 2026-09-28** ([the run](https://github.com/jeb2-spec/Oath/actions/runs/36360647723),
+with those retries): 18 held, 0 differs, 0 none, 9 unchecked, every one of the nine on the Archive's
+own server errors (503 Service Unavailable, 504 Gateway Time-out). Across the two runs, 25 of the 27
+documents were held byte for byte in at least one, no capture of any of them was other bytes in
+either, and 2 have not been checked in either, both times for the Archive's errors. A held capture is
+a fact about the Archive at the time it was read, so the union is a fair count; it is not a promise
+that the Archive holds them today. The Findings the annual Signal adds on its landing (build
+`0007-house-2025`) are checked the same way once they are published.

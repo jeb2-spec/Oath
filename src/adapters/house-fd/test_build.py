@@ -2264,3 +2264,36 @@ def test_a_decision_settles_a_report_printed_at_another_seat_and_never_another_f
     assert "rests on the maintainer's recorded decision and the Filing ID" in decided["notes"]
     assert decided["printed"]["filing_type"] == "Annual Report"
     assert "fl:house-clerk:O:10000002" not in filings, "another Filing ID refuses, decided or not"
+
+
+def test_a_report_whose_document_prints_no_filing_id_is_never_marked_read(tmp_path, monkeypatch):
+    """The refresh of 2026-09-28 captured every document behind the index for the first time,
+    the 54 transaction reports that print no Filing ID line among them, and the adapter marked
+    each "structured": read, with no rows. The reader says such a document is unreadable; only a
+    header that contradicts the attribution was held back from "read", so the register stated,
+    about 54 reports, that it had read what it could not. A document the reader cannot read is
+    fingerprinted and never marked read, on its first reading and on every later one."""
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(build, "load_ptr", lambda: StubReader)
+    captures(
+        tmp_path,
+        roster_xml(119, [ADA], "20250103"),
+        index_xml([(ADA, "20000001", "P", "3/1/2025")]),
+        "2026-01-05T00:00:00Z",
+        "2026-01-05T00:00:01Z",
+    )
+    sha = document(tmp_path, "20000001", ADA, [], "2026-01-05T00:00:02Z")
+    docs = tmp_path / "data" / "cache" / "house-fd" / "docs"
+    body = json.dumps({"text": "Name: Hon. Ada Adams\nStatus: Member\n", "tx": []}, sort_keys=True)
+    (docs / "20000001.pdf").write_text(body, encoding="utf-8")
+    manifest = json.loads((docs / "captures.json").read_text("utf-8"))
+    manifest["20000001"]["sha256"] = hashlib.sha256(body.encode()).hexdigest()
+    (docs / "captures.json").write_text(json.dumps(manifest), encoding="utf-8")
+    assert sha != manifest["20000001"]["sha256"], "the scanned stand-in, not the helper's text"
+    for _ in range(2):
+        assert build.build(2025) == 0
+        row = json.loads(rows_of(tmp_path, "filings")["fl:house-clerk:P:20000001"])
+        assert row["extraction_confidence"] is None, "never read, never said to be"
+        assert row["source"]["content_hash"] == manifest["20000001"]["sha256"]
+        assert not rows_of(tmp_path, "transactions")
+        assert run_record(tmp_path)["documents"]["unreadable"] == 1

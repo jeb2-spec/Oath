@@ -439,3 +439,35 @@ def test_held_rows_counts_every_group_whose_reason_begins_with_the_held_one():
         key.startswith(seal.HELD_REASON) for key in RUN["rejected_by_reason"] if "differ" in key
     )
     assert seal.held_rows({"rejected_by_reason": {}}) == 0
+
+
+def test_the_sentence_counts_reports_read_from_the_sealed_rows_not_the_run_record(tmp_path):
+    """On 2026-09-28 a refresh marked the reports whose documents carry no extractable text
+    read, the maintainer corrected the rows, and the sentence sealed from the run record still
+    said every report was read. The run record is what the run did; the sentence is about the
+    rows the seal covers."""
+    import json
+
+    seal = load()
+    verify = seal.load_verify(HERE)
+    root = copy_register(tmp_path)
+    path, run = the_run(root)
+    filings = [
+        json.loads(line)
+        for line in (root / "data" / "filings.ndjson").read_text("utf-8").splitlines()
+        if line.strip()
+    ]
+    reports = [f for f in filings if f.get("form_type") == "House-PTR"]
+    read = sum(1 for f in reports if f.get("extraction_confidence") == "structured")
+    unread = sum(
+        1
+        for f in reports
+        if f["source"].get("content_hash") and f.get("extraction_confidence") != "structured"
+    )
+    run["documents"] = dict(run.get("documents", {}), read=len(reports), unreadable=0)
+    path.write_text(json.dumps(run) + "\n", encoding="utf-8")
+    meta = json.loads((ROOT / "data" / "meta.json").read_text("utf-8"))
+    meta["rows"] = verify.row_counts(root)
+    text = seal.derive_state(root, meta)
+    assert f"{read:,} were read from the Clerk's documents" in text
+    assert f"{unread:,} the register fetched and hashed and did not read" in text

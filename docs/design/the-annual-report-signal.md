@@ -3,7 +3,7 @@
 *Draft, second version, 2026-09-27, after the Council's reading of the first
 ([docs/council/2026-09-27-the-annual-report-draft.md](../council/2026-09-27-the-annual-report-draft.md)).
 This is not a Signal. Nothing here is in `data/signals.ndjson`, and no Finding rests on it. The
-built Signal ([its definition](annual-report-after-extension-limit.md), both implementations under
+built Signal ([its definition](../signals/annual-report-after-extension-limit.md), both implementations under
 `src/signals/`, its known answers and its pages) goes to the Council again before it publishes.*
 
 ## Abstract
