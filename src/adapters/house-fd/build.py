@@ -1815,7 +1815,11 @@ def build(year: int, dry_run: bool = False, expect_not_listed: int = 0) -> int:
             settled = status != "contradiction" or decided(
                 published["changes"], filing["id"], "officeholder_id"
             )
-            if settled and filing["source_form_code"] == PTR_CODE:
+            # A document the reader cannot read (no Filing ID line, no State/District line) is
+            # fingerprinted and never marked read: "structured" says its rows were read, and the
+            # refresh of 2026-09-28, the first to capture every document behind the index, marked
+            # 54 such reports read with no rows until this line held them back.
+            if settled and status != "unreadable" and filing["source_form_code"] == PTR_CODE:
                 derived["extraction_confidence"] = "structured"
                 rows_read = [
                     {
