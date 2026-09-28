@@ -479,7 +479,6 @@ figure.year .yscroll > svg { width: 100%; min-width: 31rem; height: auto; displa
 .amark.void { fill: var(--paper); stroke: var(--ink); stroke-width: 1.2; stroke-dasharray: 2 1.5; }
 .amark.unread { fill: none; stroke: var(--ink-2); stroke-width: 1; stroke-dasharray: 1.4 1.2; }
 .ysworn { fill: var(--ink); }
-.yearkey .amark.after { fill: var(--ink); opacity: 1; }
 figure.year figcaption { max-width: 38rem; margin-top: .35rem; }
 ul.yearkey { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
   gap: .1rem 1rem; max-width: 44rem; font-size: .82rem; margin: .4rem 0 .2rem; }
@@ -572,6 +571,9 @@ figure.dates > svg { width: 100%; max-width: 34rem; height: auto; display: block
 figure.dates figcaption { max-width: 36rem; margin-top: .35rem; }
 .dates .window, .key .window { stroke: var(--ink-2); stroke-width: 1.4; }
 .dates .after, .key .after { fill: var(--ink-2); opacity: .55; }
+/* A key draws the annual report's adverse mark as its figure does, in solid ink: the rule
+   above, written for a Finding's dates, had turned it the grey of "not decided". */
+svg.key .acol.after, svg.key .amark.after { fill: var(--ink); opacity: 1; }
 .dates .deadline, .key .deadline { stroke: var(--ink); stroke-width: 1.6; }
 .dates .next, .key .next { fill: var(--paper); stroke: var(--ink); stroke-width: 1.3; }
 .dates .trade, .key .trade { fill: var(--ink); }
